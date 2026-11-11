@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1.7
+# API и интерфейс в одном образе: сервер отдаёт статику SPA сам. Собирается на сервере (ARM64).
+
+# Интерфейс: статическая сборка Nuxt
+FROM oven/bun:1.2.21 AS ui
+WORKDIR /src/apps/ui
+COPY apps/ui/package.json apps/ui/bun.lock ./
+RUN bun install --frozen-lockfile --ignore-scripts
+COPY apps/ui ./
+RUN bunx nuxt prepare && bun run build
+
+# Rust: зависимости кешируются отдельно от кода
+FROM lukemathwalker/cargo-chef:latest-rust-1.99-slim-trixie AS chef
+WORKDIR /src
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /src/recipe.json recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    cargo chef cook --release --recipe-path recipe.json
+COPY . .
+ENV SQLX_OFFLINE=true
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    cargo build --release -p dalywave-server --bins
+
+FROM debian:trixie-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl tini \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --uid 10001 --home-dir /nonexistent dalywave
+COPY --from=builder /src/target/release/dalywave-api /usr/local/bin/
+COPY --from=ui /src/apps/ui/.output/public /srv/ui
+ENV DALYWAVE_STATIC_DIR=/srv/ui \
+    DALYWAVE_LOG_FORMAT=json \
+    DALYWAVE_LISTEN=0.0.0.0:8400
+USER dalywave
+EXPOSE 8400
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:8400/api/healthz >/dev/null || exit 1
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["dalywave-api"]

@@ -42,9 +42,12 @@ lint: ## проверки стиля
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff check . && uv run ruff format --check .; fi
 
+deploy: ## выложить текущий коммит на wave.daly.rest (сборка на сервере)
+	bash infra/deploy.sh
+
 fmt: ## отформатировать код
 	cargo fmt --all
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api ui design api-types sqlx-prepare test lint fmt
+.PHONY: help up down db-reset api ui design api-types sqlx-prepare test lint deploy fmt

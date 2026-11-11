@@ -1,0 +1,17 @@
+**/node_modules
+**/target
+**/.nuxt
+**/.output
+**/.venv
+**/__pycache__
+**/.DS_Store
+.git
+artifacts
+design
+spikes
+services
+# В образе своя версия Rust; файл заставил бы rustup качать ещё одну
+rust-toolchain.toml
+.env
+.env.*
+!.env.example
