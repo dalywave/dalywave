@@ -48,10 +48,44 @@
   .tab { display: flex; align-items: center; gap: 8px; background: #2a2a31; border-radius: 10px 10px 0 0; padding: 8px 12px; font-size: 13px; color: #d9d9e0; width: max-content; }
   .home { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: #fff; }
   footer { color: var(--muted); font-size: 13px; padding: 0 0 48px; }
+  .bgs { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; margin-bottom: 36px; }
+  .bgs h2, .section-title { margin: 0 0 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .section-title { margin: 0 0 16px; }
+  .bgs-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 22px; }
+  .bgs figure { margin: 0; display: grid; justify-items: center; gap: 10px; }
+  .bgs figure img { width: min(220px, 100%); height: auto; display: block; }
+  .bgs figcaption { display: grid; justify-items: center; gap: 2px; font-size: 14px; }
+  .bgs figcaption span { color: var(--muted); font-size: 13px; }
+  .dock { margin: 26px auto 0; width: max-content; max-width: 100%; display: flex; gap: 14px; padding: 10px 14px; border-radius: 22px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(20px); }
+  .dock img { width: 64px; height: 64px; display: block; }
+  .themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
+  .bgs .theme { margin: 0; display: grid; gap: 10px; justify-items: stretch; }
+  .bgs .theme figcaption { justify-items: center; }
+  .screen { position: relative; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; display: grid; place-items: center; }
+  .screen .app { display: grid; justify-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+  .screen .tile { width: 96px; height: 96px; position: relative; }
+  .screen .tile > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .theme figcaption { display: grid; gap: 2px; font-size: 14px; }
+  .theme figcaption span { color: var(--muted); font-size: 13px; }
+  .s-light { background: linear-gradient(160deg, #e9e5ff, #ffe8f1 55%, #fff1e3); color: #1b1b1f; }
+  .s-dark { background: radial-gradient(120% 90% at 30% 10%, #241a3a, #0b0b0e 70%); color: #f2f2f5; }
+  .s-tinted { background: radial-gradient(120% 90% at 30% 10%, #2e2108, #0b0b0e 70%); color: #f2f2f5; }
+  .s-clear { background:
+      radial-gradient(60% 50% at 20% 20%, #7b4dff 0%, transparent 70%),
+      radial-gradient(55% 45% at 85% 30%, #ff5e8a 0%, transparent 70%),
+      radial-gradient(70% 60% at 50% 95%, #ff9c45 0%, transparent 70%), #1a1022; color: #fff; }
+  .glass { -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
+    background: linear-gradient(160deg, rgba(255,255,255,.34), rgba(255,255,255,.08)); }
+  .masked { -webkit-mask: url(../brand/icon-rounded.svg) center / contain no-repeat; mask: url(../brand/icon-rounded.svg) center / contain no-repeat; }
+  @media (max-width: 1000px) { .themes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 1000px) {
     main { grid-template-columns: 1fr; }
   }
   @media (max-width: 640px) {
+    .bgs { padding: 20px 16px; }
+    .bgs-row { gap: 8px; }
+    .bgs figcaption span { font-size: 12px; text-align: center; }
     .wrap { padding: 0 16px; }
     header { padding-top: 28px; }
     h1 { font-size: 28px; }
@@ -69,6 +103,25 @@
     <p>Знак в духе Apple Music и Spotify: один простой белый символ на цветном поле. У каждого варианта — иконка приложения, мелкие размеры вплоть до вкладки браузера и пара с названием на тёмном и светлом.</p>
     <div class="palettes" id="palettes"></div>
   </header>
+  <section class="bgs" aria-labelledby="bgs-title">
+    <h2 id="bgs-title">Фон иконки</h2>
+    <p class="note">Знак — «Волна‑W», фон — «Сумерки»: ночь переходит в закат. «Ночь» и «Закат» остаются альтернативными иконками в настройках приложения, как в Telegram.</p>
+    <div class="bgs-row">
+      <figure><img src="../brand/icon-macos-1024.png" alt="Сумерки"><figcaption><b>Сумерки</b><span>основная</span></figcaption></figure>
+      <figure><img src="../brand/icon-macos-1024-night.png" alt="Ночь"><figcaption><b>Ночь</b><span>альтернативная</span></figcaption></figure>
+      <figure><img src="../brand/icon-macos-1024-sunset.png" alt="Закат"><figcaption><b>Закат</b><span>альтернативная</span></figcaption></figure>
+    </div>
+    <div class="dock">
+      <img src="../brand/icon-macos-1024.png" alt=""><img src="../brand/icon-macos-1024-night.png" alt=""><img src="../brand/icon-macos-1024-sunset.png" alt="">
+    </div>
+  </section>
+
+  <section class="bgs" aria-labelledby="themes-title">
+    <h2 id="themes-title">Темы значка в iOS и macOS</h2>
+    <p class="note">С iOS 26 и macOS 26 система показывает значок по-разному в зависимости от темы. Для каждой есть свой вариант: в приложения уходят слои для Icon Composer и варианты для каталога ресурсов Xcode.</p>
+    <div class="themes" id="themes"></div>
+  </section>
+  <h2 class="section-title">Варианты знака</h2>
   <main id="grid"></main>
   <footer>Цвет поля переключается сверху; знак от цвета не зависит и работает одним цветом.</footer>
 </div>
@@ -77,6 +130,7 @@ const palettes = {
   night: { name: 'Ночь', stops: ['#4B21FF', '#A21CFF', '#FF3D8E'], accent: '#a51cff' },
   deep: { name: 'Глубина', stops: ['#101B7A', '#2148FF', '#21C8F0'], accent: '#2f6bff' },
   dusk: { name: 'Закат', stops: ['#E0215F', '#FF4D3A', '#FFAE3A'], accent: '#ff5a3c' },
+  twilight: { name: 'Сумерки', stops: ['#4B21FF', '#B01CF0', '#FF3D7A', '#FF9A3C'], accent: '#d02cc8' },
 };
 
 // Синусоида по точкам — плавнее, чем кривые вручную
@@ -152,13 +206,11 @@ function icon(mark, palette, px, variant = 'color') {
   const S = 100;
   const bg = variant === 'color' ? `url(#g-${uid})` : variant === 'black' ? '#000' : '#fff';
   const fg = variant === 'white' ? '#000' : '#fff';
-  const [s0, s1, s2] = palette.stops;
+  const stops = palette.stops.map((c, i, all) => `<stop offset="${(i / (all.length - 1)).toFixed(2)}" stop-color="${c}"/>`).join('');
   const glyph = mark.glyph(fg, uid);
   return `<svg width="${px}" height="${px}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${mark.name}">
     <defs>
-      <linearGradient id="g-${uid}" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="${s0}"/><stop offset=".55" stop-color="${s1}"/><stop offset="1" stop-color="${s2}"/>
-      </linearGradient>
+      <linearGradient id="g-${uid}" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient>
       <radialGradient id="h-${uid}" cx=".22" cy=".12" r=".9">
         <stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/>
       </radialGradient>
@@ -210,16 +262,34 @@ const bar = document.getElementById('palettes');
 for (const [key, p] of Object.entries(palettes)) {
   const b = document.createElement('button');
   b.innerHTML = `<i style="background:linear-gradient(135deg, ${p.stops.join(',')})"></i>${p.name}`;
-  b.setAttribute('aria-pressed', key === 'night');
+  b.setAttribute('aria-pressed', key === 'twilight');
   b.onclick = () => { bar.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); render(key); };
   bar.append(b);
 }
-render('night');
+bar.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x.textContent === 'Сумерки'));
+render('twilight');
 
-// Фавиконка — рекомендованный знак
+// Темы значка: светлая — обычная иконка, тёмная — знак в цветах бренда на тёмном,
+// монохромная — система тонирует знак цветом пользователя, прозрачная — стекло из слоёв
+const wave = smoothPath([[16, 31], [33, 69], [50, 41], [67, 69], [84, 31]]);
+const glyphSvg = (stroke, extra = '') => `<svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(50 50) scale(.68) translate(-50 -50)">
+    <path d="${wave}" fill="none" stroke="${stroke}" stroke-width="11.5" stroke-linecap="round" stroke-linejoin="round" ${extra}/></g></svg>`;
+const themes = [
+  { cls: 's-light', name: 'Светлая', note: 'обычная иконка', tile: `<img src="../brand/icon-rounded.svg" alt="">` },
+  { cls: 's-dark', name: 'Тёмная', note: 'знак в цветах бренда на тёмном', tile: `<img class="masked" src="../brand/icon-dark.svg" alt="">` },
+  { cls: 's-tinted', name: 'Монохромная', note: 'система красит знак в цвет темы', tile: `<div class="masked" style="background:linear-gradient(180deg,#2a2418,#121008)"></div>${glyphSvg('#f6b445')}` },
+  { cls: 's-clear', name: 'Прозрачная', note: '«жидкое стекло» из слоёв', tile: `<div class="masked glass"></div>${glyphSvg('#fff', 'style="filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.25))" opacity=".95"')}` },
+];
+document.getElementById('themes').innerHTML = themes.map((t) => `
+  <figure class="theme">
+    <div class="screen ${t.cls}"><div class="app"><div class="tile">${t.tile}</div><span>DalyWave</span></div></div>
+    <figcaption><b>${t.name}</b><span>${t.note}</span></figcaption>
+  </figure>`).join('');
+
+// Фавиконка — выбранный знак на «Сумерках»
 const fav = document.createElement('link');
 fav.rel = 'icon';
-fav.href = 'data:image/svg+xml,' + encodeURIComponent(icon(marks[0], palettes.night, 64).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+fav.href = '../brand/icon-rounded.svg';
 document.head.append(fav);
 </script>
 </body>
