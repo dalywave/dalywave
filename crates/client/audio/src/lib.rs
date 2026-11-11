@@ -21,6 +21,7 @@
 mod controller;
 mod deck;
 mod decode;
+pub mod devices;
 mod error;
 mod meter;
 mod mixer;
@@ -46,11 +47,14 @@ pub use mixer::equal_power;
 /// Куда выводится звук.
 #[derive(Clone, Debug)]
 pub enum OutputConfig {
-    /// Системное устройство вывода по умолчанию через cpal (CoreAudio, WASAPI). На macOS поток
-    /// сам переходит на новое устройство по умолчанию (наушники, AirPods).
+    /// Устройство вывода через cpal (CoreAudio, WASAPI). По умолчанию — системное: на macOS
+    /// поток сам переходит на новое устройство по умолчанию (наушники, AirPods).
     Device {
         /// Желаемый размер буфера в кадрах; None — по умолчанию системы.
         buffer_frames: Option<u32>,
+        /// Выбранное устройство ([`devices::OutputDevice::id`]); None — системное по умолчанию.
+        /// Нет такого — играем на системном. Сменить на ходу — [`Engine::set_output_device`].
+        device: Option<String>,
     },
     /// Тестовый режим: выход рендерится в память так быстро, как готовы данные,
     /// без недогрузок. Используется для проверки стыков.
@@ -121,6 +125,7 @@ impl Default for EngineConfig {
         Self {
             output: OutputConfig::Device {
                 buffer_frames: None,
+                device: None,
             },
             ring_ms: 3000,
             start_threshold_ms: 100,
@@ -292,6 +297,9 @@ pub struct Snapshot {
     pub output_frames: u64,
     /// Сколько раз вывод открывался заново.
     pub output_reopens: u32,
+    /// Устройство, к которому привязан поток ([`devices::OutputDevice::id`]); None — поток
+    /// следует за устройством по умолчанию (или тестовый захват).
+    pub output_device: Option<String>,
 }
 
 pub(crate) enum Command {
@@ -317,6 +325,7 @@ pub(crate) enum Command {
         sample_rate: Option<u32>,
         reason: String,
     },
+    SetOutputDevice(Option<String>),
     Stop,
     Shutdown,
 }
@@ -369,6 +378,7 @@ impl Engine {
             buffer_frames: 0,
             output_frames: 0,
             output_reopens: 0,
+            output_device: None,
         }));
         let capture = Arc::new(Mutex::new(Vec::new()));
         // Устройство открывается в потоке контроллера (cpal::Stream не везде Send),
@@ -471,6 +481,12 @@ impl Engine {
             sample_rate: None,
             reason: reason.into(),
         });
+    }
+    /// Вывести звук на устройство ([`devices::output_devices`]); None — на системное по
+    /// умолчанию, поток следует за ним. Вывод открывается заново, трек продолжается с той же
+    /// позиции, пауза остаётся паузой. Пропадёт выбранное устройство — пауза и снова системное.
+    pub fn set_output_device(&self, id: Option<String>) {
+        self.send(Command::SetOutputDevice(id));
     }
     /// Тестовый режим: открыть захват заново с другой частотой — как смена устройства.
     pub fn reopen_capture(&self, sample_rate: u32) {

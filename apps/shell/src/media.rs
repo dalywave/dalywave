@@ -219,6 +219,11 @@ fn ios_observers(app: &AppHandle) -> Vec<dalywave_audio::apple::SessionObservers
     let was_playing = Arc::new(AtomicBool::new(false));
     let session = observe_session(move |ev| {
         log::info!("audio session: {ev:?}");
+        if ev == SessionEvent::RouteChanged {
+            // AirPlay, наушники, Bluetooth — шторке «Устройства» новый маршрут
+            crate::audio::changed(&handle);
+            return;
+        }
         let Some(engine) = handle.state::<Player>().engine() else {
             return;
         };
@@ -242,6 +247,7 @@ fn ios_observers(app: &AppHandle) -> Vec<dalywave_audio::apple::SessionObservers
                 }
             }
             SessionEvent::HeadphonesUnplugged => engine.pause(),
+            SessionEvent::RouteChanged => {}
             SessionEvent::MediaServicesReset => {
                 std::thread::spawn(move || {
                     if let Err(e) = dalywave_audio::apple::activate_audio_session() {

@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH nn AS (\n               SELECT a.recording_id, a.sound <=> $1::real[]::halfvec(1280) AS dist\n               FROM track_analysis a\n               WHERE a.sound IS NOT NULL\n                 AND ($4::real IS NULL OR a.energy BETWEEN $4 AND $5)\n                 AND ($6::real IS NULL OR a.valence BETWEEN $6 AND $7)\n                 AND ($8::real IS NULL OR a.danceability >= $8)\n                 AND ($9::real IS NULL OR a.bpm BETWEEN $9 AND $10)\n                 AND ($11::real IS NULL OR a.voice <= $11)\n                 AND ($12::text IS NULL OR (CASE WHEN a.language IS NOT NULL THEN a.language = 'ru'\n                          ELSE EXISTS (SELECT 1 FROM tracks t2 WHERE t2.recording_id = a.recording_id\n                                         AND (t2.title ~ '[А-Яа-яЁё]'\n                                              OR EXISTS (SELECT 1 FROM track_artists ta JOIN artists ar ON ar.id = ta.artist_id\n                                                         WHERE ta.track_id = t2.id AND ar.name ~ '[А-Яа-яЁё]')))\n                          END) = ($12::text = 'ru'))\n                 AND (NOT $13::bool OR NOT EXISTS (\n                          SELECT 1 FROM tracks t2 WHERE t2.recording_id = a.recording_id\n                            AND (EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = $3 AND p.track_id = t2.id)\n                                 OR EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $3 AND l.track_id = t2.id))))\n               ORDER BY a.sound <=> $1::real[]::halfvec(1280)\n               LIMIT $2\n           )\n           SELECT DISTINCT ON (nn.recording_id) t.id AS \"track_id!\", nn.recording_id AS \"recording_id!\",\n                  nn.dist AS \"dist!\"\n           FROM nn JOIN tracks t ON t.recording_id = nn.recording_id\n           ORDER BY nn.recording_id,\n                    EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $3 AND l.track_id = t.id) DESC,\n                    (t.album_id IS NULL), t.rank DESC NULLS LAST, t.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "dist!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float4Array",
+        "Int8",
+        "Uuid",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "fe8adeb029bd146e4451236ab91dbd79aadface054b48c7030c848a39b61a79b"
+}

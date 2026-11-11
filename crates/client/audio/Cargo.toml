@@ -26,7 +26,7 @@ objc2 = "0.6.5"
 block2 = "0.6"
 objc2-foundation = { version = "0.3.2", features = ["NSString", "NSDictionary", "NSValue", "NSNotification", "NSOperation", "NSData", "NSObject", "NSArray", "NSError", "block2"] }
 objc2-media-player = { version = "0.3.2", default-features = false, features = ["std", "block2", "objc2-core-foundation", "MPNowPlayingInfoCenter", "MPRemoteCommandCenter", "MPRemoteCommand", "MPRemoteCommandEvent", "MPMediaItem"] }
-objc2-core-foundation = { version = "0.3.2", features = ["CFCGTypes"] }
+objc2-core-foundation = { version = "0.3.2", features = ["CFCGTypes", "CFString"] }
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2-avf-audio = { version = "0.3.2", features = ["AVAudioSession", "AVAudioSessionTypes", "AVAudioSessionRoute"] }
@@ -35,3 +35,5 @@ objc2-ui-kit = { version = "0.3.2", default-features = false, features = ["std",
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSImage"] }
 objc2-media-player = { version = "0.3.2", default-features = false, features = ["objc2-app-kit"] }
+# Список устройств вывода: тип подключения (AirPlay, Bluetooth, USB…) и слежение за их появлением
+objc2-core-audio = { version = "0.3.2", default-features = false, features = ["std", "AudioHardware"] }

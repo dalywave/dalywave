@@ -197,12 +197,39 @@ pub struct ServerFetcher {
     pub failed_24h: i64,
 }
 
+/// Попытки скачать за день (UTC) у всех исполнителей.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceDay {
+    /// `2026-11-11`.
+    pub day: String,
+    /// Файл принят.
+    pub ok: i64,
+    /// Скачано, но не совпало — ждёт решения в «Спорных».
+    pub disputed: i64,
+    /// Записи нет в источниках.
+    pub unavailable: i64,
+    /// Сбои: повтор, окончательные, отложенные из-за исполнителя.
+    pub failed: i64,
+}
+
 /// Раздел «Источники»: кто качает аудио.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Sources {
     pub downloaders: Vec<Downloader>,
     pub server: ServerFetcher,
+    /// Последние 14 дней, старые первыми; дни без попыток — с нулями.
+    pub daily: Vec<SourceDay>,
+}
+
+/// «Проверить скачивание»: поставить трек вне очереди и посмотреть, как его скачают.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SourceCheck {
+    /// Какой трек; без него — свежий лайк без файла, иначе любой трек каталога без файла.
+    #[serde(default)]
+    pub track_id: Option<Uuid>,
 }
 
 #[cfg(test)]

@@ -28,6 +28,12 @@ pub const ACQUISITION_RESOLVED: &str = "acquisition.resolved";
 pub const RECO_SETTINGS_CHANGED: &str = "reco.settings_changed";
 /// Задачи рекомендаций запущены вне расписания: разведчик, пересчёт вкуса, анализ скачанного
 pub const RECO_RUN: &str = "reco.run";
+/// Настройки сервера изменены: политика подписок по умолчанию, часовой пояс
+pub const SETTINGS_CHANGED: &str = "settings.changed";
+/// Запись поставлена на скачивание заново из «Каталога»: поиском или по ссылке
+pub const RECORDING_REACQUIRE: &str = "recording.reacquire";
+/// «Проверить скачивание» в «Источниках»
+pub const SOURCE_CHECK: &str = "source.check";
 
 pub async fn record(
     db: impl PgExecutor<'_>,

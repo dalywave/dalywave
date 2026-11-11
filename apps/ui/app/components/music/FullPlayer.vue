@@ -23,7 +23,7 @@ const art = ref<HTMLElement | null>(null)
 const nextAt = computed(() => ((player.nextEntry || player.waveActive) && !player.pending && player.effectiveMode !== 'gapless' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
 const phonePeaks = computed(() => (player.peaks.length ? resamplePeaks(player.peaks, 56) : Array.from({ length: 56 }, () => 0.18)))
 const menuOpen = ref(false)
-const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value) : []))
+const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
 
 const CONTEXT_KEY: Record<string, string> = { album: 'record.album', playlist: 'record.playlist', artist: 'record.artist', radio: 'record.radio' }
 const contextLabel = computed(() => {
@@ -181,12 +181,22 @@ function onSheetCancel() {
   gesture = null
 }
 
+// Переход из меню над плеером: сначала плеер уезжает вниз, потом открывается страница
+const offCollapse = props.variant === 'phone'
+  ? ui.onCollapsePlayer(() => new Promise<void>((resolve) => {
+      const h = sheet.value?.clientHeight
+      if (!h || !open.value) return resolve()
+      settle(h, resolve)
+    }))
+  : null
+
 function onSheetClick(e: MouseEvent) {
   if (!swallowClick) return
   e.stopPropagation()
   e.preventDefault()
 }
 onBeforeUnmount(() => {
+  offCollapse?.()
   window.removeEventListener('keydown', onKey)
   offBeat?.()
 })

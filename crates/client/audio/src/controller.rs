@@ -98,6 +98,8 @@ struct OutputParts {
     channels: u16,
     ports: MixerPorts,
     load: Arc<LoadStats>,
+    /// Выбранное устройство, если открыто оно; None — устройство по умолчанию или захват
+    device: Option<String>,
 }
 
 /// Проблема вывода с номером потока: сообщения старого потока после открытия нового не нужны.
@@ -114,6 +116,10 @@ struct Controller {
     output_gen: u32,
     output_lost: bool,
     output_reopens: u32,
+    /// Куда выводить по выбору пользователя; None — устройство по умолчанию
+    device_pref: Option<String>,
+    /// Куда поток открыт на самом деле: выбранное могло пропасть
+    output_device: Option<String>,
     /// Тестовый захват: частота, с которой его открыли заново.
     capture_rate: Option<u32>,
     device_rate: u32,
@@ -171,6 +177,7 @@ pub(crate) fn run(
 
 fn open_output(
     cfg: &EngineConfig,
+    device: Option<&str>,
     capture_rate: Option<u32>,
     volume: f32,
     capture: &Arc<Mutex<Vec<f32>>>,
@@ -179,8 +186,8 @@ fn open_output(
 ) -> Result<OutputParts, AudioError> {
     let load = Arc::new(LoadStats::default());
     match cfg.output {
-        OutputConfig::Device { buffer_frames } => {
-            let (device, supported) = output::query_device()?;
+        OutputConfig::Device { buffer_frames, .. } => {
+            let (device, supported, device_id) = output::query_device(device)?;
             let rate = supported.sample_rate();
             let (mixer, ports) = Mixer::new(rate, cfg.start_threshold_ms, volume);
             let (tx, rx) = crossbeam_channel::unbounded::<OutputIssue>();
@@ -203,6 +210,7 @@ fn open_output(
                 channels: info.channels,
                 ports,
                 load,
+                device: device_id,
             })
         }
         OutputConfig::Capture { sample_rate } => {
@@ -214,6 +222,7 @@ fn open_output(
                 channels: 2,
                 ports,
                 load,
+                device: None,
             })
         }
     }
@@ -227,8 +236,25 @@ impl Controller {
         capture: Arc<Mutex<Vec<f32>>>,
     ) -> Result<Self, AudioError> {
         let (issues_tx, issues_rx) = crossbeam_channel::unbounded();
-        let parts = open_output(&cfg, None, cfg.volume, &capture, &issues_tx, 0)?;
-        log::info!("output: {} Hz, {} ch", parts.rate, parts.channels);
+        let device_pref = match &cfg.output {
+            OutputConfig::Device { device, .. } => device.clone(),
+            OutputConfig::Capture { .. } => None,
+        };
+        let parts = open_output(
+            &cfg,
+            device_pref.as_deref(),
+            None,
+            cfg.volume,
+            &capture,
+            &issues_tx,
+            0,
+        )?;
+        log::info!(
+            "output: {} Hz, {} ch, {}",
+            parts.rate,
+            parts.channels,
+            parts.device.as_deref().unwrap_or("system default")
+        );
         let (prep_tx, prep_rx) = crossbeam_channel::unbounded();
         Ok(Self {
             cache: SourceCache::with_resolver(cfg.user_agent.clone(), cfg.resolver.clone()),
@@ -245,6 +271,8 @@ impl Controller {
             output_gen: 0,
             output_lost: false,
             output_reopens: 0,
+            device_pref,
+            output_device: parts.device,
             capture_rate: None,
             device_rate: parts.rate,
             device_channels: parts.channels,
@@ -417,6 +445,7 @@ impl Controller {
                 sample_rate,
                 reason,
             } => self.reopen_output(sample_rate, &reason),
+            Command::SetOutputDevice(id) => self.set_output_device(id),
             Command::Stop => {
                 self.reset_all();
                 self.want_play = false;
@@ -663,6 +692,12 @@ impl Controller {
                         self.pause();
                     }
                     self.output_lost = true;
+                    if self.output_device.is_some() {
+                        // Пропало выбранное устройство (колонка AirPlay, ЦАП): дальше — системное.
+                        // Открываем сразу, на паузе, чтобы список устройств показал, где звук.
+                        self.device_pref = None;
+                        reopen = Some(format!("selected output device lost: {msg}"));
+                    }
                 }
                 OutputIssue::Invalidated(msg) => {
                     log::warn!("output stream invalidated: {msg}");
@@ -674,6 +709,22 @@ impl Controller {
         if let Some(reason) = reopen {
             self.reopen_output(None, &reason);
         }
+    }
+
+    /// Выбор устройства вывода: открыть вывод заново, если звук идёт не туда.
+    fn set_output_device(&mut self, id: Option<String>) {
+        self.device_pref = id;
+        if matches!(self.cfg.output, OutputConfig::Capture { .. }) {
+            return;
+        }
+        if self.device_pref == self.output_device && !self.output_lost {
+            return;
+        }
+        let reason = match &self.device_pref {
+            Some(id) => format!("output device selected: {id}"),
+            None => "output follows the system default".to_string(),
+        };
+        self.reopen_output(None, &reason);
     }
 
     /// Открыть вывод заново (смена устройства, сброс медиасервисов) и продолжить текущий трек
@@ -694,6 +745,7 @@ impl Controller {
         let generation = self.output_gen.wrapping_add(1);
         match open_output(
             &self.cfg,
+            self.device_pref.as_deref(),
             capture_rate,
             self.volume,
             &self.capture,
@@ -708,25 +760,28 @@ impl Controller {
                 self.load = parts.load;
                 self.device_rate = parts.rate;
                 self.device_channels = parts.channels;
+                self.output_device = parts.device;
                 if matches!(self.cfg.output, OutputConfig::Capture { .. }) {
                     self.capture_rate = Some(parts.rate);
                 }
                 self.output_lost = false;
                 self.output_reopens += 1;
                 log::info!(
-                    "output reopened ({reason}): {} Hz, {} ch, position {position} ms",
-                    parts.rate,
-                    parts.channels
+                    "output reopened ({reason}): {} Hz, {} ch, {}, position {position} ms",
+                    self.device_rate,
+                    self.device_channels,
+                    self.output_device.as_deref().unwrap_or("system default")
                 );
                 self.emit(Event::Output {
-                    sample_rate: parts.rate,
-                    channels: parts.channels,
+                    sample_rate: self.device_rate,
+                    channels: self.device_channels,
                     reason: reason.into(),
                 });
             }
             Err(e) => {
                 log::warn!("could not reopen the output ({reason}): {e}");
                 self.output = Output::None;
+                self.output_device = None;
                 self.output_lost = true;
                 self.seek_target_ms = self.index.map(|_| position);
                 if self.want_play {
@@ -1326,6 +1381,7 @@ impl Controller {
             buffer_frames: self.load.buffer_frames.load(Ordering::Relaxed),
             output_frames: self.ports.shared.clock.load(Ordering::Relaxed),
             output_reopens: self.output_reopens,
+            output_device: self.output_device.clone(),
         };
         if let Ok(mut s) = self.snap.lock() {
             *s = snap;

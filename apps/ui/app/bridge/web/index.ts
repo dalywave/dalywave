@@ -1,14 +1,15 @@
 // Мост сайта: HTTP к нашему API, звук — WebAudioEngine, события — пачками, живые события — WebSocket.
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
-import type { EventResult, LikedTrackPage, Track } from '~/api/types'
+import type { EventResult, LikedTrackPage, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AudioEngine, Bridge, Downloader, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveTrack, WindowChrome } from '../types'
+import type { AudioEngine, AudioRoutes, Bridge, Downloader, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { lazyDownloader } from '../tauri/downloader'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
 import { createHttp, done, toApiError, unwrap, type HttpOptions } from './http'
 import { createLive } from './live'
+import { devOutputs, safariOutputs } from './outputs'
 
 // По каким путям OpenAPI видно, что раздел уже на сервере
 const SECTION_READY: Record<Section, (paths: string[]) => boolean> = {
@@ -53,6 +54,8 @@ export interface WebBridgeOptions extends HttpOptions {
   audio?: () => AudioEngine
   /** Загрузчик на компьютере (приложение); у сайта его нет */
   downloader?: Downloader | null
+  /** Вывод звука приложения; на сайте — окно AirPlay Safari, если оно есть */
+  outputs?: AudioRoutes | null
 }
 
 /** Только разработка: загрузчик изображает мок — `?downloader=idle|working|paused|offline|…` */
@@ -64,7 +67,27 @@ function devDownloader(): Downloader | null {
   return null
 }
 
+/** Только разработка: вывод звука изображает мок — `?outputs=picker|list` */
+function devOutputsFromQuery(): AudioRoutes | null {
+  if (import.meta.dev && typeof location !== 'undefined') {
+    const scenario = new URLSearchParams(location.search).get('outputs')
+    if (scenario) return devOutputs(scenario)
+  }
+  return null
+}
+
+function waveStart(s: WaveSession): WaveStart {
+  return {
+    id: s.id,
+    state: s.state,
+    ready: s.ready,
+    need: s.need,
+    queue: s.queue.map((i): WaveTrack => ({ track: i.track, reason: i.reason.text })),
+  }
+}
+
 export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
+  const audio = opts.audio?.() ?? new WebAudioEngine()
   const signedOut = new Set<() => void>()
   const endSession = () => signedOut.forEach(cb => cb())
   opts.onSessionEnded?.(endSession)
@@ -207,6 +230,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     updates: opts.updates ?? { onAvailable: () => () => {}, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
+    outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
 
     auth: {
       providers: () => unwrap(api.GET('/api/auth/providers')),
@@ -283,9 +307,16 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     wave: {
       async start(settings) {
         await ready()
-        if (mock && mocked('wave')) return crypto.randomUUID()
-        const session = await unwrap(api.POST('/api/wave/sessions', { body: { settings } }))
-        return session.id
+        if (mock && mocked('wave')) {
+          const queue = await mock.waveNext(settings, 6, [])
+          return { id: crypto.randomUUID(), state: 'ready', ready: queue.length, need: 0, queue }
+        }
+        return waveStart(await unwrap(api.POST('/api/wave/sessions', { body: { settings } })))
+      },
+      async session(id) {
+        await ready()
+        if (mock && mocked('wave')) return { id, state: 'ready', ready: 0, need: 0, queue: [] }
+        return waveStart(await unwrap(api.GET('/api/wave/sessions/{id}', { params: { path: { id } } })))
       },
       async next(session, settings, count, exclude) {
         await ready()
@@ -373,15 +404,32 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       updateUser: (id, patch) => done(api.PATCH('/api/admin/users/{id}', { params: { path: { id } }, body: patch })),
       sessions: userId => unwrap(api.GET('/api/admin/sessions', { params: { query: { userId } } })),
       revokeSession: id => done(api.DELETE('/api/admin/sessions/{id}', { params: { path: { id } } })),
-      audit: (cursor, limit = 50) => unwrap(api.GET('/api/admin/audit', { params: { query: { cursor: cursor ?? undefined, limit } } })),
+      audit: (cursor, limit = 50, filter = {}) => unwrap(api.GET('/api/admin/audit', { params: { query: { cursor: cursor ?? undefined, limit, kind: filter.kind || undefined, actor: filter.actor || undefined } } })),
       jobs: (q = {}) => unwrap(api.GET('/api/admin/jobs', { params: { query: { lane: q.lane, status: q.status, kind: q.kind, cursor: q.cursor ?? undefined, limit: q.limit } } })),
       retryJob: id => done(api.POST('/api/admin/jobs/{id}/retry', { params: { path: { id } } })),
       cancelJob: id => done(api.POST('/api/admin/jobs/{id}/cancel', { params: { path: { id } } })),
       lanes: () => unwrap(api.GET('/api/admin/lanes')),
       updateLane: (lane, patch) => done(api.PATCH('/api/admin/lanes/{lane}', { params: { path: { lane } }, body: patch })),
+      acquisitions: (q = {}) => unwrap(api.GET('/api/admin/acquisitions', { params: { query: { status: q.status, active: q.active, cursor: q.cursor ?? undefined, limit: q.limit } } })),
+      acquisition: id => unwrap(api.GET('/api/admin/acquisitions/{id}', { params: { path: { id } } })),
+      resolve: (id, req) => unwrap(api.POST('/api/admin/acquisitions/{id}/resolve', { params: { path: { id } }, body: req })),
+      preview: trackId => unwrap(api.GET('/api/admin/tracks/{id}/preview', { params: { path: { id: trackId } } })),
+      sources: () => unwrap(api.GET('/api/admin/sources')),
+      checkDownload: trackId => unwrap(api.POST('/api/admin/sources/check', { body: { trackId } })),
+      createDownloader: name => unwrap(api.POST('/api/admin/downloaders', { body: { name } })),
+      revokeDownloader: id => done(api.DELETE('/api/admin/downloaders/{id}', { params: { path: { id } } })),
+      recordings: (q = {}) => unwrap(api.GET('/api/admin/recordings', { params: { query: { status: q.status, source: q.source || undefined, verified: q.verified, q: q.q || undefined, cursor: q.cursor ?? undefined, limit: q.limit } } })),
+      reacquire: (id, url) => unwrap(api.POST('/api/admin/recordings/{id}/reacquire', { params: { path: { id } }, body: { url } })),
+      storage: () => unwrap(api.GET('/api/admin/storage')),
+      imports: () => unwrap(api.GET('/api/admin/imports')),
+      settings: () => unwrap(api.GET('/api/admin/settings')),
+      updateSettings: patch => unwrap(api.PATCH('/api/admin/settings', { body: patch })),
+      reco: () => unwrap(api.GET('/api/admin/reco')),
+      updateReco: patch => unwrap(api.PATCH('/api/admin/reco/settings', { body: patch })),
+      runReco: task => unwrap(api.POST('/api/admin/reco/run', { body: { task } })),
     },
 
-    audio: opts.audio?.() ?? new WebAudioEngine(),
+    audio,
   }
   return bridge
 }

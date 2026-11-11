@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// Телефон: очередь, текст, устройства и «о треке» — шторками снизу
+// Телефон: очередь, текст, устройства и «о треке» — листами снизу. Открываются до половины
+// экрана (или по содержимому), вверх — во весь экран; при переходе на другую страницу закрываются
 const ui = useUiStore()
 const player = usePlayerStore()
+const route = useRoute()
 const { t } = useI18n()
 
 const open = computed({
@@ -10,21 +12,23 @@ const open = computed({
     if (!v) ui.sheetTab = null
   },
 })
-const title = computed(() => (ui.sheetTab ? t(`player.${ui.sheetTab}`) : ''))
-watch(() => ui.sheetTab, (tab) => {
-  if (tab === 'devices') void player.loadDevices()
+// Пока лист уезжает, содержимое остаётся прежним
+const tab = ref(ui.sheetTab)
+watch(() => ui.sheetTab, (v) => {
+  if (v) tab.value = v
+  if (v === 'devices') void player.loadDevices()
 })
+watch(() => route.path, () => (ui.sheetTab = null))
+const title = computed(() => (tab.value ? t(`player.${tab.value}`) : ''))
 </script>
 
 <template>
-  <UiSheet v-model:open="open" :title="title" side="bottom">
-    <div class="pad">
-      <MusicQueuePanel v-if="ui.sheetTab === 'queue'" />
-      <UiEmptyState v-else-if="ui.sheetTab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
-      <div v-else-if="ui.sheetTab === 'devices'">
-        <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
-      </div>
-      <MusicAboutTrack v-else-if="ui.sheetTab === 'about'" :track="player.current?.track ?? null" />
+  <UiSheet v-model:open="open" :title="title" detents="expand">
+    <MusicDeviceList v-if="tab === 'devices'" :devices="player.devices" :playing="player.playing" variant="sheet" @select="player.selectDevice" />
+    <div v-else class="pad">
+      <MusicQueuePanel v-if="tab === 'queue'" />
+      <UiEmptyState v-else-if="tab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
+      <MusicAboutTrack v-else-if="tab === 'about'" :track="player.current?.track ?? null" />
     </div>
   </UiSheet>
 </template>

@@ -10,6 +10,7 @@ const ui = useUiStore()
 const toast = useToast()
 const lang = useLang()
 const { t } = useI18n()
+const { t: tl } = useI18n({ useScope: 'local' })
 
 const settings = computed({
   get: () => player.wave,
@@ -22,8 +23,13 @@ const mood = computed({
 const summary = computed(() => waveSummary(player.wave, lang.value))
 const now = computed(() => (player.waveActive ? player.current : null))
 const isPlaying = computed(() => player.waveActive && player.playing)
+// Волну готовят: начало под настройки скачивается на сервере — без технических подробностей, только ход
+const preparing = computed(() => !!player.wavePrep || (player.waveLoading && !player.waveActive))
+const need = computed(() => Math.max(1, player.wavePrep?.need || 3))
+const ready = computed(() => Math.min(need.value, player.wavePrep?.ready ?? 0))
 
 function onPlay() {
+  if (preparing.value) return
   if (player.waveActive && player.current) return player.toggle()
   return player.startWave()
 }
@@ -42,9 +48,19 @@ function savePreset() {
         <h1 class="hero__title">{{ t('wave.title') }}</h1>
         <p class="hero__summary">{{ summary }}</p>
       </div>
-      <div class="hero__play">
-        <MusicWavePlayButton :playing="isPlaying" :loading="player.waveLoading && !now" :size="ui.isPhone ? 88 : 72" :label="isPlaying ? t('common.pause') : t('wave.listen')" @click="onPlay" />
-        <div class="hero__now" aria-live="polite">
+      <div class="hero__play" :class="{ 'hero__play--prep': preparing }">
+        <MusicWavePlayButton :playing="isPlaying" :loading="preparing || (player.waveLoading && !now)" :size="ui.isPhone ? 88 : 72" :label="preparing ? tl('preparing') : isPlaying ? t('common.pause') : t('wave.listen')" @click="onPlay" />
+        <div v-if="preparing" class="hero__prep" role="status" aria-live="polite">
+          <span class="hero__prep-title">{{ tl('preparing') }}</span>
+          <span class="hero__prep-sub">{{ tl('hint') }}</span>
+          <div class="hero__prep-row">
+            <span class="hero__dots" role="img" :aria-label="tl('progress', { ready, need })">
+              <span v-for="i in need" :key="i" class="hero__dot" :class="{ 'is-on': i <= ready, 'is-next': i === ready + 1 }" />
+            </span>
+            <UiButton :size="ui.isPhone ? 'md' : 'sm'" variant="ghost" icon="ph:x" @click="player.cancelWavePrep()">{{ tl('cancel') }}</UiButton>
+          </div>
+        </div>
+        <div v-else class="hero__now" aria-live="polite">
           <template v-if="now">
             <span class="hero__now-label">{{ isPlaying ? t('wave.nowPlaying') : t('wave.paused') }}</span>
             <span class="hero__now-title">{{ now.track.title }}</span>
@@ -101,6 +117,31 @@ function savePreset() {
 .hero__reason { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
 .hero__reason :deep(.iconify) { font-size: 12px; }
 .hero__dock { grid-area: dock; display: flex; min-width: 0; }
+.hero__prep { display: flex; flex-direction: column; gap: 4px; min-width: 0; animation: hero-prep-in var(--dur-4) var(--ease-out) both; }
+.hero__prep-title { font-size: var(--fs-h4); font-weight: 650; }
+.hero__prep-sub { font-size: var(--fs-small); color: var(--text-2); text-wrap: pretty; }
+.hero__prep-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; margin-left: -10px; }
+.hero__dots { display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; }
+.hero__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.18);
+  transition: background var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-spring), box-shadow var(--dur-3) var(--ease-out);
+}
+.hero__dot.is-on { background: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent); transform: scale(1.15); }
+.hero__dot.is-next { animation: hero-dot 1.4s var(--ease-in-out) infinite; }
+@keyframes hero-dot {
+  0%, 100% { background: rgba(255, 255, 255, 0.18); transform: scale(1); }
+  50% { background: color-mix(in srgb, var(--accent) 55%, rgba(255, 255, 255, 0.2)); transform: scale(1.2); }
+}
+@keyframes hero-prep-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__prep, .hero__dot.is-next { animation: none; }
+}
 .hero__below { margin-top: 12px; }
 
 @media (max-width: 699px) {
@@ -108,6 +149,10 @@ function savePreset() {
   .hero__stage { display: flex; flex-direction: column; justify-content: flex-end; height: 388px; min-height: 0; padding: 0 20px 20px; border-radius: 28px; }
   .hero__wave::after { background: linear-gradient(0deg, rgba(2, 5, 9, 0.85) 0%, rgba(2, 5, 9, 0.35) 34%, transparent 55%); }
   .hero__play { position: absolute; left: 0; right: 0; top: 30%; justify-content: center; padding: 0; transform: translateY(-50%); }
+  .hero__play--prep { flex-direction: column; gap: 14px; top: 34%; }
+  .hero__prep { align-items: center; text-align: center; }
+  .hero__prep-sub { display: none; }
+  .hero__prep-row { margin: 2px 0 0; }
   .hero__now, .hero__eyebrow, .hero__dock { display: none; }
   .hero__intro { gap: 6px; }
   .hero__title { font-size: 34px; }
@@ -115,3 +160,20 @@ function savePreset() {
   .hero__below { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 }
 </style>
+
+<i18n lang="json">
+{
+  "ru": {
+    "preparing": "Готовим волну…",
+    "hint": "Подбираем музыку под эти настройки",
+    "progress": "Готово {ready} из {need}",
+    "cancel": "Отменить"
+  },
+  "en": {
+    "preparing": "Preparing your wave…",
+    "hint": "Picking music for these settings",
+    "progress": "{ready} of {need} ready",
+    "cancel": "Cancel"
+  }
+}
+</i18n>

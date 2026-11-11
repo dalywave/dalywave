@@ -8,6 +8,7 @@ import type { Bridge, Platform, WindowChrome, WindowState } from '../types'
 import { createWebBridge } from '../web'
 import { NativeAudioEngine } from './audio'
 import { createTauriDownloader } from './downloader'
+import { createTauriOutputs } from './outputs'
 import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell } from './shell'
 
 export function isTauri(): boolean {
@@ -113,6 +114,7 @@ export function createTauriBridge(): Bridge {
     audio: () => new NativeAudioEngine(loadShell),
     // Загрузчик музыки — только в приложении для компьютера (apps/shell/src/downloader.rs)
     downloader: platform === 'macos' || platform === 'windows' ? createTauriDownloader(loadShell) : null,
+    outputs: createTauriOutputs(platform, loadShell),
     baseUrl,
     token: getToken,
     // 401 на любом запросе: токен отозван — стираем его, экран входа покажет хранилище входа

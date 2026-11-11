@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT a.id, a.recording_id, a.track_id, a.status, a.reason, a.lane, a.error, a.attempts, a.job_id,\n                  a.requested_by, a.worker, a.candidates, a.chosen, a.created_at, a.updated_at, a.finished_at,\n                  r.audio_status, j.status AS \"job_status?\", j.payload AS \"job_payload?\"\n           FROM acquisitions a\n           JOIN recordings r ON r.id = a.recording_id\n           LEFT JOIN jobs j ON j.id = a.job_id\n           WHERE ($1::text IS NULL OR a.status = $1)\n             AND ($2::timestamptz IS NULL OR (a.updated_at, a.id) < ($2, $3))\n             AND ($4::uuid IS NULL OR a.id = $4)\n           ORDER BY a.updated_at DESC, a.id DESC\n           LIMIT $5",
+  "query": "SELECT a.id, a.recording_id, a.track_id, a.status, a.reason, a.lane, a.error, a.attempts, a.job_id,\n                  a.requested_by, a.worker, a.candidates, a.chosen, a.created_at, a.updated_at, a.finished_at,\n                  r.audio_status, j.status AS \"job_status?\", j.payload AS \"job_payload?\"\n           FROM acquisitions a\n           JOIN recordings r ON r.id = a.recording_id\n           LEFT JOIN jobs j ON j.id = a.job_id\n           WHERE ($1::text IS NULL OR a.status = $1)\n             AND ($2::timestamptz IS NULL OR (a.updated_at, a.id) < ($2, $3))\n             AND ($4::uuid IS NULL OR a.id = $4)\n             AND ($6::bool IS NULL OR (a.status IN ('queued', 'matching', 'downloading', 'verifying', 'processing')) = $6)\n           ORDER BY a.updated_at DESC, a.id DESC\n           LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -219,7 +219,8 @@
         "Timestamptz",
         "Uuid",
         "Uuid",
-        "Int8"
+        "Int8",
+        "Bool"
       ]
     },
     "nullable": [
@@ -244,5 +245,5 @@
       false
     ]
   },
-  "hash": "6eb5e7410530fb3f55d6aeca9e62e935da901fb3062c3ebbc30a6f8ba9151d9b"
+  "hash": "3279c00172607527da13b876504daf3359bb65674d1938bd5929a49205d8e7da"
 }

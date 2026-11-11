@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS \"id!\" FROM (\n                  (SELECT t.id, 0 AS tier, l.created_at AS at, 0 AS rank\n                   FROM liked_tracks l JOIN tracks t ON t.id = l.track_id\n                   JOIN recordings r ON r.id = t.recording_id\n                   WHERE r.audio_status IN ('none', 'failed') AND t.deezer_id IS NOT NULL\n                   ORDER BY l.created_at DESC LIMIT 10)\n                  UNION ALL\n                  (SELECT t.id, 1, t.created_at, COALESCE(t.rank, 0)\n                   FROM tracks t JOIN recordings r ON r.id = t.recording_id\n                   WHERE r.audio_status = 'none' AND t.deezer_id IS NOT NULL\n                   ORDER BY t.rank DESC NULLS LAST LIMIT 10)\n               ) t\n               ORDER BY t.tier, t.at DESC, t.rank DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cbff478d7223aacff121b5d03f4a9e383647a487acca3a5f674b0fce2a2fd67a"
+}

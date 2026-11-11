@@ -81,9 +81,7 @@ const language = computed({
             <span v-else>{{ initial }}</span>
           </span>
         </template>
-        <UiButton v-if="!ui.isPhone" variant="ghost" size="sm" @click="logout">{{ t('logout') }}</UiButton>
       </SettingsRow>
-      <SettingsRow v-if="ui.isPhone" as="button" :title="t('logout')" danger @click="logout" />
     </SettingsGroup>
 
     <SettingsGroup :title="t('playback')">
@@ -149,6 +147,11 @@ const language = computed({
       <SettingsRow v-if="health" :title="t('version')">
         <span class="value tnum">{{ health.version }}</span>
       </SettingsRow>
+    </SettingsGroup>
+
+    <!-- Выход — отдельно в самом низу, как в Spotify и Apple Music -->
+    <SettingsGroup :aria-label="t('logout')">
+      <SettingsRow as="button" :title="t('logout')" danger @click="logout" />
     </SettingsGroup>
   </div>
 </template>

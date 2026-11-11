@@ -58,9 +58,10 @@ watch(() => route.fullPath, (to, from) => {
   })
 })
 
-// Сцена плеера закрывается при переходе на другую страницу
+// Плеер закрывается при переходе на другую страницу; на телефоне — уезжает вниз
 watch(() => route.path, () => {
   if (!ui.isPhone) ui.playerOpen = false
+  else if (ui.playerOpen) void ui.collapsePlayer()
 })
 </script>
 

@@ -1,5 +1,5 @@
-//! Настройки оболочки: адрес сервера, язык системных меню и загрузчик на Mac (включён ли, на
-//! паузе ли). Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают —
+//! Настройки оболочки: адрес сервера, язык системных меню, загрузчик на Mac (включён ли, на
+//! паузе ли) и выбранное устройство вывода звука на компьютере. Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают —
 //! токены живут в связке ключей.
 
 use std::{path::PathBuf, sync::Mutex};
@@ -41,6 +41,9 @@ struct Stored {
     /// Пауза загрузчика не запоминается им самим: приложение передаёт `--paused` при запуске
     #[serde(default, skip_serializing_if = "Option::is_none")]
     downloader_paused: Option<bool>,
+    /// Устройство вывода звука (`cpal::DeviceId` строкой); нет — системное по умолчанию
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    audio_output: Option<String>,
 }
 
 pub struct Settings {
@@ -130,6 +133,18 @@ impl Settings {
     pub fn set_downloader_paused(&self, paused: bool) -> ShellResult<()> {
         let mut stored = self.lock();
         stored.downloader_paused = Some(paused);
+        self.save(&stored)
+    }
+
+    #[cfg(desktop)]
+    pub fn audio_output(&self) -> Option<String> {
+        self.lock().audio_output.clone()
+    }
+
+    #[cfg(desktop)]
+    pub fn set_audio_output(&self, id: Option<String>) -> ShellResult<()> {
+        let mut stored = self.lock();
+        stored.audio_output = id;
         self.save(&stored)
     }
 

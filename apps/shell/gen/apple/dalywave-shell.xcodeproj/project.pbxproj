@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		088C57F76473BB1FEBFB7418 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D439E9BF9652190398434011 /* CoreAudio.framework */; };
+		0D7043CC236F437E07150F2E /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EE8D3754EB6635BC61E5266 /* AVKit.framework */; };
 		0F4DB40E3DCDAC99EBCCC9D4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 338F139382A68AFE2AE173BF /* Security.framework */; };
 		1A43260E845B988075568FBC /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 375402116E2037E9999A79FF /* MediaPlayer.framework */; };
 		2BBE475EF6512BD0CBC946F5 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51D42D29EB38AED4AEBFFAAE /* libapp.a */; };
@@ -47,6 +48,7 @@
 		0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
 		15BF5CCB7F35C1D588A8384C /* tray.rs */ = {isa = PBXFileReference; path = tray.rs; sourceTree = "<group>"; };
 		17F5055370C371339A65AFD4 /* macos.rs */ = {isa = PBXFileReference; path = macos.rs; sourceTree = "<group>"; };
+		1AD983A4882E2E568FD6593D /* audio.rs */ = {isa = PBXFileReference; path = audio.rs; sourceTree = "<group>"; };
 		21915CE4038CA63D3585AB63 /* ios.rs */ = {isa = PBXFileReference; path = ios.rs; sourceTree = "<group>"; };
 		253DBBE975A202E6D5DF3810 /* error.rs */ = {isa = PBXFileReference; path = error.rs; sourceTree = "<group>"; };
 		338F139382A68AFE2AE173BF /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
@@ -55,6 +57,8 @@
 		39AE223214B55ED7B90ABF77 /* settings.rs */ = {isa = PBXFileReference; path = settings.rs; sourceTree = "<group>"; };
 		3C12E0D418269F691759B755 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		51D42D29EB38AED4AEBFFAAE /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		5D23FE966015BD36E8390CBC /* downloader.rs */ = {isa = PBXFileReference; path = downloader.rs; sourceTree = "<group>"; };
+		5EE8D3754EB6635BC61E5266 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
 		6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		73A56A10B0D7E0D2A07AAD02 /* updates.rs */ = {isa = PBXFileReference; path = updates.rs; sourceTree = "<group>"; };
 		759968486A44C6A199A816CF /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
@@ -95,6 +99,7 @@
 				C2800CEC082EC5AB9DFDE72E /* UIKit.framework in Frameworks */,
 				4DE8D75E722B36C791198AD0 /* WebKit.framework in Frameworks */,
 				EA4F0FAF5D753B9B1996A97B /* AVFAudio.framework in Frameworks */,
+				0D7043CC236F437E07150F2E /* AVKit.framework in Frameworks */,
 				70F6F09D1150B49EA7E8E5B3 /* AudioToolbox.framework in Frameworks */,
 				088C57F76473BB1FEBFB7418 /* CoreAudio.framework in Frameworks */,
 				1A43260E845B988075568FBC /* MediaPlayer.framework in Frameworks */,
@@ -112,6 +117,7 @@
 				06F48107150D751B1FEB95D3 /* AudioToolbox.framework */,
 				E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */,
 				0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */,
+				5EE8D3754EB6635BC61E5266 /* AVKit.framework */,
 				D439E9BF9652190398434011 /* CoreAudio.framework */,
 				EB852A5757460E97877E17EA /* CoreGraphics.framework */,
 				51D42D29EB38AED4AEBFFAAE /* libapp.a */,
@@ -138,7 +144,9 @@
 		0D971B9401EC3B8438183AB2 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				1AD983A4882E2E568FD6593D /* audio.rs */,
 				82E855B1FFBF5A66BB26A28E /* auth.rs */,
+				5D23FE966015BD36E8390CBC /* downloader.rs */,
 				253DBBE975A202E6D5DF3810 /* error.rs */,
 				21915CE4038CA63D3585AB63 /* ios.rs */,
 				0144B38ADB9470106F94418D /* lib.rs */,
@@ -233,18 +241,18 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_BFB9FA0E-3BD1-4980-B12C-985A12B631C4" /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = arm64;
-			sourceTree = "<group>";
-		};
-		"TEMP_EA758224-A6DA-475D-BFAB-4AF23858D10B" /* x86_64 */ = {
+		"TEMP_C50F014F-39A1-4942-8D1A-37BD5D4C41D9" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
+			sourceTree = "<group>";
+		};
+		"TEMP_FB79C601-630B-4579-9474-2986B0B8B5F0" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

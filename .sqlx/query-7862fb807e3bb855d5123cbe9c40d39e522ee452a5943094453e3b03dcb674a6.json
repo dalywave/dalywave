@@ -1,0 +1,319 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id, r.isrc, r.duration_ms, r.audio_status, r.status_changed_at,\n                  (SELECT t.id FROM tracks t WHERE t.recording_id = r.id\n                   ORDER BY (t.album_id IS NULL), t.id LIMIT 1) AS \"track_id?\",\n                  (SELECT count(*) FROM tracks t WHERE t.recording_id = r.id) AS \"tracks!\",\n                  (SELECT count(*) FROM audio_files x WHERE x.recording_id = r.id) AS \"files!\",\n                  f.id AS \"file_id?\", f.codec AS \"codec?\", f.container AS \"container?\", f.lossless AS \"lossless?\",\n                  f.bitrate_kbps, f.sample_rate, f.duration_ms AS \"file_duration_ms?\", f.size_bytes AS \"size_bytes?\",\n                  f.source AS \"source?\", f.source_ref, f.source_title, f.loudness_lufs, f.true_peak_db,\n                  f.match_score, f.verified AS \"verified?\", f.verify_similarity, f.acquired_by,\n                  f.created_at AS \"file_created_at?\"\n           FROM recordings r\n           LEFT JOIN audio_files f ON f.id = r.primary_file_id\n           WHERE (($1::text IS NULL AND r.audio_status <> 'none') OR r.audio_status = $1)\n             AND ($2::text IS NULL OR f.source = $2)\n             AND ($3::bool IS NULL OR f.verified = $3)\n             AND ($4::text IS NULL OR EXISTS (\n                   SELECT 1 FROM tracks t WHERE t.recording_id = r.id\n                     AND (search_norm(t.title) LIKE search_norm($4)\n                          OR EXISTS (SELECT 1 FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                                     WHERE ta.track_id = t.id AND search_norm(a.name) LIKE search_norm($4)))))\n             AND ($5::timestamptz IS NULL OR (r.status_changed_at, r.id) < ($5, $6))\n           ORDER BY r.status_changed_at DESC, r.id DESC\n           LIMIT $7",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "audio_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "status_changed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "status_changed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "track_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "files!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_id?",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "codec?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "container?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "container"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "lossless?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "lossless"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "bitrate_kbps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "bitrate_kbps"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "sample_rate",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "sample_rate"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "file_duration_ms?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "size_bytes?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "source?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "source_ref",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "source_ref"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "source_title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "source_title"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "loudness_lufs",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "loudness_lufs"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "true_peak_db",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "true_peak_db"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "match_score",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "match_score"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "verified?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "verified"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "verify_similarity",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "verify_similarity"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "acquired_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "acquired_by"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "file_created_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Timestamptz",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "7862fb807e3bb855d5123cbe9c40d39e522ee452a5943094453e3b03dcb674a6"
+}

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM jobs WHERE kind IN ('scout_artist', 'scout_charts')\n                                AND status IN ('queued', 'running') AND id <> $1) AS \"last!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "20244a93b5f51d8735998fe40eb3f56db8bb566cf9142198c29c0a5457b42ab7"
+}

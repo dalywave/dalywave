@@ -2,7 +2,9 @@
 // в приложениях — оболочка Tauri (окно, вход через системный браузер) и аудиодвижок на Rust,
 // который сам ведёт «Сейчас играет» и пульт системы. Экраны пишутся один раз.
 import type {
-  AddPlaylistItems, AdminOverview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
+  AddPlaylistItems, AdminAcquisition, AdminAcquisitionPage, AdminImportList, AdminOverview, AdminRecordingPage,
+  AcquisitionStatus, AudioStatus, DownloaderToken, RecoOverview, RecoRunResult, RecoSettings,
+  RecoSettingsPatch, RecoTask, ResolveRequest, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
   DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
@@ -33,6 +35,20 @@ export interface WaveSettings {
 export interface WaveTrack {
   track: Track
   reason: string
+}
+
+/**
+ * Начало волны: сервер подбирает его под настройки до запуска. `preparing` — первые треки ещё
+ * скачиваются (не дольше полутора минут), `ready` — очередь можно играть, готовое в ней первым.
+ */
+export interface WaveStart {
+  id: string
+  state: 'preparing' | 'ready'
+  /** Сколько треков начала уже на сервере … */
+  ready: number
+  /** … и сколько нужно, чтобы начать */
+  need: number
+  queue: WaveTrack[]
 }
 
 export interface TrackSource {
@@ -96,6 +112,37 @@ export interface PlaybackDevice {
   current: boolean
   online: boolean
   lastSeenAt: string | null
+}
+
+/** Куда идёт звук этого устройства: динамики, наушники, Bluetooth, AirPlay */
+export type AudioOutputKind = 'builtin' | 'headphones' | 'bluetooth' | 'airplay' | 'usb' | 'hdmi' | 'other'
+
+export interface AudioOutput {
+  id: string
+  name: string
+  kind: AudioOutputKind
+  /** Сейчас звук идёт сюда */
+  current: boolean
+}
+
+export interface AudioOutputs {
+  /** list — все устройства вывода; picker — текущий маршрут (обычно один) */
+  outputs: AudioOutput[]
+  /** list: выбрано «как в системе» — поток идёт за устройством по умолчанию */
+  followsSystem: boolean
+}
+
+/** Вывод звука: приложение для компьютера показывает свой список, iPhone и Safari — системное окно */
+export interface AudioRoutes {
+  /** `list` — свой список, выбор — `select`; `picker` — системное окно AirPlay и Bluetooth */
+  readonly mode: 'list' | 'picker'
+  get(): Promise<AudioOutputs>
+  /** list: устройство вывода; null — как в системе */
+  select(id: string | null): Promise<void>
+  /** picker: системное окно выбора */
+  showPicker(): Promise<void>
+  /** Маршрут сменился: подключили наушники, выбрали колонку */
+  onChange(cb: (outputs: AudioOutputs) => void): () => void
 }
 
 export interface AudioEngineEvents {
@@ -258,6 +305,9 @@ export interface Bridge {
   /** Загрузчик на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
   readonly downloader: Downloader | null
 
+  /** Куда идёт звук (AirPlay, Bluetooth, динамики); null — платформа не умеет, строки нет */
+  readonly outputs: AudioRoutes | null
+
   auth: {
     providers(): Promise<AuthProviders>
     /** null — сессии нет */
@@ -318,8 +368,11 @@ export interface Bridge {
 
   /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */
   wave: {
-    /** Новая сессия под настройки (они у сессии не меняются: другие настройки — новая сессия) */
-    start(settings: WaveSettings): Promise<string>
+    /** Новая сессия под настройки (они у сессии не меняются: другие настройки — новая сессия)
+     *  с подобранным началом */
+    start(settings: WaveSettings): Promise<WaveStart>
+    /** Ход подготовки начала: готово ли и сколько из нужного уже на сервере */
+    session(id: string): Promise<WaveStart>
     /** Следующие треки с подписью «почему этот трек»; `exclude` — сыгранное до смены настроек */
     next(session: string, settings: WaveSettings, count: number, exclude: string[]): Promise<WaveTrack[]>
     /** Реакция на трек волны: лайк, «не нравится», пропуск, «не сейчас», «больше такого», дослушан */
@@ -360,12 +413,29 @@ export interface Bridge {
     updateUser(id: string, patch: UserPatch): Promise<void>
     sessions(userId?: string): Promise<SessionList>
     revokeSession(id: string): Promise<void>
-    audit(cursor?: string | null, limit?: number): Promise<AuditPage>
+    audit(cursor?: string | null, limit?: number, filter?: { kind?: string, actor?: string }): Promise<AuditPage>
     jobs(query?: { lane?: string, status?: JobStatus, kind?: string, cursor?: string | null, limit?: number }): Promise<JobPage>
     retryJob(id: string): Promise<void>
     cancelJob(id: string): Promise<void>
     lanes(): Promise<LaneList>
     updateLane(lane: string, patch: LanePatch): Promise<void>
+    acquisitions(query?: { status?: AcquisitionStatus, active?: boolean, cursor?: string | null, limit?: number }): Promise<AdminAcquisitionPage>
+    acquisition(id: string): Promise<AdminAcquisition>
+    resolve(id: string, req: ResolveRequest): Promise<AdminAcquisition>
+    preview(trackId: string): Promise<TrackPreview>
+    sources(): Promise<Sources>
+    checkDownload(trackId?: string): Promise<AdminAcquisition>
+    createDownloader(name: string): Promise<DownloaderToken>
+    revokeDownloader(id: string): Promise<void>
+    recordings(query?: { status?: AudioStatus, source?: string, verified?: boolean, q?: string, cursor?: string | null, limit?: number }): Promise<AdminRecordingPage>
+    reacquire(recordingId: string, url?: string): Promise<AdminAcquisition>
+    storage(): Promise<StorageOverview>
+    imports(): Promise<AdminImportList>
+    settings(): Promise<ServerSettings>
+    updateSettings(patch: ServerSettingsPatch): Promise<ServerSettings>
+    reco(): Promise<RecoOverview>
+    updateReco(patch: RecoSettingsPatch): Promise<RecoSettings>
+    runReco(task: RecoTask): Promise<RecoRunResult>
   }
 
   audio: AudioEngine

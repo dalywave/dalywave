@@ -101,8 +101,9 @@ targets:
       - sdk: UIKit.framework
       - sdk: WebKit.framework
       # Статическая библиотека Rust не передаёт свои #[link(framework)] линковщику Xcode:
-      # фреймворки аудиодвижка (cpal, MediaPlayer), окна входа и прокси системы — здесь
+      # фреймворки аудиодвижка (cpal, MediaPlayer), окна входа, выбора AirPlay и прокси системы — здесь
       - sdk: AVFAudio.framework
+      - sdk: AVKit.framework
       - sdk: AudioToolbox.framework
       - sdk: CoreAudio.framework
       - sdk: MediaPlayer.framework

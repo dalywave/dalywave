@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT settings AS \"settings!\" FROM wave_sessions\n           WHERE user_id = $1 AND started_at > now() - interval '30 days' AND jsonb_typeof(settings -> 'seed') IS DISTINCT FROM 'object'\n           GROUP BY settings ORDER BY count(*) DESC, max(started_at) DESC LIMIT 20",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "settings!",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "settings"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "92f6e89eabdfa4dffc51831f4090f7c268f1b47f76afc8fd94970878b6f08f07"
+}

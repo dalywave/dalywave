@@ -20,7 +20,7 @@ use crate::{
     catalog::{self, ArtistParts},
     config::FetcherConfig,
     images, jobs,
-    reco::{analysis, scout, taste},
+    reco::{analysis, prep, scout, taste},
     storage::{IMMUTABLE, keys},
 };
 
@@ -39,7 +39,8 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::SCOUT, scout::plan)
         .register(kind::SCOUT_ARTIST, scout::scout_artist)
         .register(kind::SCOUT_CHARTS, scout::scout_charts)
-        .register(kind::TASTE, taste::run);
+        .register(kind::TASTE, taste::run)
+        .register(kind::WAVE_POOL, prep::pool_run);
     if fetcher.server {
         registry.register(kind::ACQUIRE, acquire::server::run);
     } else {

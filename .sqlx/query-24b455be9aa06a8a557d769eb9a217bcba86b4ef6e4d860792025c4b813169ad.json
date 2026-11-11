@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT codec AS key, count(*) AS \"files!\", COALESCE(sum(size_bytes), 0)::bigint AS \"bytes!\"\n           FROM audio_files GROUP BY codec ORDER BY 3 DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "files!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "24b455be9aa06a8a557d769eb9a217bcba86b4ef6e4d860792025c4b813169ad"
+}

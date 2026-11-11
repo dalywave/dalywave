@@ -5,6 +5,7 @@
 //! в `recommendation_impressions` — на них будет учиться и проверяться маленькая нейросеть вкуса.
 
 pub mod analysis;
+pub mod prep;
 pub mod rank;
 pub mod scout;
 pub mod taste;
@@ -192,6 +193,76 @@ pub async fn nearest_sound(
     })))
 }
 
+/// Ближайшие по звучанию среди подходящих под границы настроек ([`rank::Fit`]): подбор ищет подходящее
+/// по всему индексу, а не только среди нескольких сотен ближайших ко вкусу. HNSW с фильтром отдаёт меньше
+/// строк, чем просили, — итеративный обход продолжает поиск, пока не наберёт `limit`.
+pub async fn nearest_fitting(
+    conn: &mut PgConnection,
+    vector: &[f32],
+    limit: i64,
+    user_id: Uuid,
+    fit: &rank::Fit,
+) -> Result<Vec<Neighbour>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT set_config('hnsw.iterative_scan', 'relaxed_order', true) AS "v!""#
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    let (e_lo, e_hi) = fit.energy.unzip();
+    let (v_lo, v_hi) = fit.valence.unzip();
+    let (b_lo, b_hi) = fit.bpm.unzip();
+    let rows = sqlx::query!(
+        r#"WITH nn AS (
+               SELECT a.recording_id, a.sound <=> $1::real[]::halfvec(1280) AS dist
+               FROM track_analysis a
+               WHERE a.sound IS NOT NULL
+                 AND ($4::real IS NULL OR a.energy BETWEEN $4 AND $5)
+                 AND ($6::real IS NULL OR a.valence BETWEEN $6 AND $7)
+                 AND ($8::real IS NULL OR a.danceability >= $8)
+                 AND ($9::real IS NULL OR a.bpm BETWEEN $9 AND $10)
+                 AND ($11::real IS NULL OR a.voice <= $11)
+                 AND ($12::text IS NULL OR (CASE WHEN a.language IS NOT NULL THEN a.language = 'ru'
+                          ELSE EXISTS (SELECT 1 FROM tracks t2 WHERE t2.recording_id = a.recording_id
+                                         AND (t2.title ~ '[А-Яа-яЁё]'
+                                              OR EXISTS (SELECT 1 FROM track_artists ta JOIN artists ar ON ar.id = ta.artist_id
+                                                         WHERE ta.track_id = t2.id AND ar.name ~ '[А-Яа-яЁё]')))
+                          END) = ($12::text = 'ru'))
+                 AND (NOT $13::bool OR NOT EXISTS (
+                          SELECT 1 FROM tracks t2 WHERE t2.recording_id = a.recording_id
+                            AND (EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = $3 AND p.track_id = t2.id)
+                                 OR EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $3 AND l.track_id = t2.id))))
+               ORDER BY a.sound <=> $1::real[]::halfvec(1280)
+               LIMIT $2
+           )
+           SELECT DISTINCT ON (nn.recording_id) t.id AS "track_id!", nn.recording_id AS "recording_id!",
+                  nn.dist AS "dist!"
+           FROM nn JOIN tracks t ON t.recording_id = nn.recording_id
+           ORDER BY nn.recording_id,
+                    EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $3 AND l.track_id = t.id) DESC,
+                    (t.album_id IS NULL), t.rank DESC NULLS LAST, t.id"#,
+        vector,
+        limit,
+        user_id,
+        e_lo,
+        e_hi,
+        v_lo,
+        v_hi,
+        fit.danceability_min,
+        b_lo,
+        b_hi,
+        fit.voice_max,
+        fit.language,
+        fit.unheard,
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(sorted(rows.into_iter().map(|r| Neighbour {
+        track_id: r.track_id,
+        recording_id: r.recording_id,
+        similarity: (1.0 - r.dist) as f32,
+    })))
+}
+
 /// Ближайшие по «смыслу» (CLAP): описание словами против звука.
 pub async fn nearest_semantic(
     conn: &mut PgConnection,
@@ -293,6 +364,11 @@ impl Cand {
     /// Трек знаком: лайкнут или дослушан.
     pub fn familiar(&self) -> bool {
         self.liked || self.completed > 0
+    }
+
+    /// Трек уже слышал: лайк или хоть одно прослушивание.
+    pub fn heard(&self) -> bool {
+        self.liked || self.last_played.is_some()
     }
 
     pub fn main_artist(&self) -> Option<(Uuid, &str)> {
@@ -412,8 +488,8 @@ pub async fn candidates(
         .collect())
 }
 
-/// Плановые задачи рекомендаций — раз в час из обслуживания воркера: проход разведчика, полный анализ
-/// неразобранного скачанного, ночной пересчёт вкуса, чистка старых сессий и показов.
+/// Плановые задачи рекомендаций — раз в час из обслуживания воркера: проход разведчика, заготовки волны,
+/// полный анализ неразобранного скачанного, ночной пересчёт вкуса, чистка старых сессий и показов.
 pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     let settings = Settings::load(db).await?;
     let mut conn = db.acquire().await?;
@@ -426,6 +502,17 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
         )
         .dedupe("scout")
         .priority(scout::PLAN_PRIORITY),
+    )
+    .await?
+    .created;
+    let pools = jobs::enqueue(
+        &mut conn,
+        NewJob::new(
+            dalywave_protocol::jobs::kind::WAVE_POOL,
+            lanes::MAINTENANCE,
+            serde_json::json!({}),
+        )
+        .dedupe("wave_pool"),
     )
     .await?
     .created;
@@ -445,6 +532,7 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     .rows_affected();
     Ok(ScheduleReport {
         scout,
+        pools,
         analysis,
         taste,
         sessions_deleted: sessions,
@@ -455,6 +543,8 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
 #[derive(Debug, Default)]
 pub struct ScheduleReport {
     pub scout: bool,
+    /// Поставлен пересчёт заготовок волны.
+    pub pools: bool,
     pub analysis: usize,
     pub taste: usize,
     pub sessions_deleted: u64,

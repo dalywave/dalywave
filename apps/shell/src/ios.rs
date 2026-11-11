@@ -2,18 +2,22 @@
 //! приложения. Возврат `dalywave://auth?…` система отдаёт прямо сюда: не нужно уходить в Safari
 //! и подтверждать «Открыть в DalyWave?», а iOS не усыпит приложение, пока человек входит.
 //! Cookie общие с Safari: если в daly.rest уже вошли там, второй раз входить не придётся.
+//!
+//! Здесь же окно выбора AirPlay и Bluetooth (AVRoutePickerView) для шторки «Устройства».
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use block2::RcBlock;
+use objc2::rc::Allocated;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject, NSObjectProtocol, ProtocolObject};
+use objc2::runtime::{AnyClass, AnyObject, Bool, NSObject, NSObjectProtocol, ProtocolObject};
 use objc2::{AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_authentication_services::{
     ASWebAuthenticationPresentationContextProviding, ASWebAuthenticationSession,
 };
+use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_foundation::{NSError, NSString, NSURL};
 use tauri::{AppHandle, Manager};
 use url::Url;
@@ -58,7 +62,12 @@ struct Active {
 
 thread_local! {
     static ACTIVE: RefCell<Option<Active>> = const { RefCell::new(None) };
+    /// Невидимый AVRoutePickerView в окне: создаётся один раз и живёт до конца работы
+    static ROUTE_PICKER: RefCell<Option<Retained<NSObject>>> = const { RefCell::new(None) };
 }
+
+/// `UIControlEventTouchUpInside`
+const TOUCH_UP_INSIDE: usize = 1 << 6;
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -173,5 +182,84 @@ pub fn start_web_auth(app: &AppHandle, start: &Url) -> bool {
 pub fn cancel_web_auth() {
     if let Some(active) = ACTIVE.with(|a| a.borrow_mut().take()) {
         unsafe { active.session.cancel() };
+    }
+}
+
+/// Открыть системное окно «Куда выводить звук» (AirPlay, Bluetooth, динамик). Главный поток.
+///
+/// Открыть его напрямую API не даёт — только кнопка AVRoutePickerView. Поэтому в окне живёт
+/// невидимый picker (почти прозрачный и без касаний: не перехватывает нажатия интерфейса), и мы
+/// «нажимаем» его кнопку сами. Стоит он внизу по центру — на iPad к этому месту привязан поповер.
+pub fn show_route_picker(app: &AppHandle) -> Result<(), String> {
+    if MainThreadMarker::new().is_none() {
+        return Err("окно выбора открывается только с главного потока".into());
+    }
+    let window = key_window(app).ok_or("нет окна приложения")?;
+    let picker = match ROUTE_PICKER.with(|p| p.borrow().clone()) {
+        Some(p) => p,
+        None => {
+            let picker = create_route_picker()?;
+            ROUTE_PICKER.with(|p| *p.borrow_mut() = Some(picker.clone()));
+            picker
+        }
+    };
+    // SAFETY: picker — UIView, window — UIWindow; все вызовы — на главном потоке
+    unsafe {
+        let bounds: CGRect = msg_send![&*window, bounds];
+        let frame = CGRect {
+            origin: CGPoint {
+                x: bounds.size.width / 2.0 - 0.5,
+                y: bounds.size.height - 1.0,
+            },
+            size: CGSize {
+                width: 1.0,
+                height: 1.0,
+            },
+        };
+        let _: () = msg_send![&*picker, setFrame: frame];
+        let parent: Option<Retained<NSObject>> = msg_send![&*picker, window];
+        if parent.as_deref() != Some(&*window) {
+            let _: () = msg_send![&*window, addSubview: &*picker];
+        }
+        let _: () = msg_send![&*picker, layoutIfNeeded];
+        let button = route_picker_button(&picker).ok_or("у AVRoutePickerView нет кнопки")?;
+        let _: () = msg_send![&*button, sendActionsForControlEvents: TOUCH_UP_INSIDE];
+    }
+    log::info!("route picker opened");
+    Ok(())
+}
+
+fn create_route_picker() -> Result<Retained<NSObject>, String> {
+    // AVKit подключён в gen/apple/project.yml: статическая библиотека Rust его не тянет
+    let class = AnyClass::get(c"AVRoutePickerView").ok_or("нет AVRoutePickerView (AVKit)")?;
+    let zero = CGRect {
+        origin: CGPoint { x: 0.0, y: 0.0 },
+        size: CGSize {
+            width: 1.0,
+            height: 1.0,
+        },
+    };
+    // SAFETY: AVRoutePickerView — UIView: alloc + initWithFrame:, свойства UIView; главный поток
+    unsafe {
+        let allocated: Allocated<NSObject> = msg_send![class, alloc];
+        let picker: Retained<NSObject> = msg_send![allocated, initWithFrame: zero];
+        let _: () = msg_send![&*picker, setAlpha: 0.011f64];
+        let _: () = msg_send![&*picker, setUserInteractionEnabled: false];
+        Ok(picker)
+    }
+}
+
+/// Кнопка внутри AVRoutePickerView — первый UIButton среди дочерних видов.
+fn route_picker_button(picker: &NSObject) -> Option<Retained<NSObject>> {
+    let button_class = AnyClass::get(c"UIButton")?;
+    // SAFETY: subviews — NSArray<UIView>, обход по индексу; главный поток
+    unsafe {
+        let subviews: Retained<NSObject> = msg_send![picker, subviews];
+        let count: usize = msg_send![&*subviews, count];
+        (0..count).find_map(|i| {
+            let view: Retained<NSObject> = msg_send![&*subviews, objectAtIndex: i];
+            let is_button: Bool = msg_send![&*view, isKindOfClass: button_class];
+            is_button.as_bool().then_some(view)
+        })
     }
 }

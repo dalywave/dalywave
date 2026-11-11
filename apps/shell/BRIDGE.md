@@ -149,6 +149,9 @@ const shell = createShell({ invoke, listen })
 | `player.setNormalize(enabled)` | `player_set_normalize { enabled }` | — выравнивание по LUFS |
 | `player.setLevels(enabled)` | `player_set_levels { enabled }` | — события `player:level` |
 | `player.state()` | `player_state` | `PlayerSnapshot` |
+| `audio.outputs()` | `audio_outputs` | `AudioOutputs` — куда идёт звук (см. «Звук») |
+| `audio.setOutput(id)` | `audio_set_output { id }` | `AudioOutputs` — macOS и Windows; `null` — как в системе |
+| `audio.showPicker()` | `audio_show_picker` | — системное окно AirPlay и Bluetooth; iPhone и iPad |
 | `downloader.state()` | `downloader_state` | `DownloaderSnapshot` — macOS и Windows |
 | `downloader.setEnabled(enabled)` | `downloader_set_enabled { enabled }` | `DownloaderSnapshot` |
 | `downloader.setPaused(paused)` | `downloader_set_paused { paused }` | `DownloaderSnapshot` |
@@ -172,6 +175,7 @@ const shell = createShell({ invoke, listen })
 | `player:error` | `{ id \| null, message }` | трек не открылся или оборвался |
 | `player:ended` | `null` | очередь движка доиграла |
 | `player:level` | `{ rms, peak, bands: [low, mid, high] }` | ~20 раз в секунду, пока включено `setLevels(true)` |
+| `audio:outputs` | `AudioOutputs` | появилось или пропало устройство вывода, сменились устройство по умолчанию или маршрут |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |
 | `update:available` | `UpdateInfo` | фоновая проверка нашла обновление (раз в 6 часов) |
 | `update:progress` | `{ downloadedBytes, totalBytes }` | идёт `updates.install()` |
@@ -278,6 +282,50 @@ audio`. Звонок, Siri, будильник — пауза и продолж�
 **Смена устройства вывода.** macOS сама переводит поток на новое устройство по умолчанию;
 устройство пропало — пауза; поток стал непригоден (другая частота, сброс медиасервисов iOS) —
 вывод открывается заново, трек продолжается с той же позиции.
+
+### Куда идёт звук
+
+Шторка «Устройства» плеера: `audio.outputs()` при открытии, дальше — событие `audio:outputs`.
+
+```ts
+interface AudioOutputs {
+  mode: 'list' | 'picker'
+  outputs: { id: string, name: string, kind: AudioOutputKind, current: boolean }[]
+  followsSystem: boolean
+}
+type AudioOutputKind = 'builtin' | 'headphones' | 'bluetooth' | 'airplay' | 'usb' | 'hdmi' | 'other'
+```
+
+**macOS и Windows — `mode: 'list'`.** Звук выводит движок, поэтому устройство выбирает
+приложение. `outputs` — все устройства вывода системы в её порядке, с именами как в настройках
+звука («Динамики MacBook Pro», «AirPods Захара»); на macOS здесь и колонки AirPlay, которые Mac
+сейчас видит в сети. `id` — постоянный id устройства (`coreaudio:<UID>`, `wasapi:<id>`), `kind` на
+macOS — по типу подключения из CoreAudio (встроенный выход с гнездом наушников — `headphones`), на
+Windows — что сообщила система. Строка «Как в системе» — `audio.setOutput(null)`, выбрана при
+`followsSystem: true`: поток следует за устройством по умолчанию (`current` — у него).
+`audio.setOutput(id)` открывает вывод на устройстве заново: трек продолжается с той же позиции,
+пауза остаётся паузой; промис отвечает уже новым списком (ждёт переключения до 3 с, AirPlay
+подключается дольше обычного). Выбор запоминается и действует со следующего запуска; устройства
+нет при запуске — звук идёт на устройство по умолчанию. Выбранное устройство пропало (колонка
+AirPlay ушла из сети, ЦАП выдернули) — пауза, вывод переходит на устройство по умолчанию, приходит
+`audio:outputs` с `followsSystem: true`; вернувшееся устройство само обратно не выбирается — чтобы
+звук неожиданно не заиграл в другой комнате. Нет такого `id` — ошибка `invalid`.
+
+**iPhone и iPad — `mode: 'picker'`.** Маршрут звука решает iOS: выбрать AirPlay, AirPods или
+динамик можно только в её окне — `audio.showPicker()` (то же окно, что у кнопки AirPlay в Пункте
+управления; на iPad — поповер у нижнего края экрана по центру). `outputs` — текущий маршрут, обычно
+один элемент с `current: true`: `name` — как его называет система («Динамик», «Гостиная»), `id` —
+тип порта (`Speaker`, `Headphones`, `BluetoothA2DPOutput`, `AirPlay`…). Выбор в окне приходит
+событием `audio:outputs`; `followsSystem` всегда `true`.
+
+`audio.setOutput()` на iPhone и `audio.showPicker()` на компьютере отклоняются с кодом
+`unsupported`.
+
+**Когда приходит `audio:outputs`.** Только если список отличается от последнего, что интерфейс
+получил. macOS сообщает о переменах сама; iOS — при каждой смене маршрута. На Windows слушателя
+устройств нет: список перечитывается раз в 3 с в течение минуты после `audio.outputs()` — пока
+шторка открыта, звать его при открытии (и, если шторка висит дольше, раз в минуту). Везде событие
+приходит и после того, как движок открыл вывод заново.
 
 **Проверки без звука.** `DW_VOLUME=0` — громкость движка умножается на 0: всё работает, звука
 нет. `DALYWAVE_SMOKE=http://127.0.0.1:8420` — очередь из тестового сервера

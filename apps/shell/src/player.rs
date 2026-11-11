@@ -149,6 +149,12 @@ fn start_engine(app: &AppHandle) {
         Err(e) => log::error!("audio session: {e}"),
     }
     let cfg = EngineConfig {
+        // Компьютер: устройство вывода, выбранное в шторке «Устройства» (audio.rs)
+        #[cfg(desktop)]
+        output: dalywave_audio::OutputConfig::Device {
+            buffer_frames: None,
+            device: app.state::<Settings>().audio_output(),
+        },
         volume: player.engine_volume(),
         user_agent: format!(
             "DalyWave/{} ({})",
@@ -199,7 +205,7 @@ fn start_engine(app: &AppHandle) {
 }
 
 /// Движок для команды; при запуске подождать, пока он создаётся.
-async fn engine(app: &AppHandle) -> ShellResult<Engine> {
+pub(crate) async fn engine(app: &AppHandle) -> ShellResult<Engine> {
     let player = app.state::<Player>();
     let deadline = Instant::now() + INIT_WAIT;
     loop {
@@ -510,7 +516,11 @@ fn forward_events(app: &AppHandle, events: Receiver<Event>) {
                 sample_rate,
                 channels,
                 reason,
-            } => log::info!("player: output {sample_rate} Hz {channels} ch ({reason})"),
+            } => {
+                log::info!("player: output {sample_rate} Hz {channels} ch ({reason})");
+                // Устройство могло смениться: шторке «Устройства» — свежий список
+                crate::audio::changed(app);
+            }
         }
         media::on_player_event(app, &ev);
     }

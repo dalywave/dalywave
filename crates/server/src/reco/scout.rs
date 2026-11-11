@@ -3,7 +3,7 @@
 //! Семена — артисты из лайков, подписок и прослушиваний; от них — похожие Deezer на 2–3 шага с падающим
 //! весом (`scout_artists`). У артистов окрестности — популярное, свежие релизы и радио, у любимых жанров —
 //! чарты и новинки редакции (`scout_tracks`). Самые близкие к вкусу треки уходят на анализ превью
-//! в пределах суточного бюджета; индекс не растёт выше предела — дальние превью вытесняются. Медиатека,
+//! в пределах суточного бюджета — каждый час и сразу, как закончится проход разведки; индекс не растёт выше предела — дальние превью вытесняются. Медиатека,
 //! которой ещё нет на сервере, анализируется по превью первой: по ней строятся грани вкуса.
 
 use std::{
@@ -597,19 +597,38 @@ pub async fn scout_artist(ctx: Arc<Context>, job: JobRow) -> JobResult {
     )
     .execute(&ctx.db)
     .await?;
+    let queued = after_run(&ctx.db, job.id, &settings).await?;
     Ok(json!({
         "refreshed": parts,
         "top": top.len(),
         "releases": releases.len(),
         "radio": radio_ids.len(),
         "candidates": added,
+        "queued": queued,
     })
     .into())
 }
 
+/// Проход закончился (эта разведка — последняя в очереди): находки сразу уходят на анализ превью
+/// в пределах суточного бюджета, а не ждут следующего часа. Две разведки, закончившие одновременно,
+/// друг друга не видят закончившимися — тогда находки подберёт следующий проход.
+async fn after_run(db: &PgPool, job_id: Uuid, settings: &Settings) -> Result<usize, sqlx::Error> {
+    let last = sqlx::query_scalar!(
+        r#"SELECT NOT EXISTS (SELECT 1 FROM jobs WHERE kind IN ('scout_artist', 'scout_charts')
+                                AND status IN ('queued', 'running') AND id <> $1) AS "last!""#,
+        job_id,
+    )
+    .fetch_one(db)
+    .await?;
+    if !last {
+        return Ok(0);
+    }
+    enqueue_previews(db, settings).await
+}
+
 /// Задача `scout_charts`: чарты и новые релизы жанров, которые слушают (по альбомам любимого
 /// и дослушанного), — раз в сутки.
-pub async fn scout_charts(ctx: Arc<Context>, _job: JobRow) -> JobResult {
+pub async fn scout_charts(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let favourite = sqlx::query!(
         r#"SELECT g AS "genre!", count(*) AS "n!"
            FROM (
@@ -684,7 +703,9 @@ pub async fn scout_charts(ctx: Arc<Context>, _job: JobRow) -> JobResult {
         }
     }
     let added = add_tracks(&ctx.db, found).await?;
-    Ok(json!({ "genres": used, "candidates": added }).into())
+    let settings = Settings::load(&ctx.db).await?;
+    let queued = after_run(&ctx.db, job.id, &settings).await?;
+    Ok(json!({ "genres": used, "candidates": added, "queued": queued }).into())
 }
 
 #[cfg(test)]

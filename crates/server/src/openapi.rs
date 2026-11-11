@@ -7,8 +7,8 @@ use utoipa::{
 };
 
 use crate::routes::{
-    acquisitions, admin, auth, catalog, events, fetcher, home, images, library, playlists, queue,
-    reco, sources, stream, sync, system, updates, wave, ws,
+    acquisitions, admin, admin_catalog, auth, catalog, events, fetcher, home, images, library,
+    playlists, queue, reco, sources, stream, sync, system, updates, wave, ws,
 };
 
 #[derive(OpenApi)]
@@ -38,11 +38,20 @@ use crate::routes::{
         queue::list_lanes,
         queue::update_lane,
         acquisitions::list,
+        acquisitions::one,
         acquisitions::resolve,
         sources::list_downloaders,
         sources::create_downloader,
         sources::revoke_downloader,
         sources::sources,
+        sources::check_download,
+        admin_catalog::recordings,
+        admin_catalog::reacquire,
+        admin_catalog::preview,
+        admin_catalog::storage,
+        admin_catalog::imports,
+        admin_catalog::settings,
+        admin_catalog::update_settings,
         reco::reco_overview,
         reco::update_reco_settings,
         reco::run_reco,

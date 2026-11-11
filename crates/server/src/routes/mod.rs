@@ -1,5 +1,6 @@
 pub mod acquisitions;
 pub mod admin;
+pub mod admin_catalog;
 pub mod auth;
 pub mod catalog;
 pub mod events;
@@ -62,6 +63,7 @@ pub fn router(state: AppState) -> Router {
         .merge(acquisitions::routes())
         .merge(sources::routes())
         .merge(reco::routes())
+        .merge(admin_catalog::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
     let catalog = catalog::routes()
         .merge(wave::catalog_routes())

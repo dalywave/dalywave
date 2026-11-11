@@ -1,7 +1,7 @@
 //! Интеграция с системой на iOS и macOS через objc2, без Swift.
 //!
 //! - iOS: AVAudioSession (категория `.playback`, активация — не на главном потоке), прерывания
-//!   (звонок, Siri), смена маршрута (отключение наушников), сброс медиасервисов.
+//!   (звонок, Siri), смена маршрута (наушники, AirPlay), текущий маршрут, сброс медиасервисов.
 //! - iOS и macOS: «Сейчас играет» (MPNowPlayingInfoCenter) и команды с экрана блокировки,
 //!   гарнитуры, Пункта управления, медиаклавиш (MPRemoteCommandCenter).
 //!
@@ -46,6 +46,8 @@ pub enum SessionEvent {
     },
     /// Пропало устройство вывода (выдернули наушники) — по правилам Apple нужна пауза.
     HeadphonesUnplugged,
+    /// Маршрут звука сменился (любая причина, в том числе выбор AirPlay): [`current_route`].
+    RouteChanged,
     /// Система перезапустила медиасервисы: сессию настроить заново, вывод открыть заново.
     MediaServicesReset,
 }
@@ -372,6 +374,7 @@ where
             if user_info_usize(n.as_ref(), AVAudioSessionRouteChangeReasonKey) == Some(2) {
                 h(SessionEvent::HeadphonesUnplugged);
             }
+            h(SessionEvent::RouteChanged);
         });
         if let Some(name) = AVAudioSessionRouteChangeNotification {
             observers.push(nc.addObserverForName_object_queue_usingBlock(
@@ -394,6 +397,71 @@ where
         }
     }
     SessionObservers { observers }
+}
+
+/// Выход текущего маршрута аудиосессии iOS.
+#[cfg(target_os = "ios")]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RoutePort {
+    /// `AVAudioSessionPort…` строкой: `Speaker`, `Headphones`, `AirPlay`, `BluetoothA2DPOutput`…
+    pub port_type: String,
+    /// Как его называет система: «Динамик», «AirPods Захара», «Гостиная»
+    pub name: String,
+    pub kind: crate::devices::OutputKind,
+}
+
+/// iOS: куда сейчас идёт звук приложения (обычно один выход). Можно звать с любого потока.
+#[cfg(target_os = "ios")]
+pub fn current_route() -> Vec<RoutePort> {
+    use objc2_avf_audio::AVAudioSession;
+    unsafe {
+        let route = AVAudioSession::sharedInstance().currentRoute();
+        route
+            .outputs()
+            .iter()
+            .map(|port| {
+                let port_type = port.portType();
+                RoutePort {
+                    kind: port_kind(&port_type),
+                    port_type: port_type.to_string(),
+                    name: port.portName().to_string(),
+                }
+            })
+            .collect()
+    }
+}
+
+#[cfg(target_os = "ios")]
+fn port_kind(port: &NSString) -> crate::devices::OutputKind {
+    use crate::devices::OutputKind;
+    use objc2_avf_audio::{
+        AVAudioSessionPortAirPlay, AVAudioSessionPortBluetoothA2DP, AVAudioSessionPortBluetoothHFP,
+        AVAudioSessionPortBluetoothLE, AVAudioSessionPortBuiltInReceiver,
+        AVAudioSessionPortBuiltInSpeaker, AVAudioSessionPortDisplayPort, AVAudioSessionPortHDMI,
+        AVAudioSessionPortHeadphones, AVAudioSessionPortUSBAudio,
+    };
+    // SAFETY: константы AVFAudio — неизменяемые строки, живут всё время работы процесса
+    let is = |c: Option<&'static NSString>| c.is_some_and(|c| c.isEqualToString(port));
+    unsafe {
+        if is(AVAudioSessionPortBuiltInSpeaker) || is(AVAudioSessionPortBuiltInReceiver) {
+            OutputKind::BuiltIn
+        } else if is(AVAudioSessionPortHeadphones) {
+            OutputKind::Headphones
+        } else if is(AVAudioSessionPortBluetoothA2DP)
+            || is(AVAudioSessionPortBluetoothLE)
+            || is(AVAudioSessionPortBluetoothHFP)
+        {
+            OutputKind::Bluetooth
+        } else if is(AVAudioSessionPortAirPlay) {
+            OutputKind::AirPlay
+        } else if is(AVAudioSessionPortUSBAudio) {
+            OutputKind::Usb
+        } else if is(AVAudioSessionPortHDMI) || is(AVAudioSessionPortDisplayPort) {
+            OutputKind::Hdmi
+        } else {
+            OutputKind::Other
+        }
+    }
 }
 
 #[cfg(target_os = "ios")]

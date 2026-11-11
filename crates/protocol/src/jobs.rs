@@ -30,6 +30,8 @@ pub mod kind {
     pub const SCOUT_CHARTS: &str = "scout_charts";
     /// Грани вкуса слушателя, миксы дня и «Открытия недели».
     pub const TASTE: &str = "taste";
+    /// Заготовки волны: под частые настройки слушателя — несколько подобранных треков на сервере.
+    pub const WAVE_POOL: &str = "wave_pool";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -121,7 +123,25 @@ pub struct Lane {
     pub failed: i64,
     /// Выполнено за сутки.
     pub done_24h: i64,
+    /// Окно работы в минутах суток (часовой пояс владельца); `null` в обоих — круглосуточно.
+    #[schema(required = true)]
+    pub active_from: Option<i16>,
+    #[schema(required = true)]
+    pub active_until: Option<i16>,
+    /// Сейчас внутри окна: вне его полоса задачи не выдаёт, как на паузе.
+    pub open: bool,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Окно работы полосы: минуты суток 0–1439 по часовому поясу владельца, может переходить через полночь.
+/// Оба `null` — круглосуточно.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LaneSchedule {
+    #[serde(default)]
+    pub from: Option<i16>,
+    #[serde(default)]
+    pub until: Option<i16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -142,6 +162,9 @@ pub struct LanePatch {
     /// 0–3 600 000.
     #[serde(default)]
     pub min_interval_ms: Option<i32>,
+    /// Новое окно работы; не передано — окно не меняется.
+    #[serde(default)]
+    pub schedule: Option<LaneSchedule>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -534,6 +557,8 @@ pub struct AdminAcquisitionPage {
 pub struct AcquisitionsQuery {
     /// Например `disputed` — раздел «Спорные».
     pub status: Option<AcquisitionStatus>,
+    /// Только идущие: в очереди, поиск, скачивание, проверка, обработка.
+    pub active: Option<bool>,
     /// `nextCursor` из предыдущей страницы.
     pub cursor: Option<String>,
     /// 1–200, по умолчанию 50.

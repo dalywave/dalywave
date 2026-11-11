@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM wave_pools WHERE user_id = $1 AND track_id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "73cce523cd5a3d1edfd897fa37f74d61b45b16d7c0285d0310f12f3b21d83c76"
+}

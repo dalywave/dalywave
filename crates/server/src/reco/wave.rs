@@ -15,7 +15,7 @@ use dalywave_protocol::{
     sync::SyncEntity,
     wave::{
         Reason, ReasonKind, SeedKind, SoundSearchResults, WaveFeedback, WaveFeedbackKind, WaveItem,
-        WaveSession, WaveSettings,
+        WavePrepState, WaveSession, WaveSettings,
     },
 };
 use serde_json::json;
@@ -23,11 +23,12 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{
-    Cand, DayPart, MODEL_VERSION, Neighbour, Settings, analysis, candidates, nearest_semantic,
-    nearest_sound,
+    Cand, DayPart, MODEL_VERSION, Neighbour, Settings, analysis, candidates, nearest_fitting,
+    nearest_semantic, nearest_sound,
     rank::{
-        self, Entry, Origin, RankContext, Scored, SessionState, admissible, constraints, effect,
-        merge, score, sequence, similar_threshold, violation, within_bounds,
+        self, Entry, Fit, Origin, RankContext, Scored, SessionState, WIDEST, admissible,
+        constraints, effect, fit, merge, score, sequence, similar_threshold, violation,
+        within_bounds,
     },
     taste, track_sound,
     vectors::{Rng, blend, weighted_mean},
@@ -37,6 +38,7 @@ use crate::{
     acquire::{self, Enqueue, Request},
     auth::Principal,
     catalog::{self, views},
+    deezer::Deezer,
     downloaders,
     error::{AppError, AppResult, bad},
     jobs::lanes,
@@ -49,6 +51,37 @@ use crate::{
 const PREFETCH: usize = 8;
 /// Первый из них — раньше остальных в полосе «Волна».
 const PREFETCH_PRIORITY: i16 = 8;
+/// Начало волны качается в полосе «Сейчас»: после запуска трека человеком (10), раньше решений админки (5).
+const URGENT_PRIORITY: i16 = 6;
+/// Готовое из заготовок под эти настройки — вперёд: оно подобрано теми же правилами и уже на сервере.
+const POOL_BOOST: f32 = 0.3;
+
+/// Где подбирать: база, Deezer (ISRC трека перед скачиванием) и есть ли кому качать.
+pub struct Env<'a> {
+    pub db: &'a PgPool,
+    pub deezer: &'a Deezer,
+    /// Серверный fetcher включён или домашний загрузчик на связи.
+    pub can_acquire: bool,
+}
+
+impl<'a> Env<'a> {
+    pub async fn new(
+        db: &'a PgPool,
+        deezer: &'a Deezer,
+        server_fetcher: bool,
+    ) -> Result<Self, sqlx::Error> {
+        let can_acquire = server_fetcher || downloaders::online(db).await? > 0;
+        Ok(Self {
+            db,
+            deezer,
+            can_acquire,
+        })
+    }
+
+    pub async fn of(st: &'a AppState) -> Result<Self, sqlx::Error> {
+        Self::new(&st.db, &st.deezer, st.config.fetcher.server).await
+    }
+}
 pub const MAX_COUNT: usize = 30;
 const TEXT_MAX: usize = 200;
 
@@ -67,6 +100,24 @@ pub struct Session {
 }
 
 impl Session {
+    /// Сессия без строки в базе — для заготовок: подбор теми же правилами, `served` — что уже заготовлено.
+    pub fn transient(user_id: Uuid, settings: WaveSettings, served: Vec<Uuid>) -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            user_id,
+            settings,
+            state: SessionState {
+                served,
+                ..Default::default()
+            },
+            hits: None,
+            misses: None,
+            seed_sound: None,
+            seed_text: None,
+            started_at: Utc::now(),
+        }
+    }
+
     /// Радио — сессия с затравкой.
     pub fn surface(&self) -> &'static str {
         if self.settings.seed.is_some() {
@@ -75,16 +126,49 @@ impl Session {
             "wave"
         }
     }
+}
 
-    pub fn view(&self) -> WaveSession {
-        WaveSession {
-            id: self.id,
-            settings: self.settings.clone(),
-            title: self.state.title.clone(),
-            served: self.state.step,
-            started_at: self.started_at,
+/// Сессия в виде API: с подготовкой начала — готово ли, сколько из нужного уже на сервере, очередь.
+pub async fn view(db: &PgPool, session: &Session) -> AppResult<WaveSession> {
+    let (state, ready, need, queue) = match &session.state.prep {
+        Some(p) => {
+            let ids: Vec<Uuid> = p.queue.iter().map(|q| q.track_id).collect();
+            let mut cands: HashMap<Uuid, Cand> = candidates(db, &ids, session.user_id, None, None)
+                .await?
+                .into_iter()
+                .map(|c| (c.track_id, c))
+                .collect();
+            let picked: Vec<(Cand, Reason)> = p
+                .queue
+                .iter()
+                .filter_map(|q| Some((cands.remove(&q.track_id)?, q.reason.clone())))
+                .collect();
+            let ready = picked.iter().filter(|(c, _)| c.ready()).count() as u32;
+            let state = if p.done {
+                WavePrepState::Ready
+            } else {
+                WavePrepState::Preparing
+            };
+            (
+                state,
+                ready,
+                p.need,
+                items(db, session.user_id, picked).await?,
+            )
         }
-    }
+        None => (WavePrepState::Ready, 0, 0, Vec::new()),
+    };
+    Ok(WaveSession {
+        id: session.id,
+        settings: session.settings.clone(),
+        title: session.state.title.clone(),
+        served: session.state.step,
+        started_at: session.started_at,
+        state,
+        ready,
+        need,
+        queue,
+    })
 }
 
 pub async fn load(db: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<Session> {
@@ -361,6 +445,9 @@ pub async fn create(
 /// Источники кандидатов: (трек, откуда, сходство).
 type Raw = (Uuid, Origin, f32);
 
+/// Сколько подходящих под границы искать у граней вкуса (делится по их весу).
+const FIT_BUDGET: f32 = 300.0;
+
 fn push_neighbours(out: &mut Vec<Raw>, near: Vec<Neighbour>, origin: &Origin) {
     out.extend(
         near.into_iter()
@@ -393,15 +480,23 @@ pub async fn forgotten(db: &PgPool, user_id: Uuid, limit: i64) -> Result<Vec<Uui
     .await
 }
 
-/// Кандидаты выдачи: соседи затравки, сессии и граней, любимое, забытое, новинки подписок.
+/// Кандидаты выдачи: соседи затравки, сессии и граней, любимое, забытое, новинки подписок. С границами
+/// настроек — ещё и подходящее под них из всего индекса рядом с затравкой или гранями: подбор не ограничен
+/// несколькими сотнями ближайших ко вкусу, где подходящего может не оказаться.
 async fn pool(
-    st: &AppState,
+    db: &PgPool,
     session: &Session,
     part: DayPart,
     platform: Option<&str>,
 ) -> AppResult<Vec<Raw>> {
-    let db = &st.db;
     let user = session.user_id;
+    let bounds = constraints(&session.settings);
+    // Строго подходящее и подходящее с самой широкой ступенью ослабления
+    let fitting: Vec<Fit> = if bounds.any() {
+        vec![fit(&bounds, 0.0), fit(&bounds, WIDEST)]
+    } else {
+        Vec::new()
+    };
     let seeded = session.settings.seed.is_some();
     let mut raw: Vec<Raw> = Vec::new();
     let facets = taste::facets(db, user).await?;
@@ -417,6 +512,13 @@ async fn pool(
             nearest_sound(&mut tx, v, 250, user).await?,
             &origin,
         );
+        for f in &fitting {
+            push_neighbours(
+                &mut raw,
+                nearest_fitting(&mut tx, v, 150, user, f).await?,
+                &origin,
+            );
+        }
     }
     if let Some(v) = &session.seed_text {
         let origin = Origin::Query {
@@ -464,6 +566,14 @@ async fn pool(
             nearest_sound(&mut tx, &f.centroid, limit, user).await?,
             &origin,
         );
+        for k in &fitting {
+            let limit = (FIT_BUDGET * share).round().clamp(40.0, 200.0) as i64;
+            push_neighbours(
+                &mut raw,
+                nearest_fitting(&mut tx, &f.centroid, limit, user, k).await?,
+                &origin,
+            );
+        }
     }
     tx.commit().await?;
 
@@ -534,23 +644,37 @@ async fn device_platform(db: &PgPool, device: Option<Uuid>) -> Result<String, sq
     )
 }
 
-/// Следующие треки сессии.
-pub async fn next(
-    st: &AppState,
-    principal: &Principal,
-    id: Uuid,
-    count: usize,
-) -> AppResult<Vec<WaveItem>> {
-    let user = principal.user.id;
-    let count = count.clamp(1, MAX_COUNT);
-    let session = load(&st.db, user, id).await?;
-    let settings = Settings::load(&st.db).await?;
+/// Как подбирать.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Options<'a> {
+    /// Только то, что уже на сервере: качать некому или ждать дольше нельзя. Готового нет вовсе — всё.
+    pub only_ready: bool,
+    /// Заготовки под эти настройки: готовое из них — вперёд.
+    pub boost: Option<&'a HashSet<Uuid>>,
+    /// Без прослушанного за месяц: заготовки не повторяют то, что человек недавно слышал.
+    pub skip_heard: bool,
+}
+
+/// Выбранный трек и подпись «почему он здесь».
+pub type Pick = (Scored, Reason);
+
+/// Подбор: кандидаты, отсев, границы настроек с ослаблением ступенями, оценка, расстановка. Сначала —
+/// подходящее под настройки из всего индекса; то, что файл уже на сервере, важно лишь при равенстве.
+/// Отдаёт `want` треков с запасом (часть может не скачаться).
+pub async fn select(
+    env: &Env<'_>,
+    session: &Session,
+    platform: Option<&str>,
+    want: usize,
+    opts: Options<'_>,
+) -> AppResult<Vec<Pick>> {
+    let db = env.db;
+    let user = session.user_id;
+    let settings = Settings::load(db).await?;
     let now = Utc::now();
     let part = DayPart::of_hour(settings.local_hour(now));
-    let platform = device_platform(&st.db, principal.device_id).await?;
-    let can_acquire = st.config.fetcher.server || downloaders::online(&st.db).await? > 0;
 
-    let raw = pool(st, &session, part, Some(&platform)).await?;
+    let raw = pool(db, session, part, platform).await?;
     let mut ids: Vec<Uuid> = Vec::with_capacity(raw.len());
     let mut seen = HashSet::new();
     for (track, _, _) in &raw {
@@ -559,7 +683,7 @@ pub async fn next(
         }
     }
     let cands: HashMap<Uuid, Cand> = candidates(
-        &st.db,
+        db,
         &ids,
         user,
         session.hits.as_deref(),
@@ -584,19 +708,27 @@ pub async fn next(
     let ctx = RankContext {
         settings: &session.settings,
         state: &session.state,
-        can_acquire,
         now,
         similar_threshold: similar_threshold(&entries),
     };
     let exclude = session.state.served_set();
     let bounds = constraints(&session.settings);
     let mut rng = Rng::from_uuid(session.id, u64::from(session.state.step));
-    let scored: Vec<Scored> = entries
+    let admitted: Vec<Entry> = entries
         .into_iter()
         .filter(|e| admissible(e, &ctx, &exclude))
+        .filter(|e| !opts.skip_heard || e.cand.plays_30d == 0)
+        .collect();
+    let ready_only = opts.only_ready && admitted.iter().any(|e| e.cand.ready());
+    let scored: Vec<Scored> = admitted
+        .into_iter()
+        .filter(|e| !ready_only || e.cand.ready())
         .map(|e| {
             let v = violation(&e.cand, &bounds);
-            let s = score(&e, &ctx, &mut rng) - 1.5 * v.min(1.0);
+            let mut s = score(&e, &ctx, &mut rng) - 1.5 * v.min(1.0);
+            if e.cand.ready() && opts.boost.is_some_and(|b| b.contains(&e.cand.track_id)) {
+                s += POOL_BOOST;
+            }
             Scored {
                 entry: e,
                 score: s,
@@ -604,12 +736,31 @@ pub async fn next(
             }
         })
         .collect();
-    let picked = sequence(within_bounds(scored, count, &bounds), count + 5, &ctx);
+    Ok(
+        sequence(within_bounds(scored, want, &bounds), want + 5, &ctx)
+            .into_iter()
+            .map(|s| {
+                let reason = rank::reason(&s.entry, &ctx);
+                (s, reason)
+            })
+            .collect(),
+    )
+}
 
-    // Следующие треки, которых нет на сервере, — на скачивание; тот, что скачать нельзя, — мимо
-    let mut out: Vec<(Scored, Reason)> = Vec::with_capacity(count);
+/// Выдача из подобранного: не больше `count`, без артиста подряд. Чего нет на сервере — на скачивание:
+/// первые `urgent` — в полосу «Сейчас» (начало волны, его ждут), следующие [`PREFETCH`] — в «Волну».
+/// Трек, который скачать нельзя, заменяется следующим.
+pub async fn take(
+    env: &Env<'_>,
+    user: Uuid,
+    picked: Vec<Pick>,
+    count: usize,
+    urgent: usize,
+) -> Vec<Pick> {
+    let mut out: Vec<Pick> = Vec::with_capacity(count);
+    let mut urgent_left = urgent;
     let mut prefetched = 0usize;
-    for s in picked {
+    for (s, reason) in picked {
         if out.len() >= count {
             break;
         }
@@ -624,31 +775,39 @@ pub async fn next(
         {
             continue;
         }
-        if !c.ready() && prefetched < PREFETCH {
-            let req = Request::new(c.track_id, AcquireReason::Wave, lanes::WAVE)
-                .by(user)
-                .priority(PREFETCH_PRIORITY - prefetched as i16);
-            match acquire::request(&st.db, &st.deezer, req).await {
+        if !c.ready() && (urgent_left > 0 || prefetched < PREFETCH) {
+            let req = if urgent_left > 0 {
+                Request::new(c.track_id, AcquireReason::Wave, lanes::NOW).priority(URGENT_PRIORITY)
+            } else {
+                Request::new(c.track_id, AcquireReason::Wave, lanes::WAVE)
+                    .priority(PREFETCH_PRIORITY - prefetched as i16)
+            }
+            .by(user);
+            match acquire::request(env.db, env.deezer, req).await {
                 Ok(Enqueue::Skipped(why)) => {
                     tracing::debug!(track = %c.track_id, why, "wave track cannot be acquired, skipped");
                     continue;
                 }
+                Ok(_) if urgent_left > 0 => urgent_left -= 1,
                 Ok(_) => prefetched += 1,
                 Err(e) => {
                     tracing::warn!(track = %c.track_id, error = %e, "could not prefetch a wave track")
                 }
             }
         }
-        let reason = rank::reason(&s.entry, &ctx);
         out.push((s, reason));
     }
+    out
+}
 
-    // Состояние сессии и показы — одной транзакцией
-    let mut state = session.state.clone();
-    let first_position = state.step;
-    for (s, _) in &out {
-        state.push(&s.entry.cand);
-    }
+/// Выданное — в состояние сессии (`state` уже с ним) и в показы: одной транзакцией.
+pub async fn persist(
+    db: &PgPool,
+    session: &Session,
+    state: &SessionState,
+    first_position: u32,
+    out: &[Pick],
+) -> AppResult<()> {
     let track_ids: Vec<Uuid> = out.iter().map(|(s, _)| s.entry.cand.track_id).collect();
     let scores: Vec<f32> = out.iter().map(|(s, _)| s.score).collect();
     let reasons: Vec<String> = out
@@ -661,8 +820,8 @@ pub async fn next(
     let positions: Vec<i32> = (0..out.len())
         .map(|i| (first_position as usize + i) as i32)
         .collect();
-    let state_json = serde_json::to_value(&state).map_err(anyhow::Error::from)?;
-    let mut tx = st.db.begin().await?;
+    let state_json = serde_json::to_value(state).map_err(anyhow::Error::from)?;
+    let mut tx = db.begin().await?;
     sqlx::query!(
         "UPDATE wave_sessions SET state = $2, last_active_at = now() WHERE id = $1",
         session.id,
@@ -675,7 +834,7 @@ pub async fn next(
                                                  reason, position)
          SELECT $1, t, $2, $3, $4, s, r::jsonb, p
          FROM unnest($5::uuid[], $6::real[], $7::text[], $8::int[]) AS x(t, s, r, p)",
-        user,
+        session.user_id,
         session.surface(),
         session.id,
         MODEL_VERSION,
@@ -687,6 +846,37 @@ pub async fn next(
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
+    Ok(())
+}
+
+pub async fn platform_of(st: &AppState, principal: &Principal) -> AppResult<String> {
+    Ok(device_platform(&st.db, principal.device_id).await?)
+}
+
+/// Следующие треки сессии. Качать некому — из того, что уже на сервере (лучшее по настройкам).
+pub async fn next(
+    st: &AppState,
+    principal: &Principal,
+    id: Uuid,
+    count: usize,
+) -> AppResult<Vec<WaveItem>> {
+    let user = principal.user.id;
+    let count = count.clamp(1, MAX_COUNT);
+    let session = load(&st.db, user, id).await?;
+    let env = Env::of(st).await?;
+    let platform = platform_of(st, principal).await?;
+    let opts = Options {
+        only_ready: !env.can_acquire,
+        ..Default::default()
+    };
+    let picked = select(&env, &session, Some(&platform), count, opts).await?;
+    let out = take(&env, user, picked, count, 0).await;
+    let mut state = session.state.clone();
+    let first_position = state.step;
+    for (s, _) in &out {
+        state.push(&s.entry.cand);
+    }
+    persist(&st.db, &session, &state, first_position, &out).await?;
     items(
         &st.db,
         user,
@@ -696,7 +886,7 @@ pub async fn next(
 }
 
 /// Выдача в виде API: трек как везде, подпись, темп, тональность и энергия.
-async fn items(
+pub async fn items(
     db: &PgPool,
     user_id: Uuid,
     picked: Vec<(Cand, Reason)>,

@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT follow_policy FROM server_settings WHERE id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "follow_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "follow_policy"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b899a00236e8b77545af707040b27ef6fc25976e92b3ca798c28485ac112bb23"
+}

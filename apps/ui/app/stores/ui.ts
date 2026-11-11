@@ -37,6 +37,29 @@ export const useUiStore = defineStore('ui', () => {
     else openPanel(tab)
   }
 
+  // Плеер на телефоне сворачивается своей анимацией (вниз, в мини-плеер); её регистрирует FullPlayer
+  let collapser: (() => Promise<void>) | null = null
+  function onCollapsePlayer(fn: () => Promise<void>) {
+    collapser = fn
+    return () => {
+      if (collapser === fn) collapser = null
+    }
+  }
+
+  /** Свернуть плеер и дождаться конца анимации: переход на страницу — после, а не под плеером */
+  async function collapsePlayer() {
+    sheetTab.value = null
+    if (!playerOpen.value) return
+    if (isPhone.value && collapser) await collapser()
+    playerOpen.value = false
+  }
+
+  /** Переход из меню или ссылки, которые могут быть над плеером */
+  async function navigate(to: string) {
+    await collapsePlayer()
+    await navigateTo(to)
+  }
+
   function focusSearch() {
     if (isPhone.value) {
       void navigateTo('/search')
@@ -45,5 +68,5 @@ export const useUiStore = defineStore('ui', () => {
     searchFocus.value++
   }
 
-  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, reducedMotion, openPanel, togglePanel, focusSearch }
+  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
 })

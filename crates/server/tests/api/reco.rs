@@ -27,12 +27,31 @@ async fn user_of(app: &TestApp, auth: &Auth) -> Uuid {
     app.user_id(auth).await.parse().unwrap()
 }
 
-async fn session(app: &TestApp, auth: &Auth, settings: Value) -> String {
+/// Новая сессия — ответ целиком: с подготовленным началом (`queue`).
+async fn create(app: &TestApp, auth: &Auth, settings: Value) -> Value {
     let res = app
         .post("/api/wave/sessions", json!({ "settings": settings }), auth)
         .await;
     assert_eq!(res.status, StatusCode::CREATED, "{}", res.text);
-    res.body["id"].as_str().unwrap().to_string()
+    res.body
+}
+
+async fn session(app: &TestApp, auth: &Auth, settings: Value) -> String {
+    create(app, auth, settings).await["id"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+/// Первые `count` треков сессии так, как их сыграет плеер: подготовленное начало, затем выдача.
+async fn opening(app: &TestApp, auth: &Auth, created: &Value, count: usize) -> Vec<Value> {
+    let id = created["id"].as_str().unwrap();
+    let mut items = created["queue"].as_array().unwrap().clone();
+    if items.len() < count {
+        items.extend(next(app, auth, id, count - items.len()).await);
+    }
+    items.truncate(count);
+    items
 }
 
 async fn next(app: &TestApp, auth: &Auth, id: &str, count: usize) -> Vec<Value> {
@@ -162,11 +181,12 @@ async fn wave_follows_taste_and_skips_what_it_must(db: PgPool) {
     assert_eq!(report.tracks, 5, "четыре лайка и дослушанный");
     assert!(report.facets >= 1);
 
-    let id = session(&app, &me, json!({})).await;
+    let created = create(&app, &me, json!({})).await;
+    let id = created["id"].as_str().unwrap().to_string();
     let res = app.get(&format!("/api/wave/sessions/{id}"), &me).await;
     assert_eq!(res.body["title"], "Моя волна");
     assert_eq!(res.body["settings"]["character"], "mix");
-    let items = next(&app, &me, &id, 10).await;
+    let items = opening(&app, &me, &created, 10).await;
     assert_eq!(items.len(), 10);
     let ids = track_ids(&items);
     for bad in [blocked, disliked, rested, gone, by_banned] {
@@ -215,7 +235,8 @@ async fn wave_follows_taste_and_skips_what_it_must(db: PgPool) {
     );
     assert_eq!(shown[0].4, "rules-1");
 
-    // Докачка: следующие треки, которых нет на сервере, — в полосе «Волна», не больше восьми
+    // Докачка: треки, которых нет на сервере, — в полосе «Волна» (качать некому — начало не ждёт):
+    // начало (6) и следующая выдача (4)
     let prefetched: Vec<(String, i16)> = sqlx::query_as(
         "SELECT a.reason, j.priority FROM acquisitions a JOIN jobs j ON j.id = a.job_id
          WHERE j.lane = 'wave' ORDER BY j.priority DESC",
@@ -223,7 +244,7 @@ async fn wave_follows_taste_and_skips_what_it_must(db: PgPool) {
     .fetch_all(&app.state.db)
     .await
     .unwrap();
-    assert_eq!(prefetched.len(), 8);
+    assert_eq!(prefetched.len(), 10);
     assert!(prefetched.iter().all(|(r, _)| r == "wave"));
     assert_eq!(prefetched[0].1, 8);
 
@@ -323,8 +344,8 @@ async fn moods_and_activities_bound_the_wave(db: PgPool) {
         let app = &app;
         let me = &me;
         async move {
-            let id = session(app, me, settings).await;
-            let items = next(app, me, &id, count).await;
+            let created = create(app, me, settings).await;
+            let items = opening(app, me, &created, count).await;
             features(app, &items).await
         }
     };
@@ -410,8 +431,8 @@ async fn overplayed_tracks_rest_and_return(db: PgPool) {
         s.play(user, liked[1], h, true).await;
     }
     rebuild_taste(&app, user).await;
-    let id = session(&app, &me, json!({ "character": "fav" })).await;
-    let ids = track_ids(&next(&app, &me, &id, 10).await);
+    let created = create(&app, &me, json!({ "character": "fav" })).await;
+    let ids = track_ids(&opening(&app, &me, &created, 10).await);
     assert!(ids.contains(&liked[0].to_string()), "отдохнувший вернулся");
     assert!(!ids.contains(&liked[1].to_string()), "заслушанный отдыхает");
 }
@@ -603,7 +624,7 @@ async fn radio_similar_and_sound_search(db: PgPool) {
     assert_eq!(res.status, StatusCode::CREATED, "{}", res.text);
     assert_eq!(res.body["title"], "Радио: calm 0");
     let radio = res.body["id"].as_str().unwrap().to_string();
-    let items = next(&app, &me, &radio, 6).await;
+    let items = opening(&app, &me, &res.body, 6).await;
     assert!(
         items.iter().all(|i| i["reason"]["kind"] == "seed"),
         "{items:?}"
@@ -630,8 +651,7 @@ async fn radio_similar_and_sound_search(db: PgPool) {
         )
         .await;
     assert_eq!(res.status, StatusCode::CREATED, "{}", res.text);
-    let id = res.body["id"].as_str().unwrap().to_string();
-    let items = next(&app, &me, &id, 6).await;
+    let items = opening(&app, &me, &res.body, 6).await;
     assert!(
         items.iter().any(|i| i["reason"]["text"] == "Ещё Star"),
         "{items:?}"
@@ -646,8 +666,7 @@ async fn radio_similar_and_sound_search(db: PgPool) {
         .await;
     assert_eq!(res.status, StatusCode::CREATED, "{}", res.text);
     assert_eq!(res.body["title"], "По запросу «спокойный вечер»");
-    let id = res.body["id"].as_str().unwrap().to_string();
-    let items = next(&app, &me, &id, 5).await;
+    let items = opening(&app, &me, &res.body, 5).await;
     let calm_ids: HashSet<String> = calm
         .iter()
         .chain(&star_tracks)
@@ -1402,8 +1421,11 @@ async fn admin_sees_the_index_and_tunes_the_scout(db: PgPool) {
         .await;
     }
     rebuild_taste(&app, user).await;
-    let id = session(&app, &me, json!({})).await;
-    next(&app, &me, &id, 3).await;
+    let queued = create(&app, &me, json!({})).await["queue"]
+        .as_array()
+        .unwrap()
+        .len();
+    assert!(queued > 0);
 
     let res = app.get("/api/admin/reco", &admin).await;
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
@@ -1417,7 +1439,7 @@ async fn admin_sees_the_index_and_tunes_the_scout(db: PgPool) {
     assert_eq!(b["facets"][0]["userName"], "Person ann");
     assert!(!b["facets"][0]["examples"].as_array().unwrap().is_empty());
     let shown = b["impressions"].as_array().unwrap();
-    assert_eq!(shown.len(), 3);
+    assert_eq!(shown.len(), queued, "начало волны — тоже показы");
     assert!(shown[0]["reason"]["text"].is_string());
     assert_eq!(shown[0]["surface"], "wave");
 

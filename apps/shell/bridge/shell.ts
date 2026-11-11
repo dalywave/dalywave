@@ -52,6 +52,8 @@ export type ShellErrorCode =
   | 'invalid'
   | 'update'
   | 'audio'
+  /** Команды нет на этой платформе: `audio.setOutput` на iPhone, `audio.showPicker` на компьютере */
+  | 'unsupported'
   | 'internal'
   // коды сервера при входе — без изменений
   | 'expired'
@@ -131,6 +133,28 @@ export type MediaCommand =
   | { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop', source: MediaSource }
   | { action: 'seek', positionMs: number, source: MediaSource }
   | { action: 'seekBy', offsetMs: number, source: MediaSource }
+
+export type AudioOutputKind = 'builtin' | 'headphones' | 'bluetooth' | 'airplay' | 'usb' | 'hdmi' | 'other'
+
+export interface AudioOutput {
+  /** Стабильный id устройства (macOS) или тип порта (iOS) */
+  id: string
+  /** Как назвать в интерфейсе: «Динамики MacBook Pro», «AirPods Захара» */
+  name: string
+  kind: AudioOutputKind
+  /** Сейчас звук идёт сюда */
+  current: boolean
+}
+
+export interface AudioOutputs {
+  /** `list` — свой список устройств, выбор — `audio.setOutput` (macOS, Windows);
+   *  `picker` — системное окно выбора, `audio.showPicker` (iOS, iPadOS) */
+  mode: 'list' | 'picker'
+  /** list: все устройства вывода; picker: текущий маршрут (обычно один элемент) */
+  outputs: AudioOutput[]
+  /** list: выбран «как в системе» (поток следует за устройством по умолчанию) */
+  followsSystem: boolean
+}
 
 export interface UpdateInfo {
   version: string
@@ -226,6 +250,8 @@ export interface ShellEvents {
   'player:ended': null
   /** ~20 раз в секунду, пока включено `player.setLevels(true)` */
   'player:level': PlayerLevel
+  /** Список устройств вывода или маршрут звука поменялся (AirPlay, наушники, Bluetooth) */
+  'audio:outputs': AudioOutputs
   'server:changed': { serverUrl: string }
   'update:available': UpdateInfo
   'update:progress': { downloadedBytes: number, totalBytes: number | null }
@@ -301,6 +327,14 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       /** События `player:level` — только пока их кто-то рисует */
       setLevels: (enabled: boolean) => call<void>('player_set_levels', { enabled }),
       state: () => call<PlayerSnapshot>('player_state'),
+    },
+    /** Куда идёт звук: шторка «Устройства» */
+    audio: {
+      outputs: () => call<AudioOutputs>('audio_outputs'),
+      /** macOS, Windows: вывести на устройство; null — как в системе. Выбор запоминается */
+      setOutput: (id: string | null) => call<AudioOutputs>('audio_set_output', { id }),
+      /** iPhone, iPad: системное окно выбора AirPlay и Bluetooth */
+      showPicker: () => call<void>('audio_show_picker'),
     },
     /** http, https, mailto — в системном браузере */
     openExternal: (url: string) => call<void>('open_external', { url }),

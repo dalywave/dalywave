@@ -137,6 +137,16 @@ export class WebAudioEngine implements AudioEngine {
     return this.current.duration()
   }
 
+  /** Элементы обоих деков: окно AirPlay в Safari вызывается у элемента */
+  get elements(): HTMLAudioElement[] {
+    return this.decks.map(d => d.el)
+  }
+
+  /** Элемент, который звучит сейчас */
+  get element(): HTMLAudioElement {
+    return this.current.el
+  }
+
   get playing(): boolean {
     return this.current.playing()
   }

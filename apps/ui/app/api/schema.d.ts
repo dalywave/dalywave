@@ -31,6 +31,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/acquisitions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["one"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/acquisitions/{id}/resolve": {
         parameters: {
             query?: never;
@@ -90,6 +106,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revoke_downloader"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["imports"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -239,6 +271,38 @@ export interface paths {
         patch: operations["update_reco_settings"];
         trace?: never;
     };
+    "/api/admin/recordings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recordings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/recordings/{id}/reacquire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reacquire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/sessions": {
         parameters: {
             query?: never;
@@ -271,6 +335,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_settings"];
+        trace?: never;
+    };
     "/api/admin/sources": {
         parameters: {
             query?: never;
@@ -279,6 +359,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["sources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/sources/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["check_download"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["storage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/tracks/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1271,6 +1399,32 @@ export interface components {
             items: components["schemas"]["AdminAcquisition"][];
             nextCursor: string | null;
         };
+        AdminImport: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            finishedAt: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description `text`, `csv`, `m3u`, `files`, `spotify_archive`. */
+            kind: string;
+            /** Format: int32 */
+            matched: number;
+            /** @description `running`, `done`, `failed`. */
+            status: string;
+            title: string;
+            /** Format: int32 */
+            total: number;
+            /**
+             * Format: int64
+             * @description Несопоставленных позиций.
+             */
+            unmatched: number;
+            userName: string;
+        };
+        AdminImportList: {
+            items: components["schemas"]["AdminImport"][];
+        };
         /** @description Раздел «Обзор» админки. */
         AdminOverview: {
             lanes: components["schemas"]["Lane"][];
@@ -1279,6 +1433,33 @@ export interface components {
             /** @description Записи по состоянию аудио; `none` тоже здесь. */
             recordingsByStatus: components["schemas"]["StatusCount"][];
             storage: components["schemas"]["StorageStats"];
+        };
+        /** @description Запись в разделе «Каталог». */
+        AdminRecording: {
+            audioStatus: components["schemas"]["AudioStatus"];
+            /** Format: int32 */
+            durationMs: number;
+            file: components["schemas"]["AudioFileInfo"] | null;
+            /**
+             * Format: int64
+             * @description Всего файлов у записи, с вытесненными.
+             */
+            files: number;
+            /** Format: uuid */
+            id: string;
+            isrc: string | null;
+            /** Format: date-time */
+            statusChangedAt: string;
+            track: components["schemas"]["Track"] | null;
+            /**
+             * Format: int64
+             * @description Сколько треков каталога делят запись.
+             */
+            tracks: number;
+        };
+        AdminRecordingPage: {
+            items: components["schemas"]["AdminRecording"][];
+            nextCursor: string | null;
         };
         /** @description Пользователь в разделе «Доступ». */
         AdminUser: {
@@ -1419,6 +1600,39 @@ export interface components {
          * @enum {string}
          */
         AudioContainer: "ogg" | "webm" | "mp4" | "mp3" | "flac" | "wav";
+        /** @description Аудиофайл записи с техническими данными. */
+        AudioFileInfo: {
+            /** @description `server` или `device:<id>`. */
+            acquiredBy: string | null;
+            /** Format: int32 */
+            bitrateKbps: number | null;
+            codec: string;
+            container: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            durationMs: number;
+            /** Format: uuid */
+            id: string;
+            lossless: boolean;
+            /** Format: float */
+            loudnessLufs: number | null;
+            /** Format: float */
+            matchScore: number | null;
+            /** Format: int32 */
+            sampleRate: number | null;
+            /** Format: int64 */
+            sizeBytes: number;
+            source: string;
+            /** @description id видео или ссылка. */
+            sourceRef: string | null;
+            sourceTitle: string | null;
+            /** Format: float */
+            truePeakDb: number | null;
+            verified: boolean;
+            /** Format: float */
+            verifySimilarity: number | null;
+        };
         /**
          * @description Есть ли аудио записи на сервере. Интерфейс показывает это значками.
          * @enum {string}
@@ -1950,6 +2164,13 @@ export interface components {
         };
         /** @description Полоса очереди со счётчиками. */
         Lane: {
+            /**
+             * Format: int32
+             * @description Окно работы в минутах суток (часовой пояс владельца); `null` в обоих — круглосуточно.
+             */
+            activeFrom: number | null;
+            /** Format: int32 */
+            activeUntil: number | null;
             /** Format: int32 */
             concurrency: number;
             /**
@@ -1965,6 +2186,8 @@ export interface components {
              * @description Пауза между стартами задач полосы, мс.
              */
             minIntervalMs: number;
+            /** @description Сейчас внутри окна: вне его полоса задачи не выдаёт, как на паузе. */
+            open: boolean;
             paused: boolean;
             /** Format: int64 */
             queued: number;
@@ -1990,6 +2213,17 @@ export interface components {
              */
             minIntervalMs?: number | null;
             paused?: boolean | null;
+            schedule?: components["schemas"]["LaneSchedule"] | null;
+        };
+        /**
+         * @description Окно работы полосы: минуты суток 0–1439 по часовому поясу владельца, может переходить через полночь.
+         *     Оба `null` — круглосуточно.
+         */
+        LaneSchedule: {
+            /** Format: int32 */
+            from?: number | null;
+            /** Format: int32 */
+            until?: number | null;
         };
         Lease: {
             /** Format: date-time */
@@ -2328,6 +2562,13 @@ export interface components {
             singles: components["schemas"]["AlbumSummary"][];
         };
         /**
+         * @description Скачать запись заново: по ссылке (YouTube, SoundCloud, Bandcamp…) или поиском, если ссылки нет.
+         *     Файл, выбранный человеком, заменяет основной.
+         */
+        ReplaceAudio: {
+            url?: string | null;
+        };
+        /**
          * @description Что сделать со спорной (или неудачной) записью.
          * @enum {string}
          */
@@ -2429,6 +2670,26 @@ export interface components {
             running: number;
             url: string | null;
         };
+        ServerSettings: {
+            /** @description Что докачивать по новой подписке, если человек не выбрал сам. */
+            followPolicy: components["schemas"]["DownloadPolicy"];
+            /** Format: date-time */
+            updatedAt: string;
+            /**
+             * Format: int32
+             * @description Часовой пояс владельца в минутах от UTC: окна работы полос, время суток у граней вкуса.
+             */
+            utcOffsetMin: number;
+        };
+        /** @description Изменение настроек: только переданные поля. */
+        ServerSettingsPatch: {
+            followPolicy?: components["schemas"]["DownloadPolicy"] | null;
+            /**
+             * Format: int32
+             * @description −720…840.
+             */
+            utcOffsetMin?: number | null;
+        };
         /** @description Открытая сессия: вкладка сайта или приложение. */
         SessionInfo: {
             /** Format: date-time */
@@ -2504,8 +2765,43 @@ export interface components {
             /** @description Незнакомые словарю слова: в поиск они не попали. */
             unknownWords: string[];
         };
+        /** @description «Проверить скачивание»: поставить трек вне очереди и посмотреть, как его скачают. */
+        SourceCheck: {
+            /**
+             * Format: uuid
+             * @description Какой трек; без него — свежий лайк без файла, иначе любой трек каталога без файла.
+             */
+            trackId?: string | null;
+        };
+        /** @description Попытки скачать за день (UTC) у всех исполнителей. */
+        SourceDay: {
+            /** @description `2026-11-11`. */
+            day: string;
+            /**
+             * Format: int64
+             * @description Скачано, но не совпало — ждёт решения в «Спорных».
+             */
+            disputed: number;
+            /**
+             * Format: int64
+             * @description Сбои: повтор, окончательные, отложенные из-за исполнителя.
+             */
+            failed: number;
+            /**
+             * Format: int64
+             * @description Файл принят.
+             */
+            ok: number;
+            /**
+             * Format: int64
+             * @description Записи нет в источниках.
+             */
+            unavailable: number;
+        };
         /** @description Раздел «Источники»: кто качает аудио. */
         Sources: {
+            /** @description Последние 14 дней, старые первыми; дни без попыток — с нулями. */
+            daily: components["schemas"]["SourceDay"][];
             downloaders: components["schemas"]["Downloader"][];
             server: components["schemas"]["ServerFetcher"];
         };
@@ -2513,6 +2809,53 @@ export interface components {
             /** Format: int64 */
             count: number;
             status: components["schemas"]["AudioStatus"];
+        };
+        StorageArtist: {
+            artist: components["schemas"]["ArtistRef"];
+            /** Format: int64 */
+            bytes: number;
+            /** Format: int64 */
+            files: number;
+        };
+        /** @description Прирост звука за день (UTC). */
+        StorageDay: {
+            /** Format: int64 */
+            bytes: number;
+            /** @description `2026-11-11`. */
+            day: string;
+            /** Format: int64 */
+            files: number;
+        };
+        /** @description Сколько места занимает группа файлов. */
+        StorageGroup: {
+            /** Format: int64 */
+            bytes: number;
+            /** Format: int64 */
+            files: number;
+            /** @description Для видов: `audio`, `covers`, `photos`; для звука — кодек или источник. */
+            key: string;
+        };
+        /** @description Раздел «Хранилище». */
+        StorageOverview: {
+            /** @description Самые «тяжёлые» артисты по основным файлам их записей, до 12. */
+            artists: components["schemas"]["StorageArtist"][];
+            /** @description Звук по кодекам. */
+            codecs: components["schemas"]["StorageGroup"][];
+            /** @description Прирост звука за последние 30 дней, по дням. */
+            growth: components["schemas"]["StorageDay"][];
+            /** @description Звук, обложки, фото артистов. */
+            kinds: components["schemas"]["StorageGroup"][];
+            /** Format: int64 */
+            replacedBytes: number;
+            /**
+             * Format: int64
+             * @description Файлы, вытесненные лучшими копиями: занимают место, но не играются.
+             */
+            replacedFiles: number;
+            /** @description Звук по источникам. */
+            sources: components["schemas"]["StorageGroup"][];
+            /** Format: int64 */
+            totalBytes: number;
         };
         StorageStats: {
             /** Format: int64 */
@@ -2806,6 +3149,11 @@ export interface components {
             /** @description До 500 id; неизвестные пропускаются. */
             ids: string[];
         };
+        /** @description Свежая ссылка на 30-секундное превью Deezer. */
+        TrackPreview: {
+            /** @description `null` — у трека нет превью или его нет у Deezer. */
+            url: string | null;
+        };
         /** @description Ответ `GET /api/tracks/{id}/stream`; поле `status` говорит, какой. */
         TrackStream: (components["schemas"]["StreamReady"] & {
             /** @enum {string} */
@@ -2898,6 +3246,11 @@ export interface components {
         WaveLanguage: "any" | "ru" | "foreign" | "none";
         /** @enum {string} */
         WaveMood: "any" | "energetic" | "happy" | "calm" | "sad";
+        /**
+         * @description Готова ли волна к запуску.
+         * @enum {string}
+         */
+        WavePrepState: "preparing" | "ready";
         /** @description Затравка: `id` — для трека, артиста, альбома и плейлиста, `text` — для описания словами. */
         WaveSeed: {
             /** Format: uuid */
@@ -2911,12 +3264,26 @@ export interface components {
             id: string;
             /**
              * Format: int32
+             * @description … и сколько нужно, чтобы начать.
+             */
+            need: number;
+            /** @description Начало волны в порядке игры: подобрано под настройки, готовое — первым. Дальше — `next`. */
+            queue: components["schemas"]["WaveItem"][];
+            /**
+             * Format: int32
+             * @description Сколько треков начала уже на сервере …
+             */
+            ready: number;
+            /**
+             * Format: int32
              * @description Сколько треков уже выдано.
              */
             served: number;
             settings: components["schemas"]["WaveSettings"];
             /** Format: date-time */
             startedAt: string;
+            /** @description `preparing` — первые треки под настройки ещё скачиваются; `ready` — очередь можно играть. */
+            state: components["schemas"]["WavePrepState"];
             /** @description Подпись: «Моя волна», «Радио: Lowborn», «По запросу «…»». */
             title: string;
         };
@@ -2981,6 +3348,8 @@ export interface operations {
             query?: {
                 /** @description Например `disputed` — раздел «Спорные». */
                 status?: components["schemas"]["AcquisitionStatus"];
+                /** @description Только идущие: в очереди, поиск, скачивание, проверка, обработка. */
+                active?: boolean;
                 /** @description `nextCursor` из предыдущей страницы. */
                 cursor?: string;
                 /** @description 1–200, по умолчанию 50. */
@@ -3003,6 +3372,38 @@ export interface operations {
             };
             /** @description Неверный cursor или limit */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    one: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id скачивания */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Скачивание: трек, кандидаты с разбором оценки, попытки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAcquisition"];
+                };
+            };
+            /** @description Нет такого скачивания */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3073,6 +3474,10 @@ export interface operations {
                 cursor?: string;
                 /** @description Сколько событий вернуть: 1–200, по умолчанию 50. */
                 limit?: number;
+                /** @description Вид события или его группа: `auth.sign_in` — ровно он, `auth.` — все входы и выходы. */
+                kind?: string;
+                /** @description Только события этого человека. */
+                actor?: string;
             };
             header?: never;
             path?: never;
@@ -3183,6 +3588,35 @@ export interface operations {
             };
             /** @description Нет такого живого загрузчика */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    imports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Импорты всех людей, новые первыми (до 100) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminImportList"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3365,7 +3799,7 @@ export interface operations {
                     "application/json": components["schemas"]["Lane"];
                 };
             };
-            /** @description Параллельность 1–16, пауза 0–3 600 000 мс */
+            /** @description Параллельность 1–16, пауза 0–3 600 000 мс, окно — минуты 0–1439, начало и конец заданы оба и не совпадают */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3509,6 +3943,102 @@ export interface operations {
             };
         };
     };
+    recordings: {
+        parameters: {
+            query?: {
+                /** @description Состояние аудио; по умолчанию — все, у которых есть файл или запрос на скачивание. */
+                status?: components["schemas"]["AudioStatus"];
+                /** @description Источник основного файла: `youtube`, `youtube_music`, `soundcloud`, `bandcamp`, `upload`, `other`. */
+                source?: string;
+                /** @description Только непроверенные отпечатком (`false`) или только проверенные (`true`). */
+                verified?: boolean;
+                /** @description Название трека или имя артиста. */
+                q?: string;
+                /** @description `nextCursor` из предыдущей страницы. */
+                cursor?: string;
+                /** @description 1–200, по умолчанию 50. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Записи с файлом или запросом на скачивание, недавно менявшиеся первыми */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRecordingPage"];
+                };
+            };
+            /** @description Неверный cursor, limit или источник */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reacquire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id записи */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceAudio"];
+            };
+        };
+        responses: {
+            /** @description Новое скачивание вне очереди. Со ссылкой файл заменит основной, без неё — заменит, только если окажется лучше */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAcquisition"];
+                };
+            };
+            /** @description Неверная ссылка или у записи нет трека Deezer */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такой записи */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Скачивание записи уже идёт (`acquisition_active`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     list_sessions: {
         parameters: {
             query?: {
@@ -3571,6 +4101,68 @@ export interface operations {
             };
         };
     };
+    settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Настройки сервера */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerSettings"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServerSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Настройки после изменения */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerSettings"];
+                };
+            };
+            /** @description Часовой пояс — от −720 до 840 минут */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     sources: {
         parameters: {
             query?: never;
@@ -3591,6 +4183,118 @@ export interface operations {
             };
             /** @description Нет права admin */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    check_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceCheck"];
+            };
+        };
+        responses: {
+            /** @description Трек поставлен на скачивание вне очереди (или уже качается) — за ним видно, как работают источники */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAcquisition"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Скачивать нечего: у всех треков уже есть файл (`nothing_to_check`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    storage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Занятое место по видам, кодекам и источникам, тяжёлые артисты, прирост */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageOverview"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Свежая подписанная ссылка на превью Deezer (живёт недолго) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackPreview"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Deezer не ответил */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5435,7 +6139,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Сессия волны; с `seed` — радио от трека, артиста, альбома, плейлиста или описания */
+            /** @description Сессия волны; с `seed` — радио от трека, артиста, альбома, плейлиста или описания. Начало (`queue`) уже подобрано под настройки. `state = preparing` — готовых на сервере меньше `need`: лучшие из неготовых качаются вне очереди, ход — `GET` сессии (и `acquisition.updated` по трекам очереди); не дольше полутора минут */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -5485,7 +6189,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Сессия: настройки, подпись, сколько выдано */
+            /** @description Сессия: настройки, подпись, сколько выдано и ход подготовки начала: готовое — первым; что не скачалось — заменено; за полторы минуты не успели — начало из того, что уже на сервере */
             200: {
                 headers: {
                     [name: string]: unknown;

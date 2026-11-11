@@ -160,8 +160,22 @@ pub struct NewWaveSession {
     pub settings: WaveSettings,
 }
 
+/// Готова ли волна к запуску.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WavePrepState {
+    /// Первые треки под настройки ещё скачиваются: спросить сессию снова (или дождаться
+    /// `acquisition.updated` по трекам очереди). Дольше полутора минут не длится.
+    Preparing,
+    /// Можно играть очередь.
+    #[default]
+    Ready,
+}
+
+names!(WavePrepState { Preparing => "preparing", Ready => "ready" });
+
 /// Сессия волны (или радио — с затравкой).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WaveSession {
     pub id: Uuid,
@@ -171,6 +185,14 @@ pub struct WaveSession {
     /// Сколько треков уже выдано.
     pub served: u32,
     pub started_at: DateTime<Utc>,
+    /// `preparing` — первые треки под настройки ещё скачиваются; `ready` — очередь можно играть.
+    pub state: WavePrepState,
+    /// Сколько треков начала уже на сервере …
+    pub ready: u32,
+    /// … и сколько нужно, чтобы начать.
+    pub need: u32,
+    /// Начало волны в порядке игры: подобрано под настройки, готовое — первым. Дальше — `next`.
+    pub queue: Vec<WaveItem>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, IntoParams)]

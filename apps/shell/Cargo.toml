@@ -72,6 +72,7 @@ objc2-authentication-services = { version = "0.3.2", default-features = false, f
     "ASFoundation",
     "ASWebAuthenticationSession",
 ] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFCGTypes"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSURL", "NSError", "NSObject"] }
 objc2-ui-kit = { version = "0.3", default-features = false, features = ["std", "UIDevice", "UIResponder", "UIView", "UIWindow"] }
 

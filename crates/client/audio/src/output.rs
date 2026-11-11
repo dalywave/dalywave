@@ -92,15 +92,31 @@ pub(crate) enum Output {
     None,
 }
 
-pub(crate) fn query_device() -> Result<(cpal::Device, cpal::SupportedStreamConfig), AudioError> {
+/// Устройство вывода: выбранное по id или, если его нет (`None` или пропало), — по умолчанию.
+/// Второе в ответе — id, если открыто выбранное: поток к нему привязан и за устройством по
+/// умолчанию не следует.
+pub(crate) fn query_device(
+    preferred: Option<&str>,
+) -> Result<(cpal::Device, cpal::SupportedStreamConfig, Option<String>), AudioError> {
     let host = cpal::default_host();
+    if let Some(id) = preferred {
+        let found = id
+            .parse::<cpal::DeviceId>()
+            .ok()
+            .and_then(|parsed| host.device_by_id(&parsed));
+        match found.map(|d| d.default_output_config().map(|c| (d, c))) {
+            Some(Ok((device, config))) => return Ok((device, config, Some(id.to_string()))),
+            Some(Err(e)) => log::warn!("output device {id} is not usable: {e}; using the default"),
+            None => log::warn!("output device {id} is gone; using the default"),
+        }
+    }
     let device = host
         .default_output_device()
         .ok_or_else(|| AudioError::Output("нет устройства вывода".into()))?;
     let config = device
         .default_output_config()
         .map_err(|e| AudioError::Output(e.to_string()))?;
-    Ok((device, config))
+    Ok((device, config, None))
 }
 
 impl Output {

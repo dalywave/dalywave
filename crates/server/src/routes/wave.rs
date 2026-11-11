@@ -21,7 +21,7 @@ use crate::{
     cursor,
     error::AppResult,
     extract::{Json, Path, Query},
-    reco::wave,
+    reco::{prep, wave},
     state::AppState,
 };
 
@@ -48,7 +48,10 @@ pub fn catalog_routes() -> Router<AppState> {
     security(("session" = []), ("device" = [])),
     request_body = NewWaveSession,
     responses(
-        (status = 201, description = "Сессия волны; с `seed` — радио от трека, артиста, альбома, плейлиста или описания", body = WaveSession),
+        (status = 201, description = "Сессия волны; с `seed` — радио от трека, артиста, альбома, плейлиста или описания. \
+                                      Начало (`queue`) уже подобрано под настройки. `state = preparing` — готовых на сервере \
+                                      меньше `need`: лучшие из неготовых качаются вне очереди, ход — `GET` сессии (и \
+                                      `acquisition.updated` по трекам очереди); не дольше полутора минут", body = WaveSession),
         (status = 400, description = "Неверные настройки: нет id или текста затравки, темп вне 100–220", body = ErrorBody),
         (status = 404, description = "Нет трека, артиста, альбома или плейлиста затравки", body = ErrorBody),
         (status = 503, description = "Волна по описанию: сервис анализа не ответил", body = ErrorBody),
@@ -59,8 +62,14 @@ pub async fn create_session(
     principal: Principal,
     Json(body): Json<NewWaveSession>,
 ) -> AppResult<(StatusCode, Json<WaveSession>)> {
-    let session = wave::create(&st, &principal, body.settings).await?;
-    Ok((StatusCode::CREATED, Json(session.view())))
+    let mut session = wave::create(&st, &principal, body.settings).await?;
+    let env = wave::Env::of(&st).await?;
+    let platform = wave::platform_of(&st, &principal).await?;
+    prep::start(&env, &mut session, Some(&platform)).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(wave::view(&st.db, &session).await?),
+    ))
 }
 
 #[utoipa::path(
@@ -70,7 +79,9 @@ pub async fn create_session(
     security(("session" = []), ("device" = [])),
     params(("id" = Uuid, Path, description = "id сессии")),
     responses(
-        (status = 200, description = "Сессия: настройки, подпись, сколько выдано", body = WaveSession),
+        (status = 200, description = "Сессия: настройки, подпись, сколько выдано и ход подготовки начала: готовое — \
+                                      первым; что не скачалось — заменено; за полторы минуты не успели — начало из того, \
+                                      что уже на сервере", body = WaveSession),
         (status = 404, description = "Нет такой сессии у этого человека", body = ErrorBody),
     ),
 )]
@@ -79,9 +90,13 @@ pub async fn session(
     principal: Principal,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<WaveSession>> {
-    Ok(Json(
-        wave::load(&st.db, principal.user.id, id).await?.view(),
-    ))
+    let mut session = wave::load(&st.db, principal.user.id, id).await?;
+    if session.state.prep.as_ref().is_some_and(|p| !p.done) {
+        let env = wave::Env::of(&st).await?;
+        let platform = wave::platform_of(&st, &principal).await?;
+        prep::refresh(&env, &mut session, Some(&platform)).await?;
+    }
+    Ok(Json(wave::view(&st.db, &session).await?))
 }
 
 #[utoipa::path(

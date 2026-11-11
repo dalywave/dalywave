@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO wave_pools (user_id, combo, track_id, settings, score) VALUES ($1, $2, $3, $4, $5)\n                 ON CONFLICT (user_id, combo, track_id) DO UPDATE SET score = EXCLUDED.score, picked_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Jsonb",
+        "Float4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3d7ba5cc44165528e504b48a7bba5664df90a33e2b6740bab5749403c35dfa3e"
+}

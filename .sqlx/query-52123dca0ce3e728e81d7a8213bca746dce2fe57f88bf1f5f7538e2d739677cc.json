@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day!\",\n                  count(a.id) FILTER (WHERE a.outcome = 'ready') AS \"ok!\",\n                  count(a.id) FILTER (WHERE a.outcome = 'disputed') AS \"disputed!\",\n                  count(a.id) FILTER (WHERE a.outcome = 'unavailable') AS \"unavailable!\",\n                  count(a.id) FILTER (WHERE a.outcome IN ('retry', 'failed', 'postponed')) AS \"failed!\"\n           FROM generate_series((now() AT TIME ZONE 'UTC')::date - 13, (now() AT TIME ZONE 'UTC')::date,\n                                interval '1 day') AS d(day)\n           LEFT JOIN acquisition_attempts a ON (a.created_at AT TIME ZONE 'UTC')::date = d.day::date\n           GROUP BY d.day ORDER BY d.day",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "day!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "ok!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "disputed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "unavailable!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "52123dca0ce3e728e81d7a8213bca746dce2fe57f88bf1f5f7538e2d739677cc"
+}

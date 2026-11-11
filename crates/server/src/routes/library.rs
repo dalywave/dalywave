@@ -501,7 +501,11 @@ pub async fn follow(
     .await?;
     let old_policy: Option<DownloadPolicy> =
         before.map(|p| serde_json::from_value(p).unwrap_or_default());
-    let policy = body.download_policy.or(old_policy).unwrap_or_default();
+    let policy = match body.download_policy.or(old_policy) {
+        Some(p) => p,
+        // Своей политики нет — по умолчанию из настроек сервера (раздел «Настройки» админки)
+        None => crate::routes::admin_catalog::default_follow_policy(&mut tx).await?,
+    };
     let policy_json = serde_json::to_value(policy).map_err(anyhow::Error::from)?;
     sqlx::query!(
         "INSERT INTO followed_artists (user_id, artist_id, download_policy, notify)

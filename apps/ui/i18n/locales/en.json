@@ -188,7 +188,16 @@
     "offline": "Offline",
     "lastSeen": "seen {when}",
     "note": "Control goes through the server: switch from your phone.",
-    "soon": "Playing on “{name}” arrives with cross-device control"
+    "soon": "Playing on “{name}” arrives with cross-device control",
+    "otherApps": "Other DalyWave devices",
+    "routes": "AirPlay & Bluetooth",
+    "outputs": "Sound output",
+    "otherDevices": "Other devices",
+    "routesHint": "Speakers, headphones, TVs",
+    "system": "System default",
+    "tab": "Browser tab",
+    "onlineOne": "Online",
+    "none": "No other devices yet — open DalyWave on your phone or computer"
   },
   "queue": {
     "now": "Now",
@@ -274,13 +283,98 @@
   "admin": {
     "title": "Admin",
     "back": "Back to app",
+    "sections": "Sections",
     "nav": {
       "overview": "Overview",
-      "lanes": "Lanes",
-      "jobs": "Jobs",
+      "downloads": "Downloads",
+      "disputed": "Disputed",
+      "sources": "Sources",
+      "catalog": "Catalog",
+      "storage": "Storage",
+      "reco": "Recommendations",
+      "import": "Import",
       "access": "Access",
-      "sessions": "Sessions",
-      "audit": "Log"
+      "settings": "Settings",
+      "log": "Log",
+      "groupWork": "Downloading",
+      "groupMusic": "Music",
+      "groupSystem": "System"
+    },
+    "failed": "Didn't load",
+    "retry": "Retry",
+    "more": "Show more",
+    "actionFailed": "Didn't work — try again",
+    "live": {
+      "on": "Updating live",
+      "off": "No live updates"
+    },
+    "job": {
+      "status": {
+        "queued": "Queued",
+        "running": "Running",
+        "done": "Done",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "kind": {
+        "acquire": "Download",
+        "mirror_image": "Image copy",
+        "refresh_artist": "Artist refresh",
+        "sync_discography": "Discography",
+        "analyze_full": "File analysis",
+        "analyze_preview": "Preview analysis",
+        "scout": "Scout pass",
+        "scout_artist": "Artist scouting",
+        "scout_charts": "Charts and new releases",
+        "taste": "Taste rebuild"
+      }
+    },
+    "acq": {
+      "status": {
+        "queued": "Queued",
+        "matching": "Searching",
+        "downloading": "Downloading",
+        "verifying": "Verifying",
+        "processing": "Processing",
+        "ready": "Done",
+        "disputed": "Disputed",
+        "unavailable": "Not in sources",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "reason": {
+        "play": "play",
+        "wave": "wave",
+        "like": "like",
+        "playlist": "playlist",
+        "album": "album",
+        "subscription": "follow",
+        "discovery": "discovery",
+        "import": "import",
+        "manual": "manual",
+        "upgrade": "upgrade"
+      },
+      "outcome": {
+        "ready": "Accepted",
+        "disputed": "No match",
+        "unavailable": "Not found",
+        "retry": "Error, will retry",
+        "failed": "Error",
+        "postponed": "Postponed"
+      }
+    },
+    "audio": {
+      "ready": "On the server",
+      "queued": "Queued",
+      "acquiring": "Downloading",
+      "none": "Catalog only",
+      "disputed": "Disputed",
+      "unavailable": "Not in sources",
+      "failed": "Failed"
+    },
+    "executor": {
+      "server": "Server",
+      "device": "Downloader"
     }
   }
 }

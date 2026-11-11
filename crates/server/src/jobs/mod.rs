@@ -269,7 +269,8 @@ pub async fn claim_with(
     let lease_s = opts.lease.map(|l| l.as_secs_f64());
     let mut tx = db.begin().await?;
     let Some(l) = sqlx::query!(
-        r#"SELECT paused, concurrency,
+        // Вне окна работы полоса ведёт себя как на паузе
+        r#"SELECT (paused OR NOT lane_open(active_from, active_until)) AS "paused!", concurrency,
                   COALESCE(GREATEST(0, EXTRACT(EPOCH FROM (last_claimed_at + make_interval(secs => min_interval_ms / 1000.0) - now())) * 1000), 0)::bigint AS "wait_ms!",
                   (SELECT count(*) FROM jobs WHERE lane = $1 AND status = 'running') AS "running!"
            FROM job_lanes WHERE lane = $1 FOR UPDATE"#,

@@ -26,6 +26,9 @@ pub enum ShellError {
     /// Аудиодвижок не запустился (нет устройства вывода)
     #[error("звук: {0}")]
     Audio(String),
+    /// Команды нет на этой платформе (выбор устройства вывода на iPhone, окно AirPlay на Mac)
+    #[error("{0}")]
+    Unsupported(String),
     #[error("{0}")]
     Internal(String),
 }
@@ -42,6 +45,7 @@ impl ShellError {
             Self::Invalid(_) => "invalid",
             Self::Update(_) => "update",
             Self::Audio(_) => "audio",
+            Self::Unsupported(_) => "unsupported",
             Self::Internal(_) => "internal",
         }
     }

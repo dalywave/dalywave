@@ -4,6 +4,7 @@
 //! Deezer — заглушка с записанными ответами из `deezer.rs`, хранилище S3 — хранилище в памяти.
 
 mod admin;
+mod admin_sections;
 mod app_login;
 mod catalog;
 mod common;
@@ -25,4 +26,5 @@ mod stream;
 mod sync;
 mod synth;
 mod system;
+mod wave_prep;
 mod web_login;

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { ContextType, EndReason, Track, WaveFeedbackKind } from '~/api/types'
-import type { EngineTrack, MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveTrack } from '~/bridge/types'
+import type { EngineTrack, MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveStart, WaveTrack } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { coverColors } from '~/utils/cover-colors'
 import { resamplePeaks, syntheticRhythm } from '~/utils/peaks'
@@ -29,12 +29,23 @@ export interface PendingState {
   queuePosition: number | null
 }
 
+/** Волна готовится: сервер скачивает первые треки под настройки — `ready` из `need` уже на месте */
+export interface WavePrep {
+  session: string
+  ready: number
+  need: number
+}
+
 // Длина наложения по режимам. «Диджей» на сайте работает как «Умный» — сведение умеют приложения
 const FADE_MS: Record<TransitionMode, number> = { gapless: 0, smooth: 6000, smart: 4000, dj: 4000 }
 const WAVE_BUFFER = 5
 const PEAK_BARS = 120
 /** Приложение: сколько треков очереди движок знает наперёд — доиграет их и в фоне, без интерфейса */
 const ENGINE_AHEAD = 20
+/** Подготовка волны: как часто спрашивать сервер, если событий о скачивании нет */
+const PREP_POLL_MS = 2500
+/** Сервер сам начинает с готового через полторы минуты; это — на случай, если он замолчал */
+const PREP_GIVE_UP_MS = 110_000
 
 interface Listen {
   entry: QueueEntry
@@ -73,6 +84,7 @@ export const usePlayerStore = defineStore('player', () => {
   const wave = useLocalStorage<WaveSettings>('dw.wave', { mood: 'any', activity: 'any', character: 'mix', language: 'any' }, { mergeDefaults: true })
   const waveSessionId = ref<string | null>(null)
   const waveLoading = ref(false)
+  const wavePrep = ref<WavePrep | null>(null)
   /** Форма волны текущего трека, 0…1 */
   const peaks = ref<number[]>([])
   const devices = ref<PlaybackDevice[]>([])
@@ -82,6 +94,10 @@ export const usePlayerStore = defineStore('player', () => {
   let prefetched: { uid: string, result: SourceResult } | null = null
   /** Треки волны с явной реакцией («не нравится», «не сейчас»): их пропуск — уже не отдельный сигнал */
   const reacted = new Set<string>()
+  /** Треки волны, которые уже пропускали вперёд, пока они докачивались: второй раз — мимо */
+  const deferred = new Set<string>()
+  /** Номер текущей подготовки волны: новая подготовка или «Отменить» делают прежнюю ненужной */
+  let prepRun = 0
 
   const waveActive = computed(() => context.value?.type === 'wave')
   const activePreset = computed(() => WAVE_PRESETS.find(p => sameSettings(p.set, wave.value))?.id ?? null)
@@ -252,9 +268,14 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     if (result.kind === 'pending') {
-      // В волне не ждём: трек докачается и вернётся позже, играем следующий готовый
+      // В волне не ждём: трек подобран под настройки и докачивается — он сыграет через пару треков,
+      // а пока — следующий. Не успел и во второй раз — мимо
       if (waveActive.value && entry.source === 'wave' && (nextEntry.value || upcoming.value.length)) {
-        history.value.push(entry)
+        if (deferred.has(entry.uid)) history.value.push(entry)
+        else {
+          deferred.add(entry.uid)
+          upcoming.value.splice(Math.min(2, upcoming.value.length), 0, entry)
+        }
         const next = takeNext()
         if (next) return startEntry(next, opts.crossfade ? { autoplay: true } : opts)
       }
@@ -373,39 +394,116 @@ export const usePlayerStore = defineStore('player', () => {
     await startEntry(entryOf(list[start]!, 'context'), { autoplay: true })
   }
 
-  /** «Моя волна»: бесконечный поток под текущие настройки */
+  // ---------- Подготовка волны ----------
+
+  /** Пока волна готовится и ничего не играет, она «дышит» — медленно и тихо */
+  function breathe(on: boolean) {
+    const v = visual()
+    if (!v || playing.value) return
+    if (on) {
+      v.setAudioTap(null)
+      v.setBpm(66)
+      v.setEnergy(0.28)
+      v.setPlaying(true)
+    }
+    else {
+      v.setEnergy(null)
+      v.setPlaying(false)
+    }
+  }
+
+  /** Ждёт, пока сервер подготовит начало: событие о скачанном треке очереди будит сразу, иначе — опрос.
+   *  `show` — показывать «Готовим волну…» (не нужно, если музыка волны уже играет). null — подготовку
+   *  отменили или начали новую */
+  async function awaitPrepared(first: WaveStart, run: number, show = true): Promise<WaveStart | null> {
+    let s = first
+    if (s.state === 'ready') return s
+    if (show) wavePrep.value = { session: s.id, ready: s.ready, need: s.need }
+    const ids = new Set(s.queue.map(w => w.track.id))
+    let wake: (() => void) | null = null
+    const off = bridge.live.on('acquisition.updated', (e) => {
+      if (ids.has(e.trackId) && e.audioStatus !== 'queued' && e.audioStatus !== 'acquiring') wake?.()
+    })
+    const began = Date.now()
+    try {
+      while (run === prepRun) {
+        await new Promise<void>((resolve) => {
+          wake = resolve
+          window.setTimeout(resolve, PREP_POLL_MS)
+        })
+        wake = null
+        if (run !== prepRun) return null
+        try {
+          s = await bridge.wave.session(s.id)
+        }
+        catch {
+          // Сеть моргнула — спросим ещё раз
+          continue
+        }
+        if (run !== prepRun) return null
+        s.queue.forEach(w => ids.add(w.track.id))
+        if (show) wavePrep.value = { session: s.id, ready: s.ready, need: s.need }
+        if (s.state === 'ready' || Date.now() - began > PREP_GIVE_UP_MS) return s
+      }
+      return null
+    }
+    finally {
+      off()
+      if (show && run === prepRun) wavePrep.value = null
+    }
+  }
+
+  /** «Отменить» на «Готовим волну…»: что играло — играет дальше */
+  function cancelWavePrep() {
+    if (!wavePrep.value && !waveLoading.value) return
+    prepRun++
+    wavePrep.value = null
+    waveLoading.value = false
+    breathe(false)
+  }
+
+  /** «Моя волна»: бесконечный поток под текущие настройки. Начало сервер подбирает под настройки
+   *  и, если его ещё нет на сервере, сначала скачивает: до тех пор — «Готовим волну…», а то, что играло, играет */
   async function startWave(settings?: Partial<WaveSettings>) {
     if (settings) wave.value = { ...wave.value, ...settings }
     applyMood(wave.value.mood)
-    finishListen('skipped')
-    if (current.value) history.value.push(current.value)
-    waveSessionId.value = null
-    context.value = { type: 'wave', id: null, title: t('wave.title') }
-    upcoming.value = []
-    prefetched = null
+    const run = ++prepRun
+    wavePrep.value = null
     waveLoading.value = true
-    let first: WaveTrack[] = []
+    let start: WaveStart | null
     try {
       // Сессия на сервере помнит выданное и реакции; её id — и в событиях прослушивания
-      const session = await bridge.wave.start(wave.value)
-      waveSessionId.value = session
-      context.value = { type: 'wave', id: session, title: t('wave.title') }
-      first = await bridge.wave.next(session, wave.value, WAVE_BUFFER + 1, history.value.slice(-50).map(e => e.track.id))
+      start = await bridge.wave.start(wave.value)
+      if (run !== prepRun) return
+      if (start.state === 'preparing') {
+        breathe(true)
+        start = await awaitPrepared(start, run)
+      }
     }
     catch {
-      toast.error(t('player.waveFailed'))
+      if (run === prepRun) toast.error(t('player.waveFailed'))
+      start = null
     }
     finally {
-      waveLoading.value = false
+      if (run === prepRun) {
+        waveLoading.value = false
+        wavePrep.value = null
+        breathe(false)
+      }
     }
-    if (!first.length) {
-      context.value = null
+    if (!start || run !== prepRun) return
+    if (!start.queue.length) {
       toast.show({ text: t('player.waveEmpty'), icon: 'ph:heart' })
       return
     }
-    upcoming.value = first.slice(1).map(w => entryOf(w.track, 'wave', w.reason))
+    finishListen('skipped')
+    if (current.value) history.value.push(current.value)
+    waveSessionId.value = start.id
+    context.value = { type: 'wave', id: start.id, title: t('wave.title') }
+    upcoming.value = start.queue.slice(1).map(w => entryOf(w.track, 'wave', w.reason))
+    prefetched = null
     visual()?.start()
-    await startEntry(entryOf(first[0]!.track, 'wave', first[0]!.reason), { autoplay: true })
+    await startEntry(entryOf(start.queue[0]!.track, 'wave', start.queue[0]!.reason), { autoplay: true })
   }
 
   function playNext(track: Track) {
@@ -617,6 +715,11 @@ export const usePlayerStore = defineStore('player', () => {
     const before = { ...wave.value }
     wave.value = { ...wave.value, ...patch }
     if (patch.mood && patch.mood !== before.mood) applyMood(patch.mood)
+    if ((wavePrep.value || waveLoading.value) && !waveActive.value && !sameSettings(before, wave.value)) {
+      // Волна ещё готовится — готовим заново под новые настройки
+      void startWave()
+      return
+    }
     if (waveActive.value && !sameSettings(before, wave.value)) {
       // Уже сыгранное остаётся, дальше волна идёт под новые настройки — новой сессией на сервере
       upcoming.value = []
@@ -626,15 +729,33 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
+  /** Новые настройки посреди волны: текущий трек доигрывает, а дальше — начало, подобранное под них.
+   *  Пока оно докачивается, очередь держит то, что уже готово */
   async function retune() {
+    const run = ++prepRun
+    let start: WaveStart | null = null
     try {
-      const session = await bridge.wave.start(wave.value)
-      waveSessionId.value = session
-      if (context.value?.type === 'wave') context.value = { ...context.value, id: session }
+      start = await bridge.wave.start(wave.value)
+      if (run !== prepRun) return
+      waveSessionId.value = start.id
+      if (context.value?.type === 'wave') context.value = { ...context.value, id: start.id }
+      upcoming.value = start.queue.map(w => entryOf(w.track, 'wave', w.reason))
+      prefetched = null
+      prefetchNext()
+      if (start.state === 'preparing') start = await awaitPrepared(start, run, false)
     }
     catch {
       // Сервер не ответил: волна продолжит прежней сессией
     }
+    if (run !== prepRun || !start || waveSessionId.value !== start.id) return
+    // Готовое — вперёд; что из начала уже сыграно, не повторяется
+    const played = new Set([current.value, ...history.value].filter((e): e is QueueEntry => !!e).map(e => e.track.id))
+    const order = new Map(start.queue.map((w, i) => [w.track.id, i]))
+    upcoming.value = upcoming.value
+      .filter(e => !played.has(e.track.id))
+      .sort((a, b) => (order.get(a.track.id) ?? 1e9) - (order.get(b.track.id) ?? 1e9))
+    prefetched = null
+    prefetchNext()
     await refillWave()
   }
 
@@ -759,9 +880,9 @@ export const usePlayerStore = defineStore('player', () => {
 
   return {
     current, manual, upcoming, history, context, playing, buffering, positionMs, durationMs, source, pending, volume, muted,
-    transition, expressiveness, normalize, wave, waveSessionId, waveLoading, waveActive, activePreset, effectiveMode, fadeMs,
+    transition, expressiveness, normalize, wave, waveSessionId, waveLoading, wavePrep, waveActive, activePreset, effectiveMode, fadeMs,
     transitionAtMs, progress, nextEntry, peaks, devices,
-    play, pause, toggle, next, prev, seek, playTracks, startWave, playNext, enqueue, remove, clearManual, moveManual,
+    play, pause, toggle, next, prev, seek, playTracks, startWave, cancelWavePrep, playNext, enqueue, remove, clearManual, moveManual,
     jumpTo, dislike, notNow, moreLikeThis, toggleLike, setWave, applyPreset, setVolume, toggleMute, loadDevices, selectDevice,
   }
 })

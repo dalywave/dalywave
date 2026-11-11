@@ -4,6 +4,7 @@
 //! dalywave://, автообновление и (на компьютерах) загрузчик музыки для сервера. Договор с интерфейсом —
 //! BRIDGE.md.
 
+mod audio;
 mod auth;
 #[cfg(desktop)]
 mod downloader;
@@ -94,6 +95,7 @@ pub fn run() {
             app.manage(updates::Updates::default());
             // Звук — сразу, в фоновом потоке: к первой команде интерфейса движок готов
             player::init(handle);
+            audio::init(handle);
 
             let main = window::create_main(handle)?;
             // До трея: меню сразу показывает состояние загрузчика
@@ -167,6 +169,9 @@ pub fn run() {
             player::player_set_normalize,
             player::player_set_levels,
             player::player_state,
+            audio::audio_outputs,
+            audio::audio_set_output,
+            audio::audio_show_picker,
             open_external,
             server_url_get,
             server_url_set,

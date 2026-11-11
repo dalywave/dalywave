@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT l.lane, l.title, l.paused, l.concurrency, l.min_interval_ms, l.updated_at,\n                  count(j.id) FILTER (WHERE j.status = 'queued') AS \"queued!\",\n                  count(j.id) FILTER (WHERE j.status = 'running') AS \"running!\",\n                  count(j.id) FILTER (WHERE j.status = 'failed') AS \"failed!\",\n                  count(j.id) FILTER (WHERE j.status = 'done' AND j.finished_at > now() - interval '24 hours') AS \"done_24h!\"\n           FROM job_lanes l LEFT JOIN jobs j ON j.lane = l.lane\n           GROUP BY l.lane\n           ORDER BY array_position(ARRAY['now', 'wave', 'library', 'discography', 'discovery', 'analysis',\n                                         'scout', 'mirror', 'maintenance'], l.lane) NULLS LAST, l.lane",
+  "query": "SELECT l.lane, l.title, l.paused, l.concurrency, l.min_interval_ms, l.updated_at,\n                  l.active_from, l.active_until, lane_open(l.active_from, l.active_until) AS \"open!\",\n                  count(j.id) FILTER (WHERE j.status = 'queued') AS \"queued!\",\n                  count(j.id) FILTER (WHERE j.status = 'running') AS \"running!\",\n                  count(j.id) FILTER (WHERE j.status = 'failed') AS \"failed!\",\n                  count(j.id) FILTER (WHERE j.status = 'done' AND j.finished_at > now() - interval '24 hours') AS \"done_24h!\"\n           FROM job_lanes l LEFT JOIN jobs j ON j.lane = l.lane\n           GROUP BY l.lane\n           ORDER BY array_position(ARRAY['now', 'wave', 'library', 'discography', 'discovery', 'analysis',\n                                         'scout', 'mirror', 'maintenance'], l.lane) NULLS LAST, l.lane",
   "describe": {
     "columns": [
       {
@@ -71,24 +71,52 @@
       },
       {
         "ordinal": 6,
+        "name": "active_from",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "job_lanes",
+            "name": "active_from"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "active_until",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "job_lanes",
+            "name": "active_until"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "open!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
         "name": "queued!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 7,
+        "ordinal": 10,
         "name": "running!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 8,
+        "ordinal": 11,
         "name": "failed!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 9,
+        "ordinal": 12,
         "name": "done_24h!",
         "type_info": "Int8",
         "origin": "Expression"
@@ -104,11 +132,14 @@
       false,
       false,
       false,
+      true,
+      true,
+      null,
       null,
       null,
       null,
       null
     ]
   },
-  "hash": "03f9dd879d7f3a8071dc2dd4e8fdc88046c9843446deda5567c8b6a70a3428a0"
+  "hash": "fd2386e0c50430c781c9bef45eeded05a93c25626fe76db10baff998a6ec04c0"
 }

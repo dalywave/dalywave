@@ -41,6 +41,7 @@ pub fn routes() -> Router<AppState> {
 pub async fn lanes(db: &PgPool) -> Result<Vec<Lane>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"SELECT l.lane, l.title, l.paused, l.concurrency, l.min_interval_ms, l.updated_at,
+                  l.active_from, l.active_until, lane_open(l.active_from, l.active_until) AS "open!",
                   count(j.id) FILTER (WHERE j.status = 'queued') AS "queued!",
                   count(j.id) FILTER (WHERE j.status = 'running') AS "running!",
                   count(j.id) FILTER (WHERE j.status = 'failed') AS "failed!",
@@ -64,6 +65,9 @@ pub async fn lanes(db: &PgPool) -> Result<Vec<Lane>, sqlx::Error> {
             running: r.running,
             failed: r.failed,
             done_24h: r.done_24h,
+            active_from: r.active_from,
+            active_until: r.active_until,
+            open: r.open,
             updated_at: r.updated_at,
         })
         .collect())
@@ -353,7 +357,8 @@ pub async fn list_lanes(State(st): State<AppState>) -> AppResult<Json<LaneList>>
     request_body = LanePatch,
     responses(
         (status = 200, description = "Полоса после изменения", body = Lane),
-        (status = 400, description = "Параллельность 1–16, пауза 0–3 600 000 мс", body = ErrorBody),
+        (status = 400, description = "Параллельность 1–16, пауза 0–3 600 000 мс, окно — минуты 0–1439, \
+                                      начало и конец заданы оба и не совпадают", body = ErrorBody),
         (status = 404, description = "Нет такой полосы", body = ErrorBody),
     ),
 )]
@@ -372,16 +377,33 @@ pub async fn update_lane(
     {
         return Err(bad("пауза между задачами — от 0 до 3 600 000 мс"));
     }
+    if let Some(w) = patch.schedule {
+        let minute = |m: Option<i16>| m.is_none_or(|m| (0..1440).contains(&m));
+        if !minute(w.from) || !minute(w.until) {
+            return Err(bad("окно работы — минуты суток от 0 до 1439"));
+        }
+        if w.from.is_some() != w.until.is_some() || (w.from.is_some() && w.from == w.until) {
+            return Err(bad(
+                "у окна работы нужны и начало, и конец, и они не совпадают",
+            ));
+        }
+    }
     let mut tx = st.db.begin().await?;
     let updated = sqlx::query!(
         "UPDATE job_lanes SET paused = COALESCE($2, paused), concurrency = COALESCE($3, concurrency),
-                min_interval_ms = COALESCE($4, min_interval_ms), updated_at = now()
+                min_interval_ms = COALESCE($4, min_interval_ms),
+                active_from = CASE WHEN $5 THEN $6 ELSE active_from END,
+                active_until = CASE WHEN $5 THEN $7 ELSE active_until END,
+                updated_at = now()
          WHERE lane = $1
          RETURNING lane",
         lane,
         patch.paused,
         patch.concurrency,
         patch.min_interval_ms,
+        patch.schedule.is_some(),
+        patch.schedule.and_then(|w| w.from),
+        patch.schedule.and_then(|w| w.until),
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -393,7 +415,8 @@ pub async fn update_lane(
         Some(principal.user.id),
         audit::LANE_CHANGED,
         Some(lane.clone()),
-        json!({ "paused": patch.paused, "concurrency": patch.concurrency, "minIntervalMs": patch.min_interval_ms }),
+        json!({ "paused": patch.paused, "concurrency": patch.concurrency, "minIntervalMs": patch.min_interval_ms,
+                "schedule": patch.schedule }),
     )
     .await?;
     // Снятая пауза: воркер берёт задачи сразу, а не по таймеру

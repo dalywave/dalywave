@@ -25,6 +25,10 @@ use super::{
 const UNKNOWN: f32 = 0.15;
 /// Ступени ослабления границ, если строго подходящих мало.
 const TOLERANCES: [f32; 4] = [0.0, 0.1, 0.2, 0.35];
+/// Самая широкая ступень: дальше границ подбор не уходит, пока подходящее есть.
+pub const WIDEST: f32 = TOLERANCES[TOLERANCES.len() - 1];
+/// «Незнакомое», а трек уже слышал: дальше любой ступени ослабления — только если незнакомого нет вовсе.
+const HEARD: f32 = 1.0;
 /// Сколько последних артистов помнит сессия, чтобы не повторяться.
 pub const RECENT_ARTISTS: usize = 8;
 /// Сколько выданного помнит сессия: столько треков не повторится.
@@ -121,11 +125,14 @@ pub struct Constraints {
     pub tempo: Option<f32>,
     pub voice_max: Option<f32>,
     pub language: WaveLanguage,
+    /// «Незнакомое»: ни лайка, ни одного прослушивания.
+    pub unheard: bool,
 }
 
 impl Constraints {
     pub fn any(&self) -> bool {
-        self.energy.is_some()
+        self.unheard
+            || self.energy.is_some()
             || self.valence.is_some()
             || self.danceability_min.is_some()
             || self.bpm.is_some()
@@ -143,6 +150,7 @@ fn narrow(range: &mut Option<(f32, f32)>, lo: f32, hi: f32) {
 pub fn constraints(s: &WaveSettings) -> Constraints {
     let mut c = Constraints {
         language: s.language,
+        unheard: s.character == WaveCharacter::New,
         ..Default::default()
     };
     match s.mood {
@@ -242,7 +250,47 @@ pub fn violation(c: &Cand, k: &Constraints) -> f32 {
         WaveLanguage::Foreign if russian(c) => v += 10.0,
         _ => {}
     }
+    if k.unheard && c.heard() {
+        v += HEARD;
+    }
     v
+}
+
+/// Фильтр индекса под границы со ступенью ослабления `tol`: подбор ищет подходящее по всему индексу,
+/// а не только среди ближайших ко вкусу — строго подходящее (0) и с самой широкой ступенью ([`WIDEST`]),
+/// чтобы редкое строгое не потерялось среди сотен «почти». Темп бега (шаг или полшага) база не фильтрует.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Fit {
+    pub energy: Option<(f32, f32)>,
+    pub valence: Option<(f32, f32)>,
+    pub danceability_min: Option<f32>,
+    pub bpm: Option<(f32, f32)>,
+    pub voice_max: Option<f32>,
+    /// `ru` или `foreign`.
+    pub language: Option<&'static str>,
+    pub unheard: bool,
+}
+
+pub fn fit(k: &Constraints, tol: f32) -> Fit {
+    let widen = |r: Option<(f32, f32)>| r.map(|(lo, hi)| (lo - tol, hi + tol));
+    Fit {
+        energy: widen(k.energy),
+        valence: widen(k.valence),
+        danceability_min: k.danceability_min.map(|m| m - tol),
+        // 10 BPM мимо границы — как 0,1 по энергии
+        bpm: if k.tempo.is_some() {
+            None
+        } else {
+            k.bpm.map(|(lo, hi)| (lo - tol * 100.0, hi + tol * 100.0))
+        },
+        voice_max: k.voice_max.map(|m| m + tol),
+        language: match k.language {
+            WaveLanguage::Ru => Some("ru"),
+            WaveLanguage::Foreign => Some("foreign"),
+            WaveLanguage::Any | WaveLanguage::None => None,
+        },
+        unheard: k.unheard,
+    }
 }
 
 /// Ход энергии по занятию: «Засыпаю» снижает, «Просыпаюсь» поднимает. `None` — ровный поток.
@@ -260,7 +308,7 @@ pub fn new_share(c: WaveCharacter) -> f32 {
     match c {
         WaveCharacter::Fav => 0.1,
         WaveCharacter::Mix => 0.45,
-        WaveCharacter::New => 0.85,
+        WaveCharacter::New => 1.0,
         WaveCharacter::Pop => 0.5,
         WaveCharacter::Rare => 0.7,
     }
@@ -329,6 +377,8 @@ pub struct SessionState {
     pub hit_artist: Option<NamedRef>,
     /// Выданные песни (артист и название без версии): «Slowed» и «Sped Up» той же песни — не новый трек.
     pub songs: Vec<String>,
+    /// Подготовка начала волны: очередь, сколько нужно готового, срок.
+    pub prep: Option<super::prep::Prep>,
     /// Подпись сессии: «Моя волна», «Радио: Lowborn».
     pub title: String,
     /// Затравка радио: как её назвать в подписи и её артист.
@@ -511,7 +561,6 @@ impl SessionState {
 pub struct RankContext<'a> {
     pub settings: &'a WaveSettings,
     pub state: &'a SessionState,
-    pub can_acquire: bool,
     pub now: DateTime<Utc>,
     /// Сходство, начиная с которого незнакомый трек подписывается «Похоже на …», а не «Новое для тебя».
     pub similar_threshold: f32,
@@ -607,11 +656,9 @@ pub fn score(e: &Entry, ctx: &RankContext, rng: &mut Rng) -> f32 {
             s += 0.05;
         }
     }
+    // Файл на сервере — лишь при равенстве: настройки важнее того, что уже скачано
     if c.ready() {
         s += 0.03;
-    } else if !ctx.can_acquire {
-        // Качать некому: волна играет то, что уже на сервере
-        s -= 1.0;
     }
     let jitter = if ctx.state.skip_streak >= 2 { 0.2 } else { 0.1 };
     s + jitter * rng.next_f32()
@@ -820,7 +867,6 @@ mod tests {
         RankContext {
             settings,
             state,
-            can_acquire: true,
             now: Utc::now(),
             similar_threshold: 0.8,
         }
@@ -868,6 +914,80 @@ mod tests {
         let party = constraints(&s(WaveActivity::Party, WaveMood::Happy));
         assert_eq!(party.danceability_min, Some(0.55));
         assert_eq!(party.valence, Some((0.55, 1.0)));
+    }
+
+    #[test]
+    fn unfamiliar_means_never_heard() {
+        let k = constraints(&WaveSettings {
+            activity: WaveActivity::Work,
+            mood: WaveMood::Calm,
+            character: WaveCharacter::New,
+            ..Default::default()
+        });
+        assert!(k.unheard && k.any());
+        assert_eq!(k.energy, Some((0.0, 0.5)));
+        assert_eq!(k.bpm, Some((70.0, 135.0)));
+        let mut c = cand(1, 1);
+        c.energy = Some(0.4);
+        c.bpm = Some(100.0);
+        assert_eq!(violation(&c, &k), 0.0);
+        // Один раз пропущенный — уже слышал: дальше любой ступени ослабления
+        c.last_played = Some(Utc::now() - Duration::days(90));
+        assert!(violation(&c, &k) > TOLERANCES[TOLERANCES.len() - 1]);
+        c.last_played = None;
+        c.liked = true;
+        assert!(violation(&c, &k) >= HEARD);
+        // «Знакомое и новое» слышанное не штрафует
+        let mix = constraints(&WaveSettings {
+            mood: WaveMood::Calm,
+            ..Default::default()
+        });
+        assert!(!mix.unheard);
+        assert_eq!(violation(&c, &mix), 0.0);
+        assert_eq!(new_share(WaveCharacter::New), 1.0);
+    }
+
+    #[test]
+    fn index_filter_is_the_widest_relaxation() {
+        let k = constraints(&WaveSettings {
+            activity: WaveActivity::Work,
+            mood: WaveMood::Calm,
+            character: WaveCharacter::New,
+            language: WaveLanguage::Ru,
+            ..Default::default()
+        });
+        let f = fit(&k, WIDEST);
+        let (lo, hi) = f.energy.unwrap();
+        assert!((lo + 0.35).abs() < 1e-6 && (hi - 0.85).abs() < 1e-6);
+        assert_eq!(f.bpm, Some((35.0, 170.0)));
+        assert_eq!(f.language, Some("ru"));
+        assert!(f.unheard);
+        // Всё, что пропускает фильтр базы, ослабление ещё может взять; дальше — нет
+        let mut c = cand(1, 1);
+        c.title = "Тишина".into();
+        c.energy = Some(0.84);
+        c.bpm = Some(100.0);
+        assert!(violation(&c, &k) <= 0.35 + 1e-6);
+        c.energy = Some(0.9);
+        assert!(violation(&c, &k) > 0.35);
+        // Темп бега (шаг или полшага) база не фильтрует — только оценка
+        let run = fit(
+            &constraints(&WaveSettings {
+                activity: WaveActivity::Sport,
+                tempo: Some(170),
+                ..Default::default()
+            }),
+            WIDEST,
+        );
+        assert_eq!(run.bpm, None);
+        assert_eq!(
+            fit(&constraints(&WaveSettings::default()), WIDEST),
+            Fit::default()
+        );
+        // Строгий фильтр — ровно границы
+        let strict = fit(&k, 0.0);
+        assert_eq!(strict.energy, Some((0.0, 0.5)));
+        assert_eq!(strict.bpm, Some((70.0, 135.0)));
     }
 
     #[test]
@@ -1071,6 +1191,19 @@ mod tests {
             within_bounds(lang, 3, &k).is_empty(),
             "чужой язык не проходит никогда"
         );
+        // Готовые, но чужие настройкам не вытесняют подходящие: хватает подходящих — только они
+        let pool: Vec<Scored> = (0..12)
+            .map(|n| mk(n, 0.0))
+            .chain((12..30).map(|n| {
+                let mut s = mk(n, 0.6);
+                s.entry.cand.audio_status = Some(AudioStatus::Ready);
+                s.score = 2.0;
+                s
+            }))
+            .collect();
+        let kept = within_bounds(pool, 6, &k);
+        assert_eq!(kept.len(), 12);
+        assert!(kept.iter().all(|s| !s.entry.cand.ready()));
     }
 
     #[test]

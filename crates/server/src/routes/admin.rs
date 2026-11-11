@@ -347,10 +347,14 @@ pub async fn audit_log(
            FROM audit_events e
            LEFT JOIN users u ON u.id = e.actor_user_id
            WHERE ($1::uuid IS NULL OR e.id < $1)
+             AND ($3::text IS NULL OR e.kind = $3 OR (right($3, 1) = '.' AND starts_with(e.kind, $3)))
+             AND ($4::uuid IS NULL OR e.actor_user_id = $4)
            ORDER BY e.id DESC
            LIMIT $2"#,
         cursor,
         i64::from(limit) + 1,
+        q.kind.as_deref().map(str::trim).filter(|k| !k.is_empty()),
+        q.actor,
     )
     .fetch_all(&st.db)
     .await?;

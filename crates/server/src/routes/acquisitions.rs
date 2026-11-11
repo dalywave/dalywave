@@ -37,6 +37,7 @@ use crate::{
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/acquisitions", get(list))
+        .route("/acquisitions/{id}", get(one))
         .route("/acquisitions/{id}/resolve", post(resolve))
 }
 
@@ -151,8 +152,12 @@ async fn views_of(st: &AppState, rows: Vec<Row>, viewer: Uuid) -> AppResult<Vec<
     Ok(out)
 }
 
-async fn admin_view(st: &AppState, id: Uuid, viewer: Uuid) -> AppResult<AdminAcquisition> {
-    let rows = fetch(&st.db, None, None, Some(id), 1).await?;
+pub(crate) async fn admin_view(
+    st: &AppState,
+    id: Uuid,
+    viewer: Uuid,
+) -> AppResult<AdminAcquisition> {
+    let rows = fetch(&st.db, None, None, None, Some(id), 1).await?;
     views_of(st, rows, viewer)
         .await?
         .into_iter()
@@ -163,6 +168,7 @@ async fn admin_view(st: &AppState, id: Uuid, viewer: Uuid) -> AppResult<AdminAcq
 async fn fetch(
     db: &PgPool,
     status: Option<AcquisitionStatus>,
+    active: Option<bool>,
     after: Option<(DateTime<Utc>, Uuid)>,
     only: Option<Uuid>,
     limit: i64,
@@ -178,6 +184,7 @@ async fn fetch(
            WHERE ($1::text IS NULL OR a.status = $1)
              AND ($2::timestamptz IS NULL OR (a.updated_at, a.id) < ($2, $3))
              AND ($4::uuid IS NULL OR a.id = $4)
+             AND ($6::bool IS NULL OR (a.status IN ('queued', 'matching', 'downloading', 'verifying', 'processing')) = $6)
            ORDER BY a.updated_at DESC, a.id DESC
            LIMIT $5"#,
         status.map(|s| s.as_str()),
@@ -185,6 +192,7 @@ async fn fetch(
         after.map(|(_, id)| id).unwrap_or_default(),
         only,
         limit,
+        active,
     )
     .fetch_all(db)
     .await
@@ -208,12 +216,31 @@ pub async fn list(
 ) -> AppResult<Json<AdminAcquisitionPage>> {
     let limit = cursor::limit(q.limit, 50, 200)?;
     let after = cursor::decode_opt(q.cursor.as_deref())?;
-    let mut rows = fetch(&st.db, q.status, after, None, limit + 1).await?;
+    let mut rows = fetch(&st.db, q.status, q.active, after, None, limit + 1).await?;
     let next_cursor = cursor::page(&mut rows, limit, |r| (r.updated_at, r.id));
     Ok(Json(AdminAcquisitionPage {
         items: views_of(&st, rows, principal.user.id).await?,
         next_cursor,
     }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/admin/acquisitions/{id}",
+    tag = "admin",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id скачивания")),
+    responses(
+        (status = 200, description = "Скачивание: трек, кандидаты с разбором оценки, попытки", body = AdminAcquisition),
+        (status = 404, description = "Нет такого скачивания", body = ErrorBody),
+    ),
+)]
+pub async fn one(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<AdminAcquisition>> {
+    Ok(Json(admin_view(&st, id, principal.user.id).await?))
 }
 
 /// id видео YouTube: 11 символов из букв, цифр, `-` и `_`.
@@ -226,12 +253,12 @@ fn valid_video_id(id: &str) -> bool {
 
 /// Что за ссылку вставили: видео YouTube (его id) или что-то, что fetcher скачает по адресу.
 #[derive(Debug, PartialEq, Eq)]
-enum Pasted {
+pub(crate) enum Pasted {
     Video(String),
     Direct(String),
 }
 
-fn parse_pasted(raw: &str) -> AppResult<Pasted> {
+pub(crate) fn parse_pasted(raw: &str) -> AppResult<Pasted> {
     let raw = raw.trim();
     let url = url::Url::parse(raw).map_err(|_| bad("это не ссылка"))?;
     if !matches!(url.scheme(), "http" | "https") || raw.len() > 2000 {

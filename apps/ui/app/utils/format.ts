@@ -47,6 +47,9 @@ const NOUNS = {
   release: { ru: ['релиз', 'релиза', 'релизов'], en: ['release', 'releases'] },
   user: { ru: ['пользователь', 'пользователя', 'пользователей'], en: ['user', 'users'] },
   session: { ru: ['сессия', 'сессии', 'сессий'], en: ['session', 'sessions'] },
+  file: { ru: ['файл', 'файла', 'файлов'], en: ['file', 'files'] },
+  image: { ru: ['картинка', 'картинки', 'картинок'], en: ['image', 'images'] },
+  recording: { ru: ['запись', 'записи', 'записей'], en: ['recording', 'recordings'] },
 } as const
 
 export type Noun = keyof typeof NOUNS

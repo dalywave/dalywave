@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE reco_settings SET utc_offset_min = $1, updated_at = now() WHERE id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "130e3315fb3bfa767a26e543c6a7953293db10ef8bcaaf4a87f686934ec6e92f"
+}

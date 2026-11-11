@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE job_lanes SET paused = COALESCE($2, paused), concurrency = COALESCE($3, concurrency),\n                min_interval_ms = COALESCE($4, min_interval_ms),\n                active_from = CASE WHEN $5 THEN $6 ELSE active_from END,\n                active_until = CASE WHEN $5 THEN $7 ELSE active_until END,\n                updated_at = now()\n         WHERE lane = $1\n         RETURNING lane",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "lane",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "job_lanes",
+            "name": "lane"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Int2",
+        "Int4",
+        "Bool",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "97b8ecbc6fd7421663552741549243fe79266ca28c36e7701c3e30f12050a6cc"
+}

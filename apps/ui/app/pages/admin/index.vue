@@ -1,111 +1,37 @@
 <script setup lang="ts">
-import type { AdminOverview, AdminUser, AudioStatus, AuditEvent, Health, Job, JobStatus, Lane, Role, SessionInfo } from '~/api/types'
-import type { MenuEntry } from '~/types/ui'
+import type { AdminOverview, Health, Lane, RecoOverview, Sources } from '~/api/types'
+import type { MeterPart } from '~/components/admin/Meter.vue'
 
-// Админка — обзор: здоровье сервера, сутки в цифрах, записи по состояниям, очереди задач,
-// последние задачи (живьём по WebSocket), доступ людей, сессии и журнал
+// Обзор: что требует внимания (с действием в одно нажатие), сутки в цифрах, записи по состоянию,
+// место и его цена, источники и рекомендации
 definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
-const auth = useAuthStore()
 const toast = useToast()
 const lang = useLang()
+const L = useAdminLabels()
+const { counts, refresh: refreshCounts } = useAdminCounts()
 const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
 
 const health = ref<Health | null>(null)
 const overview = ref<AdminOverview | null>(null)
-const lanes = ref<Lane[] | null>(null)
-const jobs = ref<Job[] | null>(null)
-const users = ref<AdminUser[] | null>(null)
-const sessions = ref<SessionInfo[] | null>(null)
-const audit = ref<AuditEvent[] | null>(null)
-const auditCursor = ref<string | null>(null)
-const failed = ref<Record<string, boolean>>({})
-const jobFilter = ref<'all' | JobStatus>('all')
+const sources = ref<Sources | null>(null)
+const reco = ref<RecoOverview | null>(null)
+const { failed, attempt } = useAttempts()
 
-async function attempt<T>(key: string, job: () => Promise<T>, apply: (v: T) => void) {
-  try {
-    apply(await job())
-    failed.value = { ...failed.value, [key]: false }
-  }
-  catch {
-    failed.value = { ...failed.value, [key]: true }
-  }
-}
-
-const loadJobs = () => attempt('jobs', () => bridge.admin.jobs({ status: jobFilter.value === 'all' ? undefined : jobFilter.value, limit: 30 }), p => (jobs.value = p.items))
-const loadOverview = () => attempt('overview', () => bridge.admin.overview(), (o) => {
-  overview.value = o
-  lanes.value = o.lanes
-})
-
+const loadOverview = () => attempt('overview', () => bridge.admin.overview(), v => (overview.value = v))
 function loadAll() {
-  void attempt('health', () => bridge.admin.health(), h => (health.value = h))
+  void attempt('health', () => bridge.admin.health(), v => (health.value = v))
   void loadOverview()
-  void loadJobs()
-  void attempt('users', () => bridge.admin.users(), l => (users.value = [...l.items].sort((a, b) => Number(a.roles.length > 0) - Number(b.roles.length > 0))))
-  void attempt('sessions', () => bridge.admin.sessions(), l => (sessions.value = l.items))
-  void attempt('audit', () => bridge.admin.audit(null, 30), (p) => {
-    audit.value = p.items
-    auditCursor.value = p.nextCursor
-  })
+  void attempt('sources', () => bridge.admin.sources(), v => (sources.value = v))
+  void attempt('reco', () => bridge.admin.reco(), v => (reco.value = v))
+  void refreshCounts()
 }
+onMounted(loadAll)
+const refreshSoon = useDebounced(() => void loadOverview())
+useAdminLive({ 'job.updated': refreshSoon, 'acquisition.updated': refreshSoon }, loadAll)
 
-onMounted(() => {
-  loadAll()
-  bridge.live.connect()
-})
-watch(jobFilter, () => void loadJobs())
-
-// Живые события: задачи меняют состояние, загрузки двигают цифры
-let refresh: ReturnType<typeof setTimeout> | undefined
-function refreshSoon() {
-  clearTimeout(refresh)
-  refresh = setTimeout(() => void loadOverview(), 800)
-}
-const offs = [
-  bridge.live.on('job.updated', (e) => {
-    const list = jobs.value
-    if (list) {
-      const i = list.findIndex(j => j.id === e.id)
-      if (i >= 0) list.splice(i, 1, { ...list[i]!, status: e.status, attempts: e.attempts, lastError: e.lastError, runAfter: e.runAfter, updatedAt: new Date().toISOString() })
-    }
-    refreshSoon()
-  }),
-  bridge.live.on('acquisition.updated', refreshSoon),
-  bridge.live.onReconnect(loadAll),
-]
-onBeforeUnmount(() => offs.forEach(off => off()))
-
-// ---------- Обзор ----------
-
-const day = computed(() => overview.value?.last24h)
-const tiles = computed(() => {
-  const d = day.value
-  if (!d) return []
-  return [
-    { key: 'plays', icon: 'ph:play-circle', value: d.plays },
-    { key: 'likes', icon: 'ph:heart', value: d.likes },
-    { key: 'newTracks', icon: 'ph:music-notes-plus', value: d.newTracks },
-    { key: 'acquired', icon: 'ph:download-simple', value: d.acquisitionsReady },
-    { key: 'acquireFailed', icon: 'ph:warning-circle', value: d.acquisitionsFailed, bad: d.acquisitionsFailed > 0 },
-    { key: 'jobs', icon: 'ph:list-checks', value: d.jobsDone, extra: d.jobsFailed ? t('tiles.jobsFailed', { n: d.jobsFailed }) : null, bad: d.jobsFailed > 0 },
-  ]
-})
-
-const STATUS_COLOR: Record<AudioStatus, string> = {
-  ready: 'var(--success)',
-  queued: '#8ed8f5',
-  acquiring: 'var(--accent)',
-  none: 'rgba(232, 236, 244, 0.22)',
-  disputed: 'var(--warning)',
-  unavailable: 'rgba(232, 236, 244, 0.45)',
-  failed: 'var(--danger)',
-}
-const storageTotal = computed(() => (overview.value ? overview.value.storage.audioBytes + overview.value.storage.imageBytes : 0))
-const recTotal = computed(() => overview.value?.recordingsByStatus.reduce((s, x) => s + x.count, 0) ?? 0)
-const recParts = computed(() => (overview.value?.recordingsByStatus ?? []).filter(x => x.count > 0))
 const uptime = computed(() => {
   const s = health.value?.uptimeS ?? 0
   if (s < 3600) return t('uptime.min', { n: Math.max(1, Math.round(s / 60)) })
@@ -113,521 +39,191 @@ const uptime = computed(() => {
   return t('uptime.d', { n: Math.round(s / 86400) })
 })
 
-// ---------- Очереди ----------
+// ---------- Что требует внимания ----------
 
-/** «3 файла», «223 картинки» */
-function countWord(n: number, ru: [string, string, string], en: [string, string]) {
-  return lang.value === 'en' ? `${formatNumber(n, 'en')}\u00a0${n === 1 ? en[0] : en[1]}` : `${formatNumber(n)}\u00a0${plural(n, ru)}`
-}
-
-/** «2 потока · пауза 2 с» — сколько задач полоса делает разом и сколько ждёт между ними */
-function laneMode(l: Lane) {
-  const workers = lang.value === 'en'
-    ? `${l.concurrency} ${l.concurrency === 1 ? 'worker' : 'workers'}`
-    : `${l.concurrency}\u00a0${plural(l.concurrency, ['поток', 'потока', 'потоков'])}`
-  if (!l.minIntervalMs) return workers
-  const sec = (l.minIntervalMs / 1000).toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: 1 })
-  return `${workers} · ${t('lanes.pause', { s: sec })}`
-}
-
-async function toggleLane(l: Lane, paused: boolean) {
-  const was = l.paused
-  l.paused = paused
+interface Problem { key: string, icon: string, tone: 'warn' | 'bad', text: string, action: string, to?: string, run?: () => Promise<void> }
+const online = computed(() => sources.value?.downloaders.filter(d => d.online && !d.revokedAt).length ?? 0)
+const queuedDownloads = computed(() => overview.value?.recordingsByStatus.find(s => s.status === 'queued')?.count ?? 0)
+async function resume(l: Lane) {
   try {
-    await bridge.admin.updateLane(l.lane, { paused })
-    toast.show({ text: paused ? t('lanes.paused', { title: l.title }) : t('lanes.resumed', { title: l.title }), icon: paused ? 'ph:pause-circle' : 'ph:play-circle', undo: () => void toggleLane(l, was) })
+    await bridge.admin.updateLane(l.lane, { paused: false })
+    toast.show({ text: t('problem.resumed', { title: l.title }), icon: 'ph:play-circle' })
+    await loadOverview()
   }
   catch {
-    l.paused = was
-    toast.error(t('lanes.changeFailed'))
+    toast.error(t('problem.failed'))
   }
+}
+const problems = computed<Problem[]>(() => {
+  const out: Problem[] = []
+  if (counts.value.disputed) out.push({ key: 'disputed', icon: 'ph:scales', tone: 'warn', text: t('problem.disputed', { n: counts.value.disputed }), action: t('problem.review'), to: '/admin/disputed' })
+  if (counts.value.waiting) out.push({ key: 'waiting', icon: 'ph:user-plus', tone: 'warn', text: t('problem.waiting', { n: counts.value.waiting }), action: t('problem.open'), to: '/admin/access' })
+  if (sources.value && !online.value && !sources.value.server.enabled && queuedDownloads.value) {
+    out.push({ key: 'nobody', icon: 'ph:plugs', tone: 'bad', text: t('problem.nobody', { n: formatNumber(queuedDownloads.value, lang.value) }), action: t('problem.sources'), to: '/admin/sources' })
+  }
+  if (sources.value?.server.enabled && sources.value.server.reachable === false) out.push({ key: 'fetcher', icon: 'ph:cloud-warning', tone: 'bad', text: t('problem.fetcher'), action: t('problem.sources'), to: '/admin/sources' })
+  const failedJobs = overview.value?.lanes.reduce((s, l) => s + l.failed, 0) ?? 0
+  if (failedJobs) out.push({ key: 'jobs', icon: 'ph:warning-circle', tone: 'bad', text: t('problem.jobs', { n: failedJobs }), action: t('problem.open'), to: '/admin/downloads?status=failed' })
+  for (const l of overview.value?.lanes ?? []) {
+    if (l.paused && l.queued) out.push({ key: `lane-${l.lane}`, icon: 'ph:pause-circle', tone: 'warn', text: t('problem.paused', { title: l.title, n: formatNumber(l.queued, lang.value) }), action: t('problem.resume'), run: () => resume(l) })
+  }
+  if (reco.value && !reco.value.ml.reachable) out.push({ key: 'ml', icon: 'ph:waveform', tone: 'warn', text: t('problem.ml'), action: t('problem.open'), to: '/admin/reco' })
+  return out
+})
+const running = ref<string | null>(null)
+async function act(p: Problem) {
+  if (p.to) return navigateTo(p.to)
+  running.value = p.key
+  await p.run?.()
+  running.value = null
 }
 
-// ---------- Задачи ----------
+// ---------- Цифры ----------
 
-const JOB_KINDS: Record<string, string> = { acquire: 'jobs.kind.acquire', sync_discography: 'jobs.kind.discography', mirror_image: 'jobs.kind.mirror', refresh_artist: 'jobs.kind.refresh' }
-const jobKind = (k: string) => (JOB_KINDS[k] ? t(JOB_KINDS[k]!) : k)
-const JOB_TONE: Record<JobStatus, string> = { queued: 'meta', running: 'new', done: 'success', failed: 'danger', cancelled: 'meta' }
-function jobSubject(j: Job) {
-  const p = j.payload as Record<string, unknown>
-  const owner = typeof p.owner === 'string' ? (p.owner === 'album' ? t('jobs.album') : t('jobs.artist')) : null
-  const id = typeof p.id === 'string' ? p.id : typeof p.trackId === 'string' ? p.trackId : typeof p.artistId === 'string' ? p.artistId : null
-  return [owner, id ? id.slice(-8) : null].filter(Boolean).join(' · ')
-}
-async function retryJob(j: Job) {
-  try {
-    await bridge.admin.retryJob(j.id)
-    j.status = 'queued'
-    toast.show({ text: t('jobs.retried'), icon: 'ph:arrow-clockwise' })
-  }
-  catch {
-    toast.error(t('jobs.actionFailed'))
-  }
-}
-async function cancelJob(j: Job) {
-  try {
-    await bridge.admin.cancelJob(j.id)
-    j.status = 'cancelled'
-    toast.show({ text: t('jobs.cancelled'), icon: 'ph:x-circle' })
-  }
-  catch {
-    toast.error(t('jobs.actionFailed'))
-  }
-}
-
-// ---------- Доступ ----------
-
-const waiting = computed(() => users.value?.filter(u => !u.roles.length && !u.disabled) ?? [])
-async function setRoles(u: AdminUser, roles: Role[], text: string) {
-  const was = u.roles
-  u.roles = roles
-  try {
-    await bridge.admin.updateUser(u.id, { roles })
-    toast.show({ text, icon: 'ph:user-check', undo: () => void setRoles(u, was, t('access.restored')) })
-  }
-  catch {
-    u.roles = was
-    toast.error(t('access.failed'))
-  }
-}
-async function setDisabled(u: AdminUser, disabled: boolean) {
-  const was = u.disabled
-  u.disabled = disabled
-  try {
-    await bridge.admin.updateUser(u.id, { disabled })
-    toast.show({ text: disabled ? t('access.disabledDone', { name: u.name }) : t('access.enabledDone', { name: u.name }), icon: disabled ? 'ph:user-minus' : 'ph:user-plus', undo: () => void setDisabled(u, was) })
-  }
-  catch {
-    u.disabled = was
-    toast.error(t('access.failed'))
-  }
-}
-function userMenu(u: AdminUser): MenuEntry[] {
-  const isAdmin = u.roles.includes('admin')
-  const self = u.id === auth.user?.id
+const day = computed(() => overview.value?.last24h)
+const stats = computed(() => {
+  const d = day.value
+  if (!d) return []
   return [
-    { kind: 'heading', label: u.name, hint: u.email ?? undefined },
-    isAdmin
-      ? { label: t('access.removeAdmin'), icon: 'ph:shield-slash', disabled: u.idpAdmin || self, hint: u.idpAdmin ? t('access.idpAdmin') : self ? t('access.self') : undefined, onSelect: () => setRoles(u, u.roles.filter(r => r !== 'admin'), t('access.adminRemoved', { name: u.name })) }
-      : { label: t('access.makeAdmin'), icon: 'ph:shield-check', onSelect: () => setRoles(u, [...new Set<Role>([...u.roles, 'admin'])], t('access.adminGiven', { name: u.name })) },
-    u.roles.includes('listener')
-      ? { label: t('access.removeListener'), icon: 'ph:headphones', disabled: self, onSelect: () => setRoles(u, u.roles.filter(r => r !== 'listener'), t('access.listenerRemoved', { name: u.name })) }
-      : { label: t('access.makeListener'), icon: 'ph:headphones', onSelect: () => setRoles(u, [...u.roles, 'listener'], t('access.listenerGiven', { name: u.name })) },
-    { kind: 'separator' },
-    { label: u.disabled ? t('access.enable') : t('access.disable'), icon: u.disabled ? 'ph:user-plus' : 'ph:user-minus', danger: !u.disabled, disabled: self, onSelect: () => setDisabled(u, !u.disabled) },
+    { key: 'plays', value: d.plays },
+    { key: 'likes', value: d.likes },
+    { key: 'newTracks', value: d.newTracks },
+    { key: 'acquired', value: d.acquisitionsReady },
+    { key: 'acquireFailed', value: d.acquisitionsFailed, tone: d.acquisitionsFailed ? 'is-warn' : '' },
+    { key: 'jobs', value: d.jobsDone, extra: d.jobsFailed ? t('stats.jobsFailed', { n: d.jobsFailed }) : null },
   ]
-}
-
-// ---------- Сессии ----------
-
-async function revoke(s: SessionInfo) {
-  try {
-    await bridge.admin.revokeSession(s.id)
-    sessions.value = sessions.value?.filter(x => x.id !== s.id) ?? null
-    toast.show({ text: t('sessions.revoked', { name: s.userName }), icon: 'ph:sign-out' })
-  }
-  catch {
-    toast.error(t('sessions.failed'))
-  }
-}
-function agent(s: SessionInfo) {
-  if (s.device) return `${s.device.name} · ${s.device.platform}${s.device.appVersion ? ` ${s.device.appVersion}` : ''}`
-  const ua = s.userAgent ?? ''
-  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : t('sessions.browser')
-  const os = /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Linux/.test(ua) ? 'Linux' : ''
-  return [browser, os].filter(Boolean).join(' · ')
-}
-
-// ---------- Журнал ----------
-
-const AUDIT: Record<string, string> = {
-  'auth.sign_in': 'audit.signIn',
-  'auth.sign_out': 'audit.signOut',
-  'user.created': 'audit.userCreated',
-  'user.roles_changed': 'audit.rolesChanged',
-  'user.disabled': 'audit.userDisabled',
-  'user.enabled': 'audit.userEnabled',
-  'session.revoked': 'audit.sessionRevoked',
-  'lane.changed': 'audit.laneChanged',
-  'job.retried': 'audit.jobRetried',
-  'job.cancelled': 'audit.jobCancelled',
-  'device.created': 'audit.deviceCreated',
-}
-const auditKind = (k: string) => (AUDIT[k] ? t(AUDIT[k]!) : k)
-function auditDetails(e: AuditEvent) {
-  const p = e.payload as Record<string, unknown>
-  const parts: string[] = []
-  if (typeof p.via === 'string') parts.push(p.via === 'password' ? t('audit.viaPassword') : p.via === 'oidc' ? 'daly.rest' : String(p.via))
-  if (Array.isArray(p.roles)) parts.push(p.roles.join(', ') || t('audit.noRoles'))
-  if (Array.isArray(p.to)) parts.push(`${(Array.isArray(p.from) && p.from.join(', ')) || t('audit.noRoles')} → ${p.to.join(', ') || t('audit.noRoles')}`)
-  if (p.reason === 'provider') parts.push(t('audit.byProvider'))
-  if (typeof p.platform === 'string') parts.push(p.platform)
-  if (typeof p.email === 'string') parts.push(p.email)
-  if (typeof p.paused === 'boolean') parts.push(p.paused ? t('audit.pausedTrue') : t('audit.pausedFalse'))
-  if (typeof p.lane === 'string') parts.push(p.lane)
-  if (typeof p.ip === 'string') parts.push(p.ip)
-  return parts.join(' · ')
-}
-async function moreAudit() {
-  if (!auditCursor.value) return
-  const p = await bridge.admin.audit(auditCursor.value, 30).catch(() => null)
-  if (!p) return toast.error(t('audit.failed'))
-  audit.value = [...(audit.value ?? []), ...p.items]
-  auditCursor.value = p.nextCursor
-}
+})
+const recTotal = computed(() => overview.value?.recordingsByStatus.reduce((s, x) => s + x.count, 0) ?? 0)
+const recParts = computed<MeterPart[]>(() => (overview.value?.recordingsByStatus ?? []).map(p => ({ key: p.status, label: L.audio(p.status), value: p.count, color: AUDIO_COLOR[p.status] })))
+const storageTotal = computed(() => (overview.value ? overview.value.storage.audioBytes + overview.value.storage.imageBytes : 0))
+const storageParts = computed<MeterPart[]>(() => {
+  const s = overview.value?.storage
+  if (!s) return []
+  return [
+    { key: 'audio', label: t('storage.audio'), value: s.audioBytes, display: formatBytes(s.audioBytes, lang.value), color: 'var(--accent)', sub: formatCount(s.audioFiles, 'file', lang.value) },
+    { key: 'images', label: t('storage.images'), value: s.imageBytes, display: formatBytes(s.imageBytes, lang.value), color: '#8ed8f5', sub: formatCount(s.images, 'image', lang.value) },
+  ]
+})
+const cost = computed(() => formatUsd(r2MonthlyUsd(storageTotal.value), lang.value))
+const analysedShare = computed(() => {
+  const r = reco.value
+  const ready = overview.value?.recordingsByStatus.find(s => s.status === 'ready')?.count ?? 0
+  if (!r || !ready) return null
+  return Math.min(100, Math.round((r.index.full / ready) * 100))
+})
+const fetcherVersion = computed(() => {
+  const d = sources.value?.downloaders.find(x => x.online && !x.revokedAt)
+  return d?.ytDlpVersion ?? null
+})
 </script>
 
 <template>
-  <div class="ad">
-    <!-- Обзор -->
-    <section id="overview" class="ad__sec">
-      <header class="ad__head">
-        <h1 class="ad__title">{{ t('title') }}</h1>
-        <div class="ad__status">
-          <span v-if="health" class="pill pill--ok"><i />{{ t('health.ok', { version: health.version, uptime }) }}</span>
-          <span v-else-if="failed.health" class="pill pill--bad"><i />{{ t('health.down') }}</span>
-          <span class="pill" :class="bridge.live.state === 'open' ? 'pill--live' : 'pill--off'"><i />{{ bridge.live.state === 'open' ? t('live.on') : t('live.off') }}</span>
-        </div>
-      </header>
+  <div class="ap">
+    <header class="ap-head">
+      <h1 class="ap-title">{{ t('title') }}</h1>
+      <div class="ap-head__side ov__pills">
+        <span v-if="health" class="ov__pill"><i class="ap-dot is-ok" />{{ t('health.ok', { version: health.version, uptime }) }}</span>
+        <span v-else-if="failed.health" class="ov__pill ap-bad"><i class="ap-dot is-bad" />{{ t('health.down') }}</span>
+        <span class="ov__pill"><i class="ap-dot" :class="bridge.live.state === 'open' ? 'is-ok' : ''" />{{ bridge.live.state === 'open' ? t('live.on') : t('live.off') }}</span>
+      </div>
+    </header>
 
-      <div v-if="tiles.length" class="tiles">
-        <div v-for="tl in tiles" :key="tl.key" class="tile" :class="{ 'tile--bad': tl.bad }">
-          <Icon :name="tl.icon" class="tile__icon" />
-          <span class="tile__value tnum">{{ formatNumber(tl.value, lang) }}</span>
-          <span class="tile__label">{{ t(`tiles.${tl.key}`) }}</span>
-          <span v-if="tl.extra" class="tile__extra">{{ tl.extra }}</span>
+    <AdminSection :title="t('problem.title')">
+      <template v-if="problems.length" #badge>
+        <span class="ov__count tnum">{{ problems.length }}</span>
+      </template>
+      <AdminState :loading="!overview && !failed.overview" :error="failed.overview && !overview" :rows="2" @retry="loadAll">
+        <div v-if="problems.length" class="ap-table">
+          <div v-for="p in problems" :key="p.key" class="ap-tr ov__problem">
+            <Icon :name="p.icon" class="ov__picon" :class="p.tone === 'bad' ? 'ap-bad' : 'ap-warn'" />
+            <span class="ov__ptext">{{ p.text }}</span>
+            <UiButton size="sm" :variant="p.run ? 'primary' : 'secondary'" :loading="running === p.key" :icon-right="p.to ? 'ph:arrow-right' : undefined" @click="act(p)">{{ p.action }}</UiButton>
+          </div>
+        </div>
+        <p v-else class="ov__fine"><Icon name="ph:check-circle" class="ap-ok" />{{ t('problem.none') }}</p>
+      </AdminState>
+    </AdminSection>
+
+    <AdminSection :title="t('stats.title')">
+      <div v-if="stats.length" class="ap-stats">
+        <div v-for="s in stats" :key="s.key" class="ap-stat" :class="s.tone">
+          <span class="ap-stat__value">{{ formatNumber(s.value, lang) }}</span>
+          <span class="ap-stat__label">{{ t(`stats.${s.key}`) }}</span>
+          <span v-if="s.extra" class="ap-stat__extra ap-bad">{{ s.extra }}</span>
         </div>
       </div>
-      <div v-else-if="!failed.overview" class="tiles"><UiSkeleton v-for="n in 6" :key="n" height="104px" /></div>
-      <p class="ad__caption">{{ t('tiles.caption') }}</p>
+      <AdminState v-else :loading="!failed.overview" :error="failed.overview" :rows="2" @retry="loadOverview" />
+    </AdminSection>
 
-      <div v-if="overview" class="ad__grid">
-        <div class="card card--rec">
-          <h3 class="card__title">{{ t('rec.title') }}</h3>
-          <div class="rec__total tnum">{{ formatNumber(recTotal, lang) }} <span>{{ t('rec.records') }}</span></div>
-          <div class="rec__bar" role="img" :aria-label="recParts.map(p => `${t(`rec.status.${p.status}`)}: ${p.count}`).join(', ')">
-            <i v-for="p in recParts" :key="p.status" :style="{ flexGrow: p.count, background: STATUS_COLOR[p.status] }" />
+    <div v-if="overview" class="ap-cols">
+      <AdminSection :title="t('rec.title')">
+        <template #tools><span class="ov__total tnum">{{ formatNumber(recTotal, lang) }}</span></template>
+        <AdminMeter :parts="recParts" :label="t('rec.title')" />
+      </AdminSection>
+      <AdminSection :title="t('storage.title')">
+        <template #tools><span class="ov__total tnum">{{ formatBytes(storageTotal, lang) }}</span></template>
+        <AdminMeter :parts="storageParts" :label="t('storage.title')" />
+        <dl class="ap-kv">
+          <div><dt>{{ t('storage.cost') }}</dt><dd>{{ cost }}</dd></div>
+        </dl>
+      </AdminSection>
+      <AdminSection :title="t('lib.title')">
+        <dl class="ap-kv">
+          <div><dt>{{ t('lib.tracks') }}</dt><dd>{{ formatNumber(overview.library.tracks, lang) }}</dd></div>
+          <div><dt>{{ t('lib.albums') }}</dt><dd>{{ formatNumber(overview.library.albums, lang) }}</dd></div>
+          <div><dt>{{ t('lib.artists') }}</dt><dd>{{ formatNumber(overview.library.artists, lang) }}</dd></div>
+          <div><dt>{{ t('lib.liked') }}</dt><dd>{{ formatNumber(overview.library.likedTracks, lang) }}</dd></div>
+          <div><dt>{{ t('lib.followed') }}</dt><dd>{{ formatNumber(overview.library.followedArtists, lang) }}</dd></div>
+          <div><dt>{{ t('lib.playlists') }}</dt><dd>{{ formatNumber(overview.library.playlists, lang) }}</dd></div>
+        </dl>
+      </AdminSection>
+      <AdminSection :title="t('sys.title')">
+        <dl class="ap-kv">
+          <div>
+            <dt>{{ t('sys.downloaders') }}</dt>
+            <dd>
+              <template v-if="sources">{{ online ? t('sys.online', { n: online }) : t('sys.offline') }}<span v-if="fetcherVersion" class="ap-muted"> · yt-dlp {{ fetcherVersion }}</span></template>
+              <template v-else>—</template>
+            </dd>
           </div>
-          <ul class="rec__legend">
-            <li v-for="p in overview.recordingsByStatus" :key="p.status" :class="{ 'is-zero': !p.count }">
-              <i :style="{ background: STATUS_COLOR[p.status] }" />
-              <span>{{ t(`rec.status.${p.status}`) }}</span>
-              <b class="tnum">{{ formatNumber(p.count, lang) }}</b>
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3 class="card__title">{{ t('lib.title') }}</h3>
-          <dl class="kv">
-            <dt>{{ t('lib.tracks') }}</dt><dd class="tnum">{{ formatNumber(overview.library.tracks, lang) }}</dd>
-            <dt>{{ t('lib.recordings') }}</dt><dd class="tnum">{{ formatNumber(overview.library.recordings, lang) }}</dd>
-            <dt>{{ t('lib.albums') }}</dt><dd class="tnum">{{ formatNumber(overview.library.albums, lang) }}</dd>
-            <dt>{{ t('lib.artists') }}</dt><dd class="tnum">{{ formatNumber(overview.library.artists, lang) }}</dd>
-            <dt>{{ t('lib.liked') }}</dt><dd class="tnum">{{ formatNumber(overview.library.likedTracks, lang) }}</dd>
-            <dt>{{ t('lib.followed') }}</dt><dd class="tnum">{{ formatNumber(overview.library.followedArtists, lang) }}</dd>
-            <dt>{{ t('lib.playlists') }}</dt><dd class="tnum">{{ formatNumber(overview.library.playlists, lang) }}</dd>
-          </dl>
-        </div>
-        <div class="card">
-          <h3 class="card__title">{{ t('storage.title') }}</h3>
-          <div class="rec__total tnum">{{ formatBytes(storageTotal, lang) }} <span>{{ t('storage.used') }}</span></div>
-          <div class="rec__bar" role="img" :aria-label="`${t('storage.audio')}: ${formatBytes(overview.storage.audioBytes, lang)}, ${t('storage.images')}: ${formatBytes(overview.storage.imageBytes, lang)}`">
-            <i v-if="overview.storage.audioBytes" :style="{ flexGrow: overview.storage.audioBytes, background: 'var(--accent)' }" />
-            <i v-if="overview.storage.imageBytes" :style="{ flexGrow: overview.storage.imageBytes, background: '#8ed8f5' }" />
+          <div v-if="sources?.server.enabled">
+            <dt>{{ t('sys.server') }}</dt>
+            <dd :class="sources.server.reachable ? 'ap-ok' : 'ap-bad'">{{ sources.server.reachable ? t('sys.works') : t('sys.down') }}</dd>
           </div>
-          <ul class="store">
-            <li>
-              <i style="background: var(--accent)" />
-              <span class="store__name">{{ t('storage.audio') }}</span>
-              <b class="tnum">{{ formatBytes(overview.storage.audioBytes, lang) }}</b>
-              <small class="tnum">{{ countWord(overview.storage.audioFiles, ['файл', 'файла', 'файлов'], ['file', 'files']) }}</small>
-            </li>
-            <li>
-              <i style="background: #8ed8f5" />
-              <span class="store__name">{{ t('storage.images') }}</span>
-              <b class="tnum">{{ formatBytes(overview.storage.imageBytes, lang) }}</b>
-              <small class="tnum">{{ countWord(overview.storage.images, ['картинка', 'картинки', 'картинок'], ['image', 'images']) }}</small>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <UiEmptyState v-else-if="failed.overview" icon="ph:cloud-warning" :title="t('failed')" tone="error" compact>
-        <UiButton icon="ph:arrow-clockwise" @click="loadOverview">{{ t('retry') }}</UiButton>
-      </UiEmptyState>
-    </section>
-
-    <!-- Очереди -->
-    <section id="lanes" class="ad__sec">
-      <header class="ad__sechead">
-        <h2 class="ad__h2">{{ t('lanes.title') }}</h2>
-        <p class="ad__hint">{{ t('lanes.hint') }}</p>
-      </header>
-      <div v-if="lanes" class="card card--flush">
-        <div class="lanes" role="table" :aria-label="t('lanes.title')">
-          <div class="lanes__row lanes__row--head" role="row">
-            <span role="columnheader">{{ t('lanes.lane') }}</span>
-            <span role="columnheader" class="num">{{ t('lanes.queued') }}</span>
-            <span role="columnheader" class="num">{{ t('lanes.running') }}</span>
-            <span role="columnheader" class="num">{{ t('lanes.failed') }}</span>
-            <span role="columnheader" class="num">{{ t('lanes.done') }}</span>
-            <span role="columnheader" class="lanes__mode-h">{{ t('lanes.mode') }}</span>
-            <span role="columnheader" class="sr-only">{{ t('lanes.state') }}</span>
+          <div><dt>{{ t('sys.queue') }}</dt><dd>{{ formatNumber(overview.lanes.reduce((s, l) => s + l.queued, 0), lang) }}</dd></div>
+          <div><dt>{{ t('sys.analysed') }}</dt><dd>{{ analysedShare != null ? `${analysedShare}%` : '—' }}</dd></div>
+          <div><dt>{{ t('sys.index') }}</dt><dd>{{ reco ? formatNumber(reco.index.size, lang) : '—' }}</dd></div>
+          <div>
+            <dt>{{ t('sys.ml') }}</dt>
+            <dd :class="reco ? (reco.ml.reachable ? 'ap-ok' : 'ap-bad') : ''">{{ reco ? (reco.ml.reachable ? t('sys.works') : t('sys.down')) : '—' }}</dd>
           </div>
-          <div v-for="l in lanes" :key="l.lane" class="lanes__row" :class="{ 'is-paused': l.paused }" role="row">
-            <span role="cell" class="lanes__name">
-              <b>{{ l.title }}<UiBadge v-if="l.paused" variant="meta">{{ t('lanes.pausedLabel') }}</UiBadge></b>
-              <code>{{ l.lane }}</code>
-              <small class="lanes__mode-sm">{{ laneMode(l) }}</small>
-            </span>
-            <span role="cell" class="num tnum">{{ l.queued || '—' }}</span>
-            <span role="cell" class="num tnum" :class="{ 'is-on': l.running }">{{ l.running || '—' }}</span>
-            <span role="cell" class="num tnum" :class="{ 'is-bad': l.failed }">{{ l.failed || '—' }}</span>
-            <span role="cell" class="num tnum">{{ l.done24h || '—' }}</span>
-            <span role="cell" class="lanes__mode">{{ laneMode(l) }}</span>
-            <span role="cell" class="lanes__state">
-              <UiTooltip :text="l.paused ? t('lanes.resumeHint') : t('lanes.pauseHint')" side="left">
-                <span class="lanes__switch">
-                  <UiSwitch :model-value="!l.paused" :label="t(l.paused ? 'lanes.switchPaused' : 'lanes.switchRunning', { title: l.title })" hide-label @update:model-value="v => toggleLane(l, !v)" />
-                </span>
-              </UiTooltip>
-            </span>
-          </div>
-        </div>
-      </div>
-      <div v-else-if="!failed.overview" class="card"><UiSkeleton v-for="n in 4" :key="n" variant="line" height="18px" style="margin: 12px 0" /></div>
-    </section>
-
-    <!-- Задачи -->
-    <section id="jobs" class="ad__sec">
-      <header class="ad__sechead ad__sechead--row">
-        <div>
-          <h2 class="ad__h2">{{ t('jobs.title') }}</h2>
-          <p class="ad__hint">{{ t('jobs.hint') }}</p>
-        </div>
-        <UiSegmentedControl
-          v-model="jobFilter"
-          :options="[{ value: 'all', label: t('jobs.all') }, { value: 'failed', label: t('jobs.status.failed') }, { value: 'queued', label: t('jobs.status.queued') }, { value: 'running', label: t('jobs.status.running') }]"
-          :label="t('jobs.filter')"
-          size="sm"
-        />
-      </header>
-      <div v-if="jobs?.length" class="card card--flush">
-        <div v-for="j in jobs" :key="j.id" class="job">
-          <UiBadge :variant="JOB_TONE[j.status] as 'meta'" class="job__status">{{ t(`jobs.status.${j.status}`) }}</UiBadge>
-          <div class="job__main">
-            <div class="job__title">{{ jobKind(j.kind) }} <span class="job__subject">{{ jobSubject(j) }}</span></div>
-            <div class="job__meta">
-              <code>{{ j.lane }}</code>
-              <span>{{ t('jobs.attempts', { n: j.attempts, max: j.maxAttempts }) }}</span>
-              <span>{{ formatRelative(j.updatedAt, lang) }}</span>
-            </div>
-            <div v-if="j.lastError" class="job__error" :title="j.lastError">{{ j.lastError }}</div>
-          </div>
-          <div class="job__actions">
-            <UiButton v-if="j.status === 'failed' || j.status === 'cancelled'" size="sm" icon="ph:arrow-clockwise" @click="retryJob(j)">{{ t('jobs.retry') }}</UiButton>
-            <UiButton v-else-if="j.status === 'queued' || j.status === 'running'" size="sm" variant="ghost" icon="ph:x" @click="cancelJob(j)">{{ t('jobs.cancel') }}</UiButton>
-          </div>
-        </div>
-      </div>
-      <UiEmptyState v-else-if="jobs" icon="ph:check-circle" :title="t('jobs.empty')" compact />
-      <UiEmptyState v-else-if="failed.jobs" icon="ph:cloud-warning" :title="t('failed')" tone="error" compact>
-        <UiButton icon="ph:arrow-clockwise" @click="loadJobs">{{ t('retry') }}</UiButton>
-      </UiEmptyState>
-    </section>
-
-    <!-- Доступ -->
-    <section id="access" class="ad__sec">
-      <header class="ad__sechead">
-        <h2 class="ad__h2">{{ t('access.title') }}<UiBadge v-if="waiting.length" variant="new" class="ad__count">{{ t('access.waiting', { n: waiting.length }) }}</UiBadge></h2>
-        <p class="ad__hint">{{ t('access.hint') }}</p>
-      </header>
-      <div v-if="users" class="card card--flush">
-        <div v-for="u in users" :key="u.id" class="user" :class="{ 'is-waiting': !u.roles.length && !u.disabled, 'is-disabled': u.disabled }">
-          <span class="user__avatar">
-            <img v-if="u.avatarUrl" :src="u.avatarUrl" alt="">
-            <span v-else>{{ u.name.charAt(0).toUpperCase() }}</span>
-          </span>
-          <div class="user__main">
-            <div class="user__name">{{ u.name }}<UiBadge v-if="u.id === auth.user?.id" variant="meta">{{ t('access.you') }}</UiBadge></div>
-            <div class="user__meta">
-              <span v-if="u.email">{{ u.email }}</span>
-              <span>{{ u.issuer ? 'daly.rest' : t('access.local') }}</span>
-              <span v-if="u.lastLoginAt">{{ t('access.lastLogin', { when: formatRelative(u.lastLoginAt, lang) }) }}</span>
-            </div>
-          </div>
-          <div class="user__roles">
-            <UiBadge v-if="u.disabled" variant="danger">{{ t('access.disabled') }}</UiBadge>
-            <template v-else-if="u.roles.length">
-              <UiBadge v-for="r in u.roles" :key="r" :variant="r === 'admin' ? 'new' : 'meta'" :icon="r === 'admin' && u.idpAdmin ? 'ph:link-simple' : undefined">{{ t(`access.role.${r}`) }}</UiBadge>
-            </template>
-            <UiButton v-else variant="primary" size="sm" icon="ph:user-check" @click="setRoles(u, ['listener'], t('access.listenerGiven', { name: u.name }))">{{ t('access.give') }}</UiButton>
-          </div>
-          <UiMenu :items="userMenu(u)">
-            <UiIconButton icon="ph:dots-three" :label="t('access.actions')" size="sm" :tooltip="false" />
-          </UiMenu>
-        </div>
-      </div>
-      <UiEmptyState v-else-if="failed.users" icon="ph:cloud-warning" :title="t('failed')" tone="error" compact />
-    </section>
-
-    <!-- Сессии -->
-    <section id="sessions" class="ad__sec">
-      <header class="ad__sechead">
-        <h2 class="ad__h2">{{ t('sessions.title') }}</h2>
-        <p class="ad__hint">{{ t('sessions.hint') }}</p>
-      </header>
-      <div v-if="sessions?.length" class="card card--flush">
-        <div v-for="s in sessions" :key="s.id" class="sess">
-          <span class="sess__icon"><Icon :name="s.kind === 'device' ? 'ph:laptop' : 'ph:browser'" /></span>
-          <div class="sess__main">
-            <div class="sess__name">{{ s.userName }}<UiBadge v-if="s.current" variant="success">{{ t('sessions.current') }}</UiBadge></div>
-            <div class="sess__meta">
-              <span>{{ agent(s) }}</span>
-              <span>{{ s.via === 'password' ? t('sessions.viaPassword') : s.via === 'device' ? t('sessions.viaDevice') : 'daly.rest' }}</span>
-              <span v-if="s.ip">{{ s.ip }}</span>
-              <span>{{ t('sessions.seen', { when: formatRelative(s.lastSeenAt, lang) }) }}</span>
-            </div>
-          </div>
-          <UiButton v-if="!s.current" size="sm" variant="ghost" icon="ph:sign-out" @click="revoke(s)">{{ t('sessions.revoke') }}</UiButton>
-        </div>
-      </div>
-      <UiEmptyState v-else-if="sessions" icon="ph:devices" :title="t('sessions.empty')" compact />
-    </section>
-
-    <!-- Журнал -->
-    <section id="audit" class="ad__sec">
-      <header class="ad__sechead">
-        <h2 class="ad__h2">{{ t('audit.title') }}</h2>
-        <p class="ad__hint">{{ t('audit.hint') }}</p>
-      </header>
-      <div v-if="audit?.length" class="card card--flush">
-        <div v-for="e in audit" :key="e.id" class="log">
-          <span class="log__time tnum">{{ formatDateTime(e.at, lang) }}</span>
-          <span class="log__kind">{{ auditKind(e.kind) }}</span>
-          <span class="log__who">{{ e.actor?.name ?? t('audit.system') }}</span>
-          <span class="log__details">{{ auditDetails(e) }}</span>
-        </div>
-        <div v-if="auditCursor" class="log__more"><UiButton variant="ghost" size="sm" @click="moreAudit">{{ t('audit.more') }}</UiButton></div>
-      </div>
-      <UiEmptyState v-else-if="audit" icon="ph:scroll" :title="t('audit.empty')" compact />
-    </section>
+          <div><dt>{{ t('sys.model') }}</dt><dd>{{ reco?.modelVersion ?? '—' }}</dd></div>
+        </dl>
+      </AdminSection>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.ad { display: flex; flex-direction: column; gap: 48px; max-width: 1160px; padding: 32px 32px 80px; }
-.ad__sec { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
-.ad__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
-.ad__title { margin: 0; font-size: var(--fs-h1); font-weight: 750; letter-spacing: var(--tr-display); }
-.ad__status { display: flex; flex-wrap: wrap; gap: 8px; }
-.pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); font-size: var(--fs-caption); font-weight: 600; color: var(--text-2); }
-.pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-4); }
-.pill--ok i, .pill--live i { background: var(--success); box-shadow: 0 0 8px var(--success); }
-.pill--live i { animation: pulse 2s var(--ease-in-out) infinite; }
-.pill--bad { color: var(--danger); }
-.pill--bad i { background: var(--danger); }
-@keyframes pulse { 50% { opacity: 0.4; } }
-.ad__sechead { display: flex; flex-direction: column; gap: 2px; }
-.ad__sechead--row { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.ad__h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); }
-.ad__hint, .ad__caption { margin: 0; font-size: var(--fs-small); color: var(--text-3); }
-.ad__caption { margin-top: -6px; }
-.tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.tile { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 16px; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
-.tile__icon { font-size: 20px; color: var(--text-3); margin-bottom: 6px; }
-.tile__value { font-size: var(--fs-h2); font-weight: 700; letter-spacing: var(--tr-title); line-height: 1.1; }
-.tile__label { font-size: var(--fs-small); color: var(--text-2); }
-.tile__extra { font-size: var(--fs-caption); color: var(--danger); }
-.tile--bad .tile__icon { color: var(--danger); }
-.ad__grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; }
-.store { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--fs-small); }
-.store li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; }
-.store i { width: 8px; height: 8px; border-radius: 2px; }
-.store__name { min-width: 0; color: var(--text-2); }
-.store b { font-weight: 600; text-align: right; }
-.store small { grid-column: 2 / -1; font-size: var(--fs-caption); color: var(--text-3); }
-.card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 18px 20px; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
-.card--flush { gap: 0; padding: 4px 0; }
-.card__title { margin: 0; font-size: var(--fs-caption); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
-.card__note { margin: 4px 0 0; font-size: var(--fs-caption); line-height: 1.45; color: var(--text-3); text-wrap: pretty; }
-.rec__total { font-size: var(--fs-h2); font-weight: 700; letter-spacing: var(--tr-title); }
-.rec__total span { font-size: var(--fs-small); font-weight: 500; color: var(--text-2); }
-.rec__bar { display: flex; gap: 2px; height: 10px; overflow: hidden; border-radius: 5px; background: var(--fill-2); }
-.rec__bar i { display: block; min-width: 4px; height: 100%; }
-.rec__legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--fs-small); }
-.rec__legend li { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.rec__legend li.is-zero { color: var(--text-4); }
-.rec__legend i { width: 8px; height: 8px; flex: none; border-radius: 2px; }
-.rec__legend b { margin-left: auto; font-weight: 600; }
-.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; margin: 0; font-size: var(--fs-small); }
-.kv dt { color: var(--text-2); }
-.kv dd { margin: 0; font-weight: 600; text-align: right; }
-.lanes__row { display: grid; grid-template-columns: minmax(170px, 1.8fr) repeat(4, minmax(56px, 0.5fr)) minmax(150px, 1.3fr) 48px; align-items: center; gap: 16px; min-height: 56px; padding: 6px 20px; border-top: 1px solid var(--hair); font-size: var(--fs-small); }
-.lanes__row--head { min-height: 40px; border-top: 0; font-size: var(--fs-caption); font-weight: 600; color: var(--text-3); }
-.lanes__row.is-paused .lanes__name b { color: var(--text-2); }
-.lanes__name { display: flex; flex-direction: column; min-width: 0; }
-.lanes__name b { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.lanes__mode { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
-.lanes__mode-h { padding-left: 20px; white-space: nowrap; }
-.lanes__mode { padding-left: 20px; }
-.lanes__mode-sm { display: none; font-size: var(--fs-caption); color: var(--text-3); }
-.lanes__row.is-paused .lanes__mode { color: var(--text-3); }
-.lanes__switch { display: inline-flex; }
-.lanes__name code, .job__meta code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-3); }
-.num { text-align: right; }
-.num small { color: var(--text-3); }
-.is-on { color: var(--accent); font-weight: 600; }
-.is-bad { color: var(--danger); font-weight: 600; }
-.lanes__state { display: flex; justify-content: flex-end; }
-.lanes__row--head > :last-child { justify-self: end; }
-.job, .user, .sess { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-top: 1px solid var(--hair); }
-.job:first-child, .user:first-child, .sess:first-child, .log:first-child { border-top: 0; }
-.job__status { flex: none; min-width: 92px; justify-content: center; }
-.job__main, .user__main, .sess__main { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-.job__title, .user__name, .sess__name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.job__subject { font-weight: 450; color: var(--text-3); font-variant-numeric: tabular-nums; }
-.job__meta, .user__meta, .sess__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-caption); color: var(--text-3); }
-.job__error { overflow: hidden; font-size: var(--fs-caption); color: var(--danger); text-overflow: ellipsis; white-space: nowrap; }
-.job__actions { flex: none; }
-.user.is-waiting { background: color-mix(in oklab, var(--accent) 7%, transparent); }
-.user.is-disabled { opacity: 0.6; }
-.user__avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; overflow: hidden; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); font-weight: 700; }
-.user__avatar img { width: 100%; height: 100%; object-fit: cover; }
-.user__roles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.sess__icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--fill-2); color: var(--text-2); font-size: 18px; }
-.log { display: grid; grid-template-columns: 130px minmax(150px, 0.9fr) minmax(100px, 0.6fr) minmax(0, 1.4fr); gap: 12px; align-items: baseline; padding: 10px 20px; border-top: 1px solid var(--hair); font-size: var(--fs-small); }
-.log__time { color: var(--text-3); }
-.log__kind { font-weight: 600; }
-.log__who { color: var(--text-2); }
-.log__details { overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
-.log__more { display: flex; justify-content: center; padding: 8px; border-top: 1px solid var(--hair); }
-.ad__count { margin-left: 2px; }
-@media (max-width: 1199px) {
-  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ad__grid { grid-template-columns: 1fr 1fr; }
-  .card--rec { grid-column: 1 / -1; }
-}
-@media (max-width: 899px) {
-  .lanes__row { grid-template-columns: minmax(140px, 1.5fr) repeat(2, minmax(48px, 0.5fr)) minmax(130px, 1.2fr) 48px; gap: 12px; }
-  .lanes__row > :nth-child(4), .lanes__row > :nth-child(5) { display: none; }
-  .log { grid-template-columns: 110px minmax(0, 1fr); }
-  .log__who, .log__details { grid-column: 2; }
+.ov__pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: var(--r-pill); background: var(--fill-1); font-size: var(--fs-caption); font-weight: 600; color: var(--text-2); }
+.ov__count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--r-pill); background: color-mix(in oklab, var(--warning) 20%, transparent); font-size: 12px; font-weight: 700; color: var(--warning); }
+.ov__problem { --cols: 20px minmax(0, 1fr) auto; min-height: 56px; }
+.ov__picon { font-size: 20px; }
+.ov__ptext { font-size: var(--fs-body); }
+.ov__fine { display: flex; align-items: center; gap: 10px; margin: 0; min-height: 44px; color: var(--text-2); }
+.ov__fine :deep(.iconify) { font-size: 20px; }
+.ov__total { font-size: var(--fs-h4); font-weight: 700; }
+@media (max-width: 1099px) {
+  .ap-stats { --n: 3; row-gap: 20px; }
+  .ap-stat:nth-child(4) { padding-left: 0; border-left: 0; }
 }
 @media (max-width: 699px) {
-  .ad { gap: 36px; padding: 16px 16px 64px; }
-  .ad__title { font-size: 28px; }
-  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ad__grid { grid-template-columns: minmax(0, 1fr); }
-  .lanes__row { grid-template-columns: minmax(0, 1fr) 48px 48px; padding: 8px 14px; }
-  .lanes__row > :nth-child(3), .lanes__row > :nth-child(6) { display: none; }
-  .lanes__mode-sm { display: block; }
-  .job, .user, .sess { flex-wrap: wrap; padding: 12px 14px; }
-  .job { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 6px; }
-  .job__status { grid-row: 1; grid-column: 1; justify-self: start; min-width: 0; }
-  .job__actions { grid-row: 1; grid-column: 2; }
-  .job__main { grid-column: 1 / -1; }
-  .job__title { display: block; }
-  .user__roles { width: 100%; justify-content: flex-start; padding-left: 54px; }
+  .ov__pills { width: 100%; }
+  .ov__problem { --cols: 20px minmax(0, 1fr); }
+  .ov__problem > :last-child { grid-column: 2; justify-self: start; }
+  .ov__ptext { font-size: var(--fs-small); }
+  .ap-stat:nth-child(4) { padding-left: 16px; border-left: 1px solid var(--hair); }
+  .ap-stat:nth-child(odd) { padding-left: 0; border-left: 0; }
 }
 </style>
 
@@ -635,256 +231,102 @@ async function moreAudit() {
 {
   "ru": {
     "title": "Обзор",
-    "failed": "Не загрузилось",
-    "retry": "Повторить",
     "health": { "ok": "Сервер работает · {version} · {uptime}", "down": "Сервер не отвечает" },
     "uptime": { "min": "{n} мин", "h": "{n} ч", "d": "{n} дн." },
     "live": { "on": "Живые события", "off": "Без живых событий" },
-    "tiles": {
+    "problem": {
+      "title": "Требует внимания",
+      "none": "Всё в порядке",
+      "disputed": "Спорных записей: {n} — нужно выбрать, что скачать",
+      "waiting": "Ждут доступа: {n}",
+      "nobody": "Качать некому: загрузчик не на связи, в очереди {n}",
+      "fetcher": "Серверный загрузчик не отвечает",
+      "jobs": "Задач с ошибкой: {n}",
+      "paused": "«{title}» на паузе, ждут {n}",
+      "ml": "Сервис анализа звука не отвечает",
+      "review": "Разобрать",
+      "open": "Открыть",
+      "sources": "Источники",
+      "resume": "Запустить",
+      "resumed": "«{title}» снова работает",
+      "failed": "Не получилось — попробуйте ещё раз"
+    },
+    "stats": {
+      "title": "За сутки",
       "plays": "прослушиваний",
       "likes": "лайков",
       "newTracks": "новых треков",
       "acquired": "скачано",
       "acquireFailed": "не скачалось",
       "jobs": "задач выполнено",
-      "jobsFailed": "{n} с ошибкой",
-      "caption": "За последние сутки"
+      "jobsFailed": "{n} с ошибкой"
     },
-    "rec": {
-      "title": "Записи по состоянию",
-      "records": "записей",
-      "status": { "ready": "На сервере", "queued": "В очереди", "acquiring": "Скачиваются", "none": "Только в каталоге", "disputed": "Спорные", "unavailable": "Нет в источниках", "failed": "Ошибка" }
-    },
-    "lib": { "title": "Каталог и медиатека", "tracks": "Треков", "recordings": "Записей", "albums": "Альбомов", "artists": "Артистов", "liked": "Лайков", "followed": "Подписок", "playlists": "Плейлистов" },
-    "storage": { "title": "Хранилище", "audio": "Звук", "images": "Обложки и фото", "used": "занято" },
-    "lanes": {
-      "title": "Очереди задач",
-      "hint": "Полосы работают независимо: пауза одной не задерживает остальные",
-      "lane": "Полоса",
-      "queued": "Ждут",
-      "running": "Идут",
-      "failed": "Ошибки",
-      "done": "За сутки",
-      "mode": "Как работает",
-      "state": "Включена",
-      "pause": "пауза {s} с",
-      "pauseHint": "Работает — выключите, чтобы поставить на паузу",
-      "resumeHint": "На паузе — включите, чтобы продолжить",
-      "switchRunning": "«{title}» работает",
-      "switchPaused": "«{title}» на паузе",
-      "pausedLabel": "На паузе",
-      "paused": "«{title}» на паузе",
-      "resumed": "«{title}» снова работает",
-      "changeFailed": "Не получилось изменить очередь"
-    },
-    "jobs": {
-      "title": "Задачи",
-      "hint": "Обновляются сами, пока страница открыта",
-      "filter": "Какие задачи",
-      "all": "Все",
-      "empty": "Задач нет",
-      "attempts": "попытка {n} из {max}",
-      "retry": "Повторить",
-      "cancel": "Отменить",
-      "retried": "Задача снова в очереди",
-      "cancelled": "Задача отменена",
-      "actionFailed": "Не получилось — задача уже изменилась, обновите страницу",
-      "album": "альбом",
-      "artist": "артист",
-      "status": { "queued": "В очереди", "running": "Идёт", "done": "Готово", "failed": "Ошибка", "cancelled": "Отменена" },
-      "kind": { "acquire": "Скачивание записи", "discography": "Дискография", "mirror": "Копия обложки", "refresh": "Обновление артиста" }
-    },
-    "access": {
-      "title": "Доступ",
-      "hint": "Новые люди входят через daly.rest и ждут, пока им выдадут роль. Администраторы daly.rest — администраторы и здесь",
-      "waiting": "ждут: {n}",
-      "you": "это вы",
-      "local": "локальный вход",
-      "lastLogin": "входил {when}",
-      "disabled": "Отключён",
-      "give": "Выдать доступ",
-      "actions": "Действия",
-      "role": { "admin": "Администратор", "listener": "Слушатель" },
-      "makeAdmin": "Сделать администратором",
-      "removeAdmin": "Снять роль администратора",
-      "idpAdmin": "выдана daly.rest",
-      "self": "это вы",
-      "makeListener": "Выдать роль слушателя",
-      "removeListener": "Снять роль слушателя",
-      "disable": "Отключить",
-      "enable": "Включить",
-      "adminGiven": "{name} теперь администратор",
-      "adminRemoved": "{name} больше не администратор",
-      "listenerGiven": "{name} получил доступ к музыке",
-      "listenerRemoved": "{name} больше не слушатель",
-      "disabledDone": "{name} отключён: все его сессии закрыты",
-      "enabledDone": "{name} снова может входить",
-      "restored": "Роли возвращены",
-      "failed": "Не получилось изменить доступ — попробуйте ещё раз"
-    },
-    "sessions": {
-      "title": "Сессии",
-      "hint": "Вкладки сайта и приложения, где выполнен вход",
-      "current": "эта сессия",
-      "browser": "Браузер",
-      "viaPassword": "аварийный вход",
-      "viaDevice": "приложение",
-      "seen": "активна {when}",
-      "revoke": "Завершить",
-      "revoked": "Сессия {name} завершена",
-      "failed": "Не получилось завершить сессию",
-      "empty": "Открытых сессий нет"
-    },
-    "audit": {
-      "title": "Журнал",
-      "hint": "Входы, смены ролей, отзывы сессий и изменения очередей",
-      "system": "система",
-      "more": "Показать ещё",
-      "empty": "Журнал пуст",
-      "failed": "Не получилось загрузить журнал",
-      "viaPassword": "паролем",
-      "noRoles": "без ролей",
-      "byProvider": "по daly.rest",
-      "pausedTrue": "пауза",
-      "pausedFalse": "запуск",
-      "signIn": "Вход",
-      "signOut": "Выход",
-      "userCreated": "Новый пользователь",
-      "rolesChanged": "Роли изменены",
-      "userDisabled": "Пользователь отключён",
-      "userEnabled": "Пользователь включён",
-      "sessionRevoked": "Сессия завершена",
-      "laneChanged": "Очередь изменена",
-      "jobRetried": "Задача повторена",
-      "jobCancelled": "Задача отменена",
-      "deviceCreated": "Новое устройство"
+    "rec": { "title": "Записи по состоянию" },
+    "storage": { "title": "Хранилище", "audio": "Звук", "images": "Обложки и фото", "cost": "Цена в R2 за месяц" },
+    "lib": { "title": "Каталог и медиатека", "tracks": "Треков", "albums": "Альбомов", "artists": "Артистов", "liked": "Лайков", "followed": "Подписок", "playlists": "Плейлистов" },
+    "sys": {
+      "title": "Источники и рекомендации",
+      "downloaders": "Загрузчики",
+      "online": "на связи: {n}",
+      "offline": "никого на связи",
+      "server": "Серверный загрузчик",
+      "works": "работает",
+      "down": "не отвечает",
+      "queue": "Задач в очереди",
+      "analysed": "Скачанное проанализировано",
+      "index": "Индекс каталога",
+      "ml": "Анализ звука",
+      "model": "Версия модели"
     }
   },
   "en": {
     "title": "Overview",
-    "failed": "Didn't load",
-    "retry": "Retry",
     "health": { "ok": "Server running · {version} · {uptime}", "down": "Server not responding" },
     "uptime": { "min": "{n} min", "h": "{n} h", "d": "{n} d" },
     "live": { "on": "Live events", "off": "No live events" },
-    "tiles": {
+    "problem": {
+      "title": "Needs attention",
+      "none": "All good",
+      "disputed": "Disputed recordings: {n} — pick what to download",
+      "waiting": "Waiting for access: {n}",
+      "nobody": "No one to download: downloader offline, {n} queued",
+      "fetcher": "Server downloader not responding",
+      "jobs": "Failed jobs: {n}",
+      "paused": "“{title}” paused, {n} waiting",
+      "ml": "Audio analysis service not responding",
+      "review": "Review",
+      "open": "Open",
+      "sources": "Sources",
+      "resume": "Resume",
+      "resumed": "“{title}” running again",
+      "failed": "Didn't work — try again"
+    },
+    "stats": {
+      "title": "Last 24 hours",
       "plays": "plays",
       "likes": "likes",
       "newTracks": "new tracks",
       "acquired": "downloaded",
       "acquireFailed": "failed downloads",
       "jobs": "jobs done",
-      "jobsFailed": "{n} failed",
-      "caption": "Last 24 hours"
+      "jobsFailed": "{n} failed"
     },
-    "rec": {
-      "title": "Recordings by state",
-      "records": "recordings",
-      "status": { "ready": "On the server", "queued": "Queued", "acquiring": "Downloading", "none": "Catalog only", "disputed": "Disputed", "unavailable": "Not in sources", "failed": "Failed" }
-    },
-    "lib": { "title": "Catalog and library", "tracks": "Tracks", "recordings": "Recordings", "albums": "Albums", "artists": "Artists", "liked": "Likes", "followed": "Follows", "playlists": "Playlists" },
-    "storage": { "title": "Storage", "audio": "Audio", "images": "Covers and photos", "used": "used" },
-    "lanes": {
-      "title": "Job lanes",
-      "hint": "Lanes run independently: pausing one doesn't hold up the others",
-      "lane": "Lane",
-      "queued": "Queued",
-      "running": "Running",
-      "failed": "Failed",
-      "done": "24 h",
-      "mode": "How it runs",
-      "state": "Enabled",
-      "pause": "{s} s pause",
-      "pauseHint": "Running — switch off to pause",
-      "resumeHint": "Paused — switch on to resume",
-      "switchRunning": "“{title}” is running",
-      "switchPaused": "“{title}” is paused",
-      "pausedLabel": "Paused",
-      "paused": "“{title}” paused",
-      "resumed": "“{title}” running again",
-      "changeFailed": "Couldn't change the lane"
-    },
-    "jobs": {
-      "title": "Jobs",
-      "hint": "Updates live while the page is open",
-      "filter": "Which jobs",
-      "all": "All",
-      "empty": "No jobs",
-      "attempts": "attempt {n} of {max}",
-      "retry": "Retry",
-      "cancel": "Cancel",
-      "retried": "Job queued again",
-      "cancelled": "Job cancelled",
-      "actionFailed": "Didn't work — the job already changed, reload the page",
-      "album": "album",
-      "artist": "artist",
-      "status": { "queued": "Queued", "running": "Running", "done": "Done", "failed": "Failed", "cancelled": "Cancelled" },
-      "kind": { "acquire": "Recording download", "discography": "Discography", "mirror": "Cover copy", "refresh": "Artist refresh" }
-    },
-    "access": {
-      "title": "Access",
-      "hint": "New people sign in with daly.rest and wait for a role. daly.rest admins are admins here too",
-      "waiting": "waiting: {n}",
-      "you": "you",
-      "local": "local sign-in",
-      "lastLogin": "signed in {when}",
-      "disabled": "Disabled",
-      "give": "Give access",
-      "actions": "Actions",
-      "role": { "admin": "Admin", "listener": "Listener" },
-      "makeAdmin": "Make admin",
-      "removeAdmin": "Remove admin role",
-      "idpAdmin": "granted by daly.rest",
-      "self": "that's you",
-      "makeListener": "Give listener role",
-      "removeListener": "Remove listener role",
-      "disable": "Disable",
-      "enable": "Enable",
-      "adminGiven": "{name} is now an admin",
-      "adminRemoved": "{name} is no longer an admin",
-      "listenerGiven": "{name} can now listen",
-      "listenerRemoved": "{name} is no longer a listener",
-      "disabledDone": "{name} disabled: all sessions closed",
-      "enabledDone": "{name} can sign in again",
-      "restored": "Roles restored",
-      "failed": "Couldn't change access — try again"
-    },
-    "sessions": {
-      "title": "Sessions",
-      "hint": "Website tabs and apps that are signed in",
-      "current": "this session",
-      "browser": "Browser",
-      "viaPassword": "emergency sign-in",
-      "viaDevice": "app",
-      "seen": "active {when}",
-      "revoke": "End",
-      "revoked": "Session of {name} ended",
-      "failed": "Couldn't end the session",
-      "empty": "No open sessions"
-    },
-    "audit": {
-      "title": "Log",
-      "hint": "Sign-ins, role changes, revoked sessions and lane changes",
-      "system": "system",
-      "more": "Show more",
-      "empty": "The log is empty",
-      "failed": "Couldn't load the log",
-      "viaPassword": "password",
-      "noRoles": "no roles",
-      "byProvider": "via daly.rest",
-      "pausedTrue": "paused",
-      "pausedFalse": "resumed",
-      "signIn": "Sign-in",
-      "signOut": "Sign-out",
-      "userCreated": "New user",
-      "rolesChanged": "Roles changed",
-      "userDisabled": "User disabled",
-      "userEnabled": "User enabled",
-      "sessionRevoked": "Session ended",
-      "laneChanged": "Lane changed",
-      "jobRetried": "Job retried",
-      "jobCancelled": "Job cancelled",
-      "deviceCreated": "New device"
+    "rec": { "title": "Recordings by state" },
+    "storage": { "title": "Storage", "audio": "Audio", "images": "Covers and photos", "cost": "R2 cost per month" },
+    "lib": { "title": "Catalog and library", "tracks": "Tracks", "albums": "Albums", "artists": "Artists", "liked": "Likes", "followed": "Follows", "playlists": "Playlists" },
+    "sys": {
+      "title": "Sources and recommendations",
+      "downloaders": "Downloaders",
+      "online": "online: {n}",
+      "offline": "none online",
+      "server": "Server downloader",
+      "works": "working",
+      "down": "not responding",
+      "queue": "Jobs queued",
+      "analysed": "Downloads analysed",
+      "index": "Catalog index",
+      "ml": "Audio analysis",
+      "model": "Model version"
     }
   }
 }
