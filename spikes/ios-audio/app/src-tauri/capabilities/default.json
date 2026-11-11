@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Тестовая страница: события и команды движка",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

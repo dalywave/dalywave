@@ -1,0 +1,5 @@
+# Тестовое аудио собирается tools/gen_audio.py, артефакты сборки — Xcode и cargo
+/testdata/
+/app/src-tauri/gen/apple/Externals/
+/app/src-tauri/gen/apple/build/
+/app/src-tauri/gen/apple/*.xcodeproj/

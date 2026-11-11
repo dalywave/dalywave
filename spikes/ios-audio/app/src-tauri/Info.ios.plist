@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Фоновое воспроизведение: без этого iOS усыпит приложение через пару секунд после ухода в фон. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<!-- На iPhone тестовый сервер живёт на Mac в локальной сети: iOS спросит разрешение один раз. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Тестовая версия загружает звук с компьютера в вашей сети.</string>
+	<!-- Тестовый сервер на Mac отдаёт HTTP без TLS. Движок ходит в сеть сам (не через URLSession),
+	     но WebView и будущие загрузки — через систему, поэтому разрешаем локальные адреса. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>DalyWave · аудиодвижок</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>Аудиодвижок</h1>
+        <p class="muted" id="platform">загрузка…</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card player" aria-label="Плеер">
+      <div class="cover" id="cover" aria-hidden="true"></div>
+      <div class="meta">
+        <p class="eyebrow" id="album">Очередь пуста</p>
+        <h2 id="title">Выберите набор ниже</h2>
+        <p class="muted" id="artist">—</p>
+      </div>
+      <div class="badges">
+        <span class="badge" id="state">Остановлено</span>
+        <span class="badge warn hidden" id="buffering">Буферизация</span>
+        <span class="badge ok hidden" id="ttfa"></span>
+      </div>
+      <label class="seek">
+        <span class="sr">Позиция</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+      </label>
+      <div class="times"><span id="pos" class="num">0:00</span><span id="info" class="muted small"></span><span id="dur" class="num">0:00</span></div>
+      <div class="transport">
+        <button class="round" id="prev" aria-label="Предыдущий">⏮</button>
+        <button class="round big" id="toggle" aria-label="Играть или пауза">▶</button>
+        <button class="round" id="next" aria-label="Следующий">⏭</button>
+      </div>
+      <label class="row">
+        <span>Громкость</span>
+        <input type="range" id="volume" min="0" max="100" value="100">
+      </label>
+    </section>
+
+    <section class="card">
+      <h3>Переходы</h3>
+      <div class="segmented" role="radiogroup" aria-label="Режим перехода">
+        <button role="radio" aria-checked="true" data-mode="gapless" class="active">Без пауз</button>
+        <button role="radio" aria-checked="false" data-mode="crossfade">Кроссфейд</button>
+      </div>
+      <label class="row">
+        <span>Длина кроссфейда</span>
+        <input type="range" id="xfade" min="1" max="12" value="6">
+        <span class="num" id="xfadeValue">6 с</span>
+      </label>
+    </section>
+
+    <section class="card">
+      <h3>Что играть</h3>
+      <div class="server">
+        <label class="sr" for="server">Адрес тестового сервера</label>
+        <input id="server" inputmode="url" autocomplete="off" spellcheck="false" placeholder="http://192.168.1.10:8420">
+        <button id="connect">Подключить</button>
+      </div>
+      <p class="muted small" id="serverStatus"></p>
+      <ul class="albums" id="albums"></ul>
+    </section>
+
+    <section class="card">
+      <h3>Нагрузка</h3>
+      <dl class="stats" id="stats">
+        <div><dt>CPU процесса</dt><dd id="s-cpu">—</dd></div>
+        <div><dt>Память</dt><dd id="s-mem">—</dd></div>
+        <div><dt>Аудиоколбэк</dt><dd id="s-load">—</dd></div>
+        <div><dt>Недогрузки</dt><dd id="s-under">—</dd></div>
+        <div><dt>Устройство</dt><dd id="s-dev">—</dd></div>
+        <div><dt>Работает</dt><dd id="s-up">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h3>Самопроверка стыков</h3>
+      <p class="muted small">Рендер каждого набора в память по HTTP и сравнение с эталоном — тот же код, что в тестах движка.</p>
+      <button id="selftest">Запустить</button>
+      <ul class="results" id="results"></ul>
+    </section>
+
+    <section class="card">
+      <h3>Система</h3>
+      <p class="muted small" id="nowplaying">«Сейчас играет»: —</p>
+      <div class="buttons">
+        <button id="npRefresh">Прочитать «Сейчас играет»</button>
+        <button data-sim="interruption-begin">Звонок: начало</button>
+        <button data-sim="interruption-end">Звонок: конец</button>
+        <button data-sim="unplug">Отключить наушники</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Журнал</h3>
+      <pre class="log" id="log"></pre>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
