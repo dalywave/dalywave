@@ -37,16 +37,17 @@ async function load() {
 }
 onMounted(load)
 
-// Снятые сейчас лайки остаются в списке до перезахода — чтобы можно было вернуть
+// Снятый лайк убирает трек сразу; вернуть — «Отменить» в уведомлении
+const liked = computed(() => tracks.value.filter(tr => library.isLiked(tr)))
 const shown = computed(() => {
   const q = filter.value.trim().toLowerCase()
-  if (!q) return tracks.value
-  return tracks.value.filter(tr => tr.title.toLowerCase().includes(q) || tr.artists.some(a => a.name.toLowerCase().includes(q)) || tr.album?.title.toLowerCase().includes(q))
+  if (!q) return liked.value
+  return liked.value.filter(tr => tr.title.toLowerCase().includes(q) || tr.artists.some(a => a.name.toLowerCase().includes(q)) || tr.album?.title.toLowerCase().includes(q))
 })
 const ctx = computed(() => ({ type: 'library' as const, id: 'liked', title: t('title') }))
 const isCtx = computed(() => player.context?.type === 'library' && player.context.id === 'liked')
 const playing = computed(() => isCtx.value && player.playing)
-const duration = computed(() => tracks.value.reduce((s, tr) => s + tr.durationMs, 0))
+const duration = computed(() => liked.value.reduce((s, tr) => s + tr.durationMs, 0))
 
 function play(shuffle = false) {
   if (isCtx.value && !shuffle) return player.toggle()
@@ -64,17 +65,17 @@ function play(shuffle = false) {
           <div class="liked__art"><Icon name="ph:heart-fill" /></div>
         </template>
         <template #meta>
-          <span>{{ formatCount(tracks.length, 'track', lang) }}</span>
+          <span>{{ formatCount(liked.length, 'track', lang) }}</span>
           <span>{{ formatLongDuration(duration, lang) }}</span>
           <span v-if="more">{{ tg('common.loading') }}</span>
         </template>
         <template #actions>
-          <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :disabled="!tracks.length" @click="play()">{{ playing ? tg('common.pause') : tg('common.play') }}</UiButton>
-          <UiButton size="lg" icon="ph:shuffle" :disabled="!tracks.length" @click="play(true)">{{ t('shuffle') }}</UiButton>
+          <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :disabled="!liked.length" @click="play()">{{ playing ? tg('common.pause') : tg('common.play') }}</UiButton>
+          <UiButton size="lg" icon="ph:shuffle" :disabled="!liked.length" @click="play(true)">{{ t('shuffle') }}</UiButton>
         </template>
       </MusicPageHeader>
 
-      <div v-if="tracks.length" class="liked__tools">
+      <div v-if="liked.length" class="liked__tools">
         <UiSearchField v-model="filter" :placeholder="t('filter')" :size="ui.isPhone ? 'lg' : 'md'" class="liked__filter" />
         <span v-if="filter" class="liked__count">{{ formatCount(shown.length, 'track', lang) }}</span>
       </div>
