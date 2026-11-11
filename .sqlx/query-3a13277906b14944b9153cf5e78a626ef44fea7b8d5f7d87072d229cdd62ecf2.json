@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE wave_sessions SET state = $2, hits = $3::real[]::halfvec(1280), misses = $4::real[]::halfvec(1280),\n                last_active_at = now()\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Float4Array",
+        "Float4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3a13277906b14944b9153cf5e78a626ef44fea7b8d5f7d87072d229cdd62ecf2"
+}

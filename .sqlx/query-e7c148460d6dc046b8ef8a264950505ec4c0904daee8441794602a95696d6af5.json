@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT track_id FROM playlist_items WHERE playlist_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlist_items",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e7c148460d6dc046b8ef8a264950505ec4c0904daee8441794602a95696d6af5"
+}

@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT tracks_per_day, max_index, max_hops, hop_decay, utc_offset_min, updated_at\n             FROM reco_settings WHERE id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tracks_per_day",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "reco_settings",
+            "name": "tracks_per_day"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "max_index",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "reco_settings",
+            "name": "max_index"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "max_hops",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "reco_settings",
+            "name": "max_hops"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "hop_decay",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "reco_settings",
+            "name": "hop_decay"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "utc_offset_min",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "reco_settings",
+            "name": "utc_offset_min"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "reco_settings",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5dbb79e492cb8755bc54ae3eff55151abc500dac3854376ae65fcd47fb0973bf"
+}

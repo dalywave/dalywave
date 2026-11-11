@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id FROM recordings r\n           LEFT JOIN track_analysis a ON a.recording_id = r.id\n           WHERE r.audio_status = 'ready' AND r.primary_file_id IS NOT NULL\n             AND (a.recording_id IS NULL OR a.source = 'preview' OR a.file_id IS DISTINCT FROM r.primary_file_id)\n             AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.dedupe_key = 'analyze_full:' || r.id\n                               AND j.status = 'failed' AND j.finished_at > now() - interval '7 days')\n           ORDER BY r.status_changed_at DESC\n           LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dee8a8d08ff8cf6942ab51df5d5661043eb5290231543a74286382ba65f1362b"
+}

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM playlists\n         WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' = $2 AND (rules ->> 'slot')::int = $3\n         ORDER BY created_at LIMIT 1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8fc2a113fffdfc0b76d3cf6609a4082a215e6b4362dcc182a3023e6a79ee957b"
+}

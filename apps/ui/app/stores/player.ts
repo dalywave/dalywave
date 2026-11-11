@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { ContextType, EndReason, Track } from '~/api/types'
+import type { ContextType, EndReason, Track, WaveFeedbackKind } from '~/api/types'
 import type { EngineTrack, MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveTrack } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { coverColors } from '~/utils/cover-colors'
@@ -80,6 +80,8 @@ export const usePlayerStore = defineStore('player', () => {
   let listen: Listen | null = null
   let transitioning = false
   let prefetched: { uid: string, result: SourceResult } | null = null
+  /** Треки волны с явной реакцией («не нравится», «не сейчас»): их пропуск — уже не отдельный сигнал */
+  const reacted = new Set<string>()
 
   const waveActive = computed(() => context.value?.type === 'wave')
   const activePreset = computed(() => WAVE_PRESETS.find(p => sameSettings(p.set, wave.value))?.id ?? null)
@@ -165,11 +167,14 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   async function refillWave() {
-    if (!waveActive.value || waveLoading.value || upcoming.value.length >= WAVE_BUFFER) return
+    const session = waveSessionId.value
+    if (!waveActive.value || !session || waveLoading.value || upcoming.value.length >= WAVE_BUFFER) return
     waveLoading.value = true
     try {
       const exclude = [current.value, ...history.value.slice(-50), ...upcoming.value, ...manual.value].filter((e): e is QueueEntry => !!e).map(e => e.track.id)
-      const more = await bridge.wave.next(wave.value, WAVE_BUFFER + 1 - upcoming.value.length, exclude)
+      const more = await bridge.wave.next(session, wave.value, WAVE_BUFFER + 1 - upcoming.value.length, exclude)
+      // Пока ждали ответ, настройки сменились: выдача прежней сессии уже не к месту
+      if (session !== waveSessionId.value) return
       upcoming.value.push(...more.map((w: WaveTrack) => entryOf(w.track, 'wave', w.reason)))
       prefetchNext()
     }
@@ -314,6 +319,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (transitioning) return
     finishListen(reason)
     const prev = current.value
+    waveOutcome(prev, reason, positionMs.value)
     let entry = takeNext()
     if (!entry && waveActive.value) {
       await refillWave()
@@ -373,14 +379,18 @@ export const usePlayerStore = defineStore('player', () => {
     applyMood(wave.value.mood)
     finishListen('skipped')
     if (current.value) history.value.push(current.value)
-    waveSessionId.value = crypto.randomUUID()
-    context.value = { type: 'wave', id: waveSessionId.value, title: t('wave.title') }
+    waveSessionId.value = null
+    context.value = { type: 'wave', id: null, title: t('wave.title') }
     upcoming.value = []
     prefetched = null
     waveLoading.value = true
     let first: WaveTrack[] = []
     try {
-      first = await bridge.wave.next(wave.value, WAVE_BUFFER + 1, history.value.slice(-50).map(e => e.track.id))
+      // Сессия на сервере помнит выданное и реакции; её id — и в событиях прослушивания
+      const session = await bridge.wave.start(wave.value)
+      waveSessionId.value = session
+      context.value = { type: 'wave', id: session, title: t('wave.title') }
+      first = await bridge.wave.next(session, wave.value, WAVE_BUFFER + 1, history.value.slice(-50).map(e => e.track.id))
     }
     catch {
       toast.error(t('player.waveFailed'))
@@ -455,6 +465,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
     if (!entry) return
     finishListen('skipped')
+    waveOutcome(current.value, 'skipped', positionMs.value)
     if (current.value) history.value.push(current.value)
     visual()?.skip()
     await startEntry(entry, { autoplay: true })
@@ -472,6 +483,7 @@ export const usePlayerStore = defineStore('player', () => {
       // Дальше по очереди: сам (без пауз, кроссфейдом) или с пульта. Пропущенные движком
       // треки (не открылись) из очереди уходят
       finishListen(reason === 'auto' ? 'completed' : 'skipped')
+      waveOutcome(prevEntry, reason === 'auto' ? 'completed' : 'skipped', positionMs.value)
       if (prevEntry) history.value.push(prevEntry)
       if (mi >= 0) {
         entry = manual.value[mi]
@@ -534,7 +546,34 @@ export const usePlayerStore = defineStore('player', () => {
 
   // ---------- Реакции волны ----------
 
+  /** Трек волны в очереди: текущий или следующие */
+  function waveEntryOf(track: Track): QueueEntry | null {
+    return [current.value, ...upcoming.value].find(e => e?.source === 'wave' && e.track.id === track.id) ?? null
+  }
+
+  /** Реакция на трек волны — её сессии: сервер учтёт её в следующей выдаче и сам запишет событие */
+  function waveFeedback(entry: QueueEntry, kind: WaveFeedbackKind, atMs: number = positionMs.value): boolean {
+    const session = waveSessionId.value
+    if (entry.source !== 'wave' || !session) return false
+    void bridge.wave.feedback(session, entry.track.id, kind, atMs).catch(() => {})
+    return true
+  }
+
+  /** Чем кончился трек волны: дослушан или пропущен (если до этого не было явной реакции) */
+  function waveOutcome(entry: QueueEntry | null, reason: EndReason, atMs: number) {
+    if (!entry || reacted.has(entry.uid)) return
+    if (reason === 'completed') waveFeedback(entry, 'completed', atMs)
+    else if (reason === 'skipped') waveFeedback(entry, 'skip', atMs)
+  }
+
   function feedbackFor(kind: 'dislike' | 'undislike' | 'not_now' | 'more_like_this', track: Track) {
+    if (kind !== 'undislike') {
+      const entry = waveEntryOf(track)
+      if (entry && waveFeedback(entry, kind)) {
+        if (kind !== 'more_like_this') reacted.add(entry.uid)
+        return
+      }
+    }
     bridge.events.feedback({ kind, trackId: track.id, contextType: context.value?.type ?? null, contextId: context.value?.id ?? null, waveSessionId: waveActive.value ? waveSessionId.value : null })
   }
 
@@ -567,6 +606,9 @@ export const usePlayerStore = defineStore('player', () => {
     const willLike = !library.isLiked(track)
     if (willLike && current.value?.track.id === track.id) visual()?.like()
     await library.toggleLike(track)
+    // Лайк в волне — ещё и сигнал её сессии: «что сейчас заходит» сдвигается к этому треку
+    const entry = willLike ? waveEntryOf(track) : null
+    if (entry) waveFeedback(entry, 'like')
   }
 
   // ---------- Настройки волны ----------
@@ -576,12 +618,24 @@ export const usePlayerStore = defineStore('player', () => {
     wave.value = { ...wave.value, ...patch }
     if (patch.mood && patch.mood !== before.mood) applyMood(patch.mood)
     if (waveActive.value && !sameSettings(before, wave.value)) {
-      // Уже сыгранное остаётся, дальше волна идёт под новые настройки
+      // Уже сыгранное остаётся, дальше волна идёт под новые настройки — новой сессией на сервере
       upcoming.value = []
       prefetched = null
-      void refillWave()
+      void retune()
       if (!patch.mood || Object.keys(patch).length > 1) toast.show({ text: t('player.waveRetuned'), icon: 'ph:waveform' })
     }
+  }
+
+  async function retune() {
+    try {
+      const session = await bridge.wave.start(wave.value)
+      waveSessionId.value = session
+      if (context.value?.type === 'wave') context.value = { ...context.value, id: session }
+    }
+    catch {
+      // Сервер не ответил: волна продолжит прежней сессией
+    }
+    await refillWave()
   }
 
   async function applyPreset(id: string) {
@@ -657,6 +711,7 @@ export const usePlayerStore = defineStore('player', () => {
         transitioning = true
         finishListen('completed')
         const prevEntry = current.value
+        waveOutcome(prevEntry, 'completed', ms)
         const entry = takeNext()!
         if (prevEntry) history.value.push(prevEntry)
         void startEntry(entry, { crossfade: true }).finally(() => {

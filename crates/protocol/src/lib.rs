@@ -45,9 +45,11 @@ pub mod home;
 pub mod jobs;
 pub mod library;
 pub mod realtime;
+pub mod reco;
 pub mod stream;
 pub mod sync;
 pub mod system;
+pub mod wave;
 
 pub use error::{ErrorBody, ErrorInfo};
 

@@ -1,5 +1,6 @@
-//! Главная: «Продолжить», «Новинки подписок», «Недавно понравилось», «Ваши артисты».
-//! Миксы и открытия добавит этап 2 — новыми видами полок той же формы.
+//! Главная: «Продолжить», «Миксы дня», «Новинки подписок», «Открытия недели», «Недавно понравилось»,
+//! «Забытые любимые», «Ваши артисты». Миксы и открытия — плейлисты вида `mix`, которые собирает ночной
+//! пересчёт вкуса ([`crate::reco::taste`]).
 
 use std::collections::HashMap;
 
@@ -9,8 +10,8 @@ use dalywave_protocol::home::{Home, Shelf, ShelfItem, ShelfKind};
 use uuid::Uuid;
 
 use crate::{
-    auth::Principal, catalog::views, error::AppResult, extract::Json, routes::playlists,
-    state::AppState,
+    auth::Principal, catalog::views, error::AppResult, extract::Json, reco::wave,
+    routes::playlists, state::AppState,
 };
 
 const SHELF_SIZE: i64 = 20;
@@ -127,6 +128,27 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
     )
     .fetch_all(&st.db)
     .await?;
+    let mix_ids = sqlx::query_scalar!(
+        "SELECT id FROM playlists WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' = 'daily_mix'
+         ORDER BY (rules ->> 'slot')::int, id",
+        user,
+    )
+    .fetch_all(&st.db)
+    .await?;
+    let mixes: HashMap<Uuid, _> = playlists::summaries(&st.db, user, Some(&mix_ids), false)
+        .await?
+        .into_iter()
+        .map(|p| (p.id, p))
+        .collect();
+    let discovery_ids = sqlx::query_scalar!(
+        "SELECT i.track_id FROM playlists p JOIN playlist_items i ON i.playlist_id = p.id
+         WHERE p.user_id = $1 AND p.kind = 'mix' AND p.rules ->> 'generator' = 'discover_weekly'
+         ORDER BY i.position, i.id",
+        user,
+    )
+    .fetch_all(&st.db)
+    .await?;
+    let forgotten_ids = wave::forgotten(&st.db, user, SHELF_SIZE).await?;
 
     let shelves = [
         shelf(
@@ -134,6 +156,15 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
             "Продолжить",
             ShelfKind::Continue,
             continue_items(&st, user).await?,
+        ),
+        shelf(
+            "daily-mixes",
+            "Миксы дня",
+            ShelfKind::DailyMixes,
+            mix_ids
+                .iter()
+                .filter_map(|id| mixes.get(id).cloned().map(ShelfItem::Playlist))
+                .collect(),
         ),
         shelf(
             "new-releases",
@@ -146,10 +177,30 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
                 .collect(),
         ),
         shelf(
+            "discover-weekly",
+            "Открытия недели",
+            ShelfKind::DiscoverWeekly,
+            views::tracks(&st.db, &discovery_ids, user)
+                .await?
+                .into_iter()
+                .map(ShelfItem::Track)
+                .collect(),
+        ),
+        shelf(
             "recent-likes",
             "Недавно понравилось",
             ShelfKind::RecentLikes,
             views::tracks(&st.db, &liked_ids, user)
+                .await?
+                .into_iter()
+                .map(ShelfItem::Track)
+                .collect(),
+        ),
+        shelf(
+            "forgotten-favorites",
+            "Забытые любимые",
+            ShelfKind::ForgottenFavorites,
+            views::tracks(&st.db, &forgotten_ids, user)
                 .await?
                 .into_iter()
                 .map(ShelfItem::Track)

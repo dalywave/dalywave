@@ -24,6 +24,10 @@ pub const DOWNLOADER_CREATED: &str = "downloader.created";
 pub const DOWNLOADER_REVOKED: &str = "downloader.revoked";
 /// Решение по спорной записи: выбрано видео, вставлена ссылка, «нет в источниках», повтор
 pub const ACQUISITION_RESOLVED: &str = "acquisition.resolved";
+/// Настройки разведчика и рекомендаций изменены
+pub const RECO_SETTINGS_CHANGED: &str = "reco.settings_changed";
+/// Задачи рекомендаций запущены вне расписания: разведчик, пересчёт вкуса, анализ скачанного
+pub const RECO_RUN: &str = "reco.run";
 
 pub async fn record(
     db: impl PgExecutor<'_>,

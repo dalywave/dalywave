@@ -6,7 +6,7 @@ import type {
   DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
-  SessionList, Track, UserList, UserPatch,
+  SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -316,8 +316,14 @@ export interface Bridge {
     pin(id: string, pinned: boolean): Promise<void>
   }
 
+  /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */
   wave: {
-    next(settings: WaveSettings, count: number, exclude: string[]): Promise<WaveTrack[]>
+    /** Новая сессия под настройки (они у сессии не меняются: другие настройки — новая сессия) */
+    start(settings: WaveSettings): Promise<string>
+    /** Следующие треки с подписью «почему этот трек»; `exclude` — сыгранное до смены настроек */
+    next(session: string, settings: WaveSettings, count: number, exclude: string[]): Promise<WaveTrack[]>
+    /** Реакция на трек волны: лайк, «не нравится», пропуск, «не сейчас», «больше такого», дослушан */
+    feedback(session: string, trackId: string, kind: WaveFeedbackKind, positionMs: number): Promise<void>
   }
 
   media: {

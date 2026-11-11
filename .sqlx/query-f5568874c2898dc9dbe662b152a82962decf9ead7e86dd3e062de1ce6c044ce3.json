@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.recording_id, a.source AS \"source?\" FROM tracks t\n           LEFT JOIN track_analysis a ON a.recording_id = t.recording_id\n           WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "source?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "source"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "f5568874c2898dc9dbe662b152a82962decf9ead7e86dd3e062de1ce6c044ce3"
+}

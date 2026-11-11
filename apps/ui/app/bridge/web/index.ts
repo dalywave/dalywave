@@ -281,16 +281,32 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
 
     wave: {
-      async next(settings, count, exclude) {
+      async start(settings) {
+        await ready()
+        if (mock && mocked('wave')) return crypto.randomUUID()
+        const session = await unwrap(api.POST('/api/wave/sessions', { body: { settings } }))
+        return session.id
+      },
+      async next(session, settings, count, exclude) {
         await ready()
         if (mock && mocked('wave')) return mock.waveNext(settings, count, exclude)
-        // Пока сервер не собирает волну: любимое вперемешку, без уже сыгранного
+        // Выданное в сессии сервер не повторяет сам; сыгранное до смены настроек отсеиваем здесь
         const skip = new Set(exclude)
-        return (await likedTracks())
-          .filter(t => !skip.has(t.id))
-          .sort(() => Math.random() - 0.5)
+        const page = await unwrap(api.GET('/api/wave/sessions/{id}/next', {
+          params: { path: { id: session }, query: { count: Math.min(30, count + 2) } },
+        }))
+        return page.items
+          .filter(i => !skip.has(i.track.id))
           .slice(0, count)
-          .map((track): WaveTrack => ({ track, reason: 'Из любимого' }))
+          .map((i): WaveTrack => ({ track: i.track, reason: i.reason.text }))
+      },
+      async feedback(session, trackId, kind, positionMs) {
+        await ready()
+        if (mock && mocked('wave')) return
+        await done(api.POST('/api/wave/sessions/{id}/feedback', {
+          params: { path: { id: session } },
+          body: { trackId, kind, positionMs: Math.max(0, Math.round(positionMs)) },
+        }))
       },
     },
 

@@ -7,12 +7,13 @@ use axum::{
 };
 use dalywave_server::{
     AppState, Config,
-    config::{DeezerConfig, FetcherConfig},
+    config::{DeezerConfig, FetcherConfig, MlConfig},
     deezer::Deezer,
     jobs::{
         handlers,
         worker::{Context, Outcome, Settings, Worker},
     },
+    ml::Ml,
 };
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -43,6 +44,10 @@ pub fn config() -> Config {
         fetcher: FetcherConfig {
             claim_wait: Duration::from_millis(300),
             ..FetcherConfig::default()
+        },
+        // Настоящего сервиса анализа в тестах нет: адрес, где никто не слушает (заглушку ставят сами тесты)
+        ml: MlConfig {
+            url: "http://127.0.0.1:9".into(),
         },
     }
 }
@@ -130,6 +135,23 @@ impl TestApp {
             self.state.config.clone(),
             Arc::new(fast_deezer(&self.deezer.base)),
             self.state.storage.clone(),
+        )
+        .unwrap();
+        Worker::new(
+            Arc::new(ctx),
+            handlers::registry(&self.state.config.fetcher),
+            Settings::default(),
+        )
+    }
+
+    /// Исполнитель со своим клиентом сервиса анализа (короткие паузы при «занят»).
+    pub fn worker_with_ml(&self, ml: Ml) -> Worker {
+        let ctx = Context::with_ml(
+            self.state.db.clone(),
+            self.state.config.clone(),
+            Arc::new(fast_deezer(&self.deezer.base)),
+            self.state.storage.clone(),
+            Arc::new(ml),
         )
         .unwrap();
         Worker::new(

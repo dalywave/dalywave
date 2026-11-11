@@ -1,5 +1,6 @@
 //! Сервер DalyWave: API под `/api`, вход через daly.rest, каталог Deezer, медиатека, очередь задач,
-//! события в реальном времени, админка и статика интерфейса. Второй бинарник — `dalywave-worker`.
+//! события в реальном времени, рекомендации и «Моя волна», админка и статика интерфейса.
+//! Второй бинарник — `dalywave-worker`.
 
 pub mod acquire;
 pub mod audit;
@@ -16,10 +17,12 @@ pub mod error;
 pub mod extract;
 pub mod images;
 pub mod jobs;
+pub mod ml;
 pub mod oidc;
 pub mod openapi;
 pub mod ratelimit;
 pub mod realtime;
+pub mod reco;
 pub mod routes;
 pub mod security;
 pub mod session;

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO playlist_items (playlist_id, track_id, position)\n         SELECT $1, t, p::double precision FROM unnest($2::uuid[]) WITH ORDINALITY AS x(t, p)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b50bf2857bae28c6cf799dab76620a8156f2db9e0d36eb6d142ba62dc5a2741"
+}

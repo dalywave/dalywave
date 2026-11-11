@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT platform FROM devices WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "devices",
+            "name": "platform"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "27be4b4996f10c013c7baaa38849b1aa048b1fb36a7eaab507354c621d64bcbe"
+}

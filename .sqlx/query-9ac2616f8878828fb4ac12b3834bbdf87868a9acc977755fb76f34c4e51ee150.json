@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO wave_sessions (user_id, device_id, settings, state, seed_sound, seed_text)\n         VALUES ($1, $2, $3, $4, $5::real[]::halfvec(1280), $6::real[]::halfvec(512))\n         RETURNING id, started_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "started_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Jsonb",
+        "Float4Array",
+        "Float4Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "9ac2616f8878828fb4ac12b3834bbdf87868a9acc977755fb76f34c4e51ee150"
+}

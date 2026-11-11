@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE scout_tracks SET analyzed_at = CASE WHEN $2::text IS NULL THEN now() ELSE analyzed_at END,\n                skipped = $2\n         WHERE track_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d9ef2cf7e5a450f0384fe283f3e61eba8274155b1f30640d653eb5ed14968f5b"
+}

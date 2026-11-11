@@ -99,6 +99,17 @@ export type Lane = Schemas['Lane']
 export type LaneList = Schemas['LaneList']
 export type LanePatch = Schemas['LanePatch']
 
+// Волна и рекомендации
+export type WaveSession = Schemas['WaveSession']
+export type WaveItem = Schemas['WaveItem']
+export type WaveItems = Schemas['WaveItems']
+export type WaveFeedbackKind = Schemas['WaveFeedbackKind']
+export type WaveReason = Schemas['Reason']
+export type SoundSearchResults = Schemas['SoundSearchResults']
+export type RecoOverview = Schemas['RecoOverview']
+export type RecoSettings = Schemas['RecoSettings']
+export type RecoSettingsPatch = Schemas['RecoSettingsPatch']
+
 export type ErrorBody = Schemas['ErrorBody']
 
 /** Ошибка API в едином виде: код для логики, текст по-русски для человека. */

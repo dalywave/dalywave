@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.sound::real[] AS \"sound!\" FROM tracks t\n           JOIN track_analysis a ON a.recording_id = t.recording_id\n           WHERE t.id = $1 AND a.sound IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sound!",
+        "type_info": "Float4Array",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e112d15bf1d1089760fb5f70ba0c48d393aee1b1c5caf326f970b3327ca1d7e1"
+}

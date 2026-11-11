@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n              (SELECT count(*) FROM track_analysis WHERE source = 'preview') AS \"size!\",\n              (SELECT count(*) FROM track_analysis WHERE source = 'full') AS \"full!\",\n              (SELECT count(*) FROM recordings r WHERE r.audio_status = 'ready'\n                 AND NOT EXISTS (SELECT 1 FROM track_analysis a WHERE a.recording_id = r.id AND a.source = 'full'))\n                 AS \"ready_without!\",\n              (SELECT count(*) FROM scout_artists) AS \"artists!\",\n              (SELECT count(*) FROM scout_artists WHERE hops = 0) AS \"seeds!\",\n              (SELECT count(*) FROM jobs WHERE kind = 'analyze_full' AND status = 'queued') AS \"queued_full!\",\n              (SELECT count(*) FROM jobs WHERE kind = 'analyze_preview' AND status = 'queued') AS \"queued_preview!\",\n              (SELECT count(*) FROM track_analysis WHERE analyzed_at > now() - interval '24 hours') AS \"analyzed!\",\n              (SELECT count(*) FROM jobs WHERE kind IN ('analyze_full', 'analyze_preview') AND status = 'failed'\n                 AND finished_at > now() - interval '24 hours') AS \"failed!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "size!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "full!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "ready_without!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "artists!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "seeds!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "queued_full!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "queued_preview!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "analyzed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "d7650462f49a4039136d1a2fdc6a253c7428c0af099c699123a2032c0c0e7d5f"
+}

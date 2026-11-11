@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT set_config('hnsw.ef_search', $1, true) AS \"v!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "v!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "faec04aa0c7e351ffd19346ae08d93f96cdeb6819a66923bd65009bcb14218c4"
+}

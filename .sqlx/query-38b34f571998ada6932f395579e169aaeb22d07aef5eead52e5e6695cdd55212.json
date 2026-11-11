@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM playlists WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' = 'daily_mix'\n           AND (rules ->> 'slot')::int > $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "38b34f571998ada6932f395579e169aaeb22d07aef5eead52e5e6695cdd55212"
+}

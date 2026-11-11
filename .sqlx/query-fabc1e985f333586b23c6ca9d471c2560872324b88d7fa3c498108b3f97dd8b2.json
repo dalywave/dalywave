@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT i.track_id FROM playlists p JOIN playlist_items i ON i.playlist_id = p.id\n         WHERE p.user_id = $1 AND p.kind = 'mix' AND p.rules ->> 'generator' = 'discover_weekly'\n         ORDER BY i.position, i.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlist_items",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fabc1e985f333586b23c6ca9d471c2560872324b88d7fa3c498108b3f97dd8b2"
+}

@@ -1,5 +1,5 @@
-//! Главная: полки, которые интерфейс показывает как есть. Новые виды полок (миксы, открытия)
-//! добавятся в [`ShelfKind`], форма полки и элементов при этом не меняется.
+//! Главная: полки, которые интерфейс показывает как есть. Новые виды полок добавляются в [`ShelfKind`],
+//! форма полки и элементов при этом не меняется.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,12 @@ pub enum ShelfKind {
     RecentLikes,
     /// «Ваши артисты»: больше всего прослушиваний за 30 дней.
     TopArtists,
+    /// «Миксы дня»: по плейлисту на грань вкуса (вид `mix`), ~30 треков, обновляются каждую ночь.
+    DailyMixes,
+    /// «Открытия недели»: треки индекса каталога, которых ещё не слышал; обновляются раз в неделю.
+    DiscoverWeekly,
+    /// «Забытые любимые»: любимое, которое давно не играло.
+    ForgottenFavorites,
 }
 
 names!(ShelfKind {
@@ -28,6 +34,9 @@ names!(ShelfKind {
     NewReleases => "new_releases",
     RecentLikes => "recent_likes",
     TopArtists => "top_artists",
+    DailyMixes => "daily_mixes",
+    DiscoverWeekly => "discover_weekly",
+    ForgottenFavorites => "forgotten_favorites",
 });
 
 /// Элемент полки: поле `type` говорит, что внутри.
@@ -43,7 +52,8 @@ pub enum ShelfItem {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Shelf {
-    /// Постоянный id полки: `continue`, `new-releases`, `recent-likes`, `top-artists`.
+    /// Постоянный id полки: `continue`, `daily-mixes`, `new-releases`, `discover-weekly`, `recent-likes`,
+    /// `forgotten-favorites`, `top-artists`.
     pub id: String,
     /// Заголовок по-русски; английский интерфейс берёт свой по `id`.
     pub title: String,

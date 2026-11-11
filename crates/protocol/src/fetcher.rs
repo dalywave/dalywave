@@ -108,6 +108,18 @@ pub struct Lease {
     pub lease_expires_at: DateTime<Utc>,
 }
 
+/// Загрузчик бросает задание (приложение закрывают посреди скачивания): задание сразу возвращается
+/// в очередь, попытка не тратится.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseRequest {
+    #[serde(default)]
+    pub worker_id: Option<String>,
+    /// Почему: `quit`, `pause`, `control` — для журнала задачи.
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
 // ───────────── Админка: загрузчики и источники ─────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE scout_tracks SET queued_at = now() WHERE track_id = ANY($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5af006b80f5c887e2dd6d0c76cb2de87041456fc56700ff4c048eedd226434d9"
+}

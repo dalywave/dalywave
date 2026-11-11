@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id FROM tracks t\n           WHERE t.deezer_id IS NOT NULL\n             AND (t.id IN (SELECT track_id FROM liked_tracks)\n                  OR t.id IN (SELECT track_id FROM play_events)\n                  OR t.id IN (SELECT i.track_id FROM playlist_items i JOIN playlists p ON p.id = i.playlist_id\n                              WHERE p.kind <> 'mix'))\n             AND NOT EXISTS (SELECT 1 FROM track_analysis a WHERE a.recording_id = t.recording_id)\n             AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.dedupe_key = 'analyze_preview:' || t.id\n                               AND (j.status IN ('queued', 'running')\n                                    OR (j.status IN ('done', 'failed') AND j.finished_at > now() - interval '3 days')))\n           ORDER BY t.id\n           LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dddfc93f11149b659b00ac23bbe40f3d94e0af740b1d4d0750d10229b0932395"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT track_id FROM liked_tracks WHERE user_id = $1 ORDER BY md5(track_id::text || $2) LIMIT 80",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "liked_tracks",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8adfefaea22d492de3b0e6abd25cf27296b9ea92f82b15e4673e76e0ae185816"
+}

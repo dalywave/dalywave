@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT g AS \"genre!\", count(*) AS \"n!\"\n           FROM (\n               SELECT unnest(al.genres) AS g FROM liked_tracks l\n               JOIN tracks t ON t.id = l.track_id JOIN albums al ON al.id = t.album_id\n               UNION ALL\n               SELECT unnest(al.genres) FROM play_events p\n               JOIN tracks t ON t.id = p.track_id JOIN albums al ON al.id = t.album_id\n               WHERE p.started_at > now() - interval '180 days'\n                 AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)\n           ) x\n           GROUP BY g ORDER BY count(*) DESC, g\n           LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "genre!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "b4f3e0c3c17df80a9c0d6fb3f3d13363444a2cb3b7446b39fc22ccbe43df3b32"
+}

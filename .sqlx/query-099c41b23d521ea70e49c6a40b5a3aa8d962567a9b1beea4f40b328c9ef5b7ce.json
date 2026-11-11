@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE recommendation_impressions SET outcome = $3, outcome_at = now()\n         WHERE id = (SELECT id FROM recommendation_impressions WHERE wave_session_id = $1 AND track_id = $2\n                     ORDER BY shown_at DESC LIMIT 1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "099c41b23d521ea70e49c6a40b5a3aa8d962567a9b1beea4f40b328c9ef5b7ce"
+}

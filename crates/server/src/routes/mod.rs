@@ -9,11 +9,13 @@ pub mod images;
 pub mod library;
 pub mod playlists;
 pub mod queue;
+pub mod reco;
 pub mod sources;
 pub mod stream;
 pub mod sync;
 pub mod system;
 pub mod updates;
+pub mod wave;
 pub mod ws;
 
 use axum::{
@@ -51,7 +53,7 @@ async fn method_not_allowed() -> AppError {
 /// Весь API под `/api`, остальное — интерфейс из STATIC_DIR.
 ///
 /// Разделы закрыты слоями: каталог — любой ролью (`require_access`), медиатека — правом library,
-/// события прослушивания и поток трека — правом play, админка — admin. Человек без ролей получает
+/// события прослушивания, поток трека и волна — правом play, админка — admin. Человек без ролей получает
 /// 403 `no_access`, как требует экран «ждём доступа». Картинки открыты всем, WebSocket проверяет вход
 /// сам, `/api/fetcher/*` — только токен загрузчика `dwk_…` (право `downloader`).
 pub fn router(state: AppState) -> Router {
@@ -59,8 +61,11 @@ pub fn router(state: AppState) -> Router {
         .merge(queue::routes())
         .merge(acquisitions::routes())
         .merge(sources::routes())
+        .merge(reco::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
-    let catalog = catalog::routes().route_layer(from_fn_with_state(state.clone(), require_access));
+    let catalog = catalog::routes()
+        .merge(wave::catalog_routes())
+        .route_layer(from_fn_with_state(state.clone(), require_access));
     let library = library::routes()
         .merge(playlists::routes())
         .merge(home::routes())
@@ -68,6 +73,7 @@ pub fn router(state: AppState) -> Router {
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
     let play = events::routes()
         .merge(stream::routes())
+        .merge(wave::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())

@@ -13,7 +13,7 @@ use axum_extra::extract::cookie::Key;
 use sqlx::PgPool;
 
 use crate::{
-    config::Config, deezer::Deezer, oidc::Oidc, ratelimit::RateLimiter, realtime::Hub,
+    config::Config, deezer::Deezer, ml::Ml, oidc::Oidc, ratelimit::RateLimiter, realtime::Hub,
     storage::Storage,
 };
 
@@ -32,6 +32,8 @@ pub struct AppState {
     pub storage: Arc<Storage>,
     /// События для открытых WebSocket этого процесса
     pub hub: Arc<Hub>,
+    /// Сервис анализа звука: векторы описаний словами (поиск по звучанию, волна по описанию)
+    pub ml: Arc<Ml>,
 }
 
 impl AppState {
@@ -56,10 +58,12 @@ impl AppState {
             .clone()
             .map(|c| Arc::new(Oidc::new(c, http.clone())));
         let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_api)?;
+        let ml = Ml::new(&config.ml.url)?;
         Ok(Self {
             deezer: Arc::new(deezer),
             storage: Arc::new(storage),
             hub: Arc::new(Hub::default()),
+            ml: Arc::new(ml),
             cookie_key: Key::derive_from(&config.secret_key),
             db,
             config: Arc::new(config),

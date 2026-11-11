@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.hops, a.deezer_id FROM scout_artists s JOIN artists a ON a.id = s.artist_id\n         WHERE s.artist_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hops",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "scout_artists",
+            "name": "hops"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "deezer_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "14241f2ae27395bd7270888b4444129cd968ca2d1d1d264cbe9a949424391f4f"
+}

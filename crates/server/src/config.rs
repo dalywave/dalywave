@@ -9,6 +9,7 @@ pub const DEFAULT_PUBLIC_URL: &str = "http://localhost:3400";
 pub const DEFAULT_LISTEN: &str = "0.0.0.0:8400";
 pub const DEFAULT_DEEZER_URL: &str = "https://api.deezer.com";
 pub const DEFAULT_FETCHER_URL: &str = "http://localhost:8402";
+pub const DEFAULT_ML_URL: &str = "http://localhost:8403";
 /// Сколько держать запрос загрузчика, пока заданий нет: меньше таймаута его HTTP-клиента (30 с).
 pub const CLAIM_WAIT: Duration = Duration::from_secs(25);
 /// Аренда задания загрузчиком. Обычно трек качается 10–20 с; загрузчик продлевает аренду, пока работает.
@@ -40,6 +41,23 @@ pub struct Config {
     pub s3: Option<S3Config>,
     pub deezer: DeezerConfig,
     pub fetcher: FetcherConfig,
+    pub ml: MlConfig,
+}
+
+/// Сервис анализа звука (services/ml): векторы, темп, тональность, настроение. В базу он не ходит:
+/// задания и ссылки на аудио даёт воркер, текстовые запросы для поиска по звучанию — API.
+#[derive(Clone, Debug)]
+pub struct MlConfig {
+    /// Например `http://ml:8403`.
+    pub url: String,
+}
+
+impl Default for MlConfig {
+    fn default() -> Self {
+        Self {
+            url: DEFAULT_ML_URL.into(),
+        }
+    }
 }
 
 /// Кто качает аудио. Задачу `acquire` выполняет тот, кто её взял: домашний загрузчик через
@@ -93,6 +111,9 @@ pub struct S3Config {
     pub endpoint: String,
     /// Адрес для подписанных ссылок, если клиентам он виден иначе (сервер ходит по внутреннему адресу docker).
     pub public_endpoint: Option<String>,
+    /// Адрес для ссылок сервису анализа, если он видит хранилище иначе: локально ml в docker, а SeaweedFS —
+    /// на `localhost` Mac (`http://host.docker.internal:8401`). Без него — тот же, что у клиентов.
+    pub ml_endpoint: Option<String>,
     pub region: String,
     pub bucket: String,
     pub access_key_id: String,
@@ -216,9 +237,14 @@ impl Config {
                     url::Url::parse(public)
                         .context("DALYWAVE_S3_PUBLIC_ENDPOINT is not a valid URL")?;
                 }
+                let ml_endpoint = var("S3_ML_ENDPOINT");
+                if let Some(ml) = &ml_endpoint {
+                    url::Url::parse(ml).context("DALYWAVE_S3_ML_ENDPOINT is not a valid URL")?;
+                }
                 Some(S3Config {
                     endpoint: endpoint.trim_end_matches('/').to_string(),
                     public_endpoint: public_endpoint.map(|p| p.trim_end_matches('/').to_string()),
+                    ml_endpoint: ml_endpoint.map(|p| p.trim_end_matches('/').to_string()),
                     region: var("S3_REGION").unwrap_or_else(|| "auto".into()),
                     bucket: var("S3_BUCKET").unwrap_or_else(|| "dalywave".into()),
                     access_key_id,
@@ -258,6 +284,11 @@ impl Config {
             server: parse_fetcher_mode(var("FETCHER_MODE").as_deref())?,
             ..Default::default()
         };
+        let ml_url = var("ML_URL").unwrap_or_else(|| DEFAULT_ML_URL.into());
+        url::Url::parse(&ml_url).context("DALYWAVE_ML_URL is not a valid URL")?;
+        let ml = MlConfig {
+            url: ml_url.trim_end_matches('/').to_string(),
+        };
 
         Ok(Self {
             database_url: var("DATABASE_URL").unwrap_or_else(|| DEFAULT_DATABASE_URL.into()),
@@ -277,6 +308,7 @@ impl Config {
             s3,
             deezer,
             fetcher,
+            ml,
         })
     }
 
@@ -468,6 +500,26 @@ mod tests {
         assert!(!parse(&[("FETCHER_MODE", "remote")]).unwrap().fetcher.server);
         assert!(parse(&[("FETCHER_MODE", "cloud")]).is_err());
         assert!(parse(&[("FETCHER_URL", "not a url")]).is_err());
+    }
+
+    #[test]
+    fn ml_service() {
+        let c = parse(&[]).unwrap();
+        assert_eq!(c.ml.url, DEFAULT_ML_URL);
+        let c = parse(&[
+            ("ML_URL", "http://ml:8403/"),
+            ("S3_ENDPOINT", "http://localhost:8401"),
+            ("S3_ACCESS_KEY_ID", "k"),
+            ("S3_SECRET_ACCESS_KEY", "s"),
+            ("S3_ML_ENDPOINT", "http://host.docker.internal:8401/"),
+        ])
+        .unwrap();
+        assert_eq!(c.ml.url, "http://ml:8403");
+        assert_eq!(
+            c.s3.unwrap().ml_endpoint.as_deref(),
+            Some("http://host.docker.internal:8401")
+        );
+        assert!(parse(&[("ML_URL", "ml")]).is_err());
     }
 
     #[test]

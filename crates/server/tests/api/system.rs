@@ -72,6 +72,9 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/admin/lanes",
         "/api/admin/lanes/{lane}",
         "/api/admin/overview",
+        "/api/admin/reco",
+        "/api/admin/reco/run",
+        "/api/admin/reco/settings",
         "/api/admin/sessions",
         "/api/admin/sessions/{id}",
         "/api/admin/sources",
@@ -91,6 +94,7 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/events",
         "/api/fetcher/jobs/claim",
         "/api/fetcher/jobs/{id}/lease",
+        "/api/fetcher/jobs/{id}/release",
         "/api/fetcher/jobs/{id}/result",
         "/api/healthz",
         "/api/home",
@@ -113,11 +117,17 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/playlists/{id}/items/{itemId}/move",
         "/api/playlists/{id}/pin",
         "/api/search",
+        "/api/search/sound",
         "/api/sync",
         "/api/tracks/lookup",
         "/api/tracks/{id}",
+        "/api/tracks/{id}/similar",
         "/api/tracks/{id}/stream",
         "/api/updates/{target}/{arch}/{current_version}",
+        "/api/wave/sessions",
+        "/api/wave/sessions/{id}",
+        "/api/wave/sessions/{id}/feedback",
+        "/api/wave/sessions/{id}/next",
         "/api/ws",
     ];
     let mut sorted = paths.clone();
@@ -157,8 +167,17 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "ClaimResponse",
         "ResultReport",
         "Lease",
+        "ReleaseRequest",
         "DownloaderToken",
         "Sources",
+        "WaveSession",
+        "WaveItems",
+        "WaveFeedback",
+        "SoundSearchResults",
+        "RecoOverview",
+        "RecoSettingsPatch",
+        "AnalyzeFullPayload",
+        "TastePayload",
     ] {
         assert!(schemas.contains_key(name), "{name}");
     }
@@ -394,4 +413,18 @@ async fn static_spa_fallback(db: PgPool) {
         .unwrap();
     let res = app.send(req).await;
     assert_eq!(res.headers[header::CONTENT_ENCODING], "br");
+}
+
+#[tokio::test]
+async fn idle_transactions_are_cut_by_postgres() {
+    // Пул сервера: зависшая посреди транзакции задача не держит строку полосы очереди вечно
+    let Ok(url) = std::env::var("DATABASE_URL") else {
+        return;
+    };
+    let db = dalywave_server::boot::connect(&url, 1).await.unwrap();
+    let timeout: String = sqlx::query_scalar("SHOW idle_in_transaction_session_timeout")
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    assert_eq!(timeout, "1min");
 }

@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT artist_id, position, related_id FROM artist_related WHERE artist_id = ANY($1)\n             ORDER BY artist_id, position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_related",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "position",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "artist_related",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "related_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_related",
+            "name": "related_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1754e6cb2cb6faf017230ccb030e8980f5728315f9e6dcd7093cee41f0b54b22"
+}

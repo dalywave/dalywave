@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.id FROM users u\n         WHERE NOT u.disabled\n           AND (EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = u.id)\n                OR EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = u.id))\n           AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.kind = 'taste' AND j.payload ->> 'userId' = u.id::text\n                             AND (j.status IN ('queued', 'running')\n                                  OR (j.status = 'done' AND j.finished_at > now() - make_interval(hours =>\n                                      CASE WHEN EXISTS (SELECT 1 FROM taste_facets f WHERE f.user_id = u.id)\n                                           THEN $1 ELSE 1 END))))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "388a38efaae16841917cabebfc5136e8a0dc78ca8fbfdc187d86ef2ef637f886"
+}

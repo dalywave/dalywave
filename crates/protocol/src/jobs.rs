@@ -18,6 +18,18 @@ pub mod kind {
     pub const REFRESH_ARTIST: &str = "refresh_artist";
     /// Сверить релизы артиста из подписок и поставить новые треки на скачивание.
     pub const SYNC_DISCOGRAPHY: &str = "sync_discography";
+    /// Полный анализ скачанной записи (полоса «Анализ звука»).
+    pub const ANALYZE_FULL: &str = "analyze_full";
+    /// Анализ 30-секундного превью Deezer для индекса каталога (полоса «Разведка каталога»).
+    pub const ANALYZE_PREVIEW: &str = "analyze_preview";
+    /// Проход разведчика: окрестность вкуса, кандидаты на анализ превью, предел индекса.
+    pub const SCOUT: &str = "scout";
+    /// Похожие, популярное, свежие релизы и радио одного артиста окрестности.
+    pub const SCOUT_ARTIST: &str = "scout_artist";
+    /// Чарты и новые релизы жанров, которые слушают на сервере.
+    pub const SCOUT_CHARTS: &str = "scout_charts";
+    /// Грани вкуса слушателя, миксы дня и «Открытия недели».
+    pub const TASTE: &str = "taste";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -220,6 +232,34 @@ pub struct RefreshArtistPayload {
 #[serde(rename_all = "camelCase")]
 pub struct SyncDiscographyPayload {
     pub artist_id: Uuid,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzeFullPayload {
+    pub recording_id: Uuid,
+}
+
+/// Ссылка на превью у Deezer подписана и живёт недолго: задача берёт свежую в момент анализа.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzePreviewPayload {
+    pub track_id: Uuid,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ScoutArtistPayload {
+    pub artist_id: Uuid,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TastePayload {
+    pub user_id: Uuid,
+    /// Собрать «Открытия недели» заново, даже если им нет недели.
+    #[serde(default)]
+    pub refresh_discovery: bool,
 }
 
 /// Зачем скачивается запись. Хранится в `acquisitions.reason`.

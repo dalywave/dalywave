@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM scout_artists WHERE NOT (artist_id = ANY($1))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1bb5e49a33a0af9eed90e64172734de8ee9cbf68b8447c0693ff845bc6622560"
+}

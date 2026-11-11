@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM recommendation_impressions WHERE shown_at < now() - interval '180 days'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "11af3f1837388ac62e65ebbf27e77cad2f4beaa4981134eeb718403f464fafa0"
+}

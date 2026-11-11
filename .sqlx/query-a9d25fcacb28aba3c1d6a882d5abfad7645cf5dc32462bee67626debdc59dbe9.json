@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.title,\n                          (SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id\n                           ORDER BY ta.position, ta.artist_id LIMIT 1) AS artist_id,\n                          (SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                           WHERE ta.track_id = t.id ORDER BY ta.position, ta.artist_id LIMIT 1) AS artist_name\n                   FROM tracks t WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "artist_name",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "a9d25fcacb28aba3c1d6a882d5abfad7645cf5dc32462bee67626debdc59dbe9"
+}

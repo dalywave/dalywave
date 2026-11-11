@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM jobs WHERE kind = 'scout_charts'\n                                AND (status IN ('queued', 'running')\n                                     OR (status = 'done' AND finished_at > now() - interval '24 hours'))) AS \"due!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "due!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "910754fec99f5bcf2fb04f10c0e9317b9348c85fd57685e036bb8499d8a143d7"
+}

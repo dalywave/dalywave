@@ -119,6 +119,16 @@ pub fn verified(deezer_track_id: &Value, size: usize, video: &str) -> Value {
     })
 }
 
+/// Загрузчик бросает задание: приложение закрыли посреди скачивания.
+async fn release(app: &TestApp, token: &str, id: &str) -> Resp {
+    app.post(
+        &format!("/api/fetcher/jobs/{id}/release"),
+        json!({ "workerId": "test-mac", "reason": "quit" }),
+        &Auth::Bearer(token.into()),
+    )
+    .await
+}
+
 pub async fn report(app: &TestApp, token: &str, job: &Value, result: Value) -> Resp {
     let id = job["id"].as_str().unwrap();
     app.post(
@@ -565,6 +575,96 @@ async fn expired_lease_goes_to_another_downloader(db: PgPool) {
     assert_eq!(
         status_of(&app.state.db, &other.to_string()).await,
         ("queued".into(), "queued".into())
+    );
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn released_job_goes_back_at_once_without_spending_an_attempt(db: PgPool) {
+    let app = TestApp::new(db).await;
+    let (_, admin) = app.admin("boss").await;
+    let (first, _) = new_downloader(&app, &admin, "first").await;
+    let (second, second_id) = new_downloader(&app, &admin, "second").await;
+    let track = app.resolve_id("track", LIGHT_ME_UP, &admin).await;
+    no_intervals(&app.state.db).await;
+    acquire::enqueue(
+        &app.state.db,
+        Request::new(track.parse().unwrap(), AcquireReason::Like, "library"),
+    )
+    .await
+    .unwrap();
+    let job = claimed(&app, &first).await;
+    let id = job["id"].as_str().unwrap().to_string();
+
+    // Чужое задание вернуть нельзя, без токена — тем более
+    let res = release(&app, &second, &id).await;
+    assert_eq!(res.status, StatusCode::CONFLICT, "{}", res.text);
+    assert_eq!(res.code(), "job_not_yours");
+    let res = app
+        .post(
+            &format!("/api/fetcher/jobs/{id}/release"),
+            json!({}),
+            &Auth::None,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::UNAUTHORIZED);
+    let res = app
+        .post(
+            &format!("/api/fetcher/jobs/{}/release", Uuid::now_v7()),
+            json!({}),
+            &Auth::Bearer(first.clone()),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
+
+    // Свой — сразу в очередь: попытка не потрачена, запись снова «в очереди»
+    let res = release(&app, &first, &id).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let row = jobs::get(&app.state.db, id.parse().unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.status, "queued");
+    assert_eq!(row.attempts, 0);
+    assert!(row.locked_by.is_none() && row.lease_expires_at.is_none());
+    assert!(row.run_after <= chrono::Utc::now());
+    assert_eq!(
+        row.last_error.as_deref(),
+        Some("загрузчик вернул задание: quit")
+    );
+    assert_eq!(
+        status_of(&app.state.db, &track).await,
+        ("queued".into(), "queued".into())
+    );
+    // Повтор — уже не его
+    assert_eq!(release(&app, &first, &id).await.code(), "job_not_yours");
+
+    // Другой загрузчик берёт его без ожидания, это его первая попытка
+    let again = claimed(&app, &second).await;
+    assert_eq!(again["id"], job["id"]);
+    let row = jobs::get(&app.state.db, id.parse().unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.attempts, 1);
+    assert_eq!(row.locked_by, Some(format!("device:{second_id}")));
+    // Пустое тело тоже годится
+    let res = app
+        .call(
+            axum::http::Method::POST,
+            &format!("/api/fetcher/jobs/{id}/release"),
+            None,
+            &Auth::Bearer(second.clone()),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let row = jobs::get(&app.state.db, id.parse().unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.status, "queued");
+    assert_eq!(
+        row.last_error.as_deref(),
+        Some("загрузчик вернул задание: без причины")
     );
 }
 

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM jobs\n           WHERE kind = 'analyze_preview' AND status <> 'cancelled' AND created_at > now() - interval '24 hours'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "57fbc5a01f68457069804b2b5677a6a37a2ea0ea84a7c2d5cc7e7ff540962031"
+}

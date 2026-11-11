@@ -29,6 +29,8 @@ use crate::{
     config::Config,
     deezer::{Deezer, DeezerError},
     jobs,
+    ml::Ml,
+    reco,
     storage::{Storage, StorageError},
 };
 
@@ -42,7 +44,9 @@ pub struct Context {
     pub http: reqwest::Client,
     /// Серверный fetcher: скачивание с проверкой идёт до нескольких минут
     pub fetcher: reqwest::Client,
-    /// Виды задач на паузе после сбоя исполнителя (YouTube заподозрил бота)
+    /// Сервис анализа звука: анализы этого процесса идут по одному
+    pub ml: Arc<Ml>,
+    /// Виды задач на паузе после сбоя исполнителя (YouTube заподозрил бота, сервис анализа лежит)
     pub cooldowns: Cooldowns,
 }
 
@@ -52,6 +56,18 @@ impl Context {
         config: Arc<Config>,
         deezer: Arc<Deezer>,
         storage: Arc<Storage>,
+    ) -> anyhow::Result<Self> {
+        let ml = Arc::new(Ml::new(&config.ml.url)?);
+        Self::with_ml(db, config, deezer, storage, ml)
+    }
+
+    /// [`Context::new`] со своим клиентом сервиса анализа (тесты: короткие паузы при «занят»).
+    pub fn with_ml(
+        db: PgPool,
+        config: Arc<Config>,
+        deezer: Arc<Deezer>,
+        storage: Arc<Storage>,
+        ml: Arc<Ml>,
     ) -> anyhow::Result<Self> {
         let http = reqwest::Client::builder()
             .user_agent(concat!("dalywave/", env!("CARGO_PKG_VERSION")))
@@ -70,6 +86,7 @@ impl Context {
             storage,
             http,
             fetcher,
+            ml,
             cooldowns: Cooldowns::default(),
         })
     }
@@ -520,7 +537,8 @@ impl Worker {
         }
     }
 
-    /// Возврат зависших задач раз в минуту; раз в час — сверка подписок и чистка истории.
+    /// Возврат зависших задач раз в минуту; раз в час — сверка подписок, рекомендации (разведчик, анализ
+    /// скачанного, ночной пересчёт вкуса) и чистка истории.
     async fn maintenance(self: Arc<Self>, mut stop: watch::Receiver<bool>) {
         let mut reap = tokio::time::interval(self.settings.reap_every);
         let mut schedule = tokio::time::interval(self.settings.schedule_every);
@@ -543,6 +561,17 @@ impl Worker {
                         Ok(0) => {}
                         Ok(n) => tracing::info!(artists = n, "discography sync scheduled"),
                         Err(e) => tracing::warn!(error = %e, "could not schedule discography sync"),
+                    }
+                    match reco::schedule(&self.ctx.db).await {
+                        Ok(r) => tracing::info!(
+                            scout = r.scout,
+                            analysis = r.analysis,
+                            taste = r.taste,
+                            sessions_deleted = r.sessions_deleted,
+                            impressions_deleted = r.impressions_deleted,
+                            "recommendations scheduled"
+                        ),
+                        Err(e) => tracing::warn!(error = %e, "could not schedule recommendations"),
                     }
                     match jobs::cleanup(&self.ctx.db).await {
                         Ok(0) => {}

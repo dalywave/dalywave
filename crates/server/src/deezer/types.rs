@@ -56,6 +56,9 @@ impl Artist {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Genre {
+    /// Нужен чартам и подборкам жанра; в жанрах альбома тоже есть.
+    #[serde(default)]
+    pub id: Option<i64>,
     pub name: String,
 }
 
@@ -143,6 +146,10 @@ pub struct Track {
     /// Все участники с ролями; есть в треке и в популярном артиста.
     #[serde(default)]
     pub contributors: Vec<Artist>,
+    /// 30-секундное превью MP3. Ссылка подписана (`hdnea=exp=…`) и живёт недолго: её не хранят,
+    /// а берут свежую перед анализом.
+    #[serde(default, deserialize_with = "non_empty")]
+    pub preview: Option<String>,
 }
 
 impl Track {

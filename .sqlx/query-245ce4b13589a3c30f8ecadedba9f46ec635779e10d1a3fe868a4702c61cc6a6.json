@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM playlists\n                                  WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' = 'discover_weekly'\n                                    AND updated_at > now() - interval '7 days') AS \"due!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "due!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "245ce4b13589a3c30f8ecadedba9f46ec635779e10d1a3fe868a4702c61cc6a6"
+}

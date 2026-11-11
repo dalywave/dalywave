@@ -27,6 +27,8 @@ pub const IMMUTABLE: &str = "public, max-age=31536000, immutable";
 pub const AUDIO_GET_TTL: Duration = Duration::from_secs(6 * 3600);
 /// Загрузчику хватает получаса на скачивание и загрузку одного трека.
 pub const UPLOAD_PUT_TTL: Duration = Duration::from_secs(30 * 60);
+/// Сервис анализа качает файл сразу, но может ждать своей очереди (анализ один за раз).
+pub const ML_GET_TTL: Duration = Duration::from_secs(60 * 60);
 
 /// Размеры копий картинок.
 pub const IMAGE_SIZES: [u32; 3] = [1000, 500, 250];
@@ -79,6 +81,8 @@ pub struct Storage {
     store: Arc<dyn ObjectStore>,
     /// Подписывает ссылки для клиентов: публичный адрес хранилища
     signer: Arc<dyn Signer>,
+    /// Ссылки сервису анализа, если он видит хранилище по другому адресу
+    ml_signer: Option<Arc<dyn Signer>>,
     /// S3 по внутреннему адресу; нет у хранилища в памяти
     s3: Option<Arc<AmazonS3>>,
     http: reqwest::Client,
@@ -119,9 +123,16 @@ impl Storage {
             ),
             None => s3.clone(),
         };
+        let ml_signer: Option<Arc<dyn Signer>> = match &cfg.ml_endpoint {
+            Some(ml) => Some(Arc::new(
+                s3_builder(cfg, ml).build().context("S3 endpoint for ml")?,
+            )),
+            None => None,
+        };
         Ok(Self {
             store: s3.clone(),
             signer,
+            ml_signer,
             s3: Some(s3),
             http: reqwest::Client::builder()
                 .timeout(Duration::from_secs(15))
@@ -136,6 +147,7 @@ impl Storage {
         let cfg = S3Config {
             endpoint: "http://storage.invalid".into(),
             public_endpoint: None,
+            ml_endpoint: None,
             region: "auto".into(),
             bucket: "dalywave".into(),
             access_key_id: "memory".into(),
@@ -149,6 +161,7 @@ impl Storage {
         Self {
             store: Arc::new(InMemory::new()),
             signer: Arc::new(signer),
+            ml_signer: None,
             s3: None,
             http: reqwest::Client::new(),
             bucket: cfg.bucket,
@@ -268,6 +281,13 @@ impl Storage {
         Ok(self.signer.signed_url(Method::GET, &path, ttl).await?)
     }
 
+    /// Подписанная ссылка на скачивание для сервиса анализа: по его адресу хранилища, если он задан.
+    pub async fn presign_get_for_ml(&self, key: &str, ttl: Duration) -> Result<Url, StorageError> {
+        let path = Path::parse(key)?;
+        let signer = self.ml_signer.as_ref().unwrap_or(&self.signer);
+        Ok(signer.signed_url(Method::GET, &path, ttl).await?)
+    }
+
     /// Подписанная ссылка на загрузку (загрузчику — на [`UPLOAD_PUT_TTL`]). Content-Type в подпись не входит.
     pub async fn presign_put(&self, key: &str, ttl: Duration) -> Result<Url, StorageError> {
         let path = Path::parse(key)?;
@@ -346,6 +366,7 @@ mod tests {
         let cfg = S3Config {
             endpoint: "http://seaweedfs:8333".into(),
             public_endpoint: Some("https://files.example.com".into()),
+            ml_endpoint: None,
             region: "auto".into(),
             bucket: "dalywave".into(),
             access_key_id: "k".into(),
@@ -355,5 +376,23 @@ mod tests {
         let url = s.presign_get("audio/x.ogg", AUDIO_GET_TTL).await.unwrap();
         assert_eq!(url.host_str(), Some("files.example.com"));
         assert_eq!(url.path(), "/dalywave/audio/x.ogg");
+        // Без своего адреса сервис анализа получает ту же ссылку, что и клиенты
+        let ml = s
+            .presign_get_for_ml("audio/x.ogg", ML_GET_TTL)
+            .await
+            .unwrap();
+        assert_eq!(ml.host_str(), Some("files.example.com"));
+        let s = Storage::from_config(&S3Config {
+            ml_endpoint: Some("http://host.docker.internal:8401".into()),
+            ..cfg
+        })
+        .unwrap();
+        let ml = s
+            .presign_get_for_ml("audio/x.ogg", ML_GET_TTL)
+            .await
+            .unwrap();
+        assert_eq!(ml.host_str(), Some("host.docker.internal"));
+        assert_eq!(ml.port(), Some(8401));
+        assert!(ml.as_str().contains("X-Amz-Expires=3600"), "{ml}");
     }
 }

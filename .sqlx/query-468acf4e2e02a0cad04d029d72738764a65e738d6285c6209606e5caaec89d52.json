@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH nn AS (\n               SELECT a.recording_id, a.sound <=> $1::real[]::halfvec(1280) AS dist\n               FROM track_analysis a\n               WHERE a.sound IS NOT NULL\n               ORDER BY a.sound <=> $1::real[]::halfvec(1280)\n               LIMIT $2\n           )\n           SELECT DISTINCT ON (nn.recording_id) t.id AS \"track_id!\", nn.recording_id AS \"recording_id!\",\n                  nn.dist AS \"dist!\"\n           FROM nn JOIN tracks t ON t.recording_id = nn.recording_id\n           ORDER BY nn.recording_id,\n                    EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $3 AND l.track_id = t.id) DESC,\n                    (t.album_id IS NULL), t.rank DESC NULLS LAST, t.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "dist!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float4Array",
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "468acf4e2e02a0cad04d029d72738764a65e738d6285c6209606e5caaec89d52"
+}

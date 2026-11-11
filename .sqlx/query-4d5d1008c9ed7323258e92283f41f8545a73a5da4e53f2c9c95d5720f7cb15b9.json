@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO taste_facets (user_id, position, label, centroid, weight, tracks, context, examples, artists)\n             VALUES ($1, $2, $3, $4::real[]::halfvec(1280), $5, $6, $7, $8, $9)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int2",
+        "Text",
+        "Float4Array",
+        "Float4",
+        "Int4",
+        "Jsonb",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d5d1008c9ed7323258e92283f41f8545a73a5da4e53f2c9c95d5720f7cb15b9"
+}

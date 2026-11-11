@@ -35,6 +35,7 @@ use crate::{
     extract::{Json, JsonOrDefault, Path, Query},
     jobs::{self, NewJob, lanes},
     realtime::{self, Audience},
+    reco,
     routes::playlists,
     state::AppState,
 };
@@ -266,6 +267,12 @@ pub async fn like(
     }
     tx.commit().await?;
     acquire_tracks(&st, &[id], AcquireReason::Like, user).await;
+    // Лайк сдвигает ближайшую грань вкуса сразу, не дожидаясь ночного пересчёта
+    if inserted.rows_affected() > 0
+        && let Err(e) = reco::taste::on_like(&st.db, user, id).await
+    {
+        tracing::warn!(track = %id, error = %e, "could not move the taste facet");
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 

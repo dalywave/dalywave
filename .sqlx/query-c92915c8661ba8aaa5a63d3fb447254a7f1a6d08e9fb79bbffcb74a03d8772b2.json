@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT source, count(*) AS \"found!\",\n                  count(*) FILTER (WHERE analyzed_at IS NOT NULL) AS \"analyzed!\",\n                  count(*) FILTER (WHERE analyzed_at IS NULL AND skipped IS NULL) AS \"pending!\"\n           FROM scout_tracks GROUP BY source ORDER BY source",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "scout_tracks",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "found!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "analyzed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "pending!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c92915c8661ba8aaa5a63d3fb447254a7f1a6d08e9fb79bbffcb74a03d8772b2"
+}

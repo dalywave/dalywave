@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT version FROM model_versions WHERE kind = 'taste' AND active",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "model_versions",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "78f6e1cf400d8f8176a57bd7a738647547219a9f064372d0d5411c8114dc53d1"
+}

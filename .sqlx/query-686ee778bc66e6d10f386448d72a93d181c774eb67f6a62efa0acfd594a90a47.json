@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO scout_tracks (track_id, artist_id, source, base)\n         SELECT t, NULLIF(a, '00000000-0000-0000-0000-000000000000'::uuid), s, b\n         FROM unnest($1::uuid[], $2::uuid[], $3::text[], $4::real[]) AS x(t, a, s, b)\n         ON CONFLICT (track_id) DO UPDATE SET\n            source = CASE WHEN EXCLUDED.base > scout_tracks.base THEN EXCLUDED.source ELSE scout_tracks.source END,\n            artist_id = CASE WHEN EXCLUDED.base > scout_tracks.base THEN EXCLUDED.artist_id ELSE scout_tracks.artist_id END,\n            base = GREATEST(scout_tracks.base, EXCLUDED.base)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "UuidArray",
+        "TextArray",
+        "Float4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "686ee778bc66e6d10f386448d72a93d181c774eb67f6a62efa0acfd594a90a47"
+}

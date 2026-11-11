@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS \"id!\" FROM followed_artists f\n               JOIN artist_releases r ON r.artist_id = f.artist_id\n               JOIN albums al ON al.id = r.album_id\n               JOIN tracks t ON t.album_id = al.id\n               WHERE f.user_id = $1 AND al.release_date >= current_date - 45 AND al.release_date <= current_date\n                 AND NOT EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = $1 AND p.track_id = t.id)\n               ORDER BY al.release_date DESC, t.track_position NULLS LAST, t.id\n               LIMIT 30",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "61bd9a93388da59f115c18b85f97550c44d3498fbaa66df0890d2b2d13f4e8d2"
+}

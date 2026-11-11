@@ -1,6 +1,6 @@
-//! Обработчики задач: копии картинок, обновление артистов, сверка дискографий подписок и скачивание
+//! Обработчики задач: копии картинок, обновление артистов, сверка дискографий подписок, скачивание
 //! аудио через серверный fetcher (только с `server` в `DALYWAVE_FETCHER_MODE`; иначе задачи `acquire`
-//! берёт загрузчик на Mac).
+//! берёт загрузчик на Mac) и рекомендации: анализ звука, разведчик каталога, вкус ([`crate::reco`]).
 
 use std::sync::Arc;
 
@@ -20,6 +20,7 @@ use crate::{
     catalog::{self, ArtistParts},
     config::FetcherConfig,
     images, jobs,
+    reco::{analysis, scout, taste},
     storage::{IMMUTABLE, keys},
 };
 
@@ -32,7 +33,13 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
     registry
         .register(kind::MIRROR_IMAGE, mirror_image)
         .register(kind::REFRESH_ARTIST, refresh_artist)
-        .register(kind::SYNC_DISCOGRAPHY, sync_discography);
+        .register(kind::SYNC_DISCOGRAPHY, sync_discography)
+        .register(kind::ANALYZE_FULL, analysis::analyze_full)
+        .register(kind::ANALYZE_PREVIEW, analysis::analyze_preview)
+        .register(kind::SCOUT, scout::plan)
+        .register(kind::SCOUT_ARTIST, scout::scout_artist)
+        .register(kind::SCOUT_CHARTS, scout::scout_charts)
+        .register(kind::TASTE, taste::run);
     if fetcher.server {
         registry.register(kind::ACQUIRE, acquire::server::run);
     } else {

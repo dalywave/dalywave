@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tokio::{sync::Mutex, time::Instant};
 
-use self::types::{Album, ApiError, Artist, Chart, Page, Track};
+use self::types::{Album, ApiError, Artist, Chart, Genre, Page, Track};
 
 /// Окно лимита Deezer.
 pub const WINDOW: Duration = Duration::from_secs(5);
@@ -255,6 +255,40 @@ impl Deezer {
     /// Общий чарт: треки, альбомы и артисты.
     pub async fn chart(&self, limit: u32) -> Result<Chart, DeezerError> {
         self.get(&format!("/chart/0?limit={limit}")).await
+    }
+
+    /// Радио артиста: поток похожих треков (без ISRC).
+    pub async fn artist_radio(&self, id: i64, limit: u32) -> Result<Vec<Track>, DeezerError> {
+        let page: Page<Track> = self
+            .get(&format!("/artist/{id}/radio?limit={limit}"))
+            .await?;
+        Ok(page.data)
+    }
+
+    /// Жанры Deezer с id: по ним — чарты и подборки новых релизов.
+    pub async fn genres(&self) -> Result<Vec<Genre>, DeezerError> {
+        let page: Page<Genre> = self.get("/genre").await?;
+        Ok(page.data)
+    }
+
+    /// Чарт жанра (без ISRC).
+    pub async fn genre_chart(&self, genre_id: i64, limit: u32) -> Result<Vec<Track>, DeezerError> {
+        let page: Page<Track> = self
+            .get(&format!("/chart/{genre_id}/tracks?limit={limit}"))
+            .await?;
+        Ok(page.data)
+    }
+
+    /// Новые релизы жанра от редакции Deezer.
+    pub async fn editorial_releases(
+        &self,
+        genre_id: i64,
+        limit: u32,
+    ) -> Result<Vec<Album>, DeezerError> {
+        let page: Page<Album> = self
+            .get(&format!("/editorial/{genre_id}/releases?limit={limit}"))
+            .await?;
+        Ok(page.data)
     }
 }
 

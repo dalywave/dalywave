@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM wave_sessions WHERE last_active_at < now() - interval '30 days'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "67d6a62ba418aaa7ad42edf383faa08d961bad305d235acd9af2e48662cec0b1"
+}

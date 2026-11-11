@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE scout_artists SET scouted_at = now() WHERE artist_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2c0c92032e3aec7b2326454bc6f5023b69c50b72e26e15d0ff5e62c539f176fe"
+}

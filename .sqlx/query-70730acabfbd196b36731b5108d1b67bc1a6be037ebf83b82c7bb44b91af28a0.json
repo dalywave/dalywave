@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT tt.track_id FROM followed_artists f JOIN artist_top_tracks tt ON tt.artist_id = f.artist_id\n             WHERE f.user_id = $1 ORDER BY tt.position, tt.track_id LIMIT 60",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_top_tracks",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "70730acabfbd196b36731b5108d1b67bc1a6be037ebf83b82c7bb44b91af28a0"
+}

@@ -8,7 +8,7 @@ use utoipa::{
 
 use crate::routes::{
     acquisitions, admin, auth, catalog, events, fetcher, home, images, library, playlists, queue,
-    sources, stream, sync, system, updates, ws,
+    reco, sources, stream, sync, system, updates, wave, ws,
 };
 
 #[derive(OpenApi)]
@@ -43,12 +43,21 @@ use crate::routes::{
         sources::create_downloader,
         sources::revoke_downloader,
         sources::sources,
+        reco::reco_overview,
+        reco::update_reco_settings,
+        reco::run_reco,
         catalog::search,
         catalog::artist,
         catalog::album,
         catalog::track,
         catalog::lookup_tracks,
         catalog::resolve_deezer,
+        wave::similar,
+        wave::sound_search,
+        wave::create_session,
+        wave::session,
+        wave::next,
+        wave::feedback,
         images::image,
         library::overview,
         library::liked_tracks,
@@ -82,6 +91,7 @@ use crate::routes::{
         fetcher::claim,
         fetcher::renew_lease,
         fetcher::report,
+        fetcher::release,
         ws::ws,
     ),
     components(schemas(
@@ -92,6 +102,10 @@ use crate::routes::{
         dalywave_protocol::jobs::MirrorImagePayload,
         dalywave_protocol::jobs::RefreshArtistPayload,
         dalywave_protocol::jobs::SyncDiscographyPayload,
+        dalywave_protocol::jobs::AnalyzeFullPayload,
+        dalywave_protocol::jobs::AnalyzePreviewPayload,
+        dalywave_protocol::jobs::ScoutArtistPayload,
+        dalywave_protocol::jobs::TastePayload,
         dalywave_protocol::jobs::AcquireReason,
         dalywave_protocol::stream::AudioCodec,
         dalywave_protocol::stream::AudioContainer,
@@ -103,6 +117,7 @@ use crate::routes::{
         (name = "library", description = "Медиатека, плейлисты, главная и синхронизация приложений"),
         (name = "events", description = "События прослушивания и история"),
         (name = "playback", description = "Воспроизведение: ссылка на аудио трека и состояние его скачивания"),
+        (name = "wave", description = "«Моя волна» и радио: сессии, выдача с причинами, реакции"),
         (name = "fetcher", description = "Домашний загрузчик: задания, аренда, отчёты (токен `dwk_…`)"),
         (name = "realtime", description = "WebSocket: события в реальном времени"),
         (name = "admin", description = "Админка: доступ, журнал, очередь задач"),

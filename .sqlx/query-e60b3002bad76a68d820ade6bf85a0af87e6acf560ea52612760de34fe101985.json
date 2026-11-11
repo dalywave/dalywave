@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS \"id!\" FROM track_artists ta JOIN tracks t ON t.id = ta.track_id\n           WHERE ta.artist_id = $1 AND ta.role = 'main'\n           ORDER BY (EXISTS (SELECT 1 FROM track_analysis a WHERE a.recording_id = t.recording_id)) DESC,\n                    t.rank DESC NULLS LAST, t.id\n           LIMIT 60",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e60b3002bad76a68d820ade6bf85a0af87e6acf560ea52612760de34fe101985"
+}

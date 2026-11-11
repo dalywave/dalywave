@@ -1,6 +1,6 @@
-//! API домашнего загрузчика (`fetcher worker` на Mac): задание, продление аренды, отчёт.
-//! Вход — `Authorization: Bearer dwk_…` ([`DownloaderAuth`]) с единственным правом `downloader`;
-//! сессии людей и токены приложений сюда не подходят.
+//! API домашнего загрузчика (`fetcher worker` на Mac): задание, продление аренды, отчёт,
+//! возврат брошенного задания. Вход — `Authorization: Bearer dwk_…` ([`DownloaderAuth`]) с единственным
+//! правом `downloader`; сессии людей и токены приложений сюда не подходят.
 
 use std::time::{Duration, Instant};
 
@@ -13,8 +13,8 @@ use axum::{
 };
 use dalywave_protocol::{
     ErrorBody,
-    fetcher::{ClaimRequest, ClaimResponse, Lease, LeaseRequest, ResultReport},
-    jobs::{JobStatus, kind},
+    fetcher::{ClaimRequest, ClaimResponse, Lease, LeaseRequest, ReleaseRequest, ResultReport},
+    jobs::{AcquirePayload, JobStatus, kind},
 };
 use serde_json::Value;
 use uuid::Uuid;
@@ -41,6 +41,7 @@ pub fn routes() -> Router<AppState> {
         .route("/fetcher/jobs/claim", post(claim))
         .route("/fetcher/jobs/{id}/lease", post(renew_lease))
         .route("/fetcher/jobs/{id}/result", post(report))
+        .route("/fetcher/jobs/{id}/release", post(release))
 }
 
 fn not_yours() -> AppError {
@@ -199,4 +200,60 @@ pub async fn report(
         Some(_) => Ok(StatusCode::NO_CONTENT),
         None => Err(not_yours()),
     }
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/fetcher/jobs/{id}/release",
+    tag = "fetcher",
+    security(("downloader" = [])),
+    params(("id" = Uuid, Path, description = "id задания")),
+    request_body(content = ReleaseRequest, description = "Можно не передавать"),
+    responses(
+        (status = 204, description = "Задание снова в очереди и его можно брать сразу; попытка не потрачена"),
+        (status = 401, description = "Токен загрузчика не принят", body = ErrorBody),
+        (status = 404, description = "Нет такого задания", body = ErrorBody),
+        (status = 409, description = "Задание уже не ваше (`job_not_yours`): аренда кончилась, его отменили или оно закончено", body = ErrorBody),
+    ),
+)]
+pub async fn release(
+    State(st): State<AppState>,
+    downloader: DownloaderAuth,
+    ClientIp(ip): ClientIp,
+    Path(id): Path<Uuid>,
+    JsonOrDefault(body): JsonOrDefault<ReleaseRequest>,
+) -> AppResult<StatusCode> {
+    downloaders::seen(&st.db, downloader.id, ip, None).await?;
+    let executor = downloader.executor();
+    let job = jobs::get(&st.db, id).await?.ok_or(AppError::NotFound)?;
+    if job.kind != kind::ACQUIRE
+        || job.status() != JobStatus::Running
+        || job.locked_by.as_deref() != Some(executor.as_str())
+    {
+        return Err(not_yours());
+    }
+    let reason: String = body
+        .reason
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty())
+        .unwrap_or("без причины")
+        .chars()
+        .take(200)
+        .collect();
+    let message = format!("загрузчик вернул задание: {reason}");
+    // Бросил исполнитель, а не запись: попытка не тратится, взять задание можно сразу
+    let released = match job.payload::<AcquirePayload>() {
+        Ok(payload) => {
+            result::give_back(&st.db, &job, &payload, &executor, &message, Duration::ZERO).await?
+        }
+        Err(_) => jobs::postpone(&st.db, id, &executor, &message, Duration::ZERO)
+            .await?
+            .is_some(),
+    };
+    if !released {
+        return Err(not_yours());
+    }
+    tracing::info!(job = %id, downloader = %downloader.name, %reason, "job released by a downloader");
+    Ok(StatusCode::NO_CONTENT)
 }

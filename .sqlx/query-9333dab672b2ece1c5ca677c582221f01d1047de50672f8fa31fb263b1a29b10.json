@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE taste_facets SET centroid = $2::real[]::halfvec(1280), tracks = tracks + 1, examples = $3,\n                updated_at = now()\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float4Array",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9333dab672b2ece1c5ca677c582221f01d1047de50672f8fa31fb263b1a29b10"
+}

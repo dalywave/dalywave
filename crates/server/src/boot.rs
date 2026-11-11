@@ -1,10 +1,18 @@
 //! Общий запуск бинарников `dalywave-api` и `dalywave-worker`: логи, база с повторами, сигнал остановки.
 
-use std::{io::IsTerminal, time::Duration};
+use std::{io::IsTerminal, str::FromStr, time::Duration};
 
 use anyhow::Context;
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{
+    PgPool,
+    postgres::{PgConnectOptions, PgPoolOptions},
+};
 use tracing_subscriber::EnvFilter;
+
+/// Транзакция, которая простаивает дольше, обрывается самим Postgres: сеть (Deezer, хранилище, ml)
+/// в транзакциях не ждут, а зависшая (отменённый на середине запрос) иначе держала бы строку полосы
+/// очереди, и задачи этой полосы не брал бы ни один исполнитель.
+const IDLE_IN_TRANSACTION: &str = "60s";
 
 /// Фильтр из DALYWAVE_LOG; DALYWAVE_LOG_FORMAT=json — строки JSON для сервера, иначе читаемый вывод.
 pub fn init_tracing(default_filter: &str) {
@@ -30,13 +38,16 @@ pub fn init_tracing(default_filter: &str) {
 
 /// База в compose может подниматься дольше приложения, поэтому пробуем несколько раз.
 pub async fn connect(url: &str, max_connections: u32) -> anyhow::Result<PgPool> {
+    let options = PgConnectOptions::from_str(url)
+        .context("DALYWAVE_DATABASE_URL is not a valid Postgres URL")?
+        .options([("idle_in_transaction_session_timeout", IDLE_IN_TRANSACTION)]);
     let mut attempt = 0;
     loop {
         attempt += 1;
         match PgPoolOptions::new()
             .max_connections(max_connections)
             .acquire_timeout(Duration::from_secs(5))
-            .connect(url)
+            .connect_with(options.clone())
             .await
         {
             Ok(pool) => return Ok(pool),

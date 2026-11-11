@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM track_analysis\n                          WHERE recording_id = $1 AND source = 'full' AND file_id = $2) AS \"done!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "done!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4adece576f2bb889e9964e2d2d665a494c780a240ef79b2ac1aee2fcb4dfe5d8"
+}

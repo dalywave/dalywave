@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.artist_id FROM scout_artists s JOIN artists a ON a.id = s.artist_id\n         WHERE a.deezer_id IS NOT NULL AND (s.scouted_at IS NULL OR s.scouted_at < now() - interval '7 days')\n         ORDER BY s.weight DESC, s.artist_id\n         LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "scout_artists",
+            "name": "artist_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9f96e17a3dcbeb8bc439ee8ad0331c6f3bc84a8df39eccac0d7312af7f16e257"
+}

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE reco_settings SET tracks_per_day = COALESCE($1, tracks_per_day),\n                max_index = COALESCE($2, max_index), max_hops = COALESCE($3, max_hops),\n                hop_decay = COALESCE($4, hop_decay), utc_offset_min = COALESCE($5, utc_offset_min),\n                updated_at = now()\n         WHERE id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int2",
+        "Float4",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "242f23296de995c96b65c854aa186e6d863b80511ed6113784c2d27a081c87e3"
+}

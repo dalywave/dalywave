@@ -459,6 +459,11 @@ pub async fn load_track(
     deezer_id: i64,
 ) -> Result<Uuid, CatalogError> {
     let t = deezer.track(deezer_id).await?;
+    Ok(save_track(db, &t).await?)
+}
+
+/// Трек из ответа `track/{id}`: ISRC (а с ним и запись), позиция и все участники.
+pub async fn save_track(db: &PgPool, t: &dz::Track) -> Result<Uuid, sqlx::Error> {
     let mut tx = db.begin().await?;
     let main = match &t.artist {
         Some(a) => Some(upsert_artist(&mut tx, a).await?),
@@ -473,7 +478,7 @@ pub async fn load_track(
     let id = upsert_track(
         &mut tx,
         TrackIn {
-            track: &t,
+            track: t,
             album_id,
             isrc: Isrc::Known(t.isrc.as_deref()),
             full: true,
@@ -482,6 +487,23 @@ pub async fn load_track(
     .await?;
     tx.commit().await?;
     Ok(id)
+}
+
+/// Треки из списка (радио артиста, чарт жанра) облегчёнными строками; наши id в том же порядке.
+/// Коды ISRC в таких списках обычно нет — запись тогда не трогается.
+pub async fn save_listed(db: &PgPool, tracks: &[dz::Track]) -> Result<Vec<Uuid>, sqlx::Error> {
+    let mut tx = db.begin().await?;
+    let mut ids = Vec::with_capacity(tracks.len());
+    for t in tracks {
+        let isrc = match t.isrc.as_deref() {
+            Some(code) => Isrc::Known(Some(code)),
+            None => Isrc::Unknown,
+        };
+        let id = save_listed_track(&mut tx, t, isrc, None).await?;
+        push_unique(&mut ids, id);
+    }
+    tx.commit().await?;
+    Ok(ids)
 }
 
 /// Части страницы артиста, которые надо загрузить.

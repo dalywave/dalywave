@@ -129,6 +129,7 @@ mod tests {
             s3: None,
             deezer: Default::default(),
             fetcher: Default::default(),
+            ml: Default::default(),
         }
     }
 
