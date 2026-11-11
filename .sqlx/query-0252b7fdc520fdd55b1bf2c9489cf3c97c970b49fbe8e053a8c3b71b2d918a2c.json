@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT download_policy FROM followed_artists WHERE user_id = $1 AND artist_id = $2 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "download_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "download_policy"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0252b7fdc520fdd55b1bf2c9489cf3c97c970b49fbe8e053a8c3b71b2d918a2c"
+}

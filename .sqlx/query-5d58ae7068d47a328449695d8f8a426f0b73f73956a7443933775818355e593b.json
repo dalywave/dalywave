@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT audio_status, count(*) AS \"n!\" FROM recordings GROUP BY audio_status",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "audio_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "5d58ae7068d47a328449695d8f8a426f0b73f73956a7443933775818355e593b"
+}

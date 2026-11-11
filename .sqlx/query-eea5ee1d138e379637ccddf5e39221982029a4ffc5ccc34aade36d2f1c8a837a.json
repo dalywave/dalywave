@@ -1,0 +1,225 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.deezer_id, t.title, t.title_version, t.duration_ms, t.explicit, t.disc_number,\n                  t.track_position, t.recording_id, t.isrc, r.audio_status AS \"audio_status?\",\n                  al.id AS \"album_id?\", al.title AS \"album_title?\", al.cover_key AS album_cover_key,\n                  al.cover_source AS album_cover_source,\n                  EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $2 AND l.track_id = t.id) AS \"liked!\",\n                  ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id\n                        ORDER BY ta.position, ta.artist_id) AS \"artist_ids!\",\n                  ARRAY(SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                        WHERE ta.track_id = t.id ORDER BY ta.position, ta.artist_id) AS \"artist_names!\",\n                  ARRAY(SELECT ta.role FROM track_artists ta WHERE ta.track_id = t.id\n                        ORDER BY ta.position, ta.artist_id) AS \"artist_roles!\"\n           FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)\n           JOIN tracks t ON t.id = ids.id\n           LEFT JOIN recordings r ON r.id = t.recording_id\n           LEFT JOIN albums al ON al.id = t.album_id\n           ORDER BY ids.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title_version"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "explicit",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "explicit"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "disc_number",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "disc_number"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "track_position",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "track_position"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "audio_status?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "album_id?",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "album_title?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "album_cover_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_key"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "album_cover_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_source"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "liked!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "artist_ids!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "artist_names!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "artist_roles!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "eea5ee1d138e379637ccddf5e39221982029a4ffc5ccc34aade36d2f1c8a837a"
+}

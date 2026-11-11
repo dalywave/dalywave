@@ -7,6 +7,11 @@ use anyhow::{Context, bail};
 pub const DEFAULT_DATABASE_URL: &str = "postgres://dalywave:dalywave@localhost:5400/dalywave";
 pub const DEFAULT_PUBLIC_URL: &str = "http://localhost:3400";
 pub const DEFAULT_LISTEN: &str = "0.0.0.0:8400";
+pub const DEFAULT_DEEZER_URL: &str = "https://api.deezer.com";
+/// Deezer пускает ~50 запросов за 5 секунд с одного адреса; API, воркер и fetcher делят этот лимит.
+pub const DEEZER_WINDOW_MAX: u32 = 40;
+pub const DEFAULT_DEEZER_RATE_API: u32 = 25;
+pub const DEFAULT_DEEZER_RATE_WORKER: u32 = 15;
 /// Короче пароль не принимается: аварийный вход не должен подбираться перебором.
 pub const MIN_ADMIN_PASSWORD_LEN: usize = 32;
 
@@ -26,6 +31,41 @@ pub struct Config {
     pub admin_emails: Vec<String>,
     /// Пароль аварийного входа. `None` — вход паролем выключен.
     pub admin_password: Option<String>,
+    /// Хранилище S3. `None` — файлы живут в памяти процесса (только для разработки и тестов).
+    pub s3: Option<S3Config>,
+    pub deezer: DeezerConfig,
+}
+
+/// S3-совместимое хранилище: SeaweedFS локально, Cloudflare R2 в проде — один и тот же код.
+#[derive(Clone)]
+pub struct S3Config {
+    /// Адрес, по которому ходит сам сервер, например `http://localhost:8401` или `https://<account>.r2.cloudflarestorage.com`.
+    pub endpoint: String,
+    /// Адрес для подписанных ссылок, если клиентам он виден иначе (сервер ходит по внутреннему адресу docker).
+    pub public_endpoint: Option<String>,
+    pub region: String,
+    pub bucket: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+}
+
+#[derive(Clone)]
+pub struct DeezerConfig {
+    pub url: String,
+    /// Сколько запросов за 5 секунд позволено API.
+    pub rate_api: u32,
+    /// Сколько — воркеру.
+    pub rate_worker: u32,
+}
+
+impl Default for DeezerConfig {
+    fn default() -> Self {
+        Self {
+            url: DEFAULT_DEEZER_URL.into(),
+            rate_api: DEFAULT_DEEZER_RATE_API,
+            rate_worker: DEFAULT_DEEZER_RATE_WORKER,
+        }
+    }
 }
 
 /// Клиент daly.rest. Включается, только когда заданы issuer, client_id и секрет.
@@ -114,6 +154,53 @@ impl Config {
             ok
         });
 
+        let s3 = match (
+            var("S3_ENDPOINT"),
+            var("S3_ACCESS_KEY_ID"),
+            var("S3_SECRET_ACCESS_KEY"),
+        ) {
+            (Some(endpoint), Some(access_key_id), Some(secret_access_key)) => {
+                url::Url::parse(&endpoint).context("DALYWAVE_S3_ENDPOINT is not a valid URL")?;
+                let public_endpoint = var("S3_PUBLIC_ENDPOINT");
+                if let Some(public) = &public_endpoint {
+                    url::Url::parse(public)
+                        .context("DALYWAVE_S3_PUBLIC_ENDPOINT is not a valid URL")?;
+                }
+                Some(S3Config {
+                    endpoint: endpoint.trim_end_matches('/').to_string(),
+                    public_endpoint: public_endpoint.map(|p| p.trim_end_matches('/').to_string()),
+                    region: var("S3_REGION").unwrap_or_else(|| "auto".into()),
+                    bucket: var("S3_BUCKET").unwrap_or_else(|| "dalywave".into()),
+                    access_key_id,
+                    secret_access_key,
+                })
+            }
+            (None, None, None) => None,
+            _ => bail!(
+                "DALYWAVE_S3_ENDPOINT, DALYWAVE_S3_ACCESS_KEY_ID and DALYWAVE_S3_SECRET_ACCESS_KEY go together"
+            ),
+        };
+
+        let rate = |name: &str, default: u32| -> anyhow::Result<u32> {
+            match var(name) {
+                None => Ok(default),
+                Some(v) => match v.parse::<u32>() {
+                    Ok(n) if (1..=DEEZER_WINDOW_MAX).contains(&n) => Ok(n),
+                    _ => bail!(
+                        "DALYWAVE_{name} must be 1..={DEEZER_WINDOW_MAX} requests per 5 seconds"
+                    ),
+                },
+            }
+        };
+        let deezer = DeezerConfig {
+            url: var("DEEZER_URL")
+                .unwrap_or_else(|| DEFAULT_DEEZER_URL.into())
+                .trim_end_matches('/')
+                .to_string(),
+            rate_api: rate("DEEZER_RATE_API", DEFAULT_DEEZER_RATE_API)?,
+            rate_worker: rate("DEEZER_RATE_WORKER", DEFAULT_DEEZER_RATE_WORKER)?,
+        };
+
         Ok(Self {
             database_url: var("DATABASE_URL").unwrap_or_else(|| DEFAULT_DATABASE_URL.into()),
             listen: var("LISTEN")
@@ -129,6 +216,8 @@ impl Config {
                 .map(|e| e.to_lowercase())
                 .collect(),
             admin_password,
+            s3,
+            deezer,
         })
     }
 
@@ -274,6 +363,33 @@ mod tests {
             c.login_error("expired", "/a?b=1"),
             "http://localhost:3400/login?error=expired&next=%2Fa%3Fb%3D1"
         );
+    }
+
+    #[test]
+    fn storage_and_deezer() {
+        let c = parse(&[]).unwrap();
+        assert!(c.s3.is_none());
+        assert_eq!(c.deezer.url, DEFAULT_DEEZER_URL);
+        assert!(c.deezer.rate_api + c.deezer.rate_worker <= 45);
+        assert!(parse(&[("S3_ENDPOINT", "http://localhost:8401")]).is_err());
+        let c = parse(&[
+            ("S3_ENDPOINT", "http://localhost:8401/"),
+            ("S3_ACCESS_KEY_ID", "k"),
+            ("S3_SECRET_ACCESS_KEY", "s"),
+            ("S3_PUBLIC_ENDPOINT", "https://files.example.com"),
+            ("DEEZER_RATE_WORKER", "10"),
+        ])
+        .unwrap();
+        let s3 = c.s3.unwrap();
+        assert_eq!(s3.endpoint, "http://localhost:8401");
+        assert_eq!(s3.bucket, "dalywave");
+        assert_eq!(s3.region, "auto");
+        assert_eq!(
+            s3.public_endpoint.as_deref(),
+            Some("https://files.example.com")
+        );
+        assert_eq!(c.deezer.rate_worker, 10);
+        assert!(parse(&[("DEEZER_RATE_API", "100")]).is_err());
     }
 
     #[test]

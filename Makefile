@@ -19,6 +19,9 @@ db-reset: ## пересоздать локальную базу (данные п
 api: ## запустить API на :8400
 	cargo run -p dalywave-server --bin dalywave-api
 
+worker: ## исполнитель очереди задач (скачивание, обложки, подписки)
+	cargo run -p dalywave-server --bin dalywave-worker
+
 ui: ## интерфейс на :3400 (проксирует /api на :8400)
 	cd apps/ui && bun run dev
 
@@ -50,4 +53,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api ui design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ui design api-types sqlx-prepare test lint deploy fmt

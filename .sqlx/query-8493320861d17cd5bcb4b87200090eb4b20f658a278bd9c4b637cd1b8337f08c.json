@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT a.id FROM followed_artists f JOIN artists a ON a.id = f.artist_id\n         WHERE a.discography_synced_at IS NULL OR a.discography_synced_at < now() - interval '24 hours'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8493320861d17cd5bcb4b87200090eb4b20f658a278bd9c4b637cd1b8337f08c"
+}

@@ -10,6 +10,10 @@ publish.workspace = true
 name = "dalywave-api"
 path = "src/main.rs"
 
+[[bin]]
+name = "dalywave-worker"
+path = "src/bin/worker.rs"
+
 [dependencies]
 dalywave-protocol.workspace = true
 
@@ -17,11 +21,15 @@ anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
 base64.workspace = true
+bytes.workspace = true
 chrono.workspace = true
 dotenvy.workspace = true
+futures-util.workspace = true
 getrandom.workspace = true
 hex.workspace = true
+image.workspace = true
 ipnet.workspace = true
+object_store.workspace = true
 p256.workspace = true
 reqwest.workspace = true
 serde.workspace = true
@@ -43,3 +51,5 @@ uuid.workspace = true
 [dev-dependencies]
 http-body-util.workspace = true
 tempfile.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+tokio-tungstenite.workspace = true

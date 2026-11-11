@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO followed_artists (user_id, artist_id, download_policy, notify)\n         VALUES ($1, $2, $3, COALESCE($4, true))\n         ON CONFLICT (user_id, artist_id) DO UPDATE SET\n            download_policy = EXCLUDED.download_policy,\n            notify = COALESCE($4, followed_artists.notify),\n            updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ff9f3513191f6aa37c42d0fbd66f854166678c22266377b06b7aaf3727bf1b2d"
+}

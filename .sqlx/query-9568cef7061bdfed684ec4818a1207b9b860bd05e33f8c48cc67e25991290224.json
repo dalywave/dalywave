@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT upc, label, genres, fans FROM albums WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "upc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "upc"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "label"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "genres",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "genres"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "fans",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "fans"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "9568cef7061bdfed684ec4818a1207b9b860bd05e33f8c48cc67e25991290224"
+}

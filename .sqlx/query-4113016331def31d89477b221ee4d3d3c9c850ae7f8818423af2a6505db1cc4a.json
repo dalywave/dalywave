@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM acquisitions\n             WHERE recording_id = $1 AND status IN ('queued', 'matching', 'downloading', 'verifying', 'processing')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "acquisitions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4113016331def31d89477b221ee4d3d3c9c850ae7f8818423af2a6505db1cc4a"
+}

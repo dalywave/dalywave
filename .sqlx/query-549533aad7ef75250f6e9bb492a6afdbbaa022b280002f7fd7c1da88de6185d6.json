@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT artist_id, download_policy, notify, created_at FROM followed_artists\n         WHERE user_id = $1 AND ($2::timestamptz IS NULL OR (created_at, artist_id) < ($2, $3))\n         ORDER BY created_at DESC, artist_id DESC\n         LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "download_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "download_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "notify",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "notify"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "549533aad7ef75250f6e9bb492a6afdbbaa022b280002f7fd7c1da88de6185d6"
+}

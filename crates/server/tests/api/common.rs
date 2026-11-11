@@ -1,15 +1,28 @@
+use std::{net::SocketAddr, sync::Arc, time::Duration};
+
 use axum::{
     Router,
     body::Body,
     http::{HeaderMap, Method, Request, StatusCode, header},
 };
-use dalywave_server::{AppState, Config};
+use dalywave_server::{
+    AppState, Config,
+    config::DeezerConfig,
+    deezer::Deezer,
+    jobs::{
+        handlers,
+        worker::{Context, Outcome, Settings, Worker},
+    },
+};
 use http_body_util::BodyExt;
-use serde_json::Value;
+use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::mock::{MockProvider, Person};
+use crate::{
+    deezer::DeezerMock,
+    mock::{MockProvider, Person},
+};
 
 pub const PUBLIC_URL: &str = "http://localhost:3400";
 pub const ADMIN_PASSWORD: &str = "correct horse battery staple, but longer";
@@ -24,6 +37,8 @@ pub fn config() -> Config {
         oidc: None,
         admin_emails: Vec::new(),
         admin_password: None,
+        s3: None,
+        deezer: DeezerConfig::default(),
     }
 }
 
@@ -40,6 +55,7 @@ pub struct Resp {
     pub headers: HeaderMap,
     pub body: Value,
     pub text: String,
+    pub bytes: Vec<u8>,
 }
 
 impl Resp {
@@ -76,6 +92,7 @@ pub struct TestApp {
     pub router: Router,
     pub state: AppState,
     pub provider: MockProvider,
+    pub deezer: DeezerMock,
 }
 
 impl TestApp {
@@ -85,15 +102,87 @@ impl TestApp {
 
     pub async fn with(db: PgPool, tweak: impl FnOnce(&mut Config)) -> Self {
         let provider = MockProvider::start().await;
+        let deezer = DeezerMock::start().await;
         let mut config = config();
         config.oidc = Some(provider.oidc_config());
+        config.deezer.url = deezer.base.clone();
         tweak(&mut config);
-        let state = AppState::new(db, config).unwrap();
+        let mut state = AppState::new(db, config).unwrap();
+        // Квота и повторы в тестах — без пятисекундных пауз
+        state.deezer = Arc::new(fast_deezer(&deezer.base));
         Self {
             router: dalywave_server::app(state.clone()),
             state,
             provider,
+            deezer,
         }
+    }
+
+    /// Исполнитель задач с теми же базой, хранилищем и Deezer, что у API.
+    pub fn worker(&self) -> Worker {
+        let ctx = Context::new(
+            self.state.db.clone(),
+            self.state.config.clone(),
+            Arc::new(fast_deezer(&self.deezer.base)),
+            self.state.storage.clone(),
+        )
+        .unwrap();
+        Worker::new(Arc::new(ctx), handlers::registry(), Settings::default())
+    }
+
+    /// Одна задача полосы до конца.
+    pub async fn run_job(&self, lane: &str) -> Option<(String, Outcome)> {
+        self.worker()
+            .run_once(lane)
+            .await
+            .unwrap()
+            .map(|(job, outcome)| (job.kind, outcome))
+    }
+
+    /// Настоящий сервер на случайном порту — для WebSocket. Слушатель NOTIFY запущен.
+    pub async fn serve(&self) -> SocketAddr {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let app = self
+            .router
+            .clone()
+            .into_make_service_with_connect_info::<SocketAddr>();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        dalywave_server::realtime::spawn_listener(self.state.db.clone(), self.state.hub.clone());
+        addr
+    }
+
+    /// Слушатель — человек с ролью listener (выдаёт админ `boss`).
+    pub async fn listener(&self, sub: &str) -> Auth {
+        let (_, admin) = self.admin(&format!("{sub}-boss")).await;
+        let auth = Auth::Cookie(self.login(&Person::new(sub)).await);
+        let id = self.user_id(&auth).await;
+        let res = self
+            .call(
+                Method::PATCH,
+                &format!("/api/admin/users/{id}"),
+                Some(json!({ "roles": ["listener"] })),
+                &admin,
+            )
+            .await;
+        assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+        auth
+    }
+
+    /// Наш id сущности Deezer (загружается из заглушки при первом обращении).
+    pub async fn resolve(&self, kind: &str, deezer_id: i64, auth: &Auth) -> Value {
+        let res = self
+            .get(&format!("/api/catalog/deezer/{kind}/{deezer_id}"), auth)
+            .await;
+        assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+        res.body
+    }
+
+    pub async fn resolve_id(&self, kind: &str, deezer_id: i64, auth: &Auth) -> String {
+        self.resolve(kind, deezer_id, auth).await["id"]
+            .as_str()
+            .unwrap()
+            .to_string()
     }
 
     pub async fn send(&self, req: Request<Body>) -> Resp {
@@ -108,6 +197,7 @@ impl TestApp {
             headers,
             body,
             text,
+            bytes: bytes.to_vec(),
         }
     }
 
@@ -135,6 +225,18 @@ impl TestApp {
 
     pub async fn get(&self, uri: &str, auth: &Auth) -> Resp {
         self.call(Method::GET, uri, None, auth).await
+    }
+
+    pub async fn put(&self, uri: &str, auth: &Auth) -> Resp {
+        self.call(Method::PUT, uri, None, auth).await
+    }
+
+    pub async fn delete(&self, uri: &str, auth: &Auth) -> Resp {
+        self.call(Method::DELETE, uri, None, auth).await
+    }
+
+    pub async fn post(&self, uri: &str, body: Value, auth: &Auth) -> Resp {
+        self.call(Method::POST, uri, Some(body), auth).await
     }
 
     /// Начало входа: адрес daly.rest и cookie `dw_oidc`.
@@ -189,4 +291,10 @@ impl TestApp {
             .await
             .unwrap()
     }
+}
+
+pub fn fast_deezer(base: &str) -> Deezer {
+    Deezer::new(base, 40)
+        .unwrap()
+        .with_backoff(Duration::from_millis(10), Duration::from_millis(10))
 }

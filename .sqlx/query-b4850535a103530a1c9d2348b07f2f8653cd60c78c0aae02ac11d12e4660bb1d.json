@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_items i SET position = x.rn * 1024.0\n         FROM (SELECT id, row_number() OVER (ORDER BY position, id) AS rn\n               FROM playlist_items WHERE playlist_id = $1) x\n         WHERE i.id = x.id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b4850535a103530a1c9d2348b07f2f8653cd60c78c0aae02ac11d12e4660bb1d"
+}

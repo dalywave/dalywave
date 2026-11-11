@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO tracks (deezer_id, isrc, recording_id, title, title_version, album_id, disc_number,\n                             track_position, duration_ms, explicit, rank, fetched_at)\n         VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::smallint, 1), $8, $9, COALESCE($10, false), $11, CASE WHEN $12 THEN now() END)\n         ON CONFLICT (deezer_id) DO UPDATE SET\n            isrc = COALESCE(EXCLUDED.isrc, tracks.isrc),\n            recording_id = COALESCE(EXCLUDED.recording_id, tracks.recording_id),\n            title = EXCLUDED.title,\n            title_version = EXCLUDED.title_version,\n            album_id = COALESCE(EXCLUDED.album_id, tracks.album_id),\n            disc_number = CASE WHEN $7::smallint IS NOT NULL THEN EXCLUDED.disc_number ELSE tracks.disc_number END,\n            track_position = COALESCE(EXCLUDED.track_position, tracks.track_position),\n            duration_ms = EXCLUDED.duration_ms,\n            explicit = CASE WHEN $10::boolean IS NOT NULL THEN EXCLUDED.explicit ELSE tracks.explicit END,\n            rank = COALESCE(EXCLUDED.rank, tracks.rank),\n            fetched_at = COALESCE(EXCLUDED.fetched_at, tracks.fetched_at),\n            updated_at = now()\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Int2",
+        "Int2",
+        "Int4",
+        "Bool",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d78efa294f4585ff3b807b5b23d455e45926fa446c1945d8a0e87295b50f8088"
+}

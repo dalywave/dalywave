@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_artists (track_id, artist_id, role, position)\n         SELECT $1, a, r, p FROM unnest($2::uuid[], $3::text[], $4::smallint[]) AS x(a, r, p)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TextArray",
+        "Int2Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2ad10d135bed94e060bde2d3adadd71fd6749610f48d354e6f565fa1ebc8c7ac"
+}

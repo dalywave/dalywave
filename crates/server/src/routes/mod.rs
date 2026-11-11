@@ -1,6 +1,15 @@
 pub mod admin;
 pub mod auth;
+pub mod catalog;
+pub mod events;
+pub mod home;
+pub mod images;
+pub mod library;
+pub mod playlists;
+pub mod queue;
+pub mod sync;
 pub mod system;
+pub mod ws;
 
 use axum::{
     Router,
@@ -17,7 +26,12 @@ use tower_http::{
 };
 use tracing::Level;
 
-use crate::{auth::need, error::AppError, security, spa, state::AppState};
+use crate::{
+    auth::{need, require_access},
+    error::AppError,
+    security, spa,
+    state::AppState,
+};
 
 const REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
 
@@ -31,14 +45,28 @@ async fn method_not_allowed() -> AppError {
 
 /// Весь API под `/api`, остальное — интерфейс из STATIC_DIR.
 ///
-/// Новые разделы приложения (каталог, медиатека, плеер) подключаются в `api` так:
-/// `.nest("/catalog", catalog::routes().route_layer(from_fn_with_state(state.clone(), auth::require_access)))` —
-/// тогда человек без ролей получит 403 `no_access`, как требует экран «ждём доступа».
+/// Разделы закрыты слоями: каталог — любой ролью (`require_access`), медиатека — правом library,
+/// события прослушивания — правом play, админка — admin. Человек без ролей получает 403 `no_access`,
+/// как требует экран «ждём доступа». Картинки открыты всем, WebSocket проверяет вход сам.
 pub fn router(state: AppState) -> Router {
-    let admin =
-        admin::routes().route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
+    let admin = admin::routes()
+        .merge(queue::routes())
+        .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
+    let catalog = catalog::routes().route_layer(from_fn_with_state(state.clone(), require_access));
+    let library = library::routes()
+        .merge(playlists::routes())
+        .merge(home::routes())
+        .merge(sync::routes())
+        .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
+    let play =
+        events::routes().route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())
+        .merge(images::routes())
+        .merge(ws::routes())
+        .merge(catalog)
+        .merge(library)
+        .merge(play)
         .nest("/auth", auth::routes())
         .nest("/admin", admin)
         .method_not_allowed_fallback(method_not_allowed)

@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT paused, concurrency,\n                  COALESCE(GREATEST(0, EXTRACT(EPOCH FROM (last_claimed_at + make_interval(secs => min_interval_ms / 1000.0) - now())) * 1000), 0)::bigint AS \"wait_ms!\",\n                  (SELECT count(*) FROM jobs WHERE lane = $1 AND status = 'running') AS \"running!\"\n           FROM job_lanes WHERE lane = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "paused",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "job_lanes",
+            "name": "paused"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "concurrency",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "job_lanes",
+            "name": "concurrency"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "wait_ms!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "c5437dc5dadcd0d4466581f1d00387c6bdc59f9fc1ca9baf7f756cc7422ebcc9"
+}

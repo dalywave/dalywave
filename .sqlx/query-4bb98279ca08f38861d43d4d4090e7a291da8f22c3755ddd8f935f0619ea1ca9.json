@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artist_related WHERE artist_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4bb98279ca08f38861d43d4d4090e7a291da8f22c3755ddd8f935f0619ea1ca9"
+}

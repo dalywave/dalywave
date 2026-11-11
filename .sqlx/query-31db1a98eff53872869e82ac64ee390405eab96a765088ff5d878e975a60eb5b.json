@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT related_id FROM artist_related WHERE artist_id = $1 ORDER BY position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "related_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_related",
+            "name": "related_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "31db1a98eff53872869e82ac64ee390405eab96a765088ff5d878e975a60eb5b"
+}

@@ -1,0 +1,238 @@
+{
+ "id": 858280242,
+ "title": "Modern Sadness",
+ "upc": "192650705517",
+ "link": "https://www.deezer.com/album/858280242",
+ "share": "https://www.deezer.com/album/858280242?utm_source=deezer&utm_content=album-858280242&utm_term=0_1794367691&utm_medium=web",
+ "cover": "https://api.deezer.com/album/858280242/image",
+ "cover_small": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/56x56-000000-80-0-0.jpg",
+ "cover_medium": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/250x250-000000-80-0-0.jpg",
+ "cover_big": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/500x500-000000-80-0-0.jpg",
+ "cover_xl": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/1000x1000-000000-80-0-0.jpg",
+ "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+ "genre_id": 85,
+ "genres": {
+  "data": [
+   {
+    "id": 85,
+    "name": "Alternative",
+    "picture": "https://api.deezer.com/genre/85/image",
+    "type": "genre"
+   }
+  ]
+ },
+ "label": "Nettwerk Music Group",
+ "nb_tracks": 5,
+ "duration": 856,
+ "fans": 3,
+ "release_date": "2021-05-21",
+ "record_type": "ep",
+ "available": true,
+ "tracklist": "https://api.deezer.com/album/858280242/tracks",
+ "explicit_lyrics": true,
+ "explicit_content_lyrics": 4,
+ "explicit_content_cover": 2,
+ "contributors": [
+  {
+   "id": 13828465,
+   "name": "Lowborn",
+   "link": "https://www.deezer.com/artist/13828465",
+   "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367691&utm_medium=web",
+   "picture": "https://api.deezer.com/artist/13828465/image",
+   "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+   "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+   "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+   "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+   "radio": true,
+   "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+   "type": "artist",
+   "role": "Main"
+  }
+ ],
+ "artist": {
+  "id": 13828465,
+  "name": "Lowborn",
+  "picture": "https://api.deezer.com/artist/13828465/image",
+  "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+  "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+  "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+  "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+  "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+  "type": "artist"
+ },
+ "type": "album",
+ "tracks": {
+  "data": [
+   {
+    "id": 3661046662,
+    "readable": true,
+    "title": "Church On Sunday",
+    "title_short": "Church On Sunday",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3661046662",
+    "duration": 181,
+    "rank": 20894,
+    "explicit_lyrics": false,
+    "explicit_content_lyrics": 0,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/2/0/9/0/209589447f0d8393f8becb2e962c9f4f.mp3?hdnea=exp=1794368591~acl=/api/1/1/2/0/9/0/209589447f0d8393f8becb2e962c9f4f.mp3*~data=user_id=0,application_id=42~hmac=70db4a0621e5df5478bd000164f2af66152270b4179c7d188243bf2541854edc",
+    "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 858280242,
+     "title": "Modern Sadness",
+     "cover": "https://api.deezer.com/album/858280242/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+     "tracklist": "https://api.deezer.com/album/858280242/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   },
+   {
+    "id": 3661046672,
+    "readable": true,
+    "title": "sad. sad.",
+    "title_short": "sad. sad.",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3661046672",
+    "duration": 184,
+    "rank": 20176,
+    "explicit_lyrics": true,
+    "explicit_content_lyrics": 1,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/7/7/1/0/7714b946c575d6bafc7e4a6ea66c3d79.mp3?hdnea=exp=1794368591~acl=/api/1/1/7/7/1/0/7714b946c575d6bafc7e4a6ea66c3d79.mp3*~data=user_id=0,application_id=42~hmac=81f22ce0f5c90cc7d5a5e49841a877c9ad4e8743c7027df1ff787d5c665de2e6",
+    "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 858280242,
+     "title": "Modern Sadness",
+     "cover": "https://api.deezer.com/album/858280242/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+     "tracklist": "https://api.deezer.com/album/858280242/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   },
+   {
+    "id": 3661046682,
+    "readable": true,
+    "title": "TWSS",
+    "title_short": "TWSS",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3661046682",
+    "duration": 165,
+    "rank": 100000,
+    "explicit_lyrics": false,
+    "explicit_content_lyrics": 0,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/6/e/0/0/6e01b9321d82b56b864a54f1d53c4c5c.mp3?hdnea=exp=1794368591~acl=/api/1/1/6/e/0/0/6e01b9321d82b56b864a54f1d53c4c5c.mp3*~data=user_id=0,application_id=42~hmac=c9db87a03a425ef0e18053f2081d9e46eb2ad88c6477588cc25e8f21e911e5fe",
+    "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 858280242,
+     "title": "Modern Sadness",
+     "cover": "https://api.deezer.com/album/858280242/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+     "tracklist": "https://api.deezer.com/album/858280242/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   },
+   {
+    "id": 3661046692,
+    "readable": true,
+    "title": "Devil",
+    "title_short": "Devil",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3661046692",
+    "duration": 162,
+    "rank": 25553,
+    "explicit_lyrics": false,
+    "explicit_content_lyrics": 0,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/6/5/a/0/65ac7e8373beb8ef4e1700f7faacfb61.mp3?hdnea=exp=1794368591~acl=/api/1/1/6/5/a/0/65ac7e8373beb8ef4e1700f7faacfb61.mp3*~data=user_id=0,application_id=42~hmac=01d3956b81a467080c648ef29ac50649621fb5efc56bcb016e40ef632971226b",
+    "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 858280242,
+     "title": "Modern Sadness",
+     "cover": "https://api.deezer.com/album/858280242/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+     "tracklist": "https://api.deezer.com/album/858280242/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   },
+   {
+    "id": 3661046702,
+    "readable": true,
+    "title": "GOOD TIME",
+    "title_short": "GOOD TIME",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3661046702",
+    "duration": 164,
+    "rank": 100000,
+    "explicit_lyrics": true,
+    "explicit_content_lyrics": 1,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/6/1/7/0/617a4005ea7f5d7af28ae4d5e10e93ee.mp3?hdnea=exp=1794368591~acl=/api/1/1/6/1/7/0/617a4005ea7f5d7af28ae4d5e10e93ee.mp3*~data=user_id=0,application_id=42~hmac=3c1c9d8a4751285c71f9c68e3cfe2d5fae08f65df98c84630e6f34c37eee87f7",
+    "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 858280242,
+     "title": "Modern Sadness",
+     "cover": "https://api.deezer.com/album/858280242/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/266b14e0f8cea71c3e97f22b1caa6d4c/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "266b14e0f8cea71c3e97f22b1caa6d4c",
+     "tracklist": "https://api.deezer.com/album/858280242/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   }
+  ]
+ }
+}

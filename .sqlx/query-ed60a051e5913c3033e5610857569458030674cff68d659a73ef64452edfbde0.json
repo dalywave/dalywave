@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, rev, deezer_id, name, picture_key, picture_source FROM artists\n             WHERE id IN (SELECT user_artist_ids($1)) AND txid >= $2::text::xid8 AND rev > $3\n             ORDER BY rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "rev"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "picture_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "picture_key"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "picture_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "picture_source"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "ed60a051e5913c3033e5610857569458030674cff68d659a73ef64452edfbde0"
+}

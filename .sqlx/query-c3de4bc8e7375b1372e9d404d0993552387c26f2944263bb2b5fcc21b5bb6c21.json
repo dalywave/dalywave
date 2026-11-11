@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO albums (deezer_id, upc, title, artist_id, record_type, release_date, label, genres,\n                             explicit, tracks_count, duration_ms, fans, cover_source)\n         VALUES ($1, $2, $3, $4, COALESCE($5, 'album'), $6, $7, $8, COALESCE($9, false), $10, $11, $12, $13)\n         ON CONFLICT (deezer_id) DO UPDATE SET\n            upc = COALESCE(EXCLUDED.upc, albums.upc),\n            title = EXCLUDED.title,\n            artist_id = CASE WHEN $14 THEN EXCLUDED.artist_id ELSE albums.artist_id END,\n            record_type = CASE WHEN $5::text IS NOT NULL THEN EXCLUDED.record_type ELSE albums.record_type END,\n            release_date = COALESCE(EXCLUDED.release_date, albums.release_date),\n            label = COALESCE(EXCLUDED.label, albums.label),\n            genres = CASE WHEN cardinality(EXCLUDED.genres) > 0 THEN EXCLUDED.genres ELSE albums.genres END,\n            explicit = CASE WHEN $9::boolean IS NOT NULL THEN EXCLUDED.explicit ELSE albums.explicit END,\n            tracks_count = COALESCE(EXCLUDED.tracks_count, albums.tracks_count),\n            duration_ms = COALESCE(EXCLUDED.duration_ms, albums.duration_ms),\n            fans = COALESCE(EXCLUDED.fans, albums.fans),\n            cover_source = COALESCE(EXCLUDED.cover_source, albums.cover_source),\n            cover_key = CASE WHEN EXCLUDED.cover_source IS DISTINCT FROM albums.cover_source\n                                  AND EXCLUDED.cover_source IS NOT NULL\n                             THEN NULL ELSE albums.cover_key END,\n            cover_bytes = CASE WHEN EXCLUDED.cover_source IS DISTINCT FROM albums.cover_source\n                                    AND EXCLUDED.cover_source IS NOT NULL\n                               THEN NULL ELSE albums.cover_bytes END,\n            cover_palette = CASE WHEN EXCLUDED.cover_source IS DISTINCT FROM albums.cover_source\n                                      AND EXCLUDED.cover_source IS NOT NULL\n                                 THEN NULL ELSE albums.cover_palette END,\n            updated_at = now()\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Date",
+        "Text",
+        "TextArray",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c3de4bc8e7375b1372e9d404d0993552387c26f2944263bb2b5fcc21b5bb6c21"
+}

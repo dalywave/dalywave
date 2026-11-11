@@ -13,15 +13,19 @@ publish = false
 dalywave-protocol = { path = "crates/protocol" }
 
 anyhow = "1"
-axum = "0.8.9"
+axum = { version = "0.8.9", features = ["ws"] }
 axum-extra = { version = "0.12", features = ["cookie-private", "cookie-key-expansion"] }
 base64 = "0.22"
+bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 dotenvy = "0.15"
+futures-util = "0.3"
 getrandom = "0.4"
 hex = "0.4"
 http-body-util = "0.1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 ipnet = "2"
+object_store = { version = "0.14", default-features = false, features = ["aws"] }
 p256 = { version = "0.14", features = ["ecdsa"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 serde = { version = "1", features = ["derive"] }
@@ -43,6 +47,7 @@ tempfile = "3"
 thiserror = "2"
 time = "0.3"
 tokio = { version = "1.54", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
+tokio-tungstenite = "0.29"
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.7", features = [
     "compression-br",

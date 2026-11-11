@@ -1,0 +1,123 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.title, p.description, p.kind, p.pinned, p.created_at, p.updated_at,\n                  (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS \"tracks_count!\",\n                  (SELECT COALESCE(sum(t.duration_ms), 0) FROM playlist_items i JOIN tracks t ON t.id = i.track_id\n                   WHERE i.playlist_id = p.id)::bigint AS \"duration_ms!\",\n                  ARRAY(SELECT c.album_id FROM (\n                      SELECT t.album_id, min(i.position) AS first\n                      FROM playlist_items i JOIN tracks t ON t.id = i.track_id\n                      WHERE i.playlist_id = p.id AND t.album_id IS NOT NULL\n                      GROUP BY t.album_id ORDER BY first LIMIT 4) c\n                    ORDER BY c.first) AS \"cover_albums!\"\n           FROM playlists p\n           WHERE p.user_id = $1 AND ($2::uuid[] IS NULL OR p.id = ANY($2)) AND (NOT $3 OR p.pinned)\n           ORDER BY p.pinned DESC, p.updated_at DESC, p.id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "pinned",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "pinned"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "tracks_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "duration_ms!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "cover_albums!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e03f59a0d6c68368370b9c0d83d8522b880e4c075070bbad865fd68a81f90705"
+}

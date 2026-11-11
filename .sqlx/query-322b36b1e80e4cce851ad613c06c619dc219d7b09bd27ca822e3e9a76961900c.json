@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO artist_top_tracks (artist_id, position, track_id)\n                 SELECT $1, (p - 1)::smallint, t FROM unnest($2::uuid[]) WITH ORDINALITY AS x(t, p)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "322b36b1e80e4cce851ad613c06c619dc219d7b09bd27ca822e3e9a76961900c"
+}

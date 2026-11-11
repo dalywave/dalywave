@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.artist_id AS \"artist_id!\",\n                  count(DISTINCT t.recording_id) FILTER (WHERE rec.audio_status = 'ready') AS \"ready!\",\n                  count(DISTINCT COALESCE(t.recording_id, t.id)) FILTER (WHERE al.fetched_at IS NOT NULL) AS \"known!\",\n                  (SELECT COALESCE(sum(GREATEST(COALESCE(a2.tracks_count, 0), 1)), 0)\n                   FROM artist_releases r2 JOIN albums a2 ON a2.id = r2.album_id\n                   WHERE r2.artist_id = r.artist_id AND a2.fetched_at IS NULL)::bigint AS \"pending!\"\n           FROM artist_releases r\n           JOIN albums al ON al.id = r.album_id\n           LEFT JOIN tracks t ON t.album_id = al.id\n           LEFT JOIN recordings rec ON rec.id = t.recording_id\n           WHERE r.artist_id = ANY($1)\n           GROUP BY r.artist_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_releases",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "known!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "pending!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e208620dd64ff0a885de87cedccc42cb73030b70033b8c31764f4cfb1754b312"
+}

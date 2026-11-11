@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT download_policy, notify, created_at FROM followed_artists WHERE user_id = $1 AND artist_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "download_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "download_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "notify",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "notify"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "19dd4cb4a75151ac613f6792bf687d31537240b9cc87d2834c71dc9571b5b6e7"
+}

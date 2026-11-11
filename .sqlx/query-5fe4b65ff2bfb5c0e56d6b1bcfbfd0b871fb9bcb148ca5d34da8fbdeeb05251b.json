@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tracks SET rev = nextval('sync_rev'), txid = pg_current_xact_id() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5fe4b65ff2bfb5c0e56d6b1bcfbfd0b871fb9bcb148ca5d34da8fbdeeb05251b"
+}

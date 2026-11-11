@@ -1,4 +1,5 @@
-//! Журнал админки: входы, смены ролей, блокировки, отзывы сессий. Читается через `/api/admin/audit`.
+//! Журнал админки: входы, смены ролей, блокировки, отзывы сессий, действия с очередью.
+//! Читается через `/api/admin/audit`.
 
 use serde_json::Value;
 use sqlx::PgExecutor;
@@ -16,6 +17,9 @@ pub const ROLES_CHANGED: &str = "user.roles_changed";
 pub const USER_DISABLED: &str = "user.disabled";
 pub const USER_ENABLED: &str = "user.enabled";
 pub const SESSION_REVOKED: &str = "session.revoked";
+pub const JOB_RETRIED: &str = "job.retried";
+pub const JOB_CANCELLED: &str = "job.cancelled";
+pub const LANE_CHANGED: &str = "lane.changed";
 
 pub async fn record(
     db: impl PgExecutor<'_>,

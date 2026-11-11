@@ -80,6 +80,19 @@ pub fn bearer(headers: &HeaderMap) -> Option<&str> {
         .filter(|t| !t.is_empty())
 }
 
+/// Сессия по токену из адреса (`?token=` у WebSocket: не все клиенты умеют ставить заголовки).
+pub async fn authenticate_token(st: &AppState, token: &str) -> AppResult<Option<Principal>> {
+    let kind = if token.starts_with(DEVICE_PREFIX) {
+        SessionKind::Device
+    } else if token.starts_with(session::WEB_PREFIX) {
+        SessionKind::Web
+    } else {
+        return Err(AppError::Unauthorized);
+    };
+    let found = session::find(&st.db, token, kind).await?;
+    Ok(principal_from(kind, found))
+}
+
 /// Сессия запроса. Заблокированный человек — всё равно что без сессии.
 pub async fn authenticate(st: &AppState, headers: &HeaderMap) -> AppResult<Option<Principal>> {
     let (kind, found) = if headers.contains_key(header::AUTHORIZATION) {
@@ -99,7 +112,11 @@ pub async fn authenticate(st: &AppState, headers: &HeaderMap) -> AppResult<Optio
         };
         (SessionKind::Web, found)
     };
-    Ok(found.filter(|s| !s.disabled).map(|s| {
+    Ok(principal_from(kind, found))
+}
+
+fn principal_from(kind: SessionKind, found: Option<session::Found>) -> Option<Principal> {
+    found.filter(|s| !s.disabled).map(|s| {
         let via = match (kind, s.auth_method.as_str()) {
             (SessionKind::Device, _) => AuthVia::Device,
             (_, "password") => AuthVia::Password,
@@ -118,7 +135,7 @@ pub async fn authenticate(st: &AppState, headers: &HeaderMap) -> AppResult<Optio
             via,
             device_id: s.device_id,
         }
-    }))
+    })
 }
 
 impl FromRequestParts<AppState> for Principal {

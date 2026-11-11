@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT rev, table_name, row_key, deleted_at FROM tombstones\n             WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tombstones",
+            "name": "rev"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "table_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tombstones",
+            "name": "table_name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "row_key",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "tombstones",
+            "name": "row_key"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "deleted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tombstones",
+            "name": "deleted_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f7116ba53f043119aba9ec719559750584987a8691feab0f80675ed7d439b129"
+}

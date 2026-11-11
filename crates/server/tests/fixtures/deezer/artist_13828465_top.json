@@ -1,0 +1,516 @@
+{
+ "data": [
+  {
+   "id": 3661025372,
+   "readable": true,
+   "title": "I Want Out",
+   "title_short": "I Want Out",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3661025372",
+   "duration": 122,
+   "rank": 180511,
+   "explicit_lyrics": true,
+   "explicit_content_lyrics": 1,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/9/d/9/0/9d997d4f5ab8964e531cce0499cf28d5.mp3?hdnea=exp=1794368590~acl=/api/1/1/9/d/9/0/9d997d4f5ab8964e531cce0499cf28d5.mp3*~data=user_id=0,application_id=42~hmac=44c4732bd8bcb510c46088c0165a576a201a7a63e63ae1cfd3a23882fc76775f",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "54f997b28af988cad96f908ed8cf2d2b",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 858273902,
+    "title": "I Want Out",
+    "cover": "https://api.deezer.com/album/858273902/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/54f997b28af988cad96f908ed8cf2d2b/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/54f997b28af988cad96f908ed8cf2d2b/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/54f997b28af988cad96f908ed8cf2d2b/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/54f997b28af988cad96f908ed8cf2d2b/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "54f997b28af988cad96f908ed8cf2d2b",
+    "tracklist": "https://api.deezer.com/album/858273902/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657134452,
+   "readable": true,
+   "title": "Doctor Doctor",
+   "title_short": "Doctor Doctor",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3657134452",
+   "duration": 165,
+   "rank": 321188,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/1/7/f/0/17f0c9b3d7905eb584c204418e8b396a.mp3?hdnea=exp=1794368590~acl=/api/1/1/1/7/f/0/17f0c9b3d7905eb584c204418e8b396a.mp3*~data=user_id=0,application_id=42~hmac=90dcd1fbf5736555f4db1148e0a9f9de23e83a1ff51782dce05bb285c48b7d7b",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "9a31d6d15f3ffb48c03e16c8903272b9",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 856814892,
+    "title": "Doctor Doctor",
+    "cover": "https://api.deezer.com/album/856814892/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/9a31d6d15f3ffb48c03e16c8903272b9/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/9a31d6d15f3ffb48c03e16c8903272b9/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/9a31d6d15f3ffb48c03e16c8903272b9/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/9a31d6d15f3ffb48c03e16c8903272b9/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "9a31d6d15f3ffb48c03e16c8903272b9",
+    "tracklist": "https://api.deezer.com/album/856814892/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3661060002,
+   "readable": true,
+   "title": "Reckless",
+   "title_short": "Reckless",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3661060002",
+   "duration": 167,
+   "rank": 159223,
+   "explicit_lyrics": true,
+   "explicit_content_lyrics": 1,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/7/e/6/0/7e6071784cbcfb0ebea9d65f0b8a682b.mp3?hdnea=exp=1794368590~acl=/api/1/1/7/e/6/0/7e6071784cbcfb0ebea9d65f0b8a682b.mp3*~data=user_id=0,application_id=42~hmac=d163849f9e36941085c9c2c8f08c8eb6989e30cb2bd4da9caab060a13d781644",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "c319621ed776d98139e61be5cf4e3986",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 858284472,
+    "title": "Reckless",
+    "cover": "https://api.deezer.com/album/858284472/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/c319621ed776d98139e61be5cf4e3986/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/c319621ed776d98139e61be5cf4e3986/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/c319621ed776d98139e61be5cf4e3986/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/c319621ed776d98139e61be5cf4e3986/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "c319621ed776d98139e61be5cf4e3986",
+    "tracklist": "https://api.deezer.com/album/858284472/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657352302,
+   "readable": true,
+   "title": "Crazy",
+   "title_short": "Crazy",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3657352302",
+   "duration": 196,
+   "rank": 195306,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/e/7/f/0/e7f44eecacc0faf66ecb57f61073eef6.mp3?hdnea=exp=1794368590~acl=/api/1/1/e/7/f/0/e7f44eecacc0faf66ecb57f61073eef6.mp3*~data=user_id=0,application_id=42~hmac=cac88b74bb782933743b519408f44711c7973885ef8cc6d61f249b8162c6fa98",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "78c4006bd872db44f93ac2e8783e9827",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 856896562,
+    "title": "Crazy",
+    "cover": "https://api.deezer.com/album/856896562/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/78c4006bd872db44f93ac2e8783e9827/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/78c4006bd872db44f93ac2e8783e9827/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/78c4006bd872db44f93ac2e8783e9827/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/78c4006bd872db44f93ac2e8783e9827/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "78c4006bd872db44f93ac2e8783e9827",
+    "tracklist": "https://api.deezer.com/album/856896562/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657203312,
+   "readable": true,
+   "title": "Sick of My Life",
+   "title_short": "Sick of My Life",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3657203312",
+   "duration": 192,
+   "rank": 107445,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/8/3/9/0/83935231eb44c57d5b104ae8caf5fdec.mp3?hdnea=exp=1794368590~acl=/api/1/1/8/3/9/0/83935231eb44c57d5b104ae8caf5fdec.mp3*~data=user_id=0,application_id=42~hmac=91c47c04da2484d0964bbef82575b45f189dc8694e2fe2885b3686a1a978479b",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "66aea17f2282ad9cc8e7e10dbcfd50a3",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 856840472,
+    "title": "Sick of My Life",
+    "cover": "https://api.deezer.com/album/856840472/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/66aea17f2282ad9cc8e7e10dbcfd50a3/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/66aea17f2282ad9cc8e7e10dbcfd50a3/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/66aea17f2282ad9cc8e7e10dbcfd50a3/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/66aea17f2282ad9cc8e7e10dbcfd50a3/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "66aea17f2282ad9cc8e7e10dbcfd50a3",
+    "tracklist": "https://api.deezer.com/album/856840472/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657352542,
+   "readable": true,
+   "title": "Dirtyprettylove",
+   "title_short": "Dirtyprettylove",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3657352542",
+   "duration": 201,
+   "rank": 41530,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/6/6/c/0/66cfa2e68c02fddb50313852b30f286f.mp3?hdnea=exp=1794368590~acl=/api/1/1/6/6/c/0/66cfa2e68c02fddb50313852b30f286f.mp3*~data=user_id=0,application_id=42~hmac=b2ae10b3a75148199742a5b9bfc177d25a61560d3d5d5c8dd0573cfd54096aad",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "34c0a6dfc0120936695d9e995e1b2029",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 856896652,
+    "title": "Collection One",
+    "cover": "https://api.deezer.com/album/856896652/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/34c0a6dfc0120936695d9e995e1b2029/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/34c0a6dfc0120936695d9e995e1b2029/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/34c0a6dfc0120936695d9e995e1b2029/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/34c0a6dfc0120936695d9e995e1b2029/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "34c0a6dfc0120936695d9e995e1b2029",
+    "tracklist": "https://api.deezer.com/album/856896652/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657365522,
+   "readable": true,
+   "title": "Dark Inside",
+   "title_short": "Dark Inside",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3657365522",
+   "duration": 194,
+   "rank": 137519,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/3/2/f/0/32f25c1db5d4077763fe33984e13c8e0.mp3?hdnea=exp=1794368590~acl=/api/1/1/3/2/f/0/32f25c1db5d4077763fe33984e13c8e0.mp3*~data=user_id=0,application_id=42~hmac=f750dae8543ad990d709a9610d1309b2a1f64d697e7ca2ac04e79ed8e8e86c12",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "7b569e68af71a5f0213308d849bae4b1",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 856899912,
+    "title": "Dark Inside",
+    "cover": "https://api.deezer.com/album/856899912/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/7b569e68af71a5f0213308d849bae4b1/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/7b569e68af71a5f0213308d849bae4b1/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/7b569e68af71a5f0213308d849bae4b1/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/7b569e68af71a5f0213308d849bae4b1/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "7b569e68af71a5f0213308d849bae4b1",
+    "tracklist": "https://api.deezer.com/album/856899912/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 4265032922,
+   "readable": true,
+   "title": "i’mfine.",
+   "title_short": "i’mfine.",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/4265032922",
+   "duration": 138,
+   "rank": 65674,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/4/7/f/0/47fb0fbfa74347c989c0ea30edfdf3dc.mp3?hdnea=exp=1794368590~acl=/api/1/1/4/7/f/0/47fb0fbfa74347c989c0ea30edfdf3dc.mp3*~data=user_id=0,application_id=42~hmac=1a9450c9e901277de195721253650dacfda1e46a9e7633e2f63e4d971eb06d72",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "041a7401ead0c50765000792dc75b14e",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 1070416932,
+    "title": "i’mfine.",
+    "cover": "https://api.deezer.com/album/1070416932/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/041a7401ead0c50765000792dc75b14e/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/041a7401ead0c50765000792dc75b14e/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/041a7401ead0c50765000792dc75b14e/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/041a7401ead0c50765000792dc75b14e/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "041a7401ead0c50765000792dc75b14e",
+    "tracklist": "https://api.deezer.com/album/1070416932/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657195152,
+   "readable": true,
+   "title": "Nostalgia",
+   "title_short": "Nostalgia",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3657195152",
+   "duration": 170,
+   "rank": 77115,
+   "explicit_lyrics": true,
+   "explicit_content_lyrics": 1,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/7/a/3/0/7a3c9bd734108d43f60c842c756fb450.mp3?hdnea=exp=1794368590~acl=/api/1/1/7/a/3/0/7a3c9bd734108d43f60c842c756fb450.mp3*~data=user_id=0,application_id=42~hmac=0a4320559a98da2f2e2779a3294fb7175e42fe7c7e9abc847f6e134513e7acc7",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "fda133fc938bbbda4b67a26ec0edd12e",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 856837502,
+    "title": "Nostalgia",
+    "cover": "https://api.deezer.com/album/856837502/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/fda133fc938bbbda4b67a26ec0edd12e/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/fda133fc938bbbda4b67a26ec0edd12e/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/fda133fc938bbbda4b67a26ec0edd12e/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/fda133fc938bbbda4b67a26ec0edd12e/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "fda133fc938bbbda4b67a26ec0edd12e",
+    "tracklist": "https://api.deezer.com/album/856837502/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3661034702,
+   "readable": true,
+   "title": "Lacuna",
+   "title_short": "Lacuna",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3661034702",
+   "duration": 256,
+   "rank": 65626,
+   "explicit_lyrics": true,
+   "explicit_content_lyrics": 1,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/f/0/9/0/f09d2cf070425b7baeb18b6c54fcdcf2.mp3?hdnea=exp=1794368590~acl=/api/1/1/f/0/9/0/f09d2cf070425b7baeb18b6c54fcdcf2.mp3*~data=user_id=0,application_id=42~hmac=b736a246d2591b32d3b2458fcf4e3eac68e6c23234129f90ca39bb544b463789",
+   "contributors": [
+    {
+     "id": 13828465,
+     "name": "Lowborn",
+     "link": "https://www.deezer.com/artist/13828465",
+     "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367690&utm_medium=web",
+     "picture": "https://api.deezer.com/artist/13828465/image",
+     "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+     "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+     "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+     "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+     "radio": true,
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist",
+     "role": "Main"
+    }
+   ],
+   "md5_image": "dffa55f1fbb77c447b2aabaf9777101b",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "album": {
+    "id": 858276532,
+    "title": "Lacuna",
+    "cover": "https://api.deezer.com/album/858276532/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/dffa55f1fbb77c447b2aabaf9777101b/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/dffa55f1fbb77c447b2aabaf9777101b/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/dffa55f1fbb77c447b2aabaf9777101b/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/dffa55f1fbb77c447b2aabaf9777101b/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "dffa55f1fbb77c447b2aabaf9777101b",
+    "tracklist": "https://api.deezer.com/album/858276532/tracks",
+    "type": "album"
+   },
+   "type": "track"
+  }
+ ],
+ "total": 20,
+ "next": "https://api.deezer.com/artist/13828465/top?limit=10&index=10"
+}

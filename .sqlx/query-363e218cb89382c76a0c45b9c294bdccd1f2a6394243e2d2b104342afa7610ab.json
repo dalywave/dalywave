@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE albums SET fetched_at = now(), tracks_count = COALESCE(tracks_count, $2) WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "363e218cb89382c76a0c45b9c294bdccd1f2a6394243e2d2b104342afa7610ab"
+}

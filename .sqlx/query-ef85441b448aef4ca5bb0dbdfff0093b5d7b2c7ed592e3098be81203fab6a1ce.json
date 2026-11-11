@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n              (SELECT count(*) FROM audio_files) AS \"audio_files!\",\n              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files)::bigint AS \"audio_bytes!\",\n              ((SELECT count(*) FROM albums WHERE cover_key IS NOT NULL)\n               + (SELECT count(*) FROM artists WHERE picture_key IS NOT NULL)) AS \"images!\",\n              ((SELECT COALESCE(sum(cover_bytes), 0) FROM albums)\n               + (SELECT COALESCE(sum(picture_bytes), 0) FROM artists))::bigint AS \"image_bytes!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "audio_files!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "audio_bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "images!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "image_bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ef85441b448aef4ca5bb0dbdfff0093b5d7b2c7ed592e3098be81203fab6a1ce"
+}

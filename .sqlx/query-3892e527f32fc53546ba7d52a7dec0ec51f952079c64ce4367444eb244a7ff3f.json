@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind, ref_id, created_at, rev FROM blocked_items\n             WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "blocked_items",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ref_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "blocked_items",
+            "name": "ref_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "blocked_items",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "blocked_items",
+            "name": "rev"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3892e527f32fc53546ba7d52a7dec0ec51f952079c64ce4367444eb244a7ff3f"
+}

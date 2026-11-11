@@ -1,0 +1,136 @@
+{
+ "id": 856814942,
+ "title": "Devil",
+ "upc": "192650519466",
+ "link": "https://www.deezer.com/album/856814942",
+ "share": "https://www.deezer.com/album/856814942?utm_source=deezer&utm_content=album-856814942&utm_term=0_1794367692&utm_medium=web",
+ "cover": "https://api.deezer.com/album/856814942/image",
+ "cover_small": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/56x56-000000-80-0-0.jpg",
+ "cover_medium": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/250x250-000000-80-0-0.jpg",
+ "cover_big": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/500x500-000000-80-0-0.jpg",
+ "cover_xl": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/1000x1000-000000-80-0-0.jpg",
+ "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+ "genre_id": 85,
+ "genres": {
+  "data": [
+   {
+    "id": 85,
+    "name": "Alternative",
+    "picture": "https://api.deezer.com/genre/85/image",
+    "type": "genre"
+   }
+  ]
+ },
+ "label": "Nettwerk Music Group",
+ "nb_tracks": 2,
+ "duration": 346,
+ "fans": 11,
+ "release_date": "2021-04-16",
+ "record_type": "single",
+ "available": true,
+ "tracklist": "https://api.deezer.com/album/856814942/tracks",
+ "explicit_lyrics": true,
+ "explicit_content_lyrics": 4,
+ "explicit_content_cover": 2,
+ "contributors": [
+  {
+   "id": 13828465,
+   "name": "Lowborn",
+   "link": "https://www.deezer.com/artist/13828465",
+   "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367692&utm_medium=web",
+   "picture": "https://api.deezer.com/artist/13828465/image",
+   "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+   "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+   "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+   "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+   "radio": true,
+   "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+   "type": "artist",
+   "role": "Main"
+  }
+ ],
+ "artist": {
+  "id": 13828465,
+  "name": "Lowborn",
+  "picture": "https://api.deezer.com/artist/13828465/image",
+  "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+  "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+  "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+  "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+  "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+  "type": "artist"
+ },
+ "type": "album",
+ "tracks": {
+  "data": [
+   {
+    "id": 3657134502,
+    "readable": true,
+    "title": "Devil",
+    "title_short": "Devil",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3657134502",
+    "duration": 162,
+    "rank": 313346,
+    "explicit_lyrics": false,
+    "explicit_content_lyrics": 0,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/6/5/a/0/65ac7e8373beb8ef4e1700f7faacfb61.mp3?hdnea=exp=1794368592~acl=/api/1/1/6/5/a/0/65ac7e8373beb8ef4e1700f7faacfb61.mp3*~data=user_id=0,application_id=42~hmac=c1d652c07b29d73ae2c30137c86365e9134daf4df7bef38b4117e336932d4405",
+    "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 856814942,
+     "title": "Devil",
+     "cover": "https://api.deezer.com/album/856814942/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+     "tracklist": "https://api.deezer.com/album/856814942/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   },
+   {
+    "id": 3657134512,
+    "readable": true,
+    "title": "sad. sad.",
+    "title_short": "sad. sad.",
+    "title_version": "",
+    "link": "https://www.deezer.com/track/3657134512",
+    "duration": 184,
+    "rank": 1761,
+    "explicit_lyrics": true,
+    "explicit_content_lyrics": 1,
+    "explicit_content_cover": 2,
+    "preview": "https://cdnt-preview.dzcdn.net/api/1/1/7/7/1/0/7714b946c575d6bafc7e4a6ea66c3d79.mp3?hdnea=exp=1794368592~acl=/api/1/1/7/7/1/0/7714b946c575d6bafc7e4a6ea66c3d79.mp3*~data=user_id=0,application_id=42~hmac=b438919a7351c1893df4aff6de0a18c9f8d528f67842fda8209c512bd7836108",
+    "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+    "artist": {
+     "id": 13828465,
+     "name": "Lowborn",
+     "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+     "type": "artist"
+    },
+    "album": {
+     "id": 856814942,
+     "title": "Devil",
+     "cover": "https://api.deezer.com/album/856814942/image",
+     "cover_small": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/56x56-000000-80-0-0.jpg",
+     "cover_medium": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/250x250-000000-80-0-0.jpg",
+     "cover_big": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/500x500-000000-80-0-0.jpg",
+     "cover_xl": "https://cdn-images.dzcdn.net/images/cover/bd517529f512b3b6f319b9b8e0110bd4/1000x1000-000000-80-0-0.jpg",
+     "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+     "tracklist": "https://api.deezer.com/album/856814942/tracks",
+     "type": "album"
+    },
+    "type": "track"
+   }
+  ]
+ }
+}

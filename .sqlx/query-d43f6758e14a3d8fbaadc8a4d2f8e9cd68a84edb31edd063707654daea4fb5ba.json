@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE job_lanes SET last_claimed_at = now() WHERE lane = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d43f6758e14a3d8fbaadc8a4d2f8e9cd68a84edb31edd063707654daea4fb5ba"
+}

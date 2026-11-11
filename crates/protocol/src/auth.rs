@@ -3,48 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-/// Строковые имена перечислений: те же, что в JSON, и те же, что хранятся в базе.
-macro_rules! names {
-    ($ty:ident { $($variant:ident => $name:literal),+ $(,)? }) => {
-        impl $ty {
-            pub const ALL: &'static [$ty] = &[$($ty::$variant),+];
-
-            pub fn as_str(self) -> &'static str {
-                match self {
-                    $($ty::$variant => $name),+
-                }
-            }
-        }
-
-        impl std::str::FromStr for $ty {
-            type Err = UnknownName;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                match s {
-                    $($name => Ok($ty::$variant),)+
-                    _ => Err(UnknownName(s.to_string())),
-                }
-            }
-        }
-
-        impl std::fmt::Display for $ty {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str(self.as_str())
-            }
-        }
-    };
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UnknownName(pub String);
-
-impl std::fmt::Display for UnknownName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "unknown value `{}`", self.0)
-    }
-}
-
-impl std::error::Error for UnknownName {}
+pub use crate::UnknownName;
 
 /// Роль в DalyWave. Роли совмещаются; человек без ролей видит экран «ждём доступа».
 #[derive(

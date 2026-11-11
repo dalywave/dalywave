@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT artist_id, download_policy, notify, created_at, rev FROM followed_artists\n             WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "download_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "download_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "notify",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "notify"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "rev"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c33b9e8d8b71b0792deb5c9b2a27daa76dbed8ce0ead6dde57b1a20e9251fb4c"
+}

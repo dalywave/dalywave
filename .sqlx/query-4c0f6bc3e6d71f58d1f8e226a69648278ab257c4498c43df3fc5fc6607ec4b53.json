@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, rev, isrc, duration_ms, audio_status, primary_file_id FROM recordings\n             WHERE id IN (SELECT t.recording_id FROM tracks t WHERE t.id IN (SELECT user_track_ids($1)))\n               AND txid >= $2::text::xid8 AND rev > $3\n             ORDER BY rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "rev"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "audio_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "primary_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "primary_file_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "4c0f6bc3e6d71f58d1f8e226a69648278ab257c4498c43df3fc5fc6607ec4b53"
+}

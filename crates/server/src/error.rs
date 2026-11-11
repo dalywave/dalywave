@@ -38,6 +38,9 @@ pub enum AppError {
     UnsupportedMediaType,
     #[error("слишком много попыток, попробуйте через минуту")]
     TooManyRequests,
+    /// Внешний сервис (Deezer, хранилище) не ответил: стоит повторить позже.
+    #[error("{0}")]
+    Unavailable(String),
     #[error(transparent)]
     Db(sqlx::Error),
     #[error(transparent)]
@@ -69,6 +72,7 @@ impl AppError {
                 (StatusCode::UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type")
             }
             Self::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, "too_many_requests"),
+            Self::Unavailable(_) => (StatusCode::SERVICE_UNAVAILABLE, "unavailable"),
             Self::Db(_) | Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal"),
         }
     }

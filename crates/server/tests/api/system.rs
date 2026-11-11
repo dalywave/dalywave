@@ -61,10 +61,18 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         .collect();
     let expected = [
         "/api/admin/audit",
+        "/api/admin/jobs",
+        "/api/admin/jobs/{id}/cancel",
+        "/api/admin/jobs/{id}/retry",
+        "/api/admin/lanes",
+        "/api/admin/lanes/{lane}",
+        "/api/admin/overview",
         "/api/admin/sessions",
         "/api/admin/sessions/{id}",
         "/api/admin/users",
         "/api/admin/users/{id}",
+        "/api/albums/{id}",
+        "/api/artists/{id}",
         "/api/auth/app/start",
         "/api/auth/app/token",
         "/api/auth/logout",
@@ -73,8 +81,33 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/auth/oidc/start",
         "/api/auth/password",
         "/api/auth/providers",
+        "/api/catalog/deezer/{kind}/{deezerId}",
+        "/api/events",
         "/api/healthz",
+        "/api/home",
+        "/api/images/{kind}/{id}/{file}",
+        "/api/library",
+        "/api/library/albums",
+        "/api/library/albums/{id}",
+        "/api/library/artists",
+        "/api/library/artists/{id}",
+        "/api/library/blocked",
+        "/api/library/blocked/{kind}/{id}",
+        "/api/library/tracks",
+        "/api/library/tracks/{id}",
+        "/api/me/history",
         "/api/openapi.json",
+        "/api/playlists",
+        "/api/playlists/{id}",
+        "/api/playlists/{id}/items",
+        "/api/playlists/{id}/items/{itemId}",
+        "/api/playlists/{id}/items/{itemId}/move",
+        "/api/playlists/{id}/pin",
+        "/api/search",
+        "/api/sync",
+        "/api/tracks/lookup",
+        "/api/tracks/{id}",
+        "/api/ws",
     ];
     let mut sorted = paths.clone();
     sorted.sort();
@@ -88,6 +121,23 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "ErrorBody",
         "Health",
         "SessionList",
+        "ArtistDetail",
+        "AlbumDetail",
+        "Track",
+        "SearchResults",
+        "CatalogEntity",
+        "LibraryOverview",
+        "PlaylistDetail",
+        "SyncPage",
+        "Home",
+        "ShelfItem",
+        "EventBatch",
+        "AdminOverview",
+        "JobPage",
+        "LaneList",
+        "ServerEvent",
+        "ClientMessage",
+        "AcquirePayload",
     ] {
         assert!(schemas.contains_key(name), "{name}");
     }
@@ -201,6 +251,22 @@ async fn static_spa_fallback(db: PgPool) {
     let res = app.get("/favicon.ico", &Auth::None).await;
     assert_eq!(res.status, StatusCode::OK);
     assert_eq!(res.headers[header::CACHE_CONTROL], "no-cache");
+
+    // Незнакомый файл — 404, а не страница интерфейса под видом файла
+    for uri in [
+        "/robots.txt",
+        "/apple-touch-icon.png",
+        "/deep/path/manifest.webmanifest",
+        "/_nuxt/sub/missing.css",
+    ] {
+        let res = app.get(uri, &Auth::None).await;
+        assert_eq!(res.status, StatusCode::NOT_FOUND, "{uri}");
+        assert!(!res.text.contains("DalyWave"), "{uri}");
+        assert!(
+            !res.headers.contains_key(header::CONTENT_SECURITY_POLICY),
+            "{uri}"
+        );
+    }
 
     // API не подменяется интерфейсом
     let res = app.get("/api/nope", &Auth::None).await;

@@ -1,0 +1,55 @@
+{
+ "data": [
+  {
+   "id": 3657134502,
+   "readable": true,
+   "title": "Devil",
+   "title_short": "Devil",
+   "title_version": "",
+   "isrc": "QZ5FN2194847",
+   "link": "https://www.deezer.com/track/3657134502",
+   "duration": 162,
+   "track_position": 1,
+   "disk_number": 1,
+   "rank": 313346,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/6/5/a/0/65ac7e8373beb8ef4e1700f7faacfb61.mp3?hdnea=exp=1794368592~acl=/api/1/1/6/5/a/0/65ac7e8373beb8ef4e1700f7faacfb61.mp3*~data=user_id=0,application_id=42~hmac=c1d652c07b29d73ae2c30137c86365e9134daf4df7bef38b4117e336932d4405",
+   "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "type": "track"
+  },
+  {
+   "id": 3657134512,
+   "readable": true,
+   "title": "sad. sad.",
+   "title_short": "sad. sad.",
+   "title_version": "",
+   "isrc": "QZ5FN2126605",
+   "link": "https://www.deezer.com/track/3657134512",
+   "duration": 184,
+   "track_position": 2,
+   "disk_number": 1,
+   "rank": 1761,
+   "explicit_lyrics": true,
+   "explicit_content_lyrics": 1,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/7/7/1/0/7714b946c575d6bafc7e4a6ea66c3d79.mp3?hdnea=exp=1794368592~acl=/api/1/1/7/7/1/0/7714b946c575d6bafc7e4a6ea66c3d79.mp3*~data=user_id=0,application_id=42~hmac=b438919a7351c1893df4aff6de0a18c9f8d528f67842fda8209c512bd7836108",
+   "md5_image": "bd517529f512b3b6f319b9b8e0110bd4",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "type": "track"
+  }
+ ],
+ "total": 2
+}

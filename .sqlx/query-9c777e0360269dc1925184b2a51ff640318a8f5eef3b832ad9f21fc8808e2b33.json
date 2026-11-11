@@ -1,0 +1,177 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.rev, t.deezer_id, t.title, t.title_version, t.album_id, t.disc_number,\n                      t.track_position, t.duration_ms, t.explicit, t.isrc, t.recording_id,\n                      ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id\n                            ORDER BY ta.position, ta.artist_id) AS \"artist_ids!\",\n                      ARRAY(SELECT ta.role FROM track_artists ta WHERE ta.track_id = t.id\n                            ORDER BY ta.position, ta.artist_id) AS \"artist_roles!\"\n               FROM tracks t\n               WHERE t.id IN (SELECT user_track_ids($1)) AND t.txid >= $2::text::xid8 AND t.rev > $3\n               ORDER BY t.rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "rev"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "title_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title_version"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "album_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "disc_number",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "disc_number"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "track_position",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "track_position"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "explicit",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "explicit"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "artist_ids!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "artist_roles!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "9c777e0360269dc1925184b2a51ff640318a8f5eef3b832ad9f21fc8808e2b33"
+}

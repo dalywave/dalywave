@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
-# API и интерфейс в одном образе: сервер отдаёт статику SPA сам. Собирается на сервере (ARM64).
+# API, воркер очереди и интерфейс в одном образе: сервер отдаёт статику SPA сам, воркер запускается
+# из того же образа командой dalywave-worker. Собирается на сервере (ARM64).
 
 # Интерфейс: статическая сборка Nuxt
 FROM oven/bun:1.2.21 AS ui
@@ -31,7 +32,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl tini \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --uid 10001 --home-dir /nonexistent dalywave
-COPY --from=builder /src/target/release/dalywave-api /usr/local/bin/
+COPY --from=builder /src/target/release/dalywave-api /src/target/release/dalywave-worker /usr/local/bin/
 COPY --from=ui /src/apps/ui/.output/public /srv/ui
 ENV DALYWAVE_STATIC_DIR=/srv/ui \
     DALYWAVE_LOG_FORMAT=json \

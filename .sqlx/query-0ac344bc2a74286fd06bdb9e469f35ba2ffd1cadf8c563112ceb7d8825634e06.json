@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.roles FROM sessions s JOIN users u ON u.id = s.user_id\n         LEFT JOIN devices d ON d.id = s.device_id\n         WHERE s.id = $1 AND s.revoked_at IS NULL AND s.expires_at > now()\n           AND NOT u.disabled AND d.revoked_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "roles",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "roles"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0ac344bc2a74286fd06bdb9e469f35ba2ffd1cadf8c563112ceb7d8825634e06"
+}

@@ -1,0 +1,108 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.id, a.deezer_id, a.name, a.picture_key, a.picture_source, a.fans, a.albums_count,\n                  EXISTS (SELECT 1 FROM followed_artists f WHERE f.user_id = $2 AND f.artist_id = a.id) AS \"followed!\"\n           FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)\n           JOIN artists a ON a.id = ids.id\n           ORDER BY ids.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "picture_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "picture_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "picture_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "picture_source"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "fans",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "fans"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "albums_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "albums_count"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "followed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "c8a0de3326ae4e53c48596e94f6ef1805b937a1e92de4c9dba216e851b4719d9"
+}

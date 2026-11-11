@@ -12,7 +12,10 @@ use axum::{
 use axum_extra::extract::cookie::Key;
 use sqlx::PgPool;
 
-use crate::{config::Config, oidc::Oidc, ratelimit::RateLimiter};
+use crate::{
+    config::Config, deezer::Deezer, oidc::Oidc, ratelimit::RateLimiter, realtime::Hub,
+    storage::Storage,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -25,10 +28,23 @@ pub struct AppState {
     /// Клиент daly.rest; `None`, если вход через провайдера не настроен
     pub oidc: Option<Arc<Oidc>>,
     pub started: Instant,
+    pub deezer: Arc<Deezer>,
+    pub storage: Arc<Storage>,
+    /// События для открытых WebSocket этого процесса
+    pub hub: Arc<Hub>,
 }
 
 impl AppState {
+    /// Хранилище — из `S3_*`; без настроек — в памяти процесса.
     pub fn new(db: PgPool, config: Config) -> anyhow::Result<Self> {
+        let storage = match &config.s3 {
+            Some(s3) => Storage::from_config(s3)?,
+            None => Storage::memory(),
+        };
+        Self::with_storage(db, config, storage)
+    }
+
+    pub fn with_storage(db: PgPool, config: Config, storage: Storage) -> anyhow::Result<Self> {
         let http = reqwest::Client::builder()
             .user_agent(concat!("dalywave/", env!("CARGO_PKG_VERSION")))
             .timeout(Duration::from_secs(10))
@@ -39,7 +55,11 @@ impl AppState {
             .oidc
             .clone()
             .map(|c| Arc::new(Oidc::new(c, http.clone())));
+        let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_api)?;
         Ok(Self {
+            deezer: Arc::new(deezer),
+            storage: Arc::new(storage),
+            hub: Arc::new(Hub::default()),
             cookie_key: Key::derive_from(&config.secret_key),
             db,
             config: Arc::new(config),

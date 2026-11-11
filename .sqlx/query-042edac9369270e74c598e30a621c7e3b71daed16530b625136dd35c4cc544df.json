@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO acquisitions (recording_id, track_id, reason, lane, requested_by)\n         VALUES ($1, $2, $3, $4, $5)\n         ON CONFLICT (recording_id) WHERE status IN ('queued', 'matching', 'downloading', 'verifying', 'processing')\n         DO NOTHING\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "acquisitions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "042edac9369270e74c598e30a621c7e3b71daed16530b625136dd35c4cc544df"
+}

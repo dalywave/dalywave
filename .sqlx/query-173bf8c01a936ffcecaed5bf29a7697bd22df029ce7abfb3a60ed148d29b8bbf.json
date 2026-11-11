@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = $2, error = COALESCE($3, error), updated_at = now(),\n                finished_at = CASE WHEN $4 THEN now() ELSE NULL END\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "173bf8c01a936ffcecaed5bf29a7697bd22df029ce7abfb3a60ed148d29b8bbf"
+}

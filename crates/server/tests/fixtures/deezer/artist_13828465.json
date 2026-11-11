@@ -1,0 +1,16 @@
+{
+ "id": 13828465,
+ "name": "Lowborn",
+ "link": "https://www.deezer.com/artist/13828465",
+ "share": "https://www.deezer.com/artist/13828465?utm_source=deezer&utm_content=artist-13828465&utm_term=0_1794367689&utm_medium=web",
+ "picture": "https://api.deezer.com/artist/13828465/image",
+ "picture_small": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/56x56-000000-80-0-0.jpg",
+ "picture_medium": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/250x250-000000-80-0-0.jpg",
+ "picture_big": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/500x500-000000-80-0-0.jpg",
+ "picture_xl": "https://cdn-images.dzcdn.net/images/artist/efbabc526ebd5e5b7ba93365e5471a26/1000x1000-000000-80-0-0.jpg",
+ "nb_album": 54,
+ "nb_fan": 611,
+ "radio": true,
+ "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+ "type": "artist"
+}

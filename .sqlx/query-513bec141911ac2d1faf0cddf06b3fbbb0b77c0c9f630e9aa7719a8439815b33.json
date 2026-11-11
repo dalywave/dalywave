@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT lane FROM job_lanes ORDER BY lane",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "lane",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "job_lanes",
+            "name": "lane"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "513bec141911ac2d1faf0cddf06b3fbbb0b77c0c9f630e9aa7719a8439815b33"
+}

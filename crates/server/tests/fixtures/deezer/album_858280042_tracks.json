@@ -1,0 +1,30 @@
+{
+ "data": [
+  {
+   "id": 3661045852,
+   "readable": true,
+   "title": "Light Me Up",
+   "title_short": "Light Me Up",
+   "title_version": "",
+   "isrc": "GBWUL2035890",
+   "link": "https://www.deezer.com/track/3661045852",
+   "duration": 193,
+   "track_position": 1,
+   "disk_number": 1,
+   "rank": 68187,
+   "explicit_lyrics": false,
+   "explicit_content_lyrics": 0,
+   "explicit_content_cover": 2,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/8/2/3/0/823c7448e684b68f803f39fea8357767.mp3?hdnea=exp=1794368593~acl=/api/1/1/8/2/3/0/823c7448e684b68f803f39fea8357767.mp3*~data=user_id=0,application_id=42~hmac=dafaca361024b35b925db4aecc4673b8af013a98e253e8c0a828cc53b6140dfc",
+   "md5_image": "2cc9bd77a97eedb042e950aa5c40dc05",
+   "artist": {
+    "id": 13828465,
+    "name": "Lowborn",
+    "tracklist": "https://api.deezer.com/artist/13828465/top?limit=50",
+    "type": "artist"
+   },
+   "type": "track"
+  }
+ ],
+ "total": 1
+}

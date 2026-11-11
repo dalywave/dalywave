@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT dd.id, dd.device_id, dd.kind, dd.ref_id, dd.rev\n             FROM device_downloads dd JOIN devices d ON d.id = dd.device_id\n             WHERE d.user_id = $1 AND dd.txid >= $2::text::xid8 AND dd.rev > $3 ORDER BY dd.rev LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "device_downloads",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "device_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "device_downloads",
+            "name": "device_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "device_downloads",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "ref_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "device_downloads",
+            "name": "ref_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "device_downloads",
+            "name": "rev"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "e9d6d5c03cc15d8462312fe0e8891067c7773ce121e613a155ae850bbbcd6b1d"
+}

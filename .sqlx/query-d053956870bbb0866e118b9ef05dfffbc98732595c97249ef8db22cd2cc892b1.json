@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artist_releases WHERE artist_id = $1 AND NOT (album_id = ANY($2))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d053956870bbb0866e118b9ef05dfffbc98732595c97249ef8db22cd2cc892b1"
+}

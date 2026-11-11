@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n              (SELECT count(*) FROM liked_tracks WHERE user_id = $1) AS \"liked!\",\n              (SELECT count(*) FROM saved_albums WHERE user_id = $1) AS \"saved!\",\n              (SELECT count(*) FROM followed_artists WHERE user_id = $1) AS \"followed!\",\n              (SELECT count(*) FROM playlists WHERE user_id = $1) AS \"playlists!\",\n              (SELECT count(*) FROM tracks t JOIN recordings r ON r.id = t.recording_id\n               WHERE r.audio_status = 'ready' AND t.id IN (SELECT user_track_ids($1))) AS \"ready!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "liked!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "saved!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "followed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "playlists!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "b66d90486d1c53abb732df857873ad2364666e18ab3969998b04de4b08a59364"
+}

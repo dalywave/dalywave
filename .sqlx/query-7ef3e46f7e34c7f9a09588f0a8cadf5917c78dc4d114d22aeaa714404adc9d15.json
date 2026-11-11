@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT deezer_id, fetched_at, top_fetched_at, related_fetched_at, albums_fetched_at\n         FROM artists WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "fetched_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "top_fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "top_fetched_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "related_fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "related_fetched_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "albums_fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "albums_fetched_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "7ef3e46f7e34c7f9a09588f0a8cadf5917c78dc4d114d22aeaa714404adc9d15"
+}

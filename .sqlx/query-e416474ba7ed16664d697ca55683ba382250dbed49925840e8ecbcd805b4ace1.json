@@ -1,0 +1,63 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n              (SELECT count(*) FROM jobs WHERE status = 'done' AND finished_at > now() - interval '24 hours') AS \"jobs_done!\",\n              (SELECT count(*) FROM jobs WHERE status = 'failed' AND finished_at > now() - interval '24 hours') AS \"jobs_failed!\",\n              (SELECT count(*) FROM acquisitions WHERE status = 'ready' AND finished_at > now() - interval '24 hours') AS \"acq_ready!\",\n              (SELECT count(*) FROM acquisitions WHERE status IN ('failed', 'unavailable', 'disputed')\n                 AND finished_at > now() - interval '24 hours') AS \"acq_failed!\",\n              (SELECT count(*) FROM play_events WHERE created_at > now() - interval '24 hours') AS \"plays!\",\n              (SELECT count(*) FROM liked_tracks WHERE created_at > now() - interval '24 hours') AS \"likes!\",\n              (SELECT count(*) FROM tracks WHERE created_at > now() - interval '24 hours') AS \"new_tracks!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jobs_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "jobs_failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "acq_ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "acq_failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "plays!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "likes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "new_tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e416474ba7ed16664d697ca55683ba382250dbed49925840e8ecbcd805b4ace1"
+}

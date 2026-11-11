@@ -1,0 +1,180 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT al.id, al.deezer_id, al.title, al.record_type, al.release_date, al.explicit, al.tracks_count,\n                  al.duration_ms, al.cover_key, al.cover_source, al.cover_palette,\n                  a.id AS artist_id, a.name AS artist_name,\n                  EXISTS (SELECT 1 FROM saved_albums s WHERE s.user_id = $2 AND s.album_id = al.id) AS \"saved!\"\n           FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)\n           JOIN albums al ON al.id = ids.id\n           JOIN artists a ON a.id = al.artist_id\n           ORDER BY ids.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "record_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "record_type"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "release_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "release_date"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "explicit",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "explicit"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "tracks_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "tracks_count"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "cover_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_key"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "cover_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_source"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "cover_palette",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_palette"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "artist_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "saved!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "36b48606e5d95ccb2c16d7a92c780e40483e274451ecbd1a0943d434d4631d31"
+}

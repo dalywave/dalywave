@@ -99,6 +99,8 @@ mod tests {
             oidc: None,
             admin_emails: Vec::new(),
             admin_password: None,
+            s3: None,
+            deezer: Default::default(),
         }
     }
 
