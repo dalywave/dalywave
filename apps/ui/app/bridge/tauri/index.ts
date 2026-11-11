@@ -1,10 +1,12 @@
-// Мост приложений для компьютеров (Tauri) по договору apps/shell/BRIDGE.md, типы — ./shell.ts.
-// Окно без рамки: свои кнопки на Windows, отступ под «светофор» на macOS, перетаскивание.
-// Вход — системный браузер, токен устройства в связке ключей; запросы — на адрес сервера
-// с `Authorization: Bearer`. «Сейчас играет» и медиаклавиши — через оболочку; звук пока в WebView.
+// Мост приложений (Tauri) по договору apps/shell/BRIDGE.md, типы — ./shell.ts: macOS, Windows,
+// iPhone и iPad. Компьютеры: окно без рамки, свои кнопки на Windows, отступ под «светофор» на
+// macOS, перетаскивание. Вход — системный браузер (на iPhone — окно входа поверх приложения),
+// токен устройства в связке ключей; запросы — на адрес сервера с `Authorization: Bearer`.
+// Звук — движок на Rust (./audio.ts); «Сейчас играет» и пульт системы ведёт он же.
 import type { Me } from '~/api/types'
 import type { Bridge, Platform, WindowChrome, WindowState } from '../types'
 import { createWebBridge } from '../web'
+import { NativeAudioEngine } from './audio'
 import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell } from './shell'
 
 export function isTauri(): boolean {
@@ -13,10 +15,14 @@ export function isTauri(): boolean {
 
 function detectPlatform(): Platform {
   const ua = navigator.userAgent
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ipados'
+  if (/iPhone|iPod/.test(ua)) return 'ios'
   if (/Mac OS X|Macintosh/.test(ua)) return 'macos'
   if (/Windows/.test(ua)) return 'windows'
   return 'linux'
 }
+
+const DESKTOP: Platform[] = ['macos', 'windows', 'linux']
 
 // @tauri-apps/api подгружается только внутри приложения
 let shellJob: Promise<Shell> | null = null
@@ -51,9 +57,13 @@ export class ShellLoginError extends Error {
 export function createTauriBridge(): Bridge {
   const info = shellInfo()
   const platform: Platform = info?.os ?? detectPlatform()
+  // Телефон и планшет: окна с заголовком нет, отступы — env(safe-area-inset-*)
+  const desktop = DESKTOP.includes(platform)
   const chrome: WindowChrome = info
     ? { controls: info.windowControls, height: info.titleBar.height, inset: info.titleBar.controls, backdrop: info.backdrop }
-    : { controls: platform === 'macos' ? 'mac-inset' : 'windows', height: platform === 'macos' ? 48 : 32, inset: null, backdrop: 'none' }
+    : desktop
+      ? { controls: platform === 'macos' ? 'mac-inset' : 'windows', height: platform === 'macos' ? 48 : 32, inset: null, backdrop: 'none' }
+      : { controls: 'none', height: 0, inset: null, backdrop: 'none' }
 
   // В `cargo tauri dev` страница открыта с dev-сервера, и /api проксируется — адрес не нужен
   const server = (info?.serverUrl ?? '').replace(/\/$/, '')
@@ -88,7 +98,7 @@ export function createTauriBridge(): Bridge {
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.backdrop = chrome.backdrop
     void loadShell().then((shell) => {
-      void shell.window.setTheme('dark').catch(() => {})
+      if (desktop) void shell.window.setTheme('dark').catch(() => {})
       // Новый адрес сервера — перезагрузка: все запросы и сокет пойдут туда
       void shell.on('server:changed', () => location.reload())
     }).catch(() => {})
@@ -97,8 +107,9 @@ export function createTauriBridge(): Bridge {
   return createWebBridge({
     kind: 'tauri',
     platform,
-    isDesktopApp: true,
+    isDesktopApp: desktop,
     chrome,
+    audio: () => new NativeAudioEngine(loadShell),
     baseUrl,
     token: getToken,
     // 401 на любом запросе: токен отозван — стираем его, экран входа покажет хранилище входа
@@ -163,11 +174,9 @@ export function createTauriBridge(): Bridge {
       },
     },
     media: {
-      nowPlaying(state) {
-        void loadShell().then(shell => shell.nowPlaying.update(state
-          ? { title: state.title, artist: state.artist, album: state.album, artworkUrl: state.artworkUrl, durationMs: state.durationMs, positionMs: state.positionMs, playing: state.playing }
-          : null)).catch(() => {})
-      },
+      // «Сейчас играет» ведёт движок: он знает трек, позицию и паузу раньше интерфейса
+      nowPlaying() {},
+      // Сюда приходит только то, что движок не выполнил сам (например, «играть» без очереди)
       onCommand(cb) {
         return on(shell => shell.on('media:command', (c) => {
           if (c.action === 'seek') cb({ action: 'seek', positionMs: c.positionMs })

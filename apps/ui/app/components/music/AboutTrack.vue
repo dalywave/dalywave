@@ -15,7 +15,7 @@ const rows = computed(() => {
   if (tr.trackPosition) out.push({ label: t('about.position'), value: tr.discNumber > 1 ? `${tr.discNumber}–${tr.trackPosition}` : String(tr.trackPosition) })
   out.push({ label: t('about.duration'), value: formatDuration(tr.durationMs) })
   out.push({ label: t('about.status'), value: t(`track.status.${tr.audioStatus}`) })
-  if (player.current?.track.id === tr.id && player.source) out.push({ label: t('about.file'), value: player.source.preview ? t('player.preview') : t('player.quality') })
+  if (player.current?.track.id === tr.id && player.source) out.push({ label: t('about.file'), value: player.source.preview ? t('player.preview') : (qualityLabel(player.source) ?? t('player.quality')) })
   if (player.current?.track.id === tr.id && player.source?.bpm) out.push({ label: t('about.tempo'), value: `${Math.round(player.source.bpm)} BPM` })
   if (tr.isrc) out.push({ label: 'ISRC', value: tr.isrc })
   if (tr.deezerId) out.push({ label: 'Deezer', value: String(tr.deezerId) })

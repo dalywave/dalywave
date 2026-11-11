@@ -1,5 +1,7 @@
 // Двигатель волны: один холст WebGL на приложение, переезжает между экранами (главная, плеер).
 // Пульс — в долю трека по часам или по звуку, размах — от энергии, детали — от спектра.
+// Звук на сайте слушает анализатор WebAudio; в приложении звук играет движок на Rust — от него
+// приходит уровень (RMS, пик, три полосы) ~20 раз в секунду.
 // Бережёт батарею: DPR не выше 2, 30 кадров на узких экранах, пауза вне экрана и во фоне,
 // при «уменьшении движения» — один статичный кадр.
 import { FRAG, VERT } from './shader'
@@ -46,8 +48,18 @@ export interface WaveState {
   fps: number
 }
 
+/** Уровень звука от движка приложения: RMS, пик, полосы до 150 Гц, 150–2000 Гц, выше 2 кГц */
+export interface TapLevels {
+  rms: number
+  peak: number
+  bands: [number, number, number]
+}
+
 export interface AudioTap {
-  analyser: AnalyserNode
+  /** Сайт: анализатор WebAudio */
+  analyser?: AnalyserNode
+  /** Приложение: последний уровень от движка; null — ещё нет */
+  levels?: () => TapLevels | null
   /** Позиция трека в секундах — для сетки долей */
   time: () => number
   bpm?: number
@@ -119,6 +131,8 @@ export class WaveEngine {
   private lastOnset = 0
   private peak = 0.05
   private onset = 0
+  private lastLevels: TapLevels | null = null
+  private prevBands: Vec3 = [0, 0, 0]
   readonly spectrumLin = SPECTRUM.map(hexToLin) as [Vec3, Vec3, Vec3, Vec3]
   glError: string | null = null
 
@@ -357,9 +371,57 @@ export class WaveEngine {
   }
 
   private readAudio(dt: number, now: number) {
-    const s = this.state
     const tap = this.tap!
-    const an = tap.analyser
+    if (tap.analyser) this.readAnalyser(tap.analyser, dt, now)
+    else this.readLevels(dt, now)
+  }
+
+  /** Сетка долей трека: пульс точно в долю, если анализ сервера знает темп */
+  private grid(): number {
+    const tap = this.tap!
+    if (!tap.bpm) return 0
+    const pos = (tap.time() - (tap.phase ?? 0)) * (tap.bpm / 60)
+    this.state.bpm = tap.bpm
+    return pos >= 0 ? pulse(pos) : 0
+  }
+
+  /** Энергия — от громкости относительно недавнего максимума, с добавкой баса */
+  private follow(rms: number, bass: number, dt: number) {
+    const s = this.state
+    this.peak = Math.max(this.peak * Math.exp(-dt * 0.15), rms, 0.02)
+    const target = clamp(Math.pow(rms / this.peak, 1.4) * 0.95 + bass * 0.25, 0, 1)
+    s.energy = lerp(s.energy, this.manualEnergy ?? target, 1 - Math.exp(-dt * 4))
+  }
+
+  /** Приложение: уровень от движка вместо спектра — те же полосы, рывки и энергия */
+  private readLevels(dt: number, now: number) {
+    const s = this.state
+    const l = this.tap!.levels?.() ?? null
+    // RMS полосы в дБ → 0…1: от −66 дБ (тишина) до −6 дБ (громко), как байты анализатора
+    const norm = (x: number) => clamp((20 * Math.log10(Math.max(x, 1e-6)) + 66) / 60, 0, 1)
+    const raw: Vec3 = l ? [norm(l.bands[0]), norm(l.bands[1]), norm(l.bands[2])] : [0, 0, 0]
+    s.bands = s.bands.map((v, i) => lerp(v, raw[i]!, 1 - Math.exp(-dt * 14))) as Vec3
+    // Новое окно уровня: рост полос — «поток», как разница спектров на сайте
+    if (l && l !== this.lastLevels) {
+      this.lastLevels = l
+      let flux = 0
+      for (let i = 0; i < 3; i++) flux += Math.max(0, raw[i]! - this.prevBands[i]!)
+      flux /= 3
+      this.prevBands = raw
+      this.fMean = lerp(this.fMean, flux, 0.06)
+      this.fDev = lerp(this.fDev, Math.abs(flux - this.fMean), 0.06)
+      if (flux > this.fMean + 1.7 * this.fDev + 0.01 && now - this.lastOnset > 170) {
+        this.lastOnset = now
+        this.onset = 1
+      }
+    }
+    this.onset *= Math.exp(-dt * 7)
+    s.beat = Math.max(this.grid() * 0.8, this.onset * 0.95)
+    this.follow(l?.rms ?? 0, raw[0], dt)
+  }
+
+  private readAnalyser(an: AnalyserNode, dt: number, now: number) {
+    const s = this.state
     if (!this.freq || this.freq.length !== an.frequencyBinCount) {
       this.freq = new Uint8Array(an.frequencyBinCount)
       this.prev = new Uint8Array(an.frequencyBinCount)
@@ -395,19 +457,10 @@ export class WaveEngine {
       this.onset = 1
     }
     this.onset *= Math.exp(-dt * 7)
-    let grid = 0
-    if (tap.bpm) {
-      const pos = (tap.time() - (tap.phase ?? 0)) * (tap.bpm / 60)
-      grid = pos >= 0 ? pulse(pos) : 0
-      s.bpm = tap.bpm
-    }
-    s.beat = Math.max(grid * 0.8, this.onset * 0.95)
+    s.beat = Math.max(this.grid() * 0.8, this.onset * 0.95)
     let sum = 0
     for (let i = 0; i < wave.length; i++) sum += wave[i]! * wave[i]!
-    const rms = Math.sqrt(sum / wave.length)
-    this.peak = Math.max(this.peak * Math.exp(-dt * 0.15), rms, 0.02)
-    const target = clamp(Math.pow(rms / this.peak, 1.4) * 0.95 + raw[0] * 0.25, 0, 1)
-    s.energy = lerp(s.energy, this.manualEnergy ?? target, 1 - Math.exp(-dt * 4))
+    this.follow(Math.sqrt(sum / wave.length), raw[0], dt)
   }
 
   private draw() {
@@ -503,6 +556,7 @@ export class WaveEngine {
   setAudioTap(tap: AudioTap | null) {
     this.tap = tap
     this.peak = 0.05
+    this.lastLevels = null
   }
 
   start() {

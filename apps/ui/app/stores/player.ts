@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { ContextType, EndReason, Track } from '~/api/types'
-import type { MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveTrack } from '~/bridge/types'
+import type { EngineTrack, MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveTrack } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { coverColors } from '~/utils/cover-colors'
 import { resamplePeaks, syntheticRhythm } from '~/utils/peaks'
@@ -33,6 +33,8 @@ export interface PendingState {
 const FADE_MS: Record<TransitionMode, number> = { gapless: 0, smooth: 6000, smart: 4000, dj: 4000 }
 const WAVE_BUFFER = 5
 const PEAK_BARS = 120
+/** Приложение: сколько треков очереди движок знает наперёд — доиграет их и в фоне, без интерфейса */
+const ENGINE_AHEAD = 20
 
 interface Listen {
   entry: QueueEntry
@@ -45,6 +47,8 @@ interface Listen {
 export const usePlayerStore = defineStore('player', () => {
   const bridge = useBridge()
   const engine = bridge.audio
+  // Приложение: звук в движке на Rust — он сам переходит к следующему треку и слушает пульт системы
+  const native = engine.native
   const toast = useToast()
   const library = useLibraryStore()
   // Хранилище живёт и вне компонентов (горячие клавиши, системный плеер) — берём общий i18n
@@ -153,7 +157,10 @@ export const usePlayerStore = defineStore('player', () => {
     if (!next || prefetched?.uid === next.uid) return
     const uid = next.uid
     void bridge.media.source(next.track).then((result) => {
-      if (nextEntry.value?.uid === uid) prefetched = { uid, result }
+      if (nextEntry.value?.uid !== uid) return
+      prefetched = { uid, result }
+      // Движок получит готовую ссылку и громкость следующего трека — меньше запросов в фоне
+      syncUpcoming()
     }).catch(() => {})
   }
 
@@ -180,13 +187,41 @@ export const usePlayerStore = defineStore('player', () => {
     const v = visual()
     if (!v) return
     const src = source.value
-    if (src && engine.analyser) v.setAudioTap({ analyser: engine.analyser, time: () => engine.audioTime(), bpm: src.bpm, phase: src.beatPhase })
+    // Приложение: анализатора нет — волна берёт уровень из событий движка
+    if (native && current.value) v.setAudioTap({ levels: () => engine.levels(), time: () => engine.audioTime(), bpm: src?.bpm, phase: src?.beatPhase })
+    else if (src && engine.analyser) v.setAudioTap({ analyser: engine.analyser, time: () => engine.audioTime(), bpm: src.bpm, phase: src.beatPhase })
     else v.setAudioTap(null)
   }
 
   function withGain(src: TrackSource | null): TrackSource | null {
     if (!src || normalize.value) return src
-    return { ...src, gainDb: undefined }
+    return { ...src, gainDb: undefined, loudnessLufs: undefined, truePeakDb: undefined }
+  }
+
+  /** Трек очереди для движка приложения: метаданные для «Сейчас играет» и ссылка, если она уже есть */
+  function engineTrack(entry: QueueEntry, src: TrackSource | null): EngineTrack {
+    const tr = entry.track
+    const art = tr.album?.image?.large ?? tr.album?.image?.medium ?? null
+    return {
+      uid: entry.uid,
+      trackId: tr.id,
+      title: tr.title,
+      artist: tr.artists.map(a => a.name).join(', '),
+      album: tr.album?.title ?? null,
+      artworkUrl: art ? bridge.resolveUrl(art) : null,
+      durationMs: src?.durationMs ?? tr.durationMs,
+      source: withGain(src),
+    }
+  }
+
+  /** Приложение: очередь после текущего — движку, чтобы он готовил следующий трек и переходил сам */
+  function syncUpcoming() {
+    if (!native || !current.value || pending.value) return
+    const ahead = [...manual.value, ...upcoming.value].slice(0, ENGINE_AHEAD)
+    engine.setUpcoming(ahead.map((e) => {
+      const known = prefetched?.uid === e.uid && prefetched.result.kind === 'ready' ? prefetched.result.source : null
+      return engineTrack(e, known)
+    }))
   }
 
   async function startEntry(entry: QueueEntry, opts: { startMs?: number, autoplay?: boolean, crossfade?: boolean } = {}) {
@@ -234,7 +269,8 @@ export const usePlayerStore = defineStore('player', () => {
     source.value = src
     durationMs.value = src?.durationMs ?? entry.track.durationMs
     if (opts.crossfade) engine.crossfade(src, { durationMs: durationMs.value, fadeMs: fadeMs.value })
-    else engine.load(src, { durationMs: durationMs.value, startMs })
+    else engine.load(src, { durationMs: durationMs.value, startMs, track: engineTrack(entry, result.source) })
+    syncUpcoming()
     beginListen(entry, startMs)
     const rhythm = syntheticRhythm(entry.track.id)
     const v = visual()
@@ -424,6 +460,67 @@ export const usePlayerStore = defineStore('player', () => {
     await startEntry(entry, { autoplay: true })
   }
 
+  /** Приложение: движок сам перешёл к другому элементу очереди — догоняем очередь и историю */
+  async function onEngineAdvance(uid: string, reason: 'auto' | 'user') {
+    if (current.value?.uid === uid) return
+    const prevEntry = current.value
+    let entry: QueueEntry | undefined
+    const mi = manual.value.findIndex(e => e.uid === uid)
+    const ui = upcoming.value.findIndex(e => e.uid === uid)
+    const hi = history.value.findIndex(e => e.uid === uid)
+    if (mi >= 0 || ui >= 0) {
+      // Дальше по очереди: сам (без пауз, кроссфейдом) или с пульта. Пропущенные движком
+      // треки (не открылись) из очереди уходят
+      finishListen(reason === 'auto' ? 'completed' : 'skipped')
+      if (prevEntry) history.value.push(prevEntry)
+      if (mi >= 0) {
+        entry = manual.value[mi]
+        manual.value = manual.value.slice(mi + 1)
+      }
+      else {
+        entry = upcoming.value[ui]
+        manual.value = []
+        upcoming.value = upcoming.value.slice(ui + 1)
+      }
+    }
+    else if (hi >= 0) {
+      // «Предыдущий» с пульта
+      finishListen('previous')
+      entry = history.value.splice(hi, 1)[0]
+      if (prevEntry) manual.value.unshift(prevEntry)
+    }
+    if (!entry) return
+    current.value = entry
+    pending.value = null
+    positionMs.value = 0
+    durationMs.value = engine.durationMs || entry.track.durationMs
+    source.value = null
+    peaks.value = []
+    beginListen(entry, 0)
+    void applyCover(entry.track)
+    const rhythm = syntheticRhythm(entry.track.id)
+    const v = visual()
+    v?.setBpm(rhythm.bpm)
+    v?.setTrackEnergy(rhythm.energy)
+    if (reason === 'user') v?.skip()
+    attachAudioTap()
+    // Форма волны и доли — из ответа сервера о файле (тот же, что у движка)
+    const known = await sourceFor(entry)
+    if (current.value?.uid === entry.uid && known.kind === 'ready') {
+      source.value = withGain(known.source)
+      if (known.source?.bpm) v?.setBpm(known.source.bpm)
+      if (known.peaks?.length) peaks.value = resamplePeaks(known.peaks, PEAK_BARS)
+      attachAudioTap()
+    }
+    if (current.value?.uid === entry.uid && !peaks.value.length) {
+      void bridge.media.waveform(entry.track, PEAK_BARS).then((p) => {
+        if (current.value?.uid === entry.uid) peaks.value = p
+      }).catch(() => {})
+    }
+    prefetchNext()
+    void refillWave()
+  }
+
   // ---------- Устройства ----------
 
   async function loadDevices() {
@@ -542,6 +639,10 @@ export const usePlayerStore = defineStore('player', () => {
     applyMood(wave.value.mood, true)
     watch(volume, v => engine.setVolume(v))
     watch(muted, m => engine.setMuted(m))
+    // Приложение: переход и выравнивание громкости делает движок; очередь он получает наперёд
+    watch([effectiveMode, normalize], ([mode, norm]) => engine.configure({ transition: mode === 'gapless' ? 'gapless' : 'crossfade', fadeMs: FADE_MS[mode], normalize: norm }), { immediate: true })
+    watch(() => [...manual.value, ...upcoming.value].map(e => e.uid).join(), () => syncUpcoming())
+    engine.on('advance', (uid, reason) => void onEngineAdvance(uid, reason))
 
     engine.on('time', (ms) => {
       positionMs.value = ms
@@ -550,8 +651,9 @@ export const usePlayerStore = defineStore('player', () => {
         if (d > 0 && d < 1500) listen.playedMs += d
         listen.lastPos = ms
       }
-      // Наложение начинается заранее, чтобы следующий трек вошёл до конца текущего
-      if (playing.value && !transitioning && effectiveMode.value !== 'gapless' && durationMs.value > fadeMs.value * 2 && ms >= transitionAtMs.value && nextEntry.value) {
+      // Наложение начинается заранее, чтобы следующий трек вошёл до конца текущего.
+      // В приложении переход делает движок сам — точно по кадрам
+      if (!native && playing.value && !transitioning && effectiveMode.value !== 'gapless' && durationMs.value > fadeMs.value * 2 && ms >= transitionAtMs.value && nextEntry.value) {
         transitioning = true
         finishListen('completed')
         const prevEntry = current.value
@@ -572,8 +674,8 @@ export const usePlayerStore = defineStore('player', () => {
       visual()?.setPlaying(s.playing)
       if (changed) publishNowPlaying()
     })
-    engine.on('error', () => {
-      if (!current.value) return
+    engine.on('error', (_e, uid) => {
+      if (!current.value || (uid && uid !== current.value.uid)) return
       toast.error(t('player.trackFailed', { title: current.value.track.title }))
     })
 

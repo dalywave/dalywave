@@ -1,7 +1,7 @@
 // Звук сайта: два «дека» на HTMLAudioElement + WebAudio. Громкость трека выравнивается
 // усилением дека, переход — наложением двух деков, анализатор отдаёт звук волне.
 // Трек без звука (поток ещё не на сервере) «играет» по часам: интерфейс ведёт себя так же.
-import type { AudioEngine, AudioEngineEvents, TrackSource } from '../types'
+import type { AudioEngine, AudioEngineEvents, AudioLevels, TrackSource } from '../types'
 
 type Listener<E extends keyof AudioEngineEvents> = AudioEngineEvents[E]
 
@@ -91,6 +91,7 @@ class Deck {
 }
 
 export class WebAudioEngine implements AudioEngine {
+  readonly native = false
   private decks: [Deck, Deck]
   private active = 0
   private ctx: AudioContext | null = null
@@ -101,7 +102,7 @@ export class WebAudioEngine implements AudioEngine {
   private ticker = 0
   private fading = false
   private listeners: { [E in keyof AudioEngineEvents]: Set<Listener<E>> } = {
-    time: new Set(), ended: new Set(), state: new Set(), error: new Set(),
+    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(),
   }
 
   constructor() {
@@ -143,6 +144,15 @@ export class WebAudioEngine implements AudioEngine {
   audioTime(): number {
     return this.current.position() / 1000
   }
+
+  // Уровень берёт сам анализатор волны; очередь и переходы ведёт плеер интерфейса
+  levels(): AudioLevels | null {
+    return null
+  }
+
+  setUpcoming() {}
+
+  configure() {}
 
   // Граф собирается при первом запуске: браузер разрешает звук только после жеста пользователя
   private ensureGraph() {

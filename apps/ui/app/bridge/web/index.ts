@@ -2,7 +2,7 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, LikedTrackPage, Track } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { Bridge, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveTrack, WindowChrome } from '../types'
+import type { AudioEngine, Bridge, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
@@ -48,6 +48,8 @@ export interface WebBridgeOptions extends HttpOptions {
   setLocale?: Bridge['setLocale']
   /** Подписка на «вышли в другом окне» (приложение) */
   onSessionEnded?: (cb: () => void) => void
+  /** Звук приложения — движок на Rust; по умолчанию — WebAudio сайта */
+  audio?: () => AudioEngine
 }
 
 export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
@@ -291,8 +293,18 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         if (body.status === 'ready') {
           return {
             kind: 'ready',
-            source: { url: http.url(body.url), durationMs: body.durationMs ?? undefined, gainDb: gainFor(body.loudnessLufs, body.truePeakDb), bpm: body.bpm ?? undefined },
-            peaks: body.waveform ?? null,
+            source: {
+              url: http.url(body.url),
+              durationMs: body.durationMs ?? undefined,
+              gainDb: gainFor(body.loudnessLufs, body.truePeakDb),
+              loudnessLufs: body.loudnessLufs ?? undefined,
+              truePeakDb: body.truePeakDb ?? undefined,
+              bpm: body.bpm ?? undefined,
+              codec: body.codec ?? undefined,
+              bitrateKbps: body.bitrateKbps ?? undefined,
+            },
+            // Сервер отдаёт огибающую в 0..1000, полоса прокрутки рисует 0..1
+            peaks: body.waveform ? body.waveform.map(v => v / 1000) : null,
           }
         }
         return { kind: 'pending', status: body.status, acquisitionId: body.acquisitionId ?? null, queuePosition: body.queuePosition ?? null }
@@ -340,7 +352,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       updateLane: (lane, patch) => done(api.PATCH('/api/admin/lanes/{lane}', { params: { path: { lane } }, body: patch })),
     },
 
-    audio: new WebAudioEngine(),
+    audio: opts.audio?.() ?? new WebAudioEngine(),
   }
   return bridge
 }

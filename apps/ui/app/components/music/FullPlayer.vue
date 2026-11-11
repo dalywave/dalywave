@@ -38,7 +38,7 @@ const phoneTitle = computed(() => (player.waveActive ? contextLabel.value : play
 const quality = computed(() => {
   if (player.source?.preview) return t('player.preview')
   if (!player.source) return null
-  return t('player.quality')
+  return qualityLabel(player.source) ?? t('player.quality')
 })
 const bpm = computed(() => (player.source?.bpm ? `${Math.round(player.source.bpm)} BPM` : null))
 const liveStatus = computed(() => (track.value ? library.statusOf(track.value) : 'none'))

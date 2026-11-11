@@ -5,13 +5,13 @@
 // Файл без зависимостей: invoke и listen передаёт интерфейс из @tauri-apps/api,
 // поэтому его можно подключить псевдонимом или скопировать в apps/ui как есть.
 
-export type Os = 'macos' | 'windows' | 'linux'
+export type Os = 'macos' | 'windows' | 'linux' | 'ios' | 'ipados'
 
 /**
  * Кто рисует кнопки окна:
  * - `mac-inset` — «светофор» рисует macOS поверх интерфейса, слева в строке заголовка;
  * - `windows` — интерфейс рисует свои «свернуть / развернуть / закрыть» справа;
- * - `none` — у окна обычная системная рамка.
+ * - `none` — у окна обычная системная рамка или окна нет вовсе (iPhone, iPad).
  */
 export type WindowControls = 'mac-inset' | 'windows' | 'none'
 
@@ -54,6 +54,7 @@ export type ShellErrorCode =
   | 'keychain'
   | 'invalid'
   | 'update'
+  | 'audio'
   | 'internal'
   // коды сервера при входе — без изменений
   | 'expired'
@@ -85,19 +86,48 @@ export interface Session<User = unknown, Device = unknown> {
   device: Device | null
 }
 
-export interface NowPlaying {
+/** Трек очереди для движка приложения */
+export interface PlayerItem {
+  /** Ключ элемента очереди интерфейса: возвращается в событиях `player:*` */
+  id: string
+  /** Трек на сервере: по нему движок сам просит ссылку, если её нет или она истекла */
+  trackId: string
+  /** Подписанная ссылка на файл; null — движок спросит сервер, когда трек понадобится */
+  url?: string | null
+  /** Для выравнивания громкости (ответ `/api/tracks/{id}/stream`) */
+  loudnessLufs?: number | null
+  truePeakDb?: number | null
+  durationMs?: number | null
+  /** Для «Сейчас играет», экрана блокировки и трея */
   title: string
   artist: string
   album?: string | null
-  /** http(s) или file:// */
+  /** http(s) */
   artworkUrl?: string | null
-  durationMs?: number | null
-  /** Позиция в момент события; дальше система досчитывает сама */
-  positionMs?: number | null
-  playing: boolean
 }
 
-/** Откуда команда: медиаклавиши, наушники, Пункт управления, плашка Windows — `system` */
+export type PlayerTransition = { mode: 'gapless' } | { mode: 'crossfade', ms: number }
+export type PlayerStateName = 'idle' | 'loading' | 'playing' | 'paused' | 'ended'
+
+export interface PlayerSnapshot {
+  state: PlayerStateName
+  /** Ключ текущего элемента очереди */
+  id: string | null
+  positionMs: number
+  durationMs: number | null
+  buffering: boolean
+  queueLen: number
+  deviceRate: number
+}
+
+/** Уровень звука за ~50 мс до общей громкости: RMS, пик, полосы до 150 Гц, 150–2000 Гц, выше 2 кГц */
+export interface PlayerLevel {
+  rms: number
+  peak: number
+  bands: [number, number, number]
+}
+
+/** Откуда команда: медиаклавиши, наушники, Пункт управления, экран блокировки, плашка Windows — `system` */
 export type MediaSource = 'system' | 'tray'
 
 export type MediaCommand =
@@ -119,7 +149,20 @@ export interface ShellEvents {
   /** Windows: наведение и нажатие на кнопку «развернуть» (её закрывает слой привязки окон) */
   'window:caption': { button: 'maximize', state: 'enter' | 'leave' | 'down' | 'up' }
   'auth:changed': { session: Session | null }
+  /** Команда пульта, которую движок не выполнил сам: «играть» без очереди, «следующий» в конце
+   *  очереди движка, «предыдущий» в начале — их выполняет плеер интерфейса */
   'media:command': MediaCommand
+  'player:state': { state: PlayerStateName, buffering: boolean }
+  /** Каждые 250 мс во время игры, сразу после перемотки и паузы */
+  'player:position': { id: string, positionMs: number, durationMs: number | null }
+  /** Играет другой элемент очереди: `auto` — движок перешёл сам, `user` — команда (и с пульта) */
+  'player:track': { id: string, index: number, reason: 'auto' | 'user', durationMs: number | null }
+  'player:buffering': { buffering: boolean }
+  'player:error': { id: string | null, message: string }
+  /** Очередь движка доиграла: следующий трек решает интерфейс */
+  'player:ended': null
+  /** ~20 раз в секунду, пока включено `player.setLevels(true)` */
+  'player:level': PlayerLevel
   'server:changed': { serverUrl: string }
   'update:available': UpdateInfo
   'update:progress': { downloadedBytes: number, totalBytes: number | null }
@@ -171,9 +214,28 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       /** Сохранённый вход без сети; null — токена нет */
       session: <User = unknown, Device = unknown>() => call<Session<User, Device> | null>('auth_session'),
     },
-    nowPlaying: {
-      /** При смене трека, паузе, запуске и перемотке; null — ничего не играет */
-      update: (state: NowPlaying | null) => call<void>('now_playing_update', { state }),
+    /** Звук приложения: движок на Rust, «Сейчас играет» и пульт системы он ведёт сам */
+    player: {
+      /** Новая очередь: `items[start]` начинает играть с `startMs` */
+      load: (items: PlayerItem[], opts: { start?: number, startMs?: number, autoplay?: boolean } = {}) =>
+        call<void>('player_load', { items, start: opts.start ?? 0, startMs: opts.startMs ?? 0, autoplay: opts.autoplay ?? true }),
+      /** Что играть после текущего: следующий движок готовит заранее и сводит сам */
+      setUpcoming: (items: PlayerItem[]) => call<void>('player_set_upcoming', { items }),
+      play: () => call<void>('player_play'),
+      pause: () => call<void>('player_pause'),
+      toggle: () => call<void>('player_toggle'),
+      seek: (positionMs: number) => call<void>('player_seek', { positionMs: Math.max(0, Math.round(positionMs)) }),
+      next: () => call<void>('player_next'),
+      previous: () => call<void>('player_previous'),
+      stop: () => call<void>('player_stop'),
+      /** 0…1 */
+      setVolume: (volume: number) => call<void>('player_set_volume', { volume }),
+      setTransition: (transition: PlayerTransition) => call<void>('player_set_transition', { transition }),
+      /** Выравнивание громкости по LUFS */
+      setNormalize: (enabled: boolean) => call<void>('player_set_normalize', { enabled }),
+      /** События `player:level` — только пока их кто-то рисует */
+      setLevels: (enabled: boolean) => call<void>('player_set_levels', { enabled }),
+      state: () => call<PlayerSnapshot>('player_state'),
     },
     /** http, https, mailto — в системном браузере */
     openExternal: (url: string) => call<void>('open_external', { url }),

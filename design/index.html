@@ -26,6 +26,7 @@
   .head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
   h2 { font-size: 22px; margin: 0; }
   .open { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .chosen { font-size: 12px; font-weight: 600; color: #0c0c0f; background: linear-gradient(135deg, #4B21FF, #B01CF0 40%, #FF3D7A 74%, #FF9A3C); padding: 3px 10px; border-radius: 999px; color: #fff; }
   .concept { color: var(--muted); margin: 0 0 18px; max-width: 900px; }
   .row { display: grid; grid-template-columns: 300px 1fr; gap: 20px; margin-bottom: 24px; align-items: start; }
   figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -48,7 +49,7 @@
 <main id="main"></main>
 <script>
   const directions = [
-    { id: 'a', name: 'А · «Полночь»', concept: 'Премиально и спокойно: глубокий тёмный фон, окрашенный обложкой, стекло, сдержанная типографика. Энергия — только в волне и в том, что играет.' },
+    { id: 'a', name: 'А · «Полночь»', chosen: true, concept: 'Премиально и спокойно: глубокий тёмный фон, окрашенный обложкой, стекло, сдержанная типографика. Энергия — только в волне и в том, что играет. Выбрано в основу: палитра настроений совпадает с градиентом иконки «Сумерки», а волна буквально волна, как знак «Волна‑W».' },
     { id: 'b', name: 'Б · «Импульс»', concept: 'Баланс: спокойная премиальная основа и один электрический акцент, характерный шрифт для больших моментов, точные геометрические компоненты.' },
     { id: 'c', name: 'В · «Сцена»', concept: 'Энергия через типографику и свет: крупные заголовки, обложки на строгой сетке, сценический свет — дозированно. Рабочие элементы остаются тихими.' },
   ];
@@ -68,7 +69,7 @@
       </div>`).join('');
     main.insertAdjacentHTML('beforeend', `
       <section id="dir-${d.id}">
-        <div class="head"><h2>${d.name}</h2><a class="open" href="directions/${d.id}/#home">Открыть прототип →</a></div>
+        <div class="head"><h2>${d.name}</h2>${d.chosen ? '<span class="chosen">выбрано</span>' : ''}<a class="open" href="directions/${d.id}/#home">Открыть прототип →</a></div>
         <p class="concept">${d.concept}</p>
         ${rows}
       </section>`);

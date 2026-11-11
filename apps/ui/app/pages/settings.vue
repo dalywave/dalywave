@@ -6,6 +6,7 @@ import { waveSummary } from '~/utils/wave-options'
 // Настройки: аккаунт, воспроизведение, внешний вид и язык, о приложении
 const auth = useAuthStore()
 const player = usePlayerStore()
+const prefs = usePrefsStore()
 const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
@@ -98,6 +99,13 @@ async function logout() {
       </div>
       <div class="row">
         <UiSwitch v-model="player.normalize" :label="t('normalize')" :hint="t('normalizeHint')" />
+      </div>
+      <div class="row">
+        <div class="row__text">
+          <div class="row__label">{{ t('scrubber') }}</div>
+          <div class="row__hint">{{ t('scrubberHint') }}</div>
+        </div>
+        <MusicScrubberStylePicker v-model="prefs.scrubber" :label="t('scrubber')" />
       </div>
     </section>
 
@@ -209,6 +217,8 @@ async function logout() {
     "transitionsHint": "Действует для волны и списков",
     "normalize": "Выравнивать громкость",
     "normalizeHint": "Тихие и громкие треки звучат одинаково — по замеру громкости на сервере",
+    "scrubber": "Полоса прокрутки",
+    "scrubberHint": "Действует в\u00a0панели плеера, большом плеере и\u00a0мини-плеере",
     "wave": "Моя волна",
     "waveNow": "Сейчас",
     "waveResetBtn": "Сбросить",
@@ -251,6 +261,8 @@ async function logout() {
     "transitionsHint": "For the wave and lists",
     "normalize": "Normalize volume",
     "normalizeHint": "Quiet and loud tracks play at the same level — measured on the server",
+    "scrubber": "Progress bar",
+    "scrubberHint": "Applies to the player bar, full player and mini player",
     "wave": "My Wave",
     "waveNow": "Now",
     "waveResetBtn": "Reset",

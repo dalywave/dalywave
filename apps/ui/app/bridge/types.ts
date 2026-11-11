@@ -1,6 +1,6 @@
 // «Мост» — единственный путь экранов к данным и звуку. На сайте за ним HTTP и HTML-аудио,
-// в приложениях — оболочка Tauri (окно, вход через системный браузер, медиаклавиши).
-// Экраны пишутся один раз.
+// в приложениях — оболочка Tauri (окно, вход через системный браузер) и аудиодвижок на Rust,
+// который сам ведёт «Сейчас играет» и пульт системы. Экраны пишутся один раз.
 import type {
   AddPlaylistItems, AdminOverview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
   DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
@@ -38,11 +38,17 @@ export interface TrackSource {
   durationMs?: number
   /** Выравнивание громкости: на сколько дБ сдвинуть, чтобы трек звучал как остальные */
   gainDb?: number
+  /** Громкость из анализа сервера — движку приложения: он выравнивает сам */
+  loudnessLufs?: number
+  truePeakDb?: number
   /** Сетка долей из анализа трека — для пульса волны */
   bpm?: number
   beatPhase?: number
   /** 30-секундное превью вместо трека (только разработка) */
   preview?: boolean
+  /** Что на самом деле играет — для значка качества: «Opus 131», «FLAC» */
+  codec?: string
+  bitrateKbps?: number
 }
 
 /**
@@ -55,9 +61,11 @@ export type StreamResponse =
     status: 'ready'
     url: string
     mimeType: string
+    codec?: string
+    bitrateKbps?: number | null
     loudnessLufs?: number | null
     truePeakDb?: number | null
-    /** 512 значений 0…1 */
+    /** 512 значений 0…1000 — мост переводит в 0…1 */
     waveform?: number[] | null
     durationMs?: number | null
     bpm?: number | null
@@ -89,29 +97,64 @@ export interface PlaybackDevice {
 
 export interface AudioEngineEvents {
   time: (positionMs: number) => void
+  /** Сайт — трек доиграл; приложение — очередь движка доиграла, следующий решает плеер */
   ended: () => void
   state: (s: { playing: boolean, buffering: boolean }) => void
-  error: (error: unknown) => void
+  /** uid — элемент очереди, если сбой у конкретного трека (приложение) */
+  error: (error: unknown, uid?: string) => void
+  /** Приложение: движок сам перешёл к другому элементу очереди — без пауз, кроссфейдом,
+   *  с пульта системы (`user`), пропустив сбойный трек */
+  advance: (uid: string, reason: 'auto' | 'user') => void
 }
 
-/** Два «дека» с наложением, громкость, анализатор для волны */
+/** Трек очереди для движка приложения: метаданные для «Сейчас играет» и ссылка, если есть */
+export interface EngineTrack {
+  /** uid элемента очереди плеера */
+  uid: string
+  trackId: string
+  title: string
+  artist: string
+  album: string | null
+  artworkUrl: string | null
+  durationMs: number
+  /** null — ссылку движок спросит у сервера сам, когда трек понадобится */
+  source: TrackSource | null
+}
+
+/** Уровень звука ~20 раз в секунду (приложение): волна движется от него вместо анализатора */
+export interface AudioLevels {
+  rms: number
+  peak: number
+  /** До 150 Гц, 150–2000 Гц, выше 2 кГц */
+  bands: [number, number, number]
+}
+
+/** Сайт: два «дека» с наложением, громкость, анализатор для волны. Приложение: движок на Rust */
 export interface AudioEngine {
-  /** Анализатор звука; появляется после первого запуска (нужен жест пользователя) */
+  /** Звук в движке приложения: очередь, переходы и пульт системы — на его стороне */
+  readonly native: boolean
+  /** Анализатор звука; появляется после первого запуска (нужен жест пользователя). Сайт */
   readonly analyser: AnalyserNode | null
   readonly positionMs: number
   readonly durationMs: number
   readonly playing: boolean
   /** Позиция текущего звука в секундах — для сетки долей волны */
   audioTime(): number
-  /** source = null — трек без звука: время идёт, звука нет */
-  load(source: TrackSource | null, opts: { durationMs: number, startMs?: number }): void
+  /** Последний уровень звука (приложение); null — нет */
+  levels(): AudioLevels | null
+  /** source = null — трек без звука: время идёт, звука нет. `track` — для движка приложения */
+  load(source: TrackSource | null, opts: { durationMs: number, startMs?: number, track?: EngineTrack }): void
   play(): Promise<void>
   pause(): void
   seek(ms: number): void
   setVolume(volume: number): void
   setMuted(muted: boolean): void
-  /** Следующий трек входит, текущий уходит за fadeMs */
+  /** Следующий трек входит, текущий уходит за fadeMs (сайт) */
   crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number }): void
+  /** Что играть после текущего (приложение): движок готовит заранее и переходит сам */
+  setUpcoming(tracks: EngineTrack[]): void
+  /** Переход и выравнивание громкости (приложение) */
+  configure(opts: { transition: 'gapless' | 'crossfade', fadeMs: number, normalize: boolean }): void
   on<E extends keyof AudioEngineEvents>(event: E, cb: AudioEngineEvents[E]): () => void
 }
 

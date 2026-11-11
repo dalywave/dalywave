@@ -120,3 +120,14 @@ export function formatBytes(bytes: number, locale: Locale = 'ru'): string {
 export function formatDateTime(iso: string, locale: Locale = 'ru'): string {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 }
+
+const CODEC_NAMES: Record<string, string> = { opus: 'Opus', aac: 'AAC', mp3: 'MP3', vorbis: 'Vorbis', flac: 'FLAC', alac: 'ALAC', pcm: 'WAV' }
+const LOSSLESS = new Set(['flac', 'alac', 'pcm'])
+
+/** Что на самом деле играет: «Opus 131», «FLAC». null — если сервер не сказал кодек */
+export function qualityLabel(source: { codec?: string, bitrateKbps?: number }): string | null {
+  if (!source.codec) return null
+  const name = CODEC_NAMES[source.codec] ?? source.codec.toUpperCase()
+  if (LOSSLESS.has(source.codec) || !source.bitrateKbps) return name
+  return `${name}${NBSP}${Math.round(source.bitrateKbps)}`
+}
