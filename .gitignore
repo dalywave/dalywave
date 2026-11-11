@@ -16,7 +16,7 @@ node_modules/
 .nuxt/
 .output/
 .data/
-dist/
+dist
 *.tsbuildinfo
 
 # Python
