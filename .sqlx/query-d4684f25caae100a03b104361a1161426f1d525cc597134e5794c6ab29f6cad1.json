@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH touched AS (\n                UPDATE sessions SET last_seen_at = now(), expires_at = now() + make_interval(days => $2)\n                WHERE id = $1 AND last_seen_at < now() - interval '1 minute'\n                RETURNING device_id\n             )\n             UPDATE devices SET last_seen_at = now() WHERE id = (SELECT device_id FROM touched)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d4684f25caae100a03b104361a1161426f1d525cc597134e5794c6ab29f6cad1"
+}

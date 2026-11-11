@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM app_login_requests WHERE expires_at < now() - interval '1 day'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c259d24b58af51613c11cf6615d044a8b2ed09e934872bc4c5a9af43e3fb2332"
+}

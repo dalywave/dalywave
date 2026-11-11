@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET email = NULL, email_verified = false, updated_at = now()\n             WHERE lower(email) = lower($1) AND NOT email_verified AND id IS DISTINCT FROM $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1be63c23a53899e6ce4095c3c2d498a38b3aaa83a75186aa7a02d5e9a665ceae"
+}

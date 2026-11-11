@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM users WHERE lower(email) = lower($1) AND id IS DISTINCT FROM $2) AS \"free!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "free!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5664a267ddd49b189b60eb044caacc906456369b4db3d25468035931c0d684ba"
+}

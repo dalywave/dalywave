@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO app_login_requests (redirect_uri, state, code_challenge, device_name, platform, expires_at)\n         VALUES ($1, $2, $3, $4, $5, now() + interval '10 minutes')\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "app_login_requests",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "38bd5f6def35296baee1861b18b2a72981aa7d96f602b0202b0c2e60fc586909"
+}
