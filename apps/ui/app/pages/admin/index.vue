@@ -653,7 +653,7 @@ async function moreAudit() {
     "rec": {
       "title": "Записи по состоянию",
       "records": "записей",
-      "status": { "ready": "На сервере", "queued": "В очереди", "acquiring": "Скачиваются", "none": "Не скачаны", "disputed": "Спорные", "unavailable": "Нет в источниках", "failed": "Ошибка" }
+      "status": { "ready": "На сервере", "queued": "В очереди", "acquiring": "Скачиваются", "none": "Только в каталоге", "disputed": "Спорные", "unavailable": "Нет в источниках", "failed": "Ошибка" }
     },
     "lib": { "title": "Каталог и медиатека", "tracks": "Треков", "recordings": "Записей", "albums": "Альбомов", "artists": "Артистов", "liked": "Лайков", "followed": "Подписок", "playlists": "Плейлистов" },
     "storage": { "title": "Хранилище", "audio": "Звук", "images": "Обложки и фото", "used": "занято" },
@@ -780,7 +780,7 @@ async function moreAudit() {
     "rec": {
       "title": "Recordings by state",
       "records": "recordings",
-      "status": { "ready": "On the server", "queued": "Queued", "acquiring": "Downloading", "none": "Not downloaded", "disputed": "Disputed", "unavailable": "Not in sources", "failed": "Failed" }
+      "status": { "ready": "On the server", "queued": "Queued", "acquiring": "Downloading", "none": "Catalog only", "disputed": "Disputed", "unavailable": "Not in sources", "failed": "Failed" }
     },
     "lib": { "title": "Catalog and library", "tracks": "Tracks", "recordings": "Recordings", "albums": "Albums", "artists": "Artists", "liked": "Likes", "followed": "Follows", "playlists": "Playlists" },
     "storage": { "title": "Storage", "audio": "Audio", "images": "Covers and photos", "used": "used" },
