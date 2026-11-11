@@ -1,0 +1,7154 @@
+{
+  "label": "mweb-pot",
+  "startedAt": "2026-11-11T00:38:12+00:00",
+  "finishedAt": "2026-11-11T00:43:10+00:00",
+  "environment": {
+    "host": "MacBook-Pro-von-Zakhar.local",
+    "platform": "Darwin arm64",
+    "python": "3.13.7",
+    "tools": {
+      "ytDlp": "2026.10.26",
+      "deno": "deno 2.7.11 (stable, release, aarch64-apple-darwin)",
+      "ffmpeg": "ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers",
+      "fpcalc": "fpcalc version 1.6.0 (FFmpeg Lavc62.11.100 Lavf62.3.100 SwR6.1.100)"
+    },
+    "setup": {
+      "potUrl": "http://127.0.0.1:4416",
+      "cookies": false,
+      "playerClients": [
+        "mweb"
+      ],
+      "fallbackClients": null,
+      "proxy": false,
+      "dataDir": "data"
+    },
+    "delayS": 5.0,
+    "threshold": 0.7
+  },
+  "summary": {
+    "total": 20,
+    "found": 20,
+    "foundRate": 1.0,
+    "downloaded": 20,
+    "verified": 19,
+    "verifiedRate": 0.95,
+    "statuses": {
+      "verified": 19,
+      "unverified": 1
+    },
+    "firstAttemptVerified": 19,
+    "topCandidateRejectedByFingerprint": 0,
+    "errors": {
+      "no_preview": 1
+    },
+    "itags": {
+      "251": 20
+    },
+    "codecs": {
+      "opus": 20
+    },
+    "abrKbps": {
+      "median": 133.1,
+      "min": 123.8,
+      "max": 151.4
+    },
+    "clients": {
+      "MWEB": 18,
+      "TVHTML5": 2
+    },
+    "poToken": 18,
+    "sources": {
+      "isrc/atv": 3,
+      "album/atv": 16,
+      "song/atv": 1
+    },
+    "timingsMs": {
+      "deezer": {
+        "median": 184,
+        "max": 345,
+        "mean": 190
+      },
+      "match": {
+        "median": 1252,
+        "max": 4769,
+        "mean": 1420
+      },
+      "preview": {
+        "median": 295,
+        "max": 802,
+        "mean": 340
+      },
+      "download": {
+        "median": 8084,
+        "max": 9987,
+        "mean": 7830
+      },
+      "verify": {
+        "median": 299,
+        "max": 1396,
+        "mean": 359
+      },
+      "total": {
+        "median": 10258,
+        "max": 13147,
+        "mean": 10145
+      },
+      "ytExtract": {
+        "median": 2331,
+        "max": 3576
+      },
+      "ytAdWait": {
+        "median": 5000,
+        "max": 6000
+      },
+      "ytTransfer": {
+        "median": 395,
+        "max": 2238
+      }
+    }
+  },
+  "tracks": [
+    {
+      "deezerId": 3036497461,
+      "expected": {
+        "artist": "5opka",
+        "title": "Пиглины",
+        "durationS": 137
+      },
+      "tags": [
+        "owner",
+        "cyrillic",
+        "featured"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 169,
+        "match": 1009,
+        "preview": 802,
+        "download": 8860,
+        "verify": 243,
+        "total": 11086
+      },
+      "chosen": {
+        "videoId": "-oB9CsCZoM4",
+        "title": "Пиглины",
+        "artists": [
+          "5opka",
+          "OTURRO"
+        ],
+        "album": "Пиглины",
+        "durationMs": 136960,
+        "source": "isrc",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9655,
+        "offsetS": 0.0,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 139.8,
+        "sampleRate": 48000,
+        "sizeBytes": 2361868,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2915,
+          "adWait": 5000,
+          "transfer": 855,
+          "remux": 50
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "-oB9CsCZoM4",
+          "score": 1.0,
+          "source": "isrc",
+          "download": {
+            "videoId": "-oB9CsCZoM4",
+            "file": "-oB9CsCZoM4.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 139.8,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2361868,
+            "originalSizeBytes": 2392643,
+            "durationMs": 136960,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Пиглины",
+            "channel": "5opka - Topic",
+            "timingsMs": {
+              "extract": 2915,
+              "adWait": 5000,
+              "transfer": 855,
+              "remux": 50
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9655,
+            "offsetS": 0.0,
+            "threshold": 0.7,
+            "baseline": 0.5534,
+            "previewItems": 221,
+            "trackItems": 1085,
+            "error": null,
+            "elapsedMs": 243
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "-oB9CsCZoM4",
+          "url": "https://music.youtube.com/watch?v=-oB9CsCZoM4",
+          "title": "Пиглины",
+          "artists": [
+            "5opka",
+            "OTURRO"
+          ],
+          "album": "Пиглины",
+          "durationMs": 137000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "пиглины",
+              "got": "пиглины",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "5opka",
+                "oturro"
+              ],
+              "missing": [],
+              "candidate": [
+                "5opka",
+                "oturro"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "UMAYRkTn-ZY",
+          "url": "https://music.youtube.com/watch?v=UMAYRkTn-ZY",
+          "title": "Dephts of Existence",
+          "artists": [
+            "Symbolism"
+          ],
+          "album": "Gtg Dgtl 005",
+          "durationMs": 332000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 195000
+            },
+            "title": {
+              "score": 0.3846,
+              "base": 0.2308,
+              "version": 1.0,
+              "expected": "пиглины",
+              "got": "dephts of existence",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "5opka",
+                "oturro"
+              ],
+              "candidate": [
+                "symbolism"
+              ]
+            },
+            "album": {
+              "score": 0.2105,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.2364,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "d6lL86KbeeU",
+          "url": "https://music.youtube.com/watch?v=d6lL86KbeeU",
+          "title": "RRage Bite",
+          "artists": [
+            "5opka",
+            "MellSher"
+          ],
+          "album": "HEAVY METAL 3",
+          "durationMs": 107000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": -30000
+            },
+            "title": {
+              "score": 0.3882,
+              "base": 0.2353,
+              "version": 1.0,
+              "expected": "пиглины",
+              "got": "rrage bite",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.8333,
+              "matched": [
+                "5opka"
+              ],
+              "missing": [
+                "oturro"
+              ],
+              "candidate": [
+                "5opka",
+                "mellsher"
+              ]
+            },
+            "album": {
+              "score": 0.1,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.3931,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 1.0,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 154,
+          "results": 1
+        },
+        {
+          "name": "album",
+          "ms": 603,
+          "query": "5opka Пиглины",
+          "results": 0,
+          "albums": []
+        },
+        {
+          "name": "isrc",
+          "ms": 851,
+          "query": "DEP551943238",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 833,
+          "query": "5opka Пиглины",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3040222091,
+      "expected": {
+        "artist": "Mzlff",
+        "title": "ящики",
+        "durationS": 199
+      },
+      "tags": [
+        "owner",
+        "cyrillic",
+        "album",
+        "featured"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 345,
+        "match": 1535,
+        "preview": 288,
+        "download": 3017,
+        "verify": 326,
+        "total": 5515
+      },
+      "chosen": {
+        "videoId": "afkL3uLNeXA",
+        "title": "ящики",
+        "artists": [
+          "mzlff",
+          "BOOKER"
+        ],
+        "album": "светлая сторона",
+        "durationMs": 199700,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9761,
+        "offsetS": 157.03,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 136.1,
+        "sampleRate": 48000,
+        "sizeBytes": 3353582,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2219,
+          "adWait": 0,
+          "transfer": 673,
+          "remux": 59
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "afkL3uLNeXA",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "afkL3uLNeXA",
+            "file": "afkL3uLNeXA.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 136.1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 3353582,
+            "originalSizeBytes": 3398446,
+            "durationMs": 199700,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "ящики",
+            "channel": "MZLFF",
+            "timingsMs": {
+              "extract": 2219,
+              "adWait": 0,
+              "transfer": 673,
+              "remux": 59
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9761,
+            "offsetS": 157.03,
+            "threshold": 0.7,
+            "baseline": 0.5738,
+            "previewItems": 221,
+            "trackItems": 1591,
+            "error": null,
+            "elapsedMs": 326
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "afkL3uLNeXA",
+          "url": "https://music.youtube.com/watch?v=afkL3uLNeXA",
+          "title": "ящики",
+          "artists": [
+            "mzlff",
+            "BOOKER"
+          ],
+          "album": "светлая сторона",
+          "durationMs": 200000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "ящики",
+              "got": "ящики",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mzlff",
+                "booker"
+              ],
+              "missing": [],
+              "candidate": [
+                "mzlff",
+                "booker"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_EnIJJBEQrJk",
+            "title": "светлая сторона",
+            "year": "2024",
+            "trackCount": 15,
+            "deezerTrackCount": 15,
+            "position": 9,
+            "deezerPosition": 9,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "Xuwy3yzhTj8",
+          "url": "https://music.youtube.com/watch?v=Xuwy3yzhTj8",
+          "title": "ящики",
+          "artists": [
+            "mzlff",
+            "BOOKER"
+          ],
+          "album": "светлая сторона",
+          "durationMs": 200000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "ящики",
+              "got": "ящики",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mzlff",
+                "booker"
+              ],
+              "missing": [],
+              "candidate": [
+                "mzlff",
+                "booker"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_EnIJJBEQrJk",
+            "title": "светлая сторона",
+            "year": "2024",
+            "trackCount": 15,
+            "deezerTrackCount": 15,
+            "position": 9,
+            "deezerPosition": 9,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "XqOc55Lczis",
+          "url": "https://music.youtube.com/watch?v=XqOc55Lczis",
+          "title": "644_Sprueche 16.2 & 645_Sprueche 17.1 - Elberfelder Hörbibel (At)",
+          "artists": [
+            "Christliche Schriftenverbreitung",
+            "Hanno Herzler",
+            "Tobias Schuffenhauer",
+            "Eduard Janzen"
+          ],
+          "album": "Elberfelder Hörbibel (At) (Das Alte Testament)",
+          "durationMs": 238000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 0,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 39000
+            },
+            "title": {
+              "score": 0.2632,
+              "base": 0.1789,
+              "version": 0.6,
+              "expected": "ящики",
+              "got": "644 sprueche 16 2 and 645 sprueche 17 1",
+              "expectedVersion": null,
+              "gotVersion": "at elberfelder horbibel"
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "mzlff",
+                "booker"
+              ],
+              "candidate": [
+                "christliche schriftenverbreitung",
+                "hanno herzler",
+                "tobias schuffenhauer",
+                "eduard janzen"
+              ]
+            },
+            "album": {
+              "score": 0.2778,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.2067,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 307,
+          "results": 15
+        },
+        {
+          "name": "album",
+          "ms": 1225,
+          "query": "Mzlff светлая сторона",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_EnIJJBEQrJk",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 875,
+          "query": "RUAGT2454320",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 854,
+          "query": "Mzlff ящики",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3898084851,
+      "expected": {
+        "artist": "Rushex",
+        "title": "ZAKHELO (Slowed)",
+        "durationS": 129
+      },
+      "tags": [
+        "owner",
+        "phonk",
+        "slowed"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 193,
+        "match": 1053,
+        "preview": 293,
+        "download": 7756,
+        "verify": 236,
+        "total": 9535
+      },
+      "chosen": {
+        "videoId": "A4vFXuEkuzk",
+        "title": "ZAKHELO (Slowed)",
+        "artists": [
+          "Rushex"
+        ],
+        "album": "ZAKHELO",
+        "durationMs": 128700,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9402,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 129.2,
+        "sampleRate": 48000,
+        "sizeBytes": 2049314,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2402,
+          "adWait": 5000,
+          "transfer": 260,
+          "remux": 51
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "A4vFXuEkuzk",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "A4vFXuEkuzk",
+            "file": "A4vFXuEkuzk.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 129.2,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2049314,
+            "originalSizeBytes": 2078440,
+            "durationMs": 128700,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "ZAKHELO (Slowed)",
+            "channel": "Rushex",
+            "timingsMs": {
+              "extract": 2402,
+              "adWait": 5000,
+              "transfer": 260,
+              "remux": 51
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9402,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5537,
+            "previewItems": 221,
+            "trackItems": 1018,
+            "error": null,
+            "elapsedMs": 236
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "A4vFXuEkuzk",
+          "url": "https://music.youtube.com/watch?v=A4vFXuEkuzk",
+          "title": "ZAKHELO (Slowed)",
+          "artists": [
+            "Rushex"
+          ],
+          "album": "ZAKHELO",
+          "durationMs": 129000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "zakhelo",
+              "got": "zakhelo",
+              "expectedVersion": "slowed",
+              "gotVersion": "slowed"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "rushex"
+              ],
+              "missing": [],
+              "candidate": [
+                "rushex"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_3Skg0wp8PKr",
+            "title": "ZAKHELO",
+            "year": "2026",
+            "trackCount": 4,
+            "deezerTrackCount": 4,
+            "position": 2,
+            "deezerPosition": 2,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "45EGiEei1mc",
+          "url": "https://music.youtube.com/watch?v=45EGiEei1mc",
+          "title": "ZAKHELO (Slowed)",
+          "artists": [
+            "Rushex"
+          ],
+          "album": "ZAKHELO",
+          "durationMs": 129000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "zakhelo",
+              "got": "zakhelo",
+              "expectedVersion": "slowed",
+              "gotVersion": "slowed"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "rushex"
+              ],
+              "missing": [],
+              "candidate": [
+                "rushex"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_3Skg0wp8PKr",
+            "title": "ZAKHELO",
+            "year": "2026",
+            "trackCount": 4,
+            "deezerTrackCount": 4,
+            "position": 2,
+            "deezerPosition": 2,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "xF7ONLivVME",
+          "url": "https://music.youtube.com/watch?v=xF7ONLivVME",
+          "title": "ZAKHELO",
+          "artists": [
+            "Rushex"
+          ],
+          "album": "ZAKHELO",
+          "durationMs": 118000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 3,
+          "score": 0.2514,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.54,
+              "diffMs": -11000
+            },
+            "title": {
+              "score": 0.92,
+              "base": 1.0,
+              "version": 0.6,
+              "expected": "zakhelo",
+              "got": "zakhelo",
+              "expectedVersion": "slowed",
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "rushex"
+              ],
+              "missing": [],
+              "candidate": [
+                "rushex"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.838,
+            "penalties": [
+              {
+                "marker": "slowed",
+                "where": "deezer",
+                "factor": 0.3
+              }
+            ],
+            "penaltyFactor": 0.3,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.2514
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 139,
+          "results": 4
+        },
+        {
+          "name": "album",
+          "ms": 908,
+          "query": "Rushex ZAKHELO",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_3Skg0wp8PKr",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 721,
+          "query": "QT5M52651886",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 760,
+          "query": "Rushex ZAKHELO (Slowed)",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3898084841,
+      "expected": {
+        "artist": "Rushex",
+        "title": "ZAKHELO",
+        "durationS": 117
+      },
+      "tags": [
+        "owner",
+        "phonk",
+        "trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 134,
+        "match": 1147,
+        "preview": 270,
+        "download": 7815,
+        "verify": 215,
+        "total": 9584
+      },
+      "chosen": {
+        "videoId": "xF7ONLivVME",
+        "title": "ZAKHELO",
+        "artists": [
+          "Rushex"
+        ],
+        "album": "ZAKHELO",
+        "durationMs": 117300,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9354,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 129.5,
+        "sampleRate": 48000,
+        "sizeBytes": 1872168,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2496,
+          "adWait": 5000,
+          "transfer": 215,
+          "remux": 45
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "xF7ONLivVME",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "xF7ONLivVME",
+            "file": "xF7ONLivVME.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 129.5,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 1872168,
+            "originalSizeBytes": 1898724,
+            "durationMs": 117300,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "ZAKHELO",
+            "channel": "Rushex",
+            "timingsMs": {
+              "extract": 2496,
+              "adWait": 5000,
+              "transfer": 215,
+              "remux": 45
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9354,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.548,
+            "previewItems": 221,
+            "trackItems": 926,
+            "error": null,
+            "elapsedMs": 215
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "xF7ONLivVME",
+          "url": "https://music.youtube.com/watch?v=xF7ONLivVME",
+          "title": "ZAKHELO",
+          "artists": [
+            "Rushex"
+          ],
+          "album": "ZAKHELO",
+          "durationMs": 118000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "zakhelo",
+              "got": "zakhelo",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "rushex"
+              ],
+              "missing": [],
+              "candidate": [
+                "rushex"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_3Skg0wp8PKr",
+            "title": "ZAKHELO",
+            "year": "2026",
+            "trackCount": 4,
+            "deezerTrackCount": 4,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "ckPPfBLLljM",
+          "url": "https://music.youtube.com/watch?v=ckPPfBLLljM",
+          "title": "ZAKHELO (Sped Up)",
+          "artists": [
+            "Rushex"
+          ],
+          "album": "ZAKHELO",
+          "durationMs": 109000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 3,
+          "score": 0.2676,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.72,
+              "diffMs": -8000
+            },
+            "title": {
+              "score": 0.92,
+              "base": 1.0,
+              "version": 0.6,
+              "expected": "zakhelo",
+              "got": "zakhelo",
+              "expectedVersion": null,
+              "gotVersion": "sped up"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "rushex"
+              ],
+              "missing": [],
+              "candidate": [
+                "rushex"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.892,
+            "penalties": [
+              {
+                "marker": "sped_up",
+                "where": "candidate",
+                "factor": 0.3
+              }
+            ],
+            "penaltyFactor": 0.3,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.2676
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "A4vFXuEkuzk",
+          "url": "https://music.youtube.com/watch?v=A4vFXuEkuzk",
+          "title": "ZAKHELO (Slowed)",
+          "artists": [
+            "Rushex"
+          ],
+          "album": "ZAKHELO",
+          "durationMs": 129000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 0,
+          "score": 0.246,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.48,
+              "diffMs": 12000
+            },
+            "title": {
+              "score": 0.92,
+              "base": 1.0,
+              "version": 0.6,
+              "expected": "zakhelo",
+              "got": "zakhelo",
+              "expectedVersion": null,
+              "gotVersion": "slowed"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "rushex"
+              ],
+              "missing": [],
+              "candidate": [
+                "rushex"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.82,
+            "penalties": [
+              {
+                "marker": "slowed",
+                "where": "candidate",
+                "factor": 0.3
+              }
+            ],
+            "penaltyFactor": 0.3,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.246
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 185,
+          "results": 4
+        },
+        {
+          "name": "album",
+          "ms": 960,
+          "query": "Rushex ZAKHELO",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_3Skg0wp8PKr",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 723,
+          "query": "QT5M52636881",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 721,
+          "query": "Rushex ZAKHELO",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3345710671,
+      "expected": {
+        "artist": "MXZI, Rushex",
+        "title": "MONTAGEM BATCHI (ULTRA SLOWED)",
+        "durationS": 97
+      },
+      "tags": [
+        "owner",
+        "phonk",
+        "slowed",
+        "featured"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 194,
+        "match": 1285,
+        "preview": 323,
+        "download": 8208,
+        "verify": 190,
+        "total": 10204
+      },
+      "chosen": {
+        "videoId": "W2jaDu3nO10",
+        "title": "MONTAGEM BATCHI (ULTRA SLOWED)",
+        "artists": [
+          "MXZI",
+          "Rushex",
+          "Montagem"
+        ],
+        "album": "MONTAGEM BATCHI",
+        "durationMs": 96960,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9393,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 151.4,
+        "sampleRate": 48000,
+        "sizeBytes": 1813941,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2763,
+          "adWait": 5000,
+          "transfer": 359,
+          "remux": 46
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "W2jaDu3nO10",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "W2jaDu3nO10",
+            "file": "W2jaDu3nO10.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 151.4,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 1813941,
+            "originalSizeBytes": 1835469,
+            "durationMs": 96960,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "MONTAGEM BATCHI (ULTRA SLOWED)",
+            "channel": "MXZI",
+            "timingsMs": {
+              "extract": 2763,
+              "adWait": 5000,
+              "transfer": 359,
+              "remux": 46
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9393,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.551,
+            "previewItems": 221,
+            "trackItems": 762,
+            "error": null,
+            "elapsedMs": 190
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "W2jaDu3nO10",
+          "url": "https://music.youtube.com/watch?v=W2jaDu3nO10",
+          "title": "MONTAGEM BATCHI (ULTRA SLOWED)",
+          "artists": [
+            "MXZI",
+            "Rushex",
+            "Montagem"
+          ],
+          "album": "MONTAGEM BATCHI",
+          "durationMs": 97000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "montagem batchi",
+              "got": "montagem batchi",
+              "expectedVersion": "ultra slowed",
+              "gotVersion": "ultra slowed"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mxzi",
+                "rushex",
+                "montagem"
+              ],
+              "missing": [],
+              "candidate": [
+                "mxzi",
+                "rushex",
+                "montagem"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_Sov9TN4lPzy",
+            "title": "MONTAGEM BATCHI",
+            "year": "2025",
+            "trackCount": 4,
+            "deezerTrackCount": 4,
+            "position": 3,
+            "deezerPosition": 3,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "szpocyLnrjw",
+          "url": "https://music.youtube.com/watch?v=szpocyLnrjw",
+          "title": "MONTAGEM BATCHI (ULTRA SLOWED)",
+          "artists": [
+            "MXZI",
+            "Rushex",
+            "Montagem"
+          ],
+          "album": "MONTAGEM BATCHI",
+          "durationMs": 97000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "montagem batchi",
+              "got": "montagem batchi",
+              "expectedVersion": "ultra slowed",
+              "gotVersion": "ultra slowed"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mxzi",
+                "rushex",
+                "montagem"
+              ],
+              "missing": [],
+              "candidate": [
+                "mxzi",
+                "rushex",
+                "montagem"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_Sov9TN4lPzy",
+            "title": "MONTAGEM BATCHI",
+            "year": "2025",
+            "trackCount": 4,
+            "deezerTrackCount": 4,
+            "position": 3,
+            "deezerPosition": 3,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "uMz9M0VN8mo",
+          "url": "https://music.youtube.com/watch?v=uMz9M0VN8mo",
+          "title": "MONTAGEM BATCHI (SLOWED)",
+          "artists": [
+            "MXZI",
+            "Rushex",
+            "Montagem"
+          ],
+          "album": "MONTAGEM BATCHI",
+          "durationMs": 87000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 2,
+          "score": 0.2613,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.6,
+              "diffMs": -10000
+            },
+            "title": {
+              "score": 0.97,
+              "base": 1.0,
+              "version": 0.85,
+              "expected": "montagem batchi",
+              "got": "montagem batchi",
+              "expectedVersion": "ultra slowed",
+              "gotVersion": "slowed"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mxzi",
+                "rushex",
+                "montagem"
+              ],
+              "missing": [],
+              "candidate": [
+                "mxzi",
+                "rushex",
+                "montagem"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.871,
+            "penalties": [
+              {
+                "marker": "ultra",
+                "where": "deezer",
+                "factor": 0.3
+              }
+            ],
+            "penaltyFactor": 0.3,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.2613
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 157,
+          "results": 4
+        },
+        {
+          "name": "album",
+          "ms": 1121,
+          "query": "MXZI MONTAGEM BATCHI",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_Sov9TN4lPzy",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 750,
+          "query": "GB8KE2509267",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 745,
+          "query": "MXZI MONTAGEM BATCHI (ULTRA SLOWED)",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3657134452,
+      "expected": {
+        "artist": "Lowborn",
+        "title": "Doctor Doctor",
+        "durationS": 165
+      },
+      "tags": [
+        "owner",
+        "common-title"
+      ],
+      "status": "verified",
+      "viableCandidates": 3,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 212,
+        "match": 1516,
+        "preview": 401,
+        "download": 8097,
+        "verify": 291,
+        "total": 10521
+      },
+      "chosen": {
+        "videoId": "O4j9LsDWcrE",
+        "title": "Doctor Doctor",
+        "artists": [
+          "LOWBORN"
+        ],
+        "album": "Doctor Doctor",
+        "durationMs": 165040,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9489,
+        "offsetS": 85.94,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 133.4,
+        "sampleRate": 48000,
+        "sizeBytes": 2715422,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2660,
+          "adWait": 5000,
+          "transfer": 341,
+          "remux": 54
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "O4j9LsDWcrE",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "O4j9LsDWcrE",
+            "file": "O4j9LsDWcrE.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 133.4,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2715422,
+            "originalSizeBytes": 2752596,
+            "durationMs": 165040,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Doctor Doctor",
+            "channel": "LOWBORN",
+            "timingsMs": {
+              "extract": 2660,
+              "adWait": 5000,
+              "transfer": 341,
+              "remux": 54
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9489,
+            "offsetS": 85.94,
+            "threshold": 0.7,
+            "baseline": 0.5442,
+            "previewItems": 221,
+            "trackItems": 1311,
+            "error": null,
+            "elapsedMs": 291
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "O4j9LsDWcrE",
+          "url": "https://music.youtube.com/watch?v=O4j9LsDWcrE",
+          "title": "Doctor Doctor",
+          "artists": [
+            "LOWBORN"
+          ],
+          "album": "Doctor Doctor",
+          "durationMs": 166000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "doctor doctor",
+              "got": "doctor doctor",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "lowborn"
+              ],
+              "missing": [],
+              "candidate": [
+                "lowborn"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_XT5N4q6sbTT",
+            "title": "Doctor Doctor",
+            "year": "2023",
+            "trackCount": 1,
+            "deezerTrackCount": 1,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "Gieq18e7Gn8",
+          "url": "https://music.youtube.com/watch?v=Gieq18e7Gn8",
+          "title": "Doctor Doctor (Reimagined)",
+          "artists": [
+            "LOWBORN"
+          ],
+          "album": "Doctor Doctor (Reimagined)",
+          "durationMs": 165000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 1,
+          "score": 0.976,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 0.92,
+              "base": 1.0,
+              "version": 0.6,
+              "expected": "doctor doctor",
+              "got": "doctor doctor",
+              "expectedVersion": null,
+              "gotVersion": "reimagined"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "lowborn"
+              ],
+              "missing": [],
+              "candidate": [
+                "lowborn"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.976,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.976
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "Vy-8lindJrQ",
+          "url": "https://music.youtube.com/watch?v=Vy-8lindJrQ",
+          "title": "Doctor Doctor",
+          "artists": [
+            "LOWBORN"
+          ],
+          "album": "Doctor Doctor",
+          "durationMs": 166000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "doctor doctor",
+              "got": "doctor doctor",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "lowborn"
+              ],
+              "missing": [],
+              "candidate": [
+                "lowborn"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_XT5N4q6sbTT",
+            "title": "Doctor Doctor",
+            "year": "2023",
+            "trackCount": 1,
+            "deezerTrackCount": 1,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 178,
+          "results": 1
+        },
+        {
+          "name": "album",
+          "ms": 1337,
+          "query": "Lowborn Doctor Doctor",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_XT5N4q6sbTT",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 899,
+          "query": "QZWDD2320959",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 880,
+          "query": "Lowborn Doctor Doctor",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3657352542,
+      "expected": {
+        "artist": "Lowborn",
+        "title": "Dirtyprettylove",
+        "durationS": 201
+      },
+      "tags": [
+        "owner",
+        "album"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 179,
+        "match": 1291,
+        "preview": 466,
+        "download": 8271,
+        "verify": 372,
+        "total": 10583
+      },
+      "chosen": {
+        "videoId": "3ly-6VdjebU",
+        "title": "Dirtyprettylove",
+        "artists": [
+          "LOWBORN"
+        ],
+        "album": "Collection One",
+        "durationMs": 201660,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9233,
+        "offsetS": 141.05,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 128.5,
+        "sampleRate": 48000,
+        "sizeBytes": 3193346,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2730,
+          "adWait": 5000,
+          "transfer": 334,
+          "remux": 158
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "3ly-6VdjebU",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "3ly-6VdjebU",
+            "file": "3ly-6VdjebU.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 128.5,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 3193346,
+            "originalSizeBytes": 3238959,
+            "durationMs": 201660,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Dirtyprettylove",
+            "channel": "LOWBORN",
+            "timingsMs": {
+              "extract": 2730,
+              "adWait": 5000,
+              "transfer": 334,
+              "remux": 158
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9233,
+            "offsetS": 141.05,
+            "threshold": 0.7,
+            "baseline": 0.5204,
+            "previewItems": 221,
+            "trackItems": 1607,
+            "error": null,
+            "elapsedMs": 372
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "3ly-6VdjebU",
+          "url": "https://music.youtube.com/watch?v=3ly-6VdjebU",
+          "title": "Dirtyprettylove",
+          "artists": [
+            "LOWBORN"
+          ],
+          "album": "Collection One",
+          "durationMs": 202000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "dirtyprettylove",
+              "got": "dirtyprettylove",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "lowborn"
+              ],
+              "missing": [],
+              "candidate": [
+                "lowborn"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_5iY2zDX8EDH",
+            "title": "Collection One",
+            "year": "2018",
+            "trackCount": 4,
+            "deezerTrackCount": 4,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "ZlqGie4tymY",
+          "url": "https://music.youtube.com/watch?v=ZlqGie4tymY",
+          "title": "u0802 [MX2]",
+          "artists": [
+            "HVL"
+          ],
+          "album": "Orphin Spill",
+          "durationMs": 382000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 0,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 181000
+            },
+            "title": {
+              "score": 0.12,
+              "base": 0.0,
+              "version": 0.6,
+              "expected": "dirtyprettylove",
+              "got": "u0802",
+              "expectedVersion": null,
+              "gotVersion": "mx2"
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "lowborn"
+              ],
+              "candidate": [
+                "hvl"
+              ]
+            },
+            "album": {
+              "score": 0.3077,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.1668,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "8sTnB_mXZUc",
+          "url": "https://music.youtube.com/watch?v=8sTnB_mXZUc",
+          "title": "Ufem Sässelilift",
+          "artists": [
+            "Vierstern Ämmitaler"
+          ],
+          "album": "Urchig u rockig",
+          "durationMs": 158000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": -43000
+            },
+            "title": {
+              "score": 0.3548,
+              "base": 0.1935,
+              "version": 1.0,
+              "expected": "dirtyprettylove",
+              "got": "ufem sasselilift",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "lowborn"
+              ],
+              "candidate": [
+                "vierstern ammitaler"
+              ]
+            },
+            "album": {
+              "score": 0.2759,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.234,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 207,
+          "results": 4
+        },
+        {
+          "name": "album",
+          "ms": 1080,
+          "query": "Lowborn Collection One",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_5iY2zDX8EDH",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 815,
+          "query": "USHM21804037",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 706,
+          "query": "Lowborn Dirtyprettylove",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3580793761,
+      "expected": {
+        "artist": "Mytch",
+        "title": "flAsh flooD",
+        "durationS": 156
+      },
+      "tags": [
+        "owner",
+        "album",
+        "odd-case"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 165,
+        "match": 1105,
+        "preview": 216,
+        "download": 8551,
+        "verify": 272,
+        "total": 10313
+      },
+      "chosen": {
+        "videoId": "5DVeTiQGnug",
+        "title": "flAsh flooD",
+        "artists": [
+          "MYTCH"
+        ],
+        "album": "vErGe EP",
+        "durationMs": 156020,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9412,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 128.0,
+        "sampleRate": 48000,
+        "sizeBytes": 2461282,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2217,
+          "adWait": 6000,
+          "transfer": 235,
+          "remux": 53
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "5DVeTiQGnug",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "5DVeTiQGnug",
+            "file": "5DVeTiQGnug.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 128.0,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2461282,
+            "originalSizeBytes": 2496590,
+            "durationMs": 156020,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "flAsh flooD",
+            "channel": "MYTCH",
+            "timingsMs": {
+              "extract": 2217,
+              "adWait": 6000,
+              "transfer": 235,
+              "remux": 53
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9412,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5259,
+            "previewItems": 221,
+            "trackItems": 1239,
+            "error": null,
+            "elapsedMs": 272
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "5DVeTiQGnug",
+          "url": "https://music.youtube.com/watch?v=5DVeTiQGnug",
+          "title": "flAsh flooD",
+          "artists": [
+            "MYTCH"
+          ],
+          "album": "vErGe EP",
+          "durationMs": 156000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "flash flood",
+              "got": "flash flood",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mytch"
+              ],
+              "missing": [],
+              "candidate": [
+                "mytch"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_FSZ7ip3Av6N",
+            "title": "vErGe EP",
+            "year": "2024",
+            "trackCount": 5,
+            "deezerTrackCount": 5,
+            "position": 4,
+            "deezerPosition": 4,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "wM8fgbQhXRI",
+          "url": "https://music.youtube.com/watch?v=wM8fgbQhXRI",
+          "title": "flAsh flooD",
+          "artists": [
+            "MYTCH"
+          ],
+          "album": "vErGe EP",
+          "durationMs": 156000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "flash flood",
+              "got": "flash flood",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mytch"
+              ],
+              "missing": [],
+              "candidate": [
+                "mytch"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_FSZ7ip3Av6N",
+            "title": "vErGe EP",
+            "year": "2024",
+            "trackCount": 5,
+            "deezerTrackCount": 5,
+            "position": 4,
+            "deezerPosition": 4,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "AqzPlFf5-gE",
+          "url": "https://music.youtube.com/watch?v=AqzPlFf5-gE",
+          "title": "qw2947x",
+          "artists": [
+            "qumcl"
+          ],
+          "album": "i accidentally summoned a 6ft feline in my bedroom and now he won't stop dancing",
+          "durationMs": 412000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 0,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 256000
+            },
+            "title": {
+              "score": 0.2,
+              "base": 0.0,
+              "version": 1.0,
+              "expected": "flash flood",
+              "got": "qw2947x",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "mytch"
+              ],
+              "candidate": [
+                "qumcl"
+              ]
+            },
+            "album": {
+              "score": 0.1379,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.1738,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 172,
+          "results": 5
+        },
+        {
+          "name": "album",
+          "ms": 931,
+          "query": "Mytch vErGe EP",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_FSZ7ip3Av6N",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 814,
+          "query": "QZK6P2449087",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 720,
+          "query": "Mytch flAsh flooD",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3142555721,
+      "expected": {
+        "artist": "Parker The Bandit",
+        "title": "Paint it Black",
+        "durationS": 159
+      },
+      "tags": [
+        "owner",
+        "cover-trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 180,
+        "match": 1420,
+        "preview": 293,
+        "download": 7933,
+        "verify": 287,
+        "total": 10116
+      },
+      "chosen": {
+        "videoId": "EEVmC1D9FU8",
+        "title": "Paint it Black",
+        "artists": [
+          "Parker The Bandit"
+        ],
+        "album": "Paint it Black",
+        "durationMs": 159960,
+        "source": "song",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9346,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 137.1,
+        "sampleRate": 48000,
+        "sizeBytes": 2705870,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2178,
+          "adWait": 5000,
+          "transfer": 645,
+          "remux": 50
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "EEVmC1D9FU8",
+          "score": 1.0,
+          "source": "song",
+          "download": {
+            "videoId": "EEVmC1D9FU8",
+            "file": "EEVmC1D9FU8.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 137.1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2705870,
+            "originalSizeBytes": 2741888,
+            "durationMs": 159960,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Paint it Black",
+            "channel": "Parker the Bandit - Topic",
+            "timingsMs": {
+              "extract": 2178,
+              "adWait": 5000,
+              "transfer": 645,
+              "remux": 50
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9346,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5394,
+            "previewItems": 221,
+            "trackItems": 1270,
+            "error": null,
+            "elapsedMs": 287
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "EEVmC1D9FU8",
+          "url": "https://music.youtube.com/watch?v=EEVmC1D9FU8",
+          "title": "Paint it Black",
+          "artists": [
+            "Parker The Bandit"
+          ],
+          "album": "Paint it Black",
+          "durationMs": 160000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "paint it black",
+              "got": "paint it black",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "parker the bandit"
+              ],
+              "missing": [],
+              "candidate": [
+                "parker the bandit"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "-BmyPta6Ac4",
+          "url": "https://music.youtube.com/watch?v=-BmyPta6Ac4",
+          "title": "48.8488749213116, -1.5847455146977658",
+          "artists": [
+            "woiz"
+          ],
+          "album": "PHRÉATIC",
+          "durationMs": 431000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 0,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 272000
+            },
+            "title": {
+              "score": 0.2653,
+              "base": 0.0816,
+              "version": 1.0,
+              "expected": "paint it black",
+              "got": "48 8488749213116 1 5847455146977658",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "parker the bandit"
+              ],
+              "candidate": [
+                "woiz"
+              ]
+            },
+            "album": {
+              "score": 0.4545,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.225,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "AqzPlFf5-gE",
+          "url": "https://music.youtube.com/watch?v=AqzPlFf5-gE",
+          "title": "qw2947x",
+          "artists": [
+            "qumcl"
+          ],
+          "album": "i accidentally summoned a 6ft feline in my bedroom and now he won't stop dancing",
+          "durationMs": 412000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 253000
+            },
+            "title": {
+              "score": 0.2,
+              "base": 0.0,
+              "version": 1.0,
+              "expected": "paint it black",
+              "got": "qw2947x",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "parker the bandit"
+              ],
+              "candidate": [
+                "qumcl"
+              ]
+            },
+            "album": {
+              "score": 0.2151,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.1815,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 159,
+          "results": 1
+        },
+        {
+          "name": "album",
+          "ms": 1260,
+          "query": "Parker The Bandit Paint it Black",
+          "results": 0,
+          "albums": []
+        },
+        {
+          "name": "isrc",
+          "ms": 777,
+          "query": "QZSYP2293479",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 760,
+          "query": "Parker The Bandit Paint it Black",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 4309446132,
+      "expected": {
+        "artist": "MellSher, 5opka",
+        "title": "Покажи мне",
+        "durationS": 134
+      },
+      "tags": [
+        "owner",
+        "cyrillic",
+        "featured",
+        "no-preview"
+      ],
+      "status": "unverified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": false,
+      "errors": [
+        "no_preview"
+      ],
+      "timingsMs": {
+        "deezer": 215,
+        "match": 1028,
+        "preview": 0,
+        "download": 8513,
+        "total": 9759
+      },
+      "chosen": {
+        "videoId": "WOj2upNz6eI",
+        "title": "Покажи мне",
+        "artists": [
+          "MellSher",
+          "5opka"
+        ],
+        "album": "Opus",
+        "durationMs": 134400,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": null,
+        "offsetS": null,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 129.6,
+        "sampleRate": 48000,
+        "sizeBytes": 2146714,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "TVHTML5",
+        "poToken": false,
+        "downloadTimingsMs": {
+          "extract": 2036,
+          "adWait": 4000,
+          "transfer": 369,
+          "remux": 43
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "WOj2upNz6eI",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "WOj2upNz6eI",
+            "file": "WOj2upNz6eI.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 129.6,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2146714,
+            "originalSizeBytes": 2177185,
+            "durationMs": 134400,
+            "client": "TVHTML5",
+            "poToken": false,
+            "title": "Покажи мне",
+            "channel": "MellSher",
+            "timingsMs": {
+              "extract": 2036,
+              "adWait": 4000,
+              "transfer": 369,
+              "remux": 43
+            },
+            "fallback": {
+              "clients": [
+                "default"
+              ],
+              "after": "format_unavailable"
+            },
+            "warnings": []
+          },
+          "verify": null,
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "WOj2upNz6eI",
+          "url": "https://music.youtube.com/watch?v=WOj2upNz6eI",
+          "title": "Покажи мне",
+          "artists": [
+            "MellSher",
+            "5opka"
+          ],
+          "album": "Opus",
+          "durationMs": 135000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "покажи мне",
+              "got": "покажи мне",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "mellsher",
+                "5opka"
+              ],
+              "missing": [],
+              "candidate": [
+                "mellsher",
+                "5opka"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_OH1xYp96nJS",
+            "title": "Opus",
+            "year": "2026",
+            "trackCount": 5,
+            "deezerTrackCount": 5,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "O-jQnNAiI-A",
+          "url": "https://music.youtube.com/watch?v=O-jQnNAiI-A",
+          "title": "Дай Мне Шанс",
+          "artists": [
+            "Scally Milano",
+            "uglystephan"
+          ],
+          "album": "Дай Мне Шанс",
+          "durationMs": 141000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 1,
+          "score": 0.0961,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.78,
+              "diffMs": 7000
+            },
+            "title": {
+              "score": 0.6364,
+              "base": 0.5455,
+              "version": 1.0,
+              "expected": "покажи мне",
+              "got": "даи мне шанс",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "mellsher",
+                "5opka"
+              ],
+              "candidate": [
+                "scally milano",
+                "uglystephan"
+              ]
+            },
+            "album": {
+              "score": 0.1176,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.5367,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.2386,
+            "artistGate": 0.75,
+            "total": 0.0961
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "P6p-YB8cF9k",
+          "url": "https://music.youtube.com/watch?v=P6p-YB8cF9k",
+          "title": "QT6E92569272",
+          "artists": [
+            "PulseLabFM"
+          ],
+          "album": "Vellum & Static, Pt. 2",
+          "durationMs": 214000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 80000
+            },
+            "title": {
+              "score": 0.2696,
+              "base": 0.087,
+              "version": 1.0,
+              "expected": "покажи мне",
+              "got": "qt6e92569272",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "mellsher",
+                "5opka"
+              ],
+              "candidate": [
+                "pulselabfm"
+              ]
+            },
+            "album": {
+              "score": 0.1538,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.1963,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 174,
+          "results": 5
+        },
+        {
+          "name": "album",
+          "ms": 852,
+          "query": "MellSher Opus",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_OH1xYp96nJS",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 800,
+          "query": "QT9662643472",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 695,
+          "query": "MellSher Покажи мне",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3949282031,
+      "expected": {
+        "artist": "Пошлая Молли",
+        "title": "Нон стоп",
+        "durationS": 213
+      },
+      "tags": [
+        "cyrillic",
+        "album"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 177,
+        "match": 4769,
+        "preview": 477,
+        "download": 2756,
+        "verify": 374,
+        "total": 8557
+      },
+      "chosen": {
+        "videoId": "6-l6qCcXCQs",
+        "title": "Нон стоп",
+        "artists": [
+          "Пошлая Молли"
+        ],
+        "album": "8 способов как бросить...",
+        "durationMs": 213980,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9869,
+        "offsetS": 29.97,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 125.3,
+        "sampleRate": 48000,
+        "sizeBytes": 3304415,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2222,
+          "adWait": 0,
+          "transfer": 422,
+          "remux": 55
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "6-l6qCcXCQs",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "6-l6qCcXCQs",
+            "file": "6-l6qCcXCQs.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 125.3,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 3304415,
+            "originalSizeBytes": 3352807,
+            "durationMs": 213980,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Нон стоп",
+            "channel": "ПОШЛАЯ МОЛЛИ",
+            "timingsMs": {
+              "extract": 2222,
+              "adWait": 0,
+              "transfer": 422,
+              "remux": 55
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9869,
+            "offsetS": 29.97,
+            "threshold": 0.7,
+            "baseline": 0.5407,
+            "previewItems": 221,
+            "trackItems": 1707,
+            "error": null,
+            "elapsedMs": 374
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "6-l6qCcXCQs",
+          "url": "https://music.youtube.com/watch?v=6-l6qCcXCQs",
+          "title": "Нон стоп",
+          "artists": [
+            "Пошлая Молли"
+          ],
+          "album": "8 способов как бросить...",
+          "durationMs": 214000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "нон стоп",
+              "got": "нон стоп",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "пошлая молли"
+              ],
+              "missing": [],
+              "candidate": [
+                "пошлая молли"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_7tfIBQ0uiqj",
+            "title": "8 способов как бросить...",
+            "year": "2017",
+            "trackCount": 8,
+            "deezerTrackCount": 8,
+            "position": 3,
+            "deezerPosition": 3,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "6IyU45cuwQc",
+          "url": "https://music.youtube.com/watch?v=6IyU45cuwQc",
+          "title": "FRV",
+          "artists": [
+            "Ca$hRik",
+            "Nermesiz"
+          ],
+          "album": "FRV",
+          "durationMs": 168000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": -45000
+            },
+            "title": {
+              "score": 0.2,
+              "base": 0.0,
+              "version": 1.0,
+              "expected": "нон стоп",
+              "got": "frv",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "пошлая молли"
+              ],
+              "candidate": [
+                "ca hrik",
+                "nermesiz"
+              ]
+            },
+            "album": {
+              "score": 0.1667,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.1767,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "TNLfQTlHLKc",
+          "url": "https://music.youtube.com/watch?v=TNLfQTlHLKc",
+          "title": "Супермаркет",
+          "artists": [
+            "Пошлая Молли"
+          ],
+          "album": "8 способов как бросить...",
+          "durationMs": 215000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "title",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 2000
+            },
+            "title": {
+              "score": 0.3684,
+              "base": 0.2105,
+              "version": 1.0,
+              "expected": "нон стоп",
+              "got": "супермаркет",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "пошлая молли"
+              ],
+              "missing": [],
+              "candidate": [
+                "пошлая молли"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.8105,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 1.0,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 188,
+          "results": 8
+        },
+        {
+          "name": "album",
+          "ms": 2707,
+          "query": "Пошлая Молли 8 способов как бросить...",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_7tfIBQ0uiqj",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 4577,
+          "query": "FR59R2697893",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 2706,
+          "query": "Пошлая Молли Нон стоп",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 2223241397,
+      "expected": {
+        "artist": "Noize MC",
+        "title": "Вселенная бесконечна?",
+        "durationS": 260
+      },
+      "tags": [
+        "cyrillic",
+        "album"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 215,
+        "match": 1406,
+        "preview": 265,
+        "download": 8072,
+        "verify": 401,
+        "total": 10362
+      },
+      "chosen": {
+        "videoId": "Ry7itx9Uvp4",
+        "title": "Вселенная бесконечна?",
+        "artists": [
+          "Noize MC"
+        ],
+        "album": "Новый альбом",
+        "durationMs": 260580,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9439,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 131.3,
+        "sampleRate": 48000,
+        "sizeBytes": 4217806,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2520,
+          "adWait": 5000,
+          "transfer": 450,
+          "remux": 60
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "Ry7itx9Uvp4",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "Ry7itx9Uvp4",
+            "file": "Ry7itx9Uvp4.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 131.3,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 4217806,
+            "originalSizeBytes": 4276948,
+            "durationMs": 260580,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Вселенная бесконечна?",
+            "channel": "Noize MC",
+            "timingsMs": {
+              "extract": 2520,
+              "adWait": 5000,
+              "transfer": 450,
+              "remux": 60
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9439,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5468,
+            "previewItems": 221,
+            "trackItems": 2083,
+            "error": null,
+            "elapsedMs": 401
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "Ry7itx9Uvp4",
+          "url": "https://music.youtube.com/watch?v=Ry7itx9Uvp4",
+          "title": "Вселенная бесконечна?",
+          "artists": [
+            "Noize MC"
+          ],
+          "album": "Новый альбом",
+          "durationMs": 261000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "вселенная бесконечна",
+              "got": "вселенная бесконечна",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "noize mc"
+              ],
+              "missing": [],
+              "candidate": [
+                "noize mc"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_77nwukDVGle",
+            "title": "Новый альбом",
+            "year": "2012",
+            "trackCount": 21,
+            "deezerTrackCount": 21,
+            "position": 5,
+            "deezerPosition": 5,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "DBnwy46OPFU",
+          "url": "https://music.youtube.com/watch?v=DBnwy46OPFU",
+          "title": "Вселенная бесконечна?",
+          "artists": [
+            "Noize MC"
+          ],
+          "album": "Новый альбом",
+          "durationMs": 261000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "вселенная бесконечна",
+              "got": "вселенная бесконечна",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "noize mc"
+              ],
+              "missing": [],
+              "candidate": [
+                "noize mc"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_77nwukDVGle",
+            "title": "Новый альбом",
+            "year": "2012",
+            "trackCount": 21,
+            "deezerTrackCount": 21,
+            "position": 5,
+            "deezerPosition": 5,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "0SuX8so5VF0",
+          "url": "https://music.youtube.com/watch?v=0SuX8so5VF0",
+          "title": "Вселенная бесконечна? (Live)",
+          "artists": [
+            "Noize MC"
+          ],
+          "album": "XV (Live)",
+          "durationMs": 255000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 5,
+          "score": 0.2584,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.9,
+              "diffMs": -5000
+            },
+            "title": {
+              "score": 0.92,
+              "base": 1.0,
+              "version": 0.6,
+              "expected": "вселенная бесконечна",
+              "got": "вселенная бесконечна",
+              "expectedVersion": null,
+              "gotVersion": "live"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "noize mc"
+              ],
+              "missing": [],
+              "candidate": [
+                "noize mc"
+              ]
+            },
+            "album": {
+              "score": 0.1538,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.8614,
+            "penalties": [
+              {
+                "marker": "live",
+                "where": "candidate",
+                "factor": 0.3
+              }
+            ],
+            "penaltyFactor": 0.3,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.2584
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 262,
+          "results": 21
+        },
+        {
+          "name": "album",
+          "ms": 1140,
+          "query": "Noize MC Новый альбом",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_77nwukDVGle",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 736,
+          "query": "RUUM71800097",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 776,
+          "query": "Noize MC Вселенная бесконечна?",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 137639209,
+      "expected": {
+        "artist": "Валентин Стрыкало",
+        "title": "Кайен",
+        "durationS": 182
+      },
+      "tags": [
+        "cyrillic",
+        "album"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 151,
+        "match": 1093,
+        "preview": 281,
+        "download": 9480,
+        "verify": 307,
+        "total": 11315
+      },
+      "chosen": {
+        "videoId": "3A2x-7HawDc",
+        "title": "Кайен",
+        "artists": [
+          "Валентин Стрыкало"
+        ],
+        "album": "Смирись и расслабься",
+        "durationMs": 181740,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9367,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 132.5,
+        "sampleRate": 48000,
+        "sizeBytes": 2969770,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "TVHTML5",
+        "poToken": false,
+        "downloadTimingsMs": {
+          "extract": 1986,
+          "adWait": 5000,
+          "transfer": 339,
+          "remux": 56
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "3A2x-7HawDc",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "3A2x-7HawDc",
+            "file": "3A2x-7HawDc.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 132.5,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2969770,
+            "originalSizeBytes": 3010803,
+            "durationMs": 181740,
+            "client": "TVHTML5",
+            "poToken": false,
+            "title": "Кайен",
+            "channel": "Valentin Strykalo - Topic",
+            "timingsMs": {
+              "extract": 1986,
+              "adWait": 5000,
+              "transfer": 339,
+              "remux": 56
+            },
+            "fallback": {
+              "clients": [
+                "default"
+              ],
+              "after": "format_unavailable"
+            },
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9367,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5262,
+            "previewItems": 221,
+            "trackItems": 1446,
+            "error": null,
+            "elapsedMs": 307
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "3A2x-7HawDc",
+          "url": "https://music.youtube.com/watch?v=3A2x-7HawDc",
+          "title": "Кайен",
+          "artists": [
+            "Валентин Стрыкало"
+          ],
+          "album": "Смирись и расслабься",
+          "durationMs": 182000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "каиен",
+              "got": "каиен",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "валентин стрыкало"
+              ],
+              "missing": [],
+              "candidate": [
+                "валентин стрыкало"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_8WzKCTl3P8x",
+            "title": "Смирись и расслабься",
+            "year": "2012",
+            "trackCount": 17,
+            "deezerTrackCount": 17,
+            "position": 7,
+            "deezerPosition": 7,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "9P9tKJszv9k",
+          "url": "https://music.youtube.com/watch?v=9P9tKJszv9k",
+          "title": "mzu752$$.uwuw992822!28",
+          "artists": [
+            "angeleternal"
+          ],
+          "album": "mzu752$$.uwuw992822!28",
+          "durationMs": 1092000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 910000
+            },
+            "title": {
+              "score": 0.2,
+              "base": 0.0,
+              "version": 1.0,
+              "expected": "каиен",
+              "got": "mzu752 uwuw992822 28",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "валентин стрыкало"
+              ],
+              "candidate": [
+                "angeleternal"
+              ]
+            },
+            "album": {
+              "score": 0.1538,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.1754,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "aeGdhFHFj8Q",
+          "url": "https://music.youtube.com/watch?v=aeGdhFHFj8Q",
+          "title": "Наше лето",
+          "artists": [
+            "Валентин Стрыкало"
+          ],
+          "album": "Смирись и расслабься",
+          "durationMs": 209000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 27000
+            },
+            "title": {
+              "score": 0.4286,
+              "base": 0.2857,
+              "version": 1.0,
+              "expected": "каиен",
+              "got": "наше лето",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "валентин стрыкало"
+              ],
+              "missing": [],
+              "candidate": [
+                "валентин стрыкало"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.5286,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 1.0,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 167,
+          "results": 17
+        },
+        {
+          "name": "album",
+          "ms": 925,
+          "query": "Валентин Стрыкало Смирись и расслабься",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_8WzKCTl3P8x",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 770,
+          "query": "USHM91619242",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 701,
+          "query": "Валентин Стрыкало Кайен",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 3510764041,
+      "expected": {
+        "artist": "кис-кис",
+        "title": "молчи",
+        "durationS": 198
+      },
+      "tags": [
+        "cyrillic",
+        "album"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 188,
+        "match": 1123,
+        "preview": 266,
+        "download": 7839,
+        "verify": 335,
+        "total": 9755
+      },
+      "chosen": {
+        "videoId": "Sv1qQqcNb5c",
+        "title": "молчи",
+        "artists": [
+          "кис-кис"
+        ],
+        "album": "магазин игрушек для взрослых",
+        "durationMs": 198020,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9364,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 132.9,
+        "sampleRate": 48000,
+        "sizeBytes": 3245930,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2276,
+          "adWait": 5000,
+          "transfer": 442,
+          "remux": 55
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "Sv1qQqcNb5c",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "Sv1qQqcNb5c",
+            "file": "Sv1qQqcNb5c.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 132.9,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 3245930,
+            "originalSizeBytes": 3290590,
+            "durationMs": 198020,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "молчи",
+            "channel": "кис-кис",
+            "timingsMs": {
+              "extract": 2276,
+              "adWait": 5000,
+              "transfer": 442,
+              "remux": 55
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9364,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.546,
+            "previewItems": 221,
+            "trackItems": 1578,
+            "error": null,
+            "elapsedMs": 335
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "Sv1qQqcNb5c",
+          "url": "https://music.youtube.com/watch?v=Sv1qQqcNb5c",
+          "title": "молчи",
+          "artists": [
+            "кис-кис"
+          ],
+          "album": "магазин игрушек для взрослых",
+          "durationMs": 198000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "молчи",
+              "got": "молчи",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "кис кис"
+              ],
+              "missing": [],
+              "candidate": [
+                "кис кис"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_vjLjmR0F9ao",
+            "title": "магазин игрушек для взрослых",
+            "year": "2019",
+            "trackCount": 5,
+            "deezerTrackCount": 5,
+            "position": 5,
+            "deezerPosition": 5,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "QDJ6YqI3sjo",
+          "url": "https://music.youtube.com/watch?v=QDJ6YqI3sjo",
+          "title": "молчи",
+          "artists": [
+            "кис-кис"
+          ],
+          "album": "магазин игрушек для взрослых",
+          "durationMs": 198000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "молчи",
+              "got": "молчи",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "кис кис"
+              ],
+              "missing": [],
+              "candidate": [
+                "кис кис"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_vjLjmR0F9ao",
+            "title": "магазин игрушек для взрослых",
+            "year": "2019",
+            "trackCount": 5,
+            "deezerTrackCount": 5,
+            "position": 5,
+            "deezerPosition": 5,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "9MkfQ2urX9g",
+          "url": "https://music.youtube.com/watch?v=9MkfQ2urX9g",
+          "title": "Не молчи так громко",
+          "artists": [
+            "Витас"
+          ],
+          "album": "Романтика шансона",
+          "durationMs": 197000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 5,
+          "score": 0.5261,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": -1000
+            },
+            "title": {
+              "score": 0.88,
+              "base": 0.85,
+              "version": 1.0,
+              "expected": "молчи",
+              "got": "не молчи так громко",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "кис кис"
+              ],
+              "candidate": [
+                "витас"
+              ]
+            },
+            "album": {
+              "score": 0.375,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.7015,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 0.75,
+            "total": 0.5261
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 166,
+          "results": 5
+        },
+        {
+          "name": "album",
+          "ms": 955,
+          "query": "кис-кис магазин игрушек для взрослых",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_vjLjmR0F9ao",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 842,
+          "query": "FR96X1928592",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 699,
+          "query": "кис-кис молчи",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 1617024092,
+      "expected": {
+        "artist": "Kordhell",
+        "title": "Murder In My Mind",
+        "durationS": 145
+      },
+      "tags": [
+        "phonk",
+        "trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 3,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 138,
+        "match": 1270,
+        "preview": 274,
+        "download": 7687,
+        "verify": 259,
+        "total": 9632
+      },
+      "chosen": {
+        "videoId": "RXRWE_XQ8aE",
+        "title": "Murder In My Mind",
+        "artists": [
+          "Kordhell"
+        ],
+        "album": "Murder In My Mind",
+        "durationMs": 145020,
+        "source": "isrc",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9649,
+        "offsetS": 0.0,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 144.5,
+        "sampleRate": 48000,
+        "sizeBytes": 2586578,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2256,
+          "adWait": 5000,
+          "transfer": 353,
+          "remux": 42
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "RXRWE_XQ8aE",
+          "score": 1.0,
+          "source": "isrc",
+          "download": {
+            "videoId": "RXRWE_XQ8aE",
+            "file": "RXRWE_XQ8aE.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 144.5,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2586578,
+            "originalSizeBytes": 2619151,
+            "durationMs": 145020,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Murder In My Mind",
+            "channel": "KORDHELL",
+            "timingsMs": {
+              "extract": 2256,
+              "adWait": 5000,
+              "transfer": 353,
+              "remux": 42
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9649,
+            "offsetS": 0.0,
+            "threshold": 0.7,
+            "baseline": 0.559,
+            "previewItems": 221,
+            "trackItems": 1150,
+            "error": null,
+            "elapsedMs": 259
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "RXRWE_XQ8aE",
+          "url": "https://music.youtube.com/watch?v=RXRWE_XQ8aE",
+          "title": "Murder In My Mind",
+          "artists": [
+            "Kordhell"
+          ],
+          "album": "Murder In My Mind",
+          "durationMs": 145000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "murder in my mind",
+              "got": "murder in my mind",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "kordhell"
+              ],
+              "missing": [],
+              "candidate": [
+                "kordhell"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "fzeoo8n8RZo",
+          "url": "https://music.youtube.com/watch?v=fzeoo8n8RZo",
+          "title": "Murder In My Mind",
+          "artists": [
+            "Kordhell"
+          ],
+          "album": "Murder In My Mind",
+          "durationMs": 146000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "song"
+          ],
+          "rank": 0,
+          "score": 0.9925,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "murder in my mind",
+              "got": "murder in my mind",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "kordhell"
+              ],
+              "missing": [],
+              "candidate": [
+                "kordhell"
+              ]
+            },
+            "album": {
+              "score": 0.925,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.9925,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.9925
+          },
+          "albumMatch": {
+            "browseId": "MPREb_PqPhtQpigac",
+            "title": "Murder In My Mind",
+            "year": "2022",
+            "trackCount": 1,
+            "deezerTrackCount": 2,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 0.925,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "Rj4RfirEoQQ",
+          "url": "https://music.youtube.com/watch?v=Rj4RfirEoQQ",
+          "title": "Murder In My Mind",
+          "artists": [
+            "Kordhell"
+          ],
+          "album": "Murder In My Mind",
+          "durationMs": 146000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.9675,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "murder in my mind",
+              "got": "murder in my mind",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "kordhell"
+              ],
+              "missing": [],
+              "candidate": [
+                "kordhell"
+              ]
+            },
+            "album": {
+              "score": 0.925,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.9675,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.9675
+          },
+          "albumMatch": {
+            "browseId": "MPREb_PqPhtQpigac",
+            "title": "Murder In My Mind",
+            "year": "2022",
+            "trackCount": 1,
+            "deezerTrackCount": 2,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 0.925,
+            "searchScore": 1.0
+          }
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 151,
+          "results": 2
+        },
+        {
+          "name": "album",
+          "ms": 1117,
+          "query": "Kordhell Murder In My Mind",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_PqPhtQpigac",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 824,
+          "query": "QM4TW2218315",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 831,
+          "query": "Kordhell Murder In My Mind",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 448260732,
+      "expected": {
+        "artist": "Кино",
+        "title": "Группа крови",
+        "durationS": 284
+      },
+      "tags": [
+        "cyrillic",
+        "classic",
+        "trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 189,
+        "match": 1082,
+        "preview": 308,
+        "download": 8788,
+        "verify": 427,
+        "total": 10798
+      },
+      "chosen": {
+        "videoId": "xtxjm7ciwmc",
+        "title": "Группа крови",
+        "artists": [
+          "Кино"
+        ],
+        "album": "Группа крови",
+        "durationMs": 284020,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9642,
+        "offsetS": 19.94,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 123.8,
+        "sampleRate": 48000,
+        "sizeBytes": 4331018,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2155,
+          "adWait": 6000,
+          "transfer": 519,
+          "remux": 65
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "xtxjm7ciwmc",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "xtxjm7ciwmc",
+            "file": "xtxjm7ciwmc.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 123.8,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 4331018,
+            "originalSizeBytes": 4396891,
+            "durationMs": 284020,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Группа крови",
+            "channel": "Группа КИНО",
+            "timingsMs": {
+              "extract": 2155,
+              "adWait": 6000,
+              "transfer": 519,
+              "remux": 65
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9642,
+            "offsetS": 19.94,
+            "threshold": 0.7,
+            "baseline": 0.5463,
+            "previewItems": 221,
+            "trackItems": 2272,
+            "error": null,
+            "elapsedMs": 427
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "xtxjm7ciwmc",
+          "url": "https://music.youtube.com/watch?v=xtxjm7ciwmc",
+          "title": "Группа крови",
+          "artists": [
+            "Кино"
+          ],
+          "album": "Группа крови",
+          "durationMs": 285000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "группа крови",
+              "got": "группа крови",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "кино"
+              ],
+              "missing": [],
+              "candidate": [
+                "кино"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_OLmD8O5IYNS",
+            "title": "Группа крови",
+            "year": "1988",
+            "trackCount": 11,
+            "deezerTrackCount": 11,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "BQ_FYwDi1Uk",
+          "url": "https://music.youtube.com/watch?v=BQ_FYwDi1Uk",
+          "title": "UK74R1409097",
+          "artists": [
+            "Aleksi Perälä"
+          ],
+          "album": "The Colundi Sequence Level 7",
+          "durationMs": 302000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": 18000
+            },
+            "title": {
+              "score": 0.4,
+              "base": 0.25,
+              "version": 1.0,
+              "expected": "группа крови",
+              "got": "uk74r1409097",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "кино"
+              ],
+              "candidate": [
+                "aleksi perala"
+              ]
+            },
+            "album": {
+              "score": 0.15,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.235,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "EByofhvVRco",
+          "url": "https://music.youtube.com/watch?v=EByofhvVRco",
+          "title": "Группа крови",
+          "artists": [
+            "Кино"
+          ],
+          "album": "Последний герой",
+          "durationMs": 236000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 1,
+          "score": 0.0,
+          "rejected": "duration",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.0,
+              "diffMs": -48000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "группа крови",
+              "got": "группа крови",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "кино"
+              ],
+              "missing": [],
+              "candidate": [
+                "кино"
+              ]
+            },
+            "album": {
+              "score": 0.3704,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.637,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.637
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 148,
+          "results": 11
+        },
+        {
+          "name": "album",
+          "ms": 931,
+          "query": "Кино Группа крови",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_OLmD8O5IYNS",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 764,
+          "query": "RUB421401310",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 744,
+          "query": "Кино Группа крови",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 4091937401,
+      "expected": {
+        "artist": "Queen",
+        "title": "Bohemian Rhapsody",
+        "durationS": 354
+      },
+      "tags": [
+        "classic",
+        "trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 213,
+        "match": 1413,
+        "preview": 544,
+        "download": 8058,
+        "verify": 563,
+        "total": 10795
+      },
+      "chosen": {
+        "videoId": "BSTsnWoslP4",
+        "title": "Bohemian Rhapsody",
+        "artists": [
+          "Queen"
+        ],
+        "album": "A Night At The Opera",
+        "durationMs": 354340,
+        "source": "album",
+        "kind": "atv",
+        "score": 0.985,
+        "similarity": 0.954,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 134.4,
+        "sampleRate": 48000,
+        "sizeBytes": 5873910,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2319,
+          "adWait": 5000,
+          "transfer": 616,
+          "remux": 73
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "BSTsnWoslP4",
+          "score": 0.985,
+          "source": "album",
+          "download": {
+            "videoId": "BSTsnWoslP4",
+            "file": "BSTsnWoslP4.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 134.4,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 5873910,
+            "originalSizeBytes": 5954015,
+            "durationMs": 354340,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Bohemian Rhapsody",
+            "channel": "Queen Official",
+            "timingsMs": {
+              "extract": 2319,
+              "adWait": 5000,
+              "transfer": 616,
+              "remux": 73
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.954,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5188,
+            "previewItems": 221,
+            "trackItems": 2840,
+            "error": null,
+            "elapsedMs": 563
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "BSTsnWoslP4",
+          "url": "https://music.youtube.com/watch?v=BSTsnWoslP4",
+          "title": "Bohemian Rhapsody",
+          "artists": [
+            "Queen"
+          ],
+          "album": "A Night At The Opera",
+          "durationMs": 355000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 0.985,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "bohemian rhapsody",
+              "got": "bohemian rhapsody",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "queen"
+              ],
+              "missing": [],
+              "candidate": [
+                "queen"
+              ]
+            },
+            "album": {
+              "score": 0.85,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.985,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.985
+          },
+          "albumMatch": {
+            "browseId": "MPREb_eEpQf8QskKl",
+            "title": "A Night At The Opera",
+            "year": "1975",
+            "trackCount": 12,
+            "deezerTrackCount": 12,
+            "position": 11,
+            "deezerPosition": 11,
+            "alignScore": 1.0,
+            "albumScore": 0.85,
+            "searchScore": 0.85
+          }
+        },
+        {
+          "videoId": "fJ9rUzIMcZQ",
+          "url": "https://music.youtube.com/watch?v=fJ9rUzIMcZQ",
+          "title": "Bohemian Rhapsody",
+          "artists": [
+            "Queen"
+          ],
+          "album": "A Night At The Opera",
+          "durationMs": 355000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.96,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "bohemian rhapsody",
+              "got": "bohemian rhapsody",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "queen"
+              ],
+              "missing": [],
+              "candidate": [
+                "queen"
+              ]
+            },
+            "album": {
+              "score": 0.85,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.96,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.96
+          },
+          "albumMatch": {
+            "browseId": "MPREb_eEpQf8QskKl",
+            "title": "A Night At The Opera",
+            "year": "1975",
+            "trackCount": 12,
+            "deezerTrackCount": 12,
+            "position": 11,
+            "deezerPosition": 11,
+            "alignScore": 1.0,
+            "albumScore": 0.85,
+            "searchScore": 0.85
+          }
+        },
+        {
+          "videoId": "lz5ppg_Y0bo",
+          "url": "https://music.youtube.com/watch?v=lz5ppg_Y0bo",
+          "title": "Kngbtdgsf",
+          "artists": [
+            "L\\\\S"
+          ],
+          "album": "Ohne001",
+          "durationMs": 347000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc"
+          ],
+          "rank": 0,
+          "score": 0.0,
+          "rejected": "title",
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.78,
+              "diffMs": -7000
+            },
+            "title": {
+              "score": 0.3231,
+              "base": 0.1538,
+              "version": 1.0,
+              "expected": "bohemian rhapsody",
+              "got": "kngbtdgsf",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "queen"
+              ],
+              "candidate": [
+                "l s"
+              ]
+            },
+            "album": {
+              "score": 0.2222,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.4531,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 0.0,
+            "artistGate": 0.75,
+            "total": 0.0
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 196,
+          "results": 12
+        },
+        {
+          "name": "album",
+          "ms": 1214,
+          "query": "Queen A Night At The Opera",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_eEpQf8QskKl",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 762,
+          "query": "GBUM71029604",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 818,
+          "query": "Queen Bohemian Rhapsody",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 602456552,
+      "expected": {
+        "artist": "Post Malone, Swae Lee",
+        "title": "Sunflower (Spider-Man: Into the Spider-Verse)",
+        "durationS": 158
+      },
+      "tags": [
+        "featured",
+        "popular",
+        "brackets"
+      ],
+      "status": "verified",
+      "viableCandidates": 2,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 171,
+        "match": 1135,
+        "preview": 298,
+        "download": 7753,
+        "verify": 257,
+        "total": 9619
+      },
+      "chosen": {
+        "videoId": "r7Rn4ryE_w8",
+        "title": "Sunflower (Spider-Man: Into the Spider-Verse)",
+        "artists": [
+          "Post Malone",
+          "Swae Lee"
+        ],
+        "album": "Spider-Man: Into the Spider-Verse (Soundtrack From & Inspired by the Motion Picture)",
+        "durationMs": 158060,
+        "source": "isrc",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9335,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 141.9,
+        "sampleRate": 48000,
+        "sizeBytes": 2767191,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2344,
+          "adWait": 5000,
+          "transfer": 310,
+          "remux": 53
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "r7Rn4ryE_w8",
+          "score": 1.0,
+          "source": "isrc",
+          "download": {
+            "videoId": "r7Rn4ryE_w8",
+            "file": "r7Rn4ryE_w8.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 141.9,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 2767191,
+            "originalSizeBytes": 2802702,
+            "durationMs": 158060,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Sunflower (Spider-Man: Into the Spider-Verse)",
+            "channel": "Post Malone",
+            "timingsMs": {
+              "extract": 2344,
+              "adWait": 5000,
+              "transfer": 310,
+              "remux": 53
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9335,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.553,
+            "previewItems": 221,
+            "trackItems": 1255,
+            "error": null,
+            "elapsedMs": 257
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "r7Rn4ryE_w8",
+          "url": "https://music.youtube.com/watch?v=r7Rn4ryE_w8",
+          "title": "Sunflower (Spider-Man: Into the Spider-Verse)",
+          "artists": [
+            "Post Malone",
+            "Swae Lee"
+          ],
+          "album": "Spider-Man: Into the Spider-Verse (Soundtrack From & Inspired by the Motion Picture)",
+          "durationMs": 159000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "sunflower",
+              "got": "sunflower",
+              "expectedVersion": "spider man into the spider verse",
+              "gotVersion": "spider man into the spider verse"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "post malone",
+                "swae lee"
+              ],
+              "missing": [],
+              "candidate": [
+                "post malone",
+                "swae lee"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "z9VMaLxg9Ok",
+          "url": "https://music.youtube.com/watch?v=z9VMaLxg9Ok",
+          "title": "Sunflower (Spider-Man: Into the Spider-Verse)",
+          "artists": [
+            "Post Malone",
+            "Swae Lee"
+          ],
+          "album": "Hollywood's Bleeding",
+          "durationMs": 158000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 3,
+          "score": 0.9196,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "sunflower",
+              "got": "sunflower",
+              "expectedVersion": "spider man into the spider verse",
+              "gotVersion": "spider man into the spider verse"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "post malone",
+                "swae lee"
+              ],
+              "missing": [],
+              "candidate": [
+                "post malone",
+                "swae lee"
+              ]
+            },
+            "album": {
+              "score": 0.1961,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.9196,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.9196
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "8c3Os2v-Ymw",
+          "url": "https://music.youtube.com/watch?v=8c3Os2v-Ymw",
+          "title": "Sunflower (From Spiderman: Into the Spider-Verse)",
+          "artists": [
+            "The Eternal Dreamers"
+          ],
+          "album": "Sunflower (From Spiderman: Into the Spider-Verse)",
+          "durationMs": 160000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 7,
+          "score": 0.5393,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 2000
+            },
+            "title": {
+              "score": 0.9824,
+              "base": 1.0,
+              "version": 0.9118,
+              "expected": "sunflower",
+              "got": "sunflower",
+              "expectedVersion": "spider man into the spider verse",
+              "gotVersion": "from spiderman into the spider verse"
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "post malone",
+                "swae lee"
+              ],
+              "candidate": [
+                "the eternal dreamers"
+              ]
+            },
+            "album": {
+              "score": 0.2439,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.7191,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 0.75,
+            "total": 0.5393
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 185,
+          "results": 13
+        },
+        {
+          "name": "album",
+          "ms": 947,
+          "query": "Post Malone Spider-Man: Into the Spider-Verse (Soundtrack From & Inspired by the Motion Picture)",
+          "results": 0,
+          "albums": []
+        },
+        {
+          "name": "isrc",
+          "ms": 725,
+          "query": "USUM71814888",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 894,
+          "query": "Post Malone Sunflower (Spider-Man: Into the Spider-Verse)",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 116914036,
+      "expected": {
+        "artist": "Pink Floyd",
+        "title": "Shine On You Crazy Diamond (Pts. 1-5)",
+        "durationS": 812
+      },
+      "tags": [
+        "long",
+        "classic",
+        "trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 1,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 154,
+        "match": 1234,
+        "preview": 369,
+        "download": 9987,
+        "verify": 1396,
+        "total": 13147
+      },
+      "chosen": {
+        "videoId": "Tu7oq3VNgpY",
+        "title": "Shine On You Crazy Diamond (Pts. 1-5)",
+        "artists": [
+          "Pink Floyd"
+        ],
+        "album": "Wish You Were Here",
+        "durationMs": 811100,
+        "source": "album",
+        "kind": "atv",
+        "score": 0.985,
+        "similarity": 0.9581,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 143.9,
+        "sampleRate": 48000,
+        "sizeBytes": 14405578,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 2587,
+          "adWait": 5000,
+          "transfer": 2238,
+          "remux": 116
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "Tu7oq3VNgpY",
+          "score": 0.985,
+          "source": "album",
+          "download": {
+            "videoId": "Tu7oq3VNgpY",
+            "file": "Tu7oq3VNgpY.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 143.9,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 14405578,
+            "originalSizeBytes": 14587885,
+            "durationMs": 811100,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Shine On You Crazy Diamond (Pts. 1-5)",
+            "channel": "Pink Floyd",
+            "timingsMs": {
+              "extract": 2587,
+              "adWait": 5000,
+              "transfer": 2238,
+              "remux": 116
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9581,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5317,
+            "previewItems": 221,
+            "trackItems": 6530,
+            "error": null,
+            "elapsedMs": 1396
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "Tu7oq3VNgpY",
+          "url": "https://music.youtube.com/watch?v=Tu7oq3VNgpY",
+          "title": "Shine On You Crazy Diamond (Pts. 1-5)",
+          "artists": [
+            "Pink Floyd"
+          ],
+          "album": "Wish You Were Here",
+          "durationMs": 812000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album",
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 0.985,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 0
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "shine on you crazy diamond",
+              "got": "shine on you crazy diamond",
+              "expectedVersion": "pts 1 5",
+              "gotVersion": "pts 1 5"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "pink floyd"
+              ],
+              "missing": [],
+              "candidate": [
+                "pink floyd"
+              ]
+            },
+            "album": {
+              "score": 0.85,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.985,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.985
+          },
+          "albumMatch": {
+            "browseId": "MPREb_pYj3YFxjhPp",
+            "title": "Wish You Were Here",
+            "year": "1975",
+            "trackCount": 5,
+            "deezerTrackCount": 5,
+            "position": 1,
+            "deezerPosition": 1,
+            "alignScore": 1.0,
+            "albumScore": 0.85,
+            "searchScore": 0.85
+          }
+        },
+        {
+          "videoId": "6_-Fj5Z4blQ",
+          "url": "https://music.youtube.com/watch?v=6_-Fj5Z4blQ",
+          "title": "Shine On You Crazy Diamond",
+          "artists": [
+            "P-Floyd"
+          ],
+          "album": "Inside Out Live 2009",
+          "durationMs": 808000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 4,
+          "score": 0.5236,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.9333,
+              "diffMs": -4000
+            },
+            "title": {
+              "score": 0.92,
+              "base": 1.0,
+              "version": 0.6,
+              "expected": "shine on you crazy diamond",
+              "got": "shine on you crazy diamond",
+              "expectedVersion": "pts 1 5",
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 0.0,
+              "matched": [],
+              "missing": [
+                "pink floyd"
+              ],
+              "candidate": [
+                "p floyd"
+              ]
+            },
+            "album": {
+              "score": 0.4211,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.6981,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 0.75,
+            "total": 0.5236
+          },
+          "albumMatch": null
+        },
+        {
+          "videoId": "AsDAxjTPwTY",
+          "url": "https://music.youtube.com/watch?v=AsDAxjTPwTY",
+          "title": "Shine On You Crazy Diamond (Pts. 1-5, 7) (Live)",
+          "artists": [
+            "Pink Floyd"
+          ],
+          "album": "Pulse (Live)",
+          "durationMs": 817000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "song",
+          "sources": [
+            "song"
+          ],
+          "rank": 3,
+          "score": 0.2635,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 0.9,
+              "diffMs": 5000
+            },
+            "title": {
+              "score": 0.97,
+              "base": 1.0,
+              "version": 0.85,
+              "expected": "shine on you crazy diamond",
+              "got": "shine on you crazy diamond",
+              "expectedVersion": "pts 1 5",
+              "gotVersion": "pts 1 5 7 live"
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "pink floyd"
+              ],
+              "missing": [],
+              "candidate": [
+                "pink floyd"
+              ]
+            },
+            "album": {
+              "score": 0.1739,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.8784,
+            "penalties": [
+              {
+                "marker": "live",
+                "where": "candidate",
+                "factor": 0.3
+              }
+            ],
+            "penaltyFactor": 0.3,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.2635
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 151,
+          "results": 5
+        },
+        {
+          "name": "album",
+          "ms": 1081,
+          "query": "Pink Floyd Wish You Were Here",
+          "results": 1,
+          "albums": [
+            {
+              "browseId": "MPREb_pYj3YFxjhPp",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 679,
+          "query": "GBN9Y1100085",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 778,
+          "query": "Pink Floyd Shine On You Crazy Diamond (Pts. 1-5)",
+          "results": 8
+        }
+      ]
+    },
+    {
+      "deezerId": 908604612,
+      "expected": {
+        "artist": "The Weeknd",
+        "title": "Blinding Lights",
+        "durationS": 200
+      },
+      "tags": [
+        "popular",
+        "trap"
+      ],
+      "status": "verified",
+      "viableCandidates": 3,
+      "attempts": 1,
+      "firstAttemptVerified": true,
+      "errors": [],
+      "timingsMs": {
+        "deezer": 224,
+        "match": 1504,
+        "preview": 369,
+        "download": 9169,
+        "verify": 442,
+        "total": 11711
+      },
+      "chosen": {
+        "videoId": "2ru92T7Y5z0",
+        "title": "Blinding Lights",
+        "artists": [
+          "The Weeknd"
+        ],
+        "album": "After Hours",
+        "durationMs": 200060,
+        "source": "album",
+        "kind": "atv",
+        "score": 1.0,
+        "similarity": 0.9428,
+        "offsetS": 47.93,
+        "itag": "251",
+        "codec": "opus",
+        "abrKbps": 133.2,
+        "sampleRate": 48000,
+        "sizeBytes": 3284808,
+        "container": "ogg",
+        "originalContainer": "webm",
+        "client": "MWEB",
+        "poToken": true,
+        "downloadTimingsMs": {
+          "extract": 3576,
+          "adWait": 5000,
+          "transfer": 454,
+          "remux": 90
+        }
+      },
+      "attemptsDetail": [
+        {
+          "videoId": "2ru92T7Y5z0",
+          "score": 1.0,
+          "source": "album",
+          "download": {
+            "videoId": "2ru92T7Y5z0",
+            "file": "2ru92T7Y5z0.opus",
+            "container": "ogg",
+            "mimeType": "audio/ogg",
+            "codec": "opus",
+            "originalContainer": "webm",
+            "itag": "251",
+            "abrKbps": 133.2,
+            "sampleRate": 48000,
+            "channels": 2,
+            "sizeBytes": 3284808,
+            "originalSizeBytes": 3329928,
+            "durationMs": 200060,
+            "client": "MWEB",
+            "poToken": true,
+            "title": "Blinding Lights",
+            "channel": "The Weeknd",
+            "timingsMs": {
+              "extract": 3576,
+              "adWait": 5000,
+              "transfer": 454,
+              "remux": 90
+            },
+            "fallback": null,
+            "warnings": []
+          },
+          "verify": {
+            "verified": true,
+            "similarity": 0.9428,
+            "offsetS": 47.93,
+            "threshold": 0.7,
+            "baseline": 0.5011,
+            "previewItems": 221,
+            "trackItems": 1594,
+            "error": null,
+            "elapsedMs": 442
+          },
+          "error": null
+        }
+      ],
+      "topCandidates": [
+        {
+          "videoId": "2ru92T7Y5z0",
+          "url": "https://music.youtube.com/watch?v=2ru92T7Y5z0",
+          "title": "Blinding Lights",
+          "artists": [
+            "The Weeknd"
+          ],
+          "album": "After Hours",
+          "durationMs": 201000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 1.0,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "blinding lights",
+              "got": "blinding lights",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "the weeknd"
+              ],
+              "missing": [],
+              "candidate": [
+                "the weeknd"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 1.0,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 1.0
+          },
+          "albumMatch": {
+            "browseId": "MPREb_TH6Wut5eTMQ",
+            "title": "After Hours",
+            "year": "2020",
+            "trackCount": 14,
+            "deezerTrackCount": 14,
+            "position": 9,
+            "deezerPosition": 9,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "4NRXx6U8ABQ",
+          "url": "https://music.youtube.com/watch?v=4NRXx6U8ABQ",
+          "title": "Blinding Lights",
+          "artists": [
+            "The Weeknd"
+          ],
+          "album": "After Hours",
+          "durationMs": 201000,
+          "videoType": "MUSIC_VIDEO_TYPE_OMV",
+          "kind": "omv",
+          "source": "album",
+          "sources": [
+            "album"
+          ],
+          "rank": 0,
+          "score": 0.975,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 1000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "blinding lights",
+              "got": "blinding lights",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "the weeknd"
+              ],
+              "missing": [],
+              "candidate": [
+                "the weeknd"
+              ]
+            },
+            "album": {
+              "score": 1.0,
+              "fromAlbumMatch": true
+            },
+            "source": {
+              "score": 0.75,
+              "kind": "omv"
+            },
+            "weighted": 0.975,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.975
+          },
+          "albumMatch": {
+            "browseId": "MPREb_TH6Wut5eTMQ",
+            "title": "After Hours",
+            "year": "2020",
+            "trackCount": 14,
+            "deezerTrackCount": 14,
+            "position": 9,
+            "deezerPosition": 9,
+            "alignScore": 1.0,
+            "albumScore": 1.0,
+            "searchScore": 1.0
+          }
+        },
+        {
+          "videoId": "J7p4bzqLvCw",
+          "url": "https://music.youtube.com/watch?v=J7p4bzqLvCw",
+          "title": "Blinding Lights",
+          "artists": [
+            "The Weeknd"
+          ],
+          "album": "Blinding Lights",
+          "durationMs": 202000,
+          "videoType": "MUSIC_VIDEO_TYPE_ATV",
+          "kind": "atv",
+          "source": "isrc",
+          "sources": [
+            "isrc",
+            "song"
+          ],
+          "rank": 0,
+          "score": 0.9231,
+          "rejected": null,
+          "breakdown": {
+            "weights": {
+              "duration": 0.3,
+              "title": 0.3,
+              "artist": 0.2,
+              "album": 0.1,
+              "source": 0.1
+            },
+            "duration": {
+              "score": 1.0,
+              "diffMs": 2000
+            },
+            "title": {
+              "score": 1.0,
+              "base": 1.0,
+              "version": 1.0,
+              "expected": "blinding lights",
+              "got": "blinding lights",
+              "expectedVersion": null,
+              "gotVersion": null
+            },
+            "artist": {
+              "score": 1.0,
+              "matched": [
+                "the weeknd"
+              ],
+              "missing": [],
+              "candidate": [
+                "the weeknd"
+              ]
+            },
+            "album": {
+              "score": 0.2308,
+              "fromAlbumMatch": false
+            },
+            "source": {
+              "score": 1.0,
+              "kind": "atv"
+            },
+            "weighted": 0.9231,
+            "penalties": [],
+            "penaltyFactor": 1,
+            "titleGate": 1.0,
+            "artistGate": 1.0,
+            "total": 0.9231
+          },
+          "albumMatch": null
+        }
+      ],
+      "steps": [
+        {
+          "name": "deezer_album",
+          "ms": 204,
+          "results": 14
+        },
+        {
+          "name": "album",
+          "ms": 1298,
+          "query": "The Weeknd After Hours",
+          "results": 2,
+          "albums": [
+            {
+              "browseId": "MPREb_TH6Wut5eTMQ",
+              "aligned": true
+            }
+          ]
+        },
+        {
+          "name": "isrc",
+          "ms": 835,
+          "query": "USUG11904206",
+          "results": 2
+        },
+        {
+          "name": "song",
+          "ms": 813,
+          "query": "The Weeknd Blinding Lights",
+          "results": 8
+        }
+      ]
+    }
+  ]
+}

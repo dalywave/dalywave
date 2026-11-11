@@ -1,0 +1,53 @@
+# Бенчмарк в Docker: fetcher и сервис PO-токенов в своей сети. Порт PO-токенов наружу
+# не публикуется — его видит только fetcher по имени pot. Выход в интернет у сети есть:
+# обоим сервисам нужен YouTube.
+#
+#   docker compose -f compose.bench.yml build
+#   BENCH_LABEL=server-default-pot docker compose -f compose.bench.yml run --rm bench
+#   BENCH_LABEL=server-mweb-pot FETCHER_PLAYER_CLIENTS=mweb \
+#     docker compose -f compose.bench.yml run --rm bench
+#   BENCH_LABEL=server-default FETCHER_POT_URL= docker compose -f compose.bench.yml run --rm bench
+#   docker compose -f compose.bench.yml down
+#
+# Результаты: bench/results-<метка>.json и .md, аудио — bench/out/<метка>/.
+name: dalywave-fetcher-bench
+
+services:
+  pot:
+    image: brainicism/bgutil-ytdlp-pot-provider:2.0.2-deno
+    restart: unless-stopped
+    networks: [fetch]
+
+  bench:
+    build: .
+    image: dalywave-fetcher:0.1.0
+    depends_on: [pot]
+    networks: [fetch]
+    # Пишет в смонтированную bench/ — от имени владельца папки на хосте.
+    user: "${BENCH_UID:-1000}:${BENCH_GID:-1000}"
+    environment:
+      HOME: /tmp
+      DENO_DIR: /tmp/deno
+      FETCHER_DATA_DIR: /bench/out/.data
+      # Пустое значение выключает PO-токены.
+      FETCHER_POT_URL: ${FETCHER_POT_URL-http://pot:4416}
+      # Пусто — клиенты по выбору yt-dlp; после 403 сам повторит через mweb с токеном.
+      FETCHER_PLAYER_CLIENTS: ${FETCHER_PLAYER_CLIENTS:-}
+      FETCHER_FALLBACK_CLIENTS: ${FETCHER_FALLBACK_CLIENTS:-}
+      FETCHER_SOURCE_ADDRESS: ${FETCHER_SOURCE_ADDRESS:-}
+      # Cookies кладутся в bench/out/ (папка в .gitignore): FETCHER_COOKIES=/bench/out/cookies.txt
+      FETCHER_COOKIES: ${FETCHER_COOKIES:-}
+    volumes:
+      - ./bench:/bench
+    entrypoint: ["fetcher"]
+    command:
+      - bench
+      - --set
+      - /bench/set.json
+      - --out
+      - /bench/results-${BENCH_LABEL:-docker}.json
+      - --audio-dir
+      - /bench/out
+
+networks:
+  fetch: {}

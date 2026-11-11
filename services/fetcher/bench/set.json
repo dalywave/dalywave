@@ -1,0 +1,165 @@
+{
+  "description": "Эталонный набор этапа 0: 20 треков Deezer, подобранных через поиск Deezer. Артисты из реальной медиатеки, кириллица, фонк со slowed-версиями, классика с концертными и ремастер-ловушками, участие других артистов, длинный трек, мировой хит, трек без превью.",
+  "tracks": [
+    {
+      "deezerId": 3036497461,
+      "artist": "5opka",
+      "title": "Пиглины",
+      "durationS": 137,
+      "tags": ["owner", "cyrillic", "featured"],
+      "note": "Кириллица, участник OTURRO"
+    },
+    {
+      "deezerId": 3040222091,
+      "artist": "Mzlff",
+      "title": "ящики",
+      "durationS": 199,
+      "tags": ["owner", "cyrillic", "album", "featured"],
+      "note": "Девятый трек альбома «светлая сторона»; в альбоме YouTube Music стоит клип вместо аудио"
+    },
+    {
+      "deezerId": 3898084851,
+      "artist": "Rushex",
+      "title": "ZAKHELO (Slowed)",
+      "durationS": 129,
+      "tags": ["owner", "phonk", "slowed"],
+      "note": "Slowed — отдельный трек Deezer; верна именно slowed-версия"
+    },
+    {
+      "deezerId": 3898084841,
+      "artist": "Rushex",
+      "title": "ZAKHELO",
+      "durationS": 117,
+      "tags": ["owner", "phonk", "trap"],
+      "note": "Оригинал той же песни: slowed / sped up / ultra slowed — ловушки"
+    },
+    {
+      "deezerId": 3345710671,
+      "artist": "MXZI, Rushex",
+      "title": "MONTAGEM BATCHI (ULTRA SLOWED)",
+      "durationS": 97,
+      "tags": ["owner", "phonk", "slowed", "featured"],
+      "note": "ULTRA SLOWED ≠ Slowed"
+    },
+    {
+      "deezerId": 3657134452,
+      "artist": "Lowborn",
+      "title": "Doctor Doctor",
+      "durationS": 165,
+      "tags": ["owner", "common-title"],
+      "note": "Распространённое название: Thompson Twins, UFO и другие"
+    },
+    {
+      "deezerId": 3657352542,
+      "artist": "Lowborn",
+      "title": "Dirtyprettylove",
+      "durationS": 201,
+      "tags": ["owner", "album"],
+      "note": "Трек из сборника «Collection One», сингл с тем же звуком"
+    },
+    {
+      "deezerId": 3580793761,
+      "artist": "Mytch",
+      "title": "flAsh flooD",
+      "durationS": 156,
+      "tags": ["owner", "album", "odd-case"],
+      "note": "Странный регистр, трек EP «vErGe EP»"
+    },
+    {
+      "deezerId": 3142555721,
+      "artist": "Parker The Bandit",
+      "title": "Paint it Black",
+      "durationS": 159,
+      "tags": ["owner", "cover-trap"],
+      "note": "Кавер: оригинал The Rolling Stones намного популярнее"
+    },
+    {
+      "deezerId": 4309446132,
+      "artist": "MellSher, 5opka",
+      "title": "Покажи мне",
+      "durationS": 134,
+      "tags": ["owner", "cyrillic", "featured", "no-preview"],
+      "note": "Свежий релиз без превью в Deezer — проверить отпечатком нечем"
+    },
+    {
+      "deezerId": 3949282031,
+      "artist": "Пошлая Молли",
+      "title": "Нон стоп",
+      "durationS": 213,
+      "tags": ["cyrillic", "album"],
+      "note": "Кириллица, альбом «8 способов как бросить...»"
+    },
+    {
+      "deezerId": 2223241397,
+      "artist": "Noize MC",
+      "title": "Вселенная бесконечна?",
+      "durationS": 260,
+      "tags": ["cyrillic", "album"],
+      "note": "Знак вопроса в названии, «Новый альбом»"
+    },
+    {
+      "deezerId": 137639209,
+      "artist": "Валентин Стрыкало",
+      "title": "Кайен",
+      "durationS": 182,
+      "tags": ["cyrillic", "album"],
+      "note": "Кириллица, альбом «Смирись и расслабься»"
+    },
+    {
+      "deezerId": 3510764041,
+      "artist": "кис-кис",
+      "title": "молчи",
+      "durationS": 198,
+      "tags": ["cyrillic", "album"],
+      "note": "Дефис в имени артиста"
+    },
+    {
+      "deezerId": 1617024092,
+      "artist": "Kordhell",
+      "title": "Murder In My Mind",
+      "durationS": 145,
+      "tags": ["phonk", "trap"],
+      "note": "Фонк; рядом Sped Up, Slowed + Reverb, Lil Texas Remix"
+    },
+    {
+      "deezerId": 448260732,
+      "artist": "Кино",
+      "title": "Группа крови",
+      "durationS": 284,
+      "tags": ["cyrillic", "classic", "trap"],
+      "note": "1988; ремастеры, концертные записи и английская версия"
+    },
+    {
+      "deezerId": 4091937401,
+      "artist": "Queen",
+      "title": "Bohemian Rhapsody",
+      "durationS": 354,
+      "tags": ["classic", "trap"],
+      "note": "Live Aid, Wembley, Budapest и ремастер 2011"
+    },
+    {
+      "deezerId": 602456552,
+      "artist": "Post Malone, Swae Lee",
+      "title": "Sunflower (Spider-Man: Into the Spider-Verse)",
+      "durationS": 158,
+      "tags": ["featured", "popular", "brackets"],
+      "note": "Скобка — не метка версии; рядом Remix и Tiny Desk"
+    },
+    {
+      "deezerId": 116914036,
+      "artist": "Pink Floyd",
+      "title": "Shine On You Crazy Diamond (Pts. 1-5)",
+      "durationS": 812,
+      "tags": ["long", "classic", "trap"],
+      "note": "13:32; концертные версии на Pulse и Delicate Sound of Thunder"
+    },
+    {
+      "deezerId": 908604612,
+      "artist": "The Weeknd",
+      "title": "Blinding Lights",
+      "durationS": 200,
+      "tags": ["popular", "trap"],
+      "note": "Мировой хит; ремиксы и Live At SoFi Stadium"
+    }
+  ]
+}

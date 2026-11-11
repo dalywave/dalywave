@@ -43,3 +43,4 @@ xcuserdata/
 # Системное
 .DS_Store
 *.log
+/services/fetcher/data/

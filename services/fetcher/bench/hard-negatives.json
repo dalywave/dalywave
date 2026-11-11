@@ -1,0 +1,18 @@
+{
+  "description": "Трудные негативы для калибровки отпечатков: превью трека Deezer против другой записи той же песни (концерт, ремикс, sped up / slowed, другой язык, перезапись). Проверка должна их отбивать.",
+  "pairs": [
+    {"deezerId": 4091937401, "videoId": "kM0Fpbz0W8U", "note": "Queen — Bohemian Rhapsody: студия ↔ Live Aid"},
+    {"deezerId": 908604612, "videoId": "gJW0MRL9vLw", "note": "The Weeknd — Blinding Lights: студия ↔ Live At SoFi Stadium"},
+    {"deezerId": 908604612, "videoId": "cLSjuixwlrs", "note": "The Weeknd — Blinding Lights: оригинал ↔ Chromatics Remix"},
+    {"deezerId": 908604612, "videoId": "hTAojo7-56w", "note": "The Weeknd — Blinding Lights: оригинал ↔ Remix с ROSALÍA"},
+    {"deezerId": 1617024092, "videoId": "Y8uY7ZAjz6Q", "note": "Kordhell — Murder In My Mind: оригинал ↔ Sped Up"},
+    {"deezerId": 1617024092, "videoId": "1o3oHXOip04", "note": "Kordhell — Murder In My Mind: оригинал ↔ Slowed + Reverb"},
+    {"deezerId": 1617024092, "videoId": "m0hSyrInZFs", "note": "Kordhell — Murder In My Mind: оригинал ↔ Lil Texas Remix"},
+    {"deezerId": 448260732, "videoId": "SKP3hpWEgEs", "note": "Кино — Группа крови: русская ↔ английская версия (тот же аккомпанемент)"},
+    {"deezerId": 448260732, "videoId": "EByofhvVRco", "note": "Кино — Группа крови: альбом 1988 ↔ запись с «Последнего героя»"},
+    {"deezerId": 602456552, "videoId": "YbYVpazd_6g", "note": "Post Malone — Sunflower: студия ↔ Tiny Desk"},
+    {"deezerId": 3345710671, "videoId": "uMz9M0VN8mo", "note": "MONTAGEM BATCHI: ULTRA SLOWED ↔ SLOWED"},
+    {"deezerId": 3898084841, "videoId": "ckPPfBLLljM", "note": "Rushex — ZAKHELO: оригинал ↔ Sped Up"},
+    {"deezerId": 3898084841, "videoId": "9YJmv3ZPVx8", "note": "Rushex — ZAKHELO: оригинал ↔ Ultra Slowed"}
+  ]
+}

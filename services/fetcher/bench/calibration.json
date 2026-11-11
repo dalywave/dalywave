@@ -1,0 +1,264 @@
+{
+  "threshold": 0.8,
+  "positives": {
+    "n": 19,
+    "min": 0.9233,
+    "p05": 0.9233,
+    "median": 0.9428,
+    "p95": 0.9761,
+    "max": 0.9869
+  },
+  "negatives": {
+    "n": 342,
+    "min": 0.5008,
+    "p05": 0.5184,
+    "median": 0.54665,
+    "p95": 0.5788,
+    "max": 0.621
+  },
+  "hardNegatives": {
+    "n": 13,
+    "min": 0.526,
+    "p05": 0.526,
+    "median": 0.565,
+    "p95": 0.7945,
+    "max": 0.8896
+  },
+  "rejectedAttempts": {
+    "n": 0
+  },
+  "midpoint": {
+    "negatives": 0.772,
+    "hardNegatives": 0.906
+  },
+  "positivePairs": [
+    {
+      "track": "mweb-pot/3657352542",
+      "file": "3ly-6VdjebU.opus",
+      "sim": 0.9233
+    },
+    {
+      "track": "mweb-pot/602456552",
+      "file": "r7Rn4ryE_w8.opus",
+      "sim": 0.9335
+    },
+    {
+      "track": "mweb-pot/3142555721",
+      "file": "EEVmC1D9FU8.opus",
+      "sim": 0.9346
+    },
+    {
+      "track": "mweb-pot/3898084841",
+      "file": "xF7ONLivVME.opus",
+      "sim": 0.9354
+    },
+    {
+      "track": "mweb-pot/3510764041",
+      "file": "Sv1qQqcNb5c.opus",
+      "sim": 0.9364
+    },
+    {
+      "track": "mweb-pot/137639209",
+      "file": "3A2x-7HawDc.opus",
+      "sim": 0.9367
+    },
+    {
+      "track": "mweb-pot/3345710671",
+      "file": "W2jaDu3nO10.opus",
+      "sim": 0.9393
+    },
+    {
+      "track": "mweb-pot/3898084851",
+      "file": "A4vFXuEkuzk.opus",
+      "sim": 0.9402
+    },
+    {
+      "track": "mweb-pot/3580793761",
+      "file": "5DVeTiQGnug.opus",
+      "sim": 0.9412
+    },
+    {
+      "track": "mweb-pot/908604612",
+      "file": "2ru92T7Y5z0.opus",
+      "sim": 0.9428
+    },
+    {
+      "track": "mweb-pot/2223241397",
+      "file": "Ry7itx9Uvp4.opus",
+      "sim": 0.9439
+    },
+    {
+      "track": "mweb-pot/3657134452",
+      "file": "O4j9LsDWcrE.opus",
+      "sim": 0.9489
+    },
+    {
+      "track": "mweb-pot/4091937401",
+      "file": "BSTsnWoslP4.opus",
+      "sim": 0.954
+    },
+    {
+      "track": "mweb-pot/116914036",
+      "file": "Tu7oq3VNgpY.opus",
+      "sim": 0.9581
+    },
+    {
+      "track": "mweb-pot/448260732",
+      "file": "xtxjm7ciwmc.opus",
+      "sim": 0.9642
+    },
+    {
+      "track": "mweb-pot/1617024092",
+      "file": "RXRWE_XQ8aE.opus",
+      "sim": 0.9649
+    },
+    {
+      "track": "mweb-pot/3036497461",
+      "file": "-oB9CsCZoM4.opus",
+      "sim": 0.9655
+    },
+    {
+      "track": "mweb-pot/3040222091",
+      "file": "afkL3uLNeXA.opus",
+      "sim": 0.9761
+    },
+    {
+      "track": "mweb-pot/3949282031",
+      "file": "6-l6qCcXCQs.opus",
+      "sim": 0.9869
+    }
+  ],
+  "hardNegativePairs": [
+    {
+      "deezerId": 908604612,
+      "videoId": "hTAojo7-56w",
+      "note": "The Weeknd — Blinding Lights: оригинал ↔ Remix с ROSALÍA",
+      "sim": 0.8896
+    },
+    {
+      "deezerId": 908604612,
+      "videoId": "gJW0MRL9vLw",
+      "note": "The Weeknd — Blinding Lights: студия ↔ Live At SoFi Stadium",
+      "sim": 0.7945
+    },
+    {
+      "deezerId": 4091937401,
+      "videoId": "kM0Fpbz0W8U",
+      "note": "Queen — Bohemian Rhapsody: студия ↔ Live Aid",
+      "sim": 0.6119
+    },
+    {
+      "deezerId": 908604612,
+      "videoId": "cLSjuixwlrs",
+      "note": "The Weeknd — Blinding Lights: оригинал ↔ Chromatics Remix",
+      "sim": 0.6017
+    },
+    {
+      "deezerId": 448260732,
+      "videoId": "SKP3hpWEgEs",
+      "note": "Кино — Группа крови: русская ↔ английская версия (тот же аккомпанемент)",
+      "sim": 0.5945
+    },
+    {
+      "deezerId": 602456552,
+      "videoId": "YbYVpazd_6g",
+      "note": "Post Malone — Sunflower: студия ↔ Tiny Desk",
+      "sim": 0.5831
+    },
+    {
+      "deezerId": 1617024092,
+      "videoId": "m0hSyrInZFs",
+      "note": "Kordhell — Murder In My Mind: оригинал ↔ Lil Texas Remix",
+      "sim": 0.565
+    },
+    {
+      "deezerId": 1617024092,
+      "videoId": "1o3oHXOip04",
+      "note": "Kordhell — Murder In My Mind: оригинал ↔ Slowed + Reverb",
+      "sim": 0.5565
+    },
+    {
+      "deezerId": 1617024092,
+      "videoId": "Y8uY7ZAjz6Q",
+      "note": "Kordhell — Murder In My Mind: оригинал ↔ Sped Up",
+      "sim": 0.5518
+    },
+    {
+      "deezerId": 448260732,
+      "videoId": "EByofhvVRco",
+      "note": "Кино — Группа крови: альбом 1988 ↔ запись с «Последнего героя»",
+      "sim": 0.5348
+    },
+    {
+      "deezerId": 3898084841,
+      "videoId": "9YJmv3ZPVx8",
+      "note": "Rushex — ZAKHELO: оригинал ↔ Ultra Slowed",
+      "sim": 0.5285
+    },
+    {
+      "deezerId": 3345710671,
+      "videoId": "uMz9M0VN8mo",
+      "note": "MONTAGEM BATCHI: ULTRA SLOWED ↔ SLOWED",
+      "sim": 0.5284
+    },
+    {
+      "deezerId": 3898084841,
+      "videoId": "ckPPfBLLljM",
+      "note": "Rushex — ZAKHELO: оригинал ↔ Sped Up",
+      "sim": 0.526
+    }
+  ],
+  "rejectedAttemptPairs": [],
+  "topNegativePairs": [
+    {
+      "preview": "mweb-pot/1617024092",
+      "file": "mweb-pot/3040222091",
+      "sim": 0.621
+    },
+    {
+      "preview": "mweb-pot/3510764041",
+      "file": "mweb-pot/3949282031",
+      "sim": 0.6145
+    },
+    {
+      "preview": "mweb-pot/3040222091",
+      "file": "mweb-pot/1617024092",
+      "sim": 0.6081
+    },
+    {
+      "preview": "mweb-pot/3345710671",
+      "file": "mweb-pot/3040222091",
+      "sim": 0.6072
+    },
+    {
+      "preview": "mweb-pot/4091937401",
+      "file": "mweb-pot/116914036",
+      "sim": 0.604
+    },
+    {
+      "preview": "mweb-pot/602456552",
+      "file": "mweb-pot/3345710671",
+      "sim": 0.6023
+    },
+    {
+      "preview": "mweb-pot/1617024092",
+      "file": "mweb-pot/3345710671",
+      "sim": 0.5939
+    },
+    {
+      "preview": "mweb-pot/2223241397",
+      "file": "mweb-pot/3657134452",
+      "sim": 0.5938
+    },
+    {
+      "preview": "mweb-pot/3949282031",
+      "file": "mweb-pot/3510764041",
+      "sim": 0.5934
+    },
+    {
+      "preview": "mweb-pot/3040222091",
+      "file": "mweb-pot/3345710671",
+      "sim": 0.5922
+    }
+  ]
+}
