@@ -1,0 +1,15 @@
+[package]
+name = "dalywave-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Волна без сети: подбор следующего трека из скачанного запаса по настройкам и пропускам — правила сервера в компактном виде"
+
+[lib]
+name = "dalywave_core"
+
+[dependencies]
+dalywave-protocol = { path = "../../protocol" }
+uuid = { version = "1", features = ["v7"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

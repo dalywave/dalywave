@@ -11,7 +11,12 @@
 //!
 //! «Без пауз» сделан цепочкой сегментов внутри одной деки: следующий трек декодируется в тот же
 //! буфер сразу за предыдущим, ресемплер не сбрасывается — стык точен до сэмпла. Кроссфейд и
-//! будущий режим «Диджей» используют разные деки, которые сводит микшер.
+//! режим «Диджей» используют разные деки, которые сводит микшер.
+//!
+//! «Диджей»: движок заранее берёт анализ текущего и следующего трека ([`AnalysisSource`]),
+//! выбирает переход (`dalywave_transitions::plan`), готовит входящий с нужной сильной доли,
+//! растягивает его по карте темпа (Signalsmith Stretch) и стартует ровно на кадре сильной доли
+//! уходящего; автоматику (громкости, эквалайзер, фильтры, эхо) ведёт микшер.
 //!
 //! Ссылки на файлы — подписанные и живут несколько часов. Если ссылка перестала работать посреди
 //! трека или её ещё нет ([`SourceSpec::Deferred`]), движок просит новую у [`Resolver`] вызывающего
@@ -23,12 +28,14 @@ mod deck;
 mod decode;
 pub mod devices;
 mod error;
+mod fx;
 mod meter;
 mod mixer;
 mod mp4;
 mod output;
 mod resample;
 pub mod source;
+mod stretch;
 pub mod testkit;
 
 #[cfg(target_vendor = "apple")]
@@ -41,6 +48,8 @@ use std::thread::JoinHandle;
 
 use crossbeam_channel::{Receiver, Sender};
 
+pub use dalywave_transitions as transitions;
+pub use dalywave_transitions::Analysis;
 pub use error::AudioError;
 pub use mixer::equal_power;
 
@@ -65,7 +74,13 @@ pub enum OutputConfig {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Transition {
     Gapless,
-    Crossfade { ms: u32 },
+    Crossfade {
+        ms: u32,
+    },
+    /// Сведение, как в сете. `expressiveness` — 0…100: от незаметного до эффектного.
+    Dj {
+        expressiveness: u8,
+    },
 }
 
 /// Что вернул [`Resolver`]: свежая ссылка на файл и данные для выравнивания громкости.
@@ -75,6 +90,32 @@ pub struct Resolved {
     pub loudness_lufs: Option<f32>,
     pub peak_db: Option<f32>,
     pub duration_ms: Option<u64>,
+}
+
+type AnalysisFn = dyn Fn(&TrackSpec) -> Result<Option<Analysis>, String> + Send + Sync;
+
+/// Анализ трека для «Диджея» (сетка долей, фразы, вокал, энергия) по [`TrackSpec::stream_id`]:
+/// приложение берёт его у сервера. `Ok(None)` — анализа нет (переход будет «Умным»).
+/// Вызывается в фоновых потоках движка, может ходить в сеть.
+#[derive(Clone)]
+pub struct AnalysisSource(Arc<AnalysisFn>);
+
+impl AnalysisSource {
+    pub fn new(
+        f: impl Fn(&TrackSpec) -> Result<Option<Analysis>, String> + Send + Sync + 'static,
+    ) -> Self {
+        Self(Arc::new(f))
+    }
+
+    pub fn fetch(&self, track: &TrackSpec) -> Result<Option<Analysis>, String> {
+        (self.0)(track)
+    }
+}
+
+impl fmt::Debug for AnalysisSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("AnalysisSource")
+    }
 }
 
 type ResolveFn = dyn Fn(&TrackSpec) -> Result<Resolved, String> + Send + Sync;
@@ -118,6 +159,22 @@ pub struct EngineConfig {
     pub volume: f32,
     pub user_agent: String,
     pub resolver: Option<Resolver>,
+    /// Анализ треков для «Диджея»; без него — [`TrackSpec::analysis`] или «Умный» переход.
+    pub analysis: Option<AnalysisSource>,
+    /// Проверки «Диджея»: во время перехода слышна только одна дека и без автоматики — так рендер
+    /// даёт дорожки уходящего и входящего по отдельности (сверка долей по атакам).
+    #[doc(hidden)]
+    pub dj_solo: DjSolo,
+}
+
+/// Какая дека слышна во время перехода (только для проверок).
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DjSolo {
+    #[default]
+    Both,
+    Outgoing,
+    Incoming,
 }
 
 impl Default for EngineConfig {
@@ -136,6 +193,8 @@ impl Default for EngineConfig {
             volume: 1.0,
             user_agent: format!("DalyWave-audio/{}", env!("CARGO_PKG_VERSION")),
             resolver: None,
+            analysis: None,
+            dj_solo: DjSolo::Both,
         }
     }
 }
@@ -167,6 +226,8 @@ pub struct TrackSpec {
     pub loudness_lufs: Option<f32>,
     /// Истинный пик трека, dBFS: усиление при нормализации не поднимет пик выше −1 dBFS.
     pub peak_db: Option<f32>,
+    /// Анализ для «Диджея», если он уже есть; иначе движок спросит [`EngineConfig::analysis`].
+    pub analysis: Option<Arc<Analysis>>,
 }
 
 impl TrackSpec {
@@ -182,6 +243,7 @@ impl TrackSpec {
             duration_ms: None,
             loudness_lufs: None,
             peak_db: None,
+            analysis: None,
         }
     }
 
@@ -266,6 +328,22 @@ pub enum Event {
     },
     /// ~20 раз в секунду во время воспроизведения, если включено [`Engine::set_levels`].
     Level(Level),
+    /// «Диджей» выбрал переход к следующему треку (для журнала и проверок).
+    TransitionPlanned {
+        index: usize,
+        next_index: usize,
+        /// `blend`, `filter`, `echo`, `cut`, `fade` («Умный»)
+        technique: &'static str,
+        /// Позиция уходящего, где начинается переход, и входящего — где он вступает, мс.
+        start_ms: f64,
+        in_start_ms: f64,
+        /// Длина автоматики и через сколько от её начала вступает входящий, мс.
+        length_ms: f64,
+        in_offset_ms: f64,
+        /// Карта темпа входящего от его старта.
+        tempo: dalywave_transitions::TempoMap,
+        note: String,
+    },
     /// Устройство вывода открыто заново (сменилось или пропало и вернулось).
     Output {
         sample_rate: u32,

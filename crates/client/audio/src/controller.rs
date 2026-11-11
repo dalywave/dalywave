@@ -5,12 +5,13 @@
 //! Тяжёлое (ссылка у сервера, открытие источника, разбор контейнера, перемотка) идёт в отдельных
 //! потоках подготовки, чтобы команды обрабатывались сразу.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crossbeam_channel::{Receiver, Sender};
+use dalywave_transitions::{Analysis, Plan, PlanInput, TempoMap};
 
 use crate::deck::{self, DeckCmd, DeckHandle, PreparedTrack};
 use crate::decode::TrackDecoder;
@@ -18,8 +19,8 @@ use crate::mixer::{MAX_DECKS, Mixer, MixerCmd, MixerEvent, MixerPorts, StartRule
 use crate::output::{self, LoadStats, Output, OutputIssue};
 use crate::source::SourceCache;
 use crate::{
-    AudioError, ChangeReason, Command, EngineConfig, Event, OutputConfig, PlaybackState, Snapshot,
-    SourceSpec, TrackSpec, Transition,
+    AudioError, ChangeReason, Command, DjSolo, EngineConfig, Event, OutputConfig, PlaybackState,
+    Snapshot, SourceSpec, TrackSpec, Transition,
 };
 
 const POSITION_EVERY: Duration = Duration::from_millis(250);
@@ -27,6 +28,30 @@ const POSITION_EVERY: Duration = Duration::from_millis(250);
 const LEVEL_EVERY: Duration = Duration::from_millis(40);
 /// Пауза дольше этого — останавливаем поток устройства (на iOS система сможет усыпить приложение).
 const STOP_OUTPUT_AFTER: Duration = Duration::from_secs(3);
+/// Устройство не просит звук столько времени, хотя должно играть — вывод открывается заново,
+/// не помогло — ошибка: иначе плеер молча висит в «загрузке» (так бывает, когда системный
+/// звук завис: coreaudiod не вызывает колбэки ни у одного устройства).
+const OUTPUT_STALL: Duration = Duration::from_secs(3);
+/// «Диджей»: переход не раньше, чем через столько от текущей позиции — входящему нужно открыться,
+/// перемотаться к сильной доле и набрать буфер.
+const DJ_LEAD_MS: f64 = 12_000.0;
+/// «Диджей»: входящий готовится за столько до начала перехода.
+const DJ_PREP_MS: f64 = 20_000.0;
+/// Анализ не пришёл, а до конца трека меньше этого — переход без него («Умный»).
+const DJ_WAIT_ANALYSIS_MS: u64 = 40_000;
+
+/// Анализ трека: ещё идёт или готов (None — его нет).
+enum AnalysisState {
+    Pending,
+    Done(Option<Arc<Analysis>>),
+}
+
+/// Выбранный переход «Диджея» к следующему треку.
+struct DjPlan {
+    index: usize,
+    id: String,
+    plan: Plan,
+}
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Role {
@@ -58,6 +83,14 @@ struct Prep {
     index: usize,
     offset_ms: u64,
     purpose: Purpose,
+}
+
+/// Откуда начинать подготовку трека.
+#[derive(Clone, Debug, Default)]
+struct StartAt {
+    offset_ms: u64,
+    /// «Диджей»: точное начало (мс, дробное) и карта темпа входящего.
+    tempo: Option<TempoMap>,
 }
 
 struct PrepResult {
@@ -147,10 +180,18 @@ struct Controller {
     last_pos_emit: Instant,
     last_level_emit: Instant,
     paused_since: Option<Instant>,
+    /// Сторож вывода: последнее значение счётчика кадров и с какого момента оно не растёт.
+    stall: Option<(u64, Instant)>,
+    stall_reopened: bool,
+    stall_reported: bool,
     buffering: bool,
     seek_target_ms: Option<u64>,
     consecutive_errors: u32,
     shutdown: bool,
+    analyses: HashMap<String, AnalysisState>,
+    analysis_tx: Sender<(String, Option<Arc<Analysis>>)>,
+    analysis_rx: Receiver<(String, Option<Arc<Analysis>>)>,
+    dj_plan: Option<DjPlan>,
 }
 
 pub(crate) fn run(
@@ -256,6 +297,14 @@ impl Controller {
             parts.device.as_deref().unwrap_or("system default")
         );
         let (prep_tx, prep_rx) = crossbeam_channel::unbounded();
+        let (analysis_tx, analysis_rx) = crossbeam_channel::unbounded();
+        let mut ports = parts.ports;
+        if matches!(cfg.transition, Transition::Dj { .. }) {
+            let _ = ports.cmd_tx.push(MixerCmd::Dj(true));
+        }
+        if cfg.dj_solo != DjSolo::Both {
+            let _ = ports.cmd_tx.push(MixerCmd::Solo(cfg.dj_solo));
+        }
         Ok(Self {
             cache: SourceCache::with_resolver(cfg.user_agent.clone(), cfg.resolver.clone()),
             volume: cfg.volume,
@@ -277,7 +326,7 @@ impl Controller {
             device_rate: parts.rate,
             device_channels: parts.channels,
             load: parts.load,
-            ports: parts.ports,
+            ports,
             queue: Vec::new(),
             index: None,
             state: PlaybackState::Idle,
@@ -295,10 +344,17 @@ impl Controller {
             last_pos_emit: Instant::now(),
             last_level_emit: Instant::now(),
             paused_since: None,
+            stall: None,
+            stall_reopened: false,
+            stall_reported: false,
             buffering: false,
             seek_target_ms: None,
             consecutive_errors: 0,
             shutdown: false,
+            analyses: HashMap::new(),
+            analysis_tx,
+            analysis_rx,
+            dj_plan: None,
         })
     }
 
@@ -368,13 +424,27 @@ impl Controller {
             self.on_prep(r);
         }
         self.poll_output_issues();
+        while let Ok((key, a)) = self.analysis_rx.try_recv() {
+            self.analyses.insert(key, AnalysisState::Done(a));
+        }
         self.track_segments();
+        self.maybe_plan();
         self.maybe_preload();
         self.emit_position(false);
         self.emit_level();
-        let undecided = self.index.and_then(|i| self.next_index(i)).is_some()
-            && self.next == NextState::None
-            && (self.main_slot().is_some() || self.pending_slot().is_some());
+        let has_next = self.index.and_then(|i| self.next_index(i)).is_some();
+        let undecided = if matches!(self.transition, Transition::Dj { .. }) {
+            // «Диджей» решает, когда главная дека зазвучала и пришёл анализ; с выбранным
+            // переходом следующий готовится ближе к нему
+            has_next
+                && self.next == NextState::None
+                && self.dj_plan.is_none()
+                && (self.main_slot().is_some() || self.pending_slot().is_some())
+        } else {
+            has_next
+                && self.next == NextState::None
+                && (self.main_slot().is_some() || self.pending_slot().is_some())
+        };
         let hold =
             !self.preps.is_empty() || undecided || matches!(self.next, NextState::Preparing(_));
         self.ports.shared.hold.store(hold, Ordering::Release);
@@ -384,7 +454,51 @@ impl Controller {
         {
             self.output.stop();
         }
+        self.watch_output();
         self.update_snapshot();
+    }
+
+    /// Сторож вывода: должно звучать, а устройство не берёт ни кадра.
+    fn watch_output(&mut self) {
+        let active = self.want_play
+            && matches!(self.cfg.output, OutputConfig::Device { .. })
+            && self.output.is_running()
+            && matches!(self.state, PlaybackState::Loading | PlaybackState::Playing);
+        let clock = self.ports.shared.clock.load(Ordering::Relaxed);
+        if !active {
+            self.stall = None;
+            return;
+        }
+        match self.stall {
+            Some((c, since)) if c == clock => {
+                if since.elapsed() < OUTPUT_STALL {
+                    return;
+                }
+                if !self.stall_reopened {
+                    self.stall_reopened = true;
+                    self.stall = None;
+                    log::warn!("output: the device has not asked for audio for 3 s, reopening");
+                    self.reopen_output(None, "output callbacks stalled");
+                } else if !self.stall_reported {
+                    self.stall_reported = true;
+                    log::error!("output: the system audio does not run the device (stalled)");
+                    self.set_buffering(false);
+                    self.emit(Event::Error {
+                        index: self.index,
+                        id: self.index.and_then(|i| self.id_at(i)),
+                        message: "системный звук не отвечает: устройство вывода не берёт звук"
+                            .into(),
+                    });
+                }
+            }
+            _ => {
+                if self.stall.is_some_and(|(c, _)| c != clock) {
+                    self.stall_reopened = false;
+                    self.stall_reported = false;
+                }
+                self.stall = Some((clock, Instant::now()));
+            }
+        }
     }
 
     // ---- команды ----
@@ -435,6 +549,10 @@ impl Controller {
             }
             Command::SetTransition(t) => {
                 if t != self.transition {
+                    let dj = matches!(t, Transition::Dj { .. });
+                    if dj != matches!(self.transition, Transition::Dj { .. }) {
+                        self.mixer(MixerCmd::Dj(dj));
+                    }
                     self.transition = t;
                     self.reset_next();
                 }
@@ -603,6 +721,10 @@ impl Controller {
         if matches!(self.next, NextState::Chained(_)) {
             self.next = NextState::None;
         }
+        // «Диджей» привязан к кадрам старой деки: переход выбирается заново от новой позиции
+        if matches!(self.transition, Transition::Dj { .. }) {
+            self.reset_next();
+        }
         if self.state == PlaybackState::Ended {
             self.set_state(PlaybackState::Paused);
         }
@@ -740,6 +862,7 @@ impl Controller {
         }
         self.preps.clear();
         self.next = NextState::None;
+        self.dj_plan = None;
         self.level_seq = 0;
         let capture_rate = capture_rate.or(self.capture_rate);
         let generation = self.output_gen.wrapping_add(1);
@@ -766,6 +889,9 @@ impl Controller {
                 }
                 self.output_lost = false;
                 self.output_reopens += 1;
+                if matches!(self.transition, Transition::Dj { .. }) {
+                    self.mixer(MixerCmd::Dj(true));
+                }
                 log::info!(
                     "output reopened ({reason}): {} Hz, {} ch, {}, position {position} ms",
                     self.device_rate,
@@ -863,6 +989,7 @@ impl Controller {
         }
         self.cancel_preps(Purpose::Next);
         self.next = NextState::None;
+        self.dj_plan = None;
         self.update_expect_chain();
     }
 
@@ -880,6 +1007,7 @@ impl Controller {
         }
         self.preps.clear();
         self.next = NextState::None;
+        self.dj_plan = None;
         self.seek_target_ms = None;
         self.set_buffering(false);
     }
@@ -911,6 +1039,18 @@ impl Controller {
     }
 
     fn start_prep(&mut self, index: usize, offset_ms: u64, purpose: Purpose) {
+        self.start_prep_at(
+            index,
+            StartAt {
+                offset_ms,
+                tempo: None,
+            },
+            purpose,
+        );
+    }
+
+    fn start_prep_at(&mut self, index: usize, at: StartAt, purpose: Purpose) {
+        let StartAt { offset_ms, tempo } = at;
         let spec = self.queue[index].clone();
         let normalize = self.normalize;
         let target = self.cfg.target_lufs;
@@ -940,8 +1080,14 @@ impl Controller {
                     };
                     let (source, ext) = cache.open_track(&spec)?;
                     let mut decoder = TrackDecoder::open(source, ext.as_deref())?;
-                    if offset_ms > 0 {
-                        let frame = offset_ms * decoder.source_rate as u64 / 1000;
+                    // «Диджей» входит с сильной доли — с точностью до кадра, а не до миллисекунды
+                    let frame = match &tempo {
+                        Some(m) => {
+                            (m.start() * f64::from(decoder.source_rate) / 1000.0).round() as u64
+                        }
+                        None => offset_ms * decoder.source_rate as u64 / 1000,
+                    };
+                    if frame > 0 {
                         decoder.seek_frame(frame)?;
                     }
                     Ok(PreparedTrack {
@@ -950,6 +1096,7 @@ impl Controller {
                         decoder,
                         gain,
                         offset_ms,
+                        tempo,
                     })
                 })();
                 let _ = tx.send(PrepResult { id, res });
@@ -1135,8 +1282,193 @@ impl Controller {
                     }),
                 }
             }
+            (Transition::Dj { .. }, Some(m)) => self.attach_dj(p, m),
             _ => self.next = NextState::None,
         }
+    }
+
+    /// Кадр главной деки `m`, на котором звучит место уходящего трека `track_ms`.
+    fn main_frame_at(&self, m: usize, track_ms: f64) -> Option<u64> {
+        let d = self.decks[m].as_ref()?;
+        let segs = d.handle.shared.segments();
+        let id = self
+            .index
+            .and_then(|i| self.queue.get(i))
+            .map(|t| t.id.clone());
+        let seg = segs
+            .iter()
+            .rev()
+            .find(|s| Some(&s.track.id) == id.as_ref())
+            .or(segs.last())?;
+        let ms = seg.elapsed_ms(track_ms).max(0.0);
+        Some(seg.deck_start + (ms * f64::from(self.device_rate) / 1000.0).round() as u64)
+    }
+
+    /// «Диджей»: входящая дека ждёт сильной доли уходящего, автоматика — начала перехода.
+    fn attach_dj(&mut self, p: PreparedTrack, m: usize) {
+        let index = p.index;
+        let plan = match &self.dj_plan {
+            Some(dj) if dj.index == index && dj.id == p.spec.id => dj.plan.clone(),
+            _ => {
+                self.next = NextState::None;
+                return;
+            }
+        };
+        let (Some(start_frame), Some(in_frame)) = (
+            self.main_frame_at(m, plan.start_ms),
+            self.main_frame_at(m, plan.in_at_ms()),
+        ) else {
+            self.next = NextState::None;
+            return;
+        };
+        let read = self.ports.shared.frames_read[m].load(Ordering::Relaxed);
+        if start_frame < read {
+            log::warn!(
+                "dj: transition start is {} ms late",
+                (read - start_frame) * 1000 / u64::from(self.device_rate)
+            );
+        }
+        let Some(slot) = self.free_slot() else { return };
+        let ring = self.ms_to_frames(self.cfg.ring_ms as u64) as usize;
+        let info = p.decoder.describe();
+        let first = p.spec.clone();
+        match deck::spawn(p, self.device_rate, ring) {
+            Ok((handle, link)) => {
+                self.mixer(MixerCmd::Attach {
+                    slot,
+                    link,
+                    rule: StartRule::AtMainFrame { frame: in_frame },
+                    fade_in: 0,
+                });
+                self.mixer(MixerCmd::Plan {
+                    slot,
+                    start_frame,
+                    curves: plan.curves(),
+                });
+                self.decks[slot] = Some(DeckCtl {
+                    handle,
+                    role: Role::Next,
+                    first_index: index,
+                    first,
+                });
+                self.next = NextState::Waiting { slot, index };
+                self.emit(Event::TrackInfo { index, info });
+            }
+            Err(e) => self.emit(Event::Error {
+                index: Some(index),
+                id: Some(first.id),
+                message: e.to_string(),
+            }),
+        }
+    }
+
+    // ---- «Диджей»: анализ и выбор перехода ----
+
+    fn analysis_key(t: &TrackSpec) -> String {
+        t.stream_id.clone().unwrap_or_else(|| t.id.clone())
+    }
+
+    /// Анализ трека: уже есть, идёт или запрашивается сейчас (в фоне).
+    fn analysis(&mut self, index: usize) -> Option<Option<Arc<Analysis>>> {
+        let t = self.queue.get(index)?.clone();
+        if let Some(a) = &t.analysis {
+            return Some(Some(a.clone()));
+        }
+        let key = Self::analysis_key(&t);
+        match self.analyses.get(&key) {
+            Some(AnalysisState::Done(a)) => return Some(a.clone()),
+            Some(AnalysisState::Pending) => return None,
+            None => {}
+        }
+        let Some(source) = self.cfg.analysis.clone() else {
+            return Some(None);
+        };
+        self.analyses.insert(key.clone(), AnalysisState::Pending);
+        // Держим немного: волна длинная, а нужен лишь текущий и следующий
+        if self.analyses.len() > 16 {
+            let keep: HashSet<String> = [self.index, self.index.and_then(|i| self.next_index(i))]
+                .into_iter()
+                .flatten()
+                .filter_map(|i| self.queue.get(i).map(Self::analysis_key))
+                .chain([key.clone()])
+                .collect();
+            self.analyses.retain(|k, _| keep.contains(k));
+        }
+        let tx = self.analysis_tx.clone();
+        let _ = std::thread::Builder::new()
+            .name("dw-analysis".into())
+            .spawn(move || {
+                let a = match source.fetch(&t) {
+                    Ok(a) => a.map(Arc::new),
+                    Err(e) => {
+                        log::info!("analysis of {} is not available: {e}", t.id);
+                        None
+                    }
+                };
+                let _ = tx.send((key, a));
+            });
+        None
+    }
+
+    /// Выбрать переход к следующему треку, как только известны оба анализа.
+    fn maybe_plan(&mut self) {
+        let Transition::Dj { expressiveness } = self.transition else {
+            return;
+        };
+        if self.dj_plan.is_some() || self.next != NextState::None {
+            return;
+        }
+        let Some(i) = self.index else { return };
+        let Some(j) = self.next_index(i) else { return };
+        // Главная дека ещё играет прежний трек (переход в разгаре)
+        if self
+            .current_segment()
+            .is_none_or(|(_, seg, _)| seg.track.id != self.queue[i].id)
+        {
+            return;
+        }
+        let out = self.analysis(i);
+        let inc = self.analysis(j);
+        let pos = self.position_ms();
+        let dur = self.duration_ms();
+        let remaining = dur.map(|d| d.saturating_sub(pos));
+        if (out.is_none() || inc.is_none()) && remaining.is_none_or(|r| r > DJ_WAIT_ANALYSIS_MS) {
+            return;
+        }
+        let none = Analysis::default();
+        let out = out.flatten();
+        let inc = inc.flatten();
+        // Входящий прошлого перехода мог ещё возвращаться к своему темпу: новый переход — после
+        let settled = self
+            .current_segment()
+            .and_then(|(_, seg, _)| seg.tempo.map(|t| t.src_at(t.settled_at())))
+            .unwrap_or(0.0);
+        let input = PlanInput {
+            out: out.as_deref().unwrap_or(&none),
+            inc: inc.as_deref().unwrap_or(&none),
+            out_duration_ms: dur.map(|d| d as f64),
+            in_duration_ms: self.queue[j].duration_ms.map(|d| d as f64),
+            expressiveness: f64::from(expressiveness.min(100)) / 100.0,
+            earliest_ms: (pos as f64 + DJ_LEAD_MS).max(settled),
+        };
+        let plan = dalywave_transitions::plan(&input);
+        log::info!("dj #{i} → #{j}: {}", plan.note);
+        self.emit(Event::TransitionPlanned {
+            index: i,
+            next_index: j,
+            technique: plan.technique.as_str(),
+            start_ms: plan.start_ms,
+            in_start_ms: plan.in_start_ms,
+            length_ms: plan.length_ms,
+            in_offset_ms: plan.in_offset_ms,
+            tempo: plan.tempo.clone(),
+            note: plan.note.clone(),
+        });
+        self.dj_plan = Some(DjPlan {
+            index: j,
+            id: self.queue[j].id.clone(),
+            plan,
+        });
     }
 
     fn poll_mixer_events(&mut self) {
@@ -1168,6 +1500,7 @@ impl Controller {
                     let mut index = first_index;
                     if role == Role::Next {
                         self.next = NextState::None;
+                        self.dj_plan = None;
                         index = self.adopt(first_index, &first);
                         if self.index != Some(index) {
                             self.index = Some(index);
@@ -1280,13 +1613,29 @@ impl Controller {
         if self.main_slot().is_none() && self.pending_slot().is_none() {
             return;
         }
+        if matches!(self.transition, Transition::Dj { .. }) {
+            let Some(dj) = &self.dj_plan else { return };
+            if dj.index != j || self.queue[j].id != dj.id {
+                self.dj_plan = None;
+                return;
+            }
+            if (self.position_ms() as f64) < dj.plan.start_ms - DJ_PREP_MS {
+                return;
+            }
+            let at = StartAt {
+                offset_ms: dj.plan.in_start_ms.max(0.0).round() as u64,
+                tempo: Some(dj.plan.tempo.clone()),
+            };
+            self.start_prep_at(j, at, Purpose::Next);
+            return;
+        }
         let remaining = self
             .duration_ms()
             .map(|d| d.saturating_sub(self.position_ms()));
         let window = self.cfg.preload_secs as u64 * 1000
             + match self.transition {
                 Transition::Crossfade { ms } => ms as u64,
-                Transition::Gapless => 0,
+                Transition::Gapless | Transition::Dj { .. } => 0,
             };
         if remaining.is_none_or(|r| r <= window) {
             self.start_prep(j, 0, Purpose::Next);
@@ -1311,7 +1660,8 @@ impl Controller {
         }
         match self.current_segment() {
             Some((_, seg, read)) => {
-                seg.offset_ms + (read - seg.deck_start) * 1000 / self.device_rate as u64
+                let elapsed = (read - seg.deck_start) as f64 * 1000.0 / f64::from(self.device_rate);
+                seg.track_ms(elapsed).max(0.0) as u64
             }
             None => 0,
         }

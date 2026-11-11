@@ -1,0 +1,24 @@
+[package]
+name = "dalywave-sync"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Синхронизация локальной базы с сервером: медиатека, набор волны, закреплённое"
+
+[lib]
+name = "dalywave_sync"
+
+[dependencies]
+dalywave-protocol = { path = "../../protocol" }
+dalywave-store = { path = "../store" }
+reqwest = { version = "0.13", default-features = false, features = ["json", "query"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v7"] }
+thiserror = "2"
+log = "0.4"
+
+[dev-dependencies]
+tokio = { version = "1.54", features = ["macros", "rt-multi-thread", "net", "io-util"] }
+serde_json = "1"

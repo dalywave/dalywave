@@ -9,11 +9,13 @@ mod auth;
 #[cfg(desktop)]
 mod downloader;
 mod error;
+mod haptics;
 #[cfg(target_os = "ios")]
 mod ios;
 #[cfg(target_os = "macos")]
 mod macos;
 mod media;
+mod offline;
 mod platform;
 mod player;
 mod settings;
@@ -96,6 +98,8 @@ pub fn run() {
             // Звук — сразу, в фоновом потоке: к первой команде интерфейса движок готов
             player::init(handle);
             audio::init(handle);
+            // Локальная база и загрузки: синхронизация и докачка идут в фоне
+            offline::init(handle);
 
             let main = window::create_main(handle)?;
             // До трея: меню сразу показывает состояние загрузчика
@@ -169,6 +173,19 @@ pub fn run() {
             player::player_set_normalize,
             player::player_set_levels,
             player::player_state,
+            offline::offline_status,
+            offline::offline_set_settings,
+            offline::offline_sync,
+            offline::offline_read,
+            offline::offline_pin,
+            offline::offline_unpin,
+            offline::offline_clear,
+            offline::offline_downloads,
+            offline::offline_source,
+            offline::offline_wave_next,
+            offline::offline_wave_react,
+            offline::offline_played,
+            haptics::haptic,
             audio::audio_outputs,
             audio::audio_set_output,
             audio::audio_show_picker,
@@ -180,6 +197,8 @@ pub fn run() {
             updates::update_check,
             #[cfg(desktop)]
             updates::update_install,
+            #[cfg(desktop)]
+            updates::update_state,
             #[cfg(desktop)]
             downloader::downloader_state,
             #[cfg(desktop)]
@@ -210,6 +229,9 @@ pub fn run() {
                     let _ = main.hide();
                 }
                 downloader::shutdown(app);
+                // macOS: готовое обновление ставится при обычном выходе (updates.rs)
+                #[cfg(target_os = "macos")]
+                updates::install_on_exit(app);
             }
             _ => {}
         }

@@ -1,0 +1,23 @@
+[package]
+name = "dalywave-downloads"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Загрузки на устройство: что качать и что вытеснять в пределах места, докачка с места обрыва, проверка размера и хеша"
+
+[lib]
+name = "dalywave_downloads"
+
+[dependencies]
+dalywave-store = { path = "../store" }
+ureq = { version = "3.5.1", default-features = false, features = ["rustls"] }
+sha2 = "0.11"
+hex = "0.4"
+uuid = { version = "1", features = ["v7"] }
+thiserror = "2"
+log = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

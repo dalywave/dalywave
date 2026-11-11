@@ -1,0 +1,23 @@
+[package]
+name = "dalywave-store"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Локальная база приложений DalyWave (SQLite): медиатека из синхронизации, закреплённое, файлы на устройстве, набор волны"
+
+[lib]
+name = "dalywave_store"
+
+[dependencies]
+dalywave-protocol = { path = "../../protocol" }
+rusqlite = { version = "0.42", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v7", "serde"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+thiserror = "2"
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+tempfile = "3"

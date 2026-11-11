@@ -2,7 +2,8 @@
 //! трек, «Показать DalyWave», выход. Команды плеера выполняет движок (player.rs); что он не
 //! может сам (например, «играть» без очереди), уходит интерфейсу как `media:command`.
 //! И загрузчик музыки (downloader.rs): строка состояния, пауза и «Скачивать на этом Mac» (на
-//! Windows — «на этом ПК»).
+//! Windows — «на этом ПК»). Скачанное обновление — пунктом «Обновление готово — Перезапустить»
+//! в начале меню (updates.rs), только пока оно готово.
 
 use std::sync::Mutex;
 
@@ -19,7 +20,7 @@ use crate::{
     media::{Command, Media, NowPlaying, Source},
     player,
     settings::{Locale, Settings},
-    window,
+    updates, window,
 };
 
 const TRAY: &str = "main";
@@ -36,6 +37,7 @@ struct Texts {
     previous: &'static str,
     show: &'static str,
     quit: &'static str,
+    update: &'static str,
 }
 
 const RU: Texts = Texts {
@@ -46,6 +48,7 @@ const RU: Texts = Texts {
     previous: "Предыдущий трек",
     show: "Показать DalyWave",
     quit: "Выйти из DalyWave",
+    update: "Обновление готово — Перезапустить",
 };
 
 const EN: Texts = Texts {
@@ -56,6 +59,7 @@ const EN: Texts = Texts {
     previous: "Previous Track",
     show: "Show DalyWave",
     quit: "Quit DalyWave",
+    update: "Update Ready — Restart",
 };
 
 fn texts(locale: Locale) -> &'static Texts {
@@ -157,6 +161,15 @@ pub struct TrayItems {
     show: MenuItem<Wry>,
     quit: MenuItem<Wry>,
     downloader: DlItems,
+    update: UpdateItems,
+}
+
+/// Готовое обновление: пункт и черта под ним встают в начало меню, только пока оно готово.
+struct UpdateItems {
+    menu: Menu<Wry>,
+    item: MenuItem<Wry>,
+    separator: PredefinedMenuItem<Wry>,
+    shown: Mutex<bool>,
 }
 
 struct DlItems {
@@ -171,31 +184,45 @@ struct DlItems {
 pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let t = texts(app.state::<Settings>().locale());
     let none = None::<&str>;
-    let items = TrayItems {
-        now: MenuItem::with_id(app, "now", t.nothing, false, none)?,
-        toggle: MenuItem::with_id(app, "toggle", t.play, true, none)?,
-        next: MenuItem::with_id(app, "next", t.next, true, none)?,
-        previous: MenuItem::with_id(app, "previous", t.previous, true, none)?,
-        show: MenuItem::with_id(app, "show", t.show, true, none)?,
-        quit: MenuItem::with_id(app, "quit", t.quit, true, none)?,
-        downloader: dl_items(app)?,
-    };
+    let now = MenuItem::with_id(app, "now", t.nothing, false, none)?;
+    let toggle = MenuItem::with_id(app, "toggle", t.play, true, none)?;
+    let next = MenuItem::with_id(app, "next", t.next, true, none)?;
+    let previous = MenuItem::with_id(app, "previous", t.previous, true, none)?;
+    let show = MenuItem::with_id(app, "show", t.show, true, none)?;
+    let quit = MenuItem::with_id(app, "quit", t.quit, true, none)?;
+    let downloader = dl_items(app)?;
     let separator = || PredefinedMenuItem::separator(app);
     let menu = Menu::with_items(
         app,
         &[
-            &items.now,
+            &now,
             &separator()?,
-            &items.toggle,
-            &items.next,
-            &items.previous,
+            &toggle,
+            &next,
+            &previous,
             &separator()?,
         ],
     )?;
-    menu.append_items(&[&items.downloader.menu, &separator()?])?;
-    menu.append_items(&[&items.show, &separator()?, &items.quit])?;
-    app.manage(items);
+    menu.append_items(&[&downloader.menu, &separator()?])?;
+    menu.append_items(&[&show, &separator()?, &quit])?;
+    let update = UpdateItems {
+        menu: menu.clone(),
+        item: MenuItem::with_id(app, "update", t.update, true, none)?,
+        separator: separator()?,
+        shown: Mutex::new(false),
+    };
+    app.manage(TrayItems {
+        now,
+        toggle,
+        next,
+        previous,
+        show,
+        quit,
+        downloader,
+        update,
+    });
     refresh_downloader(app);
+    refresh_update(app);
 
     // macOS: шаблон — система сама красит знак под светлую и тёмную строку меню
     #[cfg(target_os = "macos")]
@@ -252,6 +279,7 @@ fn on_menu(app: &AppHandle, event: MenuEvent) {
         "dl-toggle" => downloader::toggle_paused(app),
         "dl-enabled" => downloader::toggle_enabled(app),
         "show" => window::show_main(app),
+        "update" => updates::restart(app),
         "quit" => app.exit(0),
         _ => {}
     }
@@ -349,6 +377,26 @@ pub fn refresh_downloader(app: &AppHandle) {
     let _ = dl.enabled.set_checked(state.enabled);
 }
 
+/// Показать или убрать «Обновление готово — Перезапустить»: после перемены у обновления и смены
+/// языка. Главный поток.
+pub fn refresh_update(app: &AppHandle) {
+    let Some(items) = app.try_state::<TrayItems>() else {
+        return;
+    };
+    let t = texts(app.state::<Settings>().locale());
+    let u = &items.update;
+    let ready = updates::ready_version(app).is_some();
+    let mut shown = u.shown.lock().unwrap_or_else(|e| e.into_inner());
+    let _ = u.item.set_text(t.update);
+    if ready && !*shown {
+        *shown = u.menu.insert_items(&[&u.item, &u.separator], 0).is_ok();
+    } else if !ready && *shown {
+        let _ = u.menu.remove(&u.item);
+        let _ = u.menu.remove(&u.separator);
+        *shown = false;
+    }
+}
+
 /// Обновить тексты: после смены трека, паузы или языка.
 pub fn refresh(app: &AppHandle) {
     let Some(items) = app.try_state::<TrayItems>() else {
@@ -374,6 +422,7 @@ pub fn refresh(app: &AppHandle) {
         let _ = tray.set_tooltip(Some(tooltip));
     }
     refresh_downloader(app);
+    refresh_update(app);
 }
 
 #[cfg(test)]

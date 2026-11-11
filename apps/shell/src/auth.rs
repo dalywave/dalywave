@@ -408,6 +408,15 @@ pub fn load_token(server: &str) -> ShellResult<Option<String>> {
     keychain::load(server)
 }
 
+/// id устройства этого входа (из сохранённого профиля): набор волны и закреплённое — его.
+pub(crate) fn device_id(app: &AppHandle, server: &str) -> Option<String> {
+    sessions::get(app, server)?
+        .device
+        .get("id")?
+        .as_str()
+        .map(str::to_string)
+}
+
 /// Пользователь и устройство — без секретов, чтобы интерфейс открывался без сети.
 mod sessions {
     use std::{collections::BTreeMap, path::PathBuf};

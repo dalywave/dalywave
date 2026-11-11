@@ -32,7 +32,7 @@ async function step<T>(name: string, run: () => Promise<T>): Promise<T | undefin
 
 const events: (keyof ShellEvents)[] = [
   'window:maximized', 'window:fullscreen', 'window:focus', 'window:caption', 'auth:changed',
-  'media:command', 'server:changed', 'update:available', 'update:progress', 'deep-link:open',
+  'media:command', 'server:changed', 'update:available', 'update:progress', 'update:ready', 'update:state', 'deep-link:open',
   'player:state', 'player:track', 'player:buffering', 'player:error', 'player:ended',
 ]
 for (const name of events) {
@@ -188,6 +188,7 @@ const actions: Record<string, () => Promise<unknown>> = {
   'locale-en': () => shell.setLocale('en'),
   'locale-ru': () => shell.setLocale('ru'),
   'update': () => shell.updates.check(),
+  'update-state': () => shell.updates.state(),
 }
 for (const [id, run] of Object.entries(actions)) {
   document.getElementById(`btn-${id}`)?.addEventListener('click', () => void step(id, run))

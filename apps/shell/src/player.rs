@@ -162,6 +162,7 @@ fn start_engine(app: &AppHandle) {
             crate::platform::OS
         ),
         resolver: Some(resolver(app)),
+        analysis: Some(analysis_source(app)),
         ..EngineConfig::default()
     };
     let started = Instant::now();
@@ -242,6 +243,10 @@ fn resolver(app: &AppHandle) -> Resolver {
     let app = app.clone();
     Resolver::new(move |track: &TrackSpec| {
         let track_id = track.stream_id.clone().ok_or("у трека нет id на сервере")?;
+        // Без сети ссылку не получить: не ждать таймаута, следующий трек — из скачанного
+        if crate::offline::offline_now(&app) {
+            return Err("нет сети".into());
+        }
         let server = app.state::<Settings>().server_url();
         let player = app.state::<Player>();
         let token = player.token_for(&server);
@@ -261,6 +266,47 @@ fn resolver(app: &AppHandle) -> Resolver {
             Err(e) => log::warn!("player: no link for track {track_id}: {e}"),
         }
         resolved
+    })
+}
+
+/// Анализ трека для «Диджея»: `GET /api/tracks/{id}/analysis`. Движок берёт его заранее — для
+/// текущего и следующего трека; нет анализа (404) — переход будет «Умным».
+fn analysis_source(app: &AppHandle) -> dalywave_audio::AnalysisSource {
+    let app = app.clone();
+    dalywave_audio::AnalysisSource::new(move |track: &TrackSpec| {
+        let track_id = track.stream_id.clone().ok_or("у трека нет id на сервере")?;
+        // Скачанный трек — с анализом рядом (умный офлайн): переходы по долям и без сети
+        if let Some(a) = crate::offline::local_analysis(&app, &track_id)
+            .and_then(|b| serde_json::from_slice::<dalywave_audio::Analysis>(&b).ok())
+        {
+            return Ok(Some(a));
+        }
+        if crate::offline::offline_now(&app) {
+            return Ok(None);
+        }
+        let server = app.state::<Settings>().server_url();
+        let player = app.state::<Player>();
+        let token = player.token_for(&server);
+        let http = player.http.clone();
+        tauri::async_runtime::block_on(async move {
+            let mut req = http.get(format!("{server}/api/tracks/{track_id}/analysis"));
+            if let Some(token) = token {
+                req = req.bearer_auth(token);
+            }
+            let res = req
+                .send()
+                .await
+                .map_err(|e| format!("сервер недоступен: {e}"))?;
+            match res.status().as_u16() {
+                200 => res
+                    .json::<dalywave_audio::Analysis>()
+                    .await
+                    .map(Some)
+                    .map_err(|e| format!("неожиданный ответ сервера: {e}")),
+                404 => Ok(None),
+                status => Err(format!("сервер ответил {status}")),
+            }
+        })
     })
 }
 
@@ -512,6 +558,13 @@ fn forward_events(app: &AppHandle, events: Receiver<Event>) {
                     );
                 }
             }
+            Event::TransitionPlanned {
+                index,
+                next_index,
+                technique,
+                note,
+                ..
+            } => log::info!("player: dj #{index} → #{next_index}: {technique} ({note})"),
             Event::Output {
                 sample_rate,
                 channels,
@@ -600,6 +653,7 @@ impl PlayerItem {
             duration_ms: self.duration_ms,
             loudness_lufs: self.loudness_lufs,
             peak_db: self.true_peak_db,
+            analysis: None,
         }
     }
 }
@@ -608,7 +662,18 @@ impl PlayerItem {
 #[serde(tag = "mode", rename_all = "camelCase")]
 pub enum TransitionDto {
     Gapless,
-    Crossfade { ms: u32 },
+    Crossfade {
+        ms: u32,
+    },
+    /// «Диджей»: `expressiveness` 0…1 — от незаметного до эффектного
+    Dj {
+        #[serde(default = "default_expressiveness")]
+        expressiveness: f32,
+    },
+}
+
+fn default_expressiveness() -> f32 {
+    0.6
 }
 
 #[derive(Serialize)]
@@ -633,7 +698,10 @@ pub async fn player_load(
     autoplay: Option<bool>,
 ) -> ShellResult<()> {
     let engine = engine(&app).await?;
-    let tracks = items.into_iter().map(PlayerItem::into_spec).collect();
+    let tracks = items
+        .into_iter()
+        .map(|i| crate::offline::prefer_local(&app, i.into_spec()))
+        .collect();
     engine.load_queue_at(
         tracks,
         start.unwrap_or(0),
@@ -647,7 +715,12 @@ pub async fn player_load(
 #[tauri::command]
 pub async fn player_set_upcoming(app: AppHandle, items: Vec<PlayerItem>) -> ShellResult<()> {
     let engine = engine(&app).await?;
-    engine.set_upcoming(items.into_iter().map(PlayerItem::into_spec).collect());
+    engine.set_upcoming(
+        items
+            .into_iter()
+            .map(|i| crate::offline::prefer_local(&app, i.into_spec()))
+            .collect(),
+    );
     Ok(())
 }
 
@@ -710,6 +783,9 @@ pub async fn player_set_transition(app: AppHandle, transition: TransitionDto) ->
         TransitionDto::Gapless => Transition::Gapless,
         TransitionDto::Crossfade { ms } => Transition::Crossfade {
             ms: ms.clamp(100, 30_000),
+        },
+        TransitionDto::Dj { expressiveness } => Transition::Dj {
+            expressiveness: (expressiveness.clamp(0.0, 1.0) * 100.0).round() as u8,
         },
     });
     Ok(())
@@ -863,6 +939,10 @@ mod tests {
         let t: TransitionDto =
             serde_json::from_value(serde_json::json!({ "mode": "gapless" })).unwrap();
         assert!(matches!(t, TransitionDto::Gapless));
+        let t: TransitionDto =
+            serde_json::from_value(serde_json::json!({ "mode": "dj", "expressiveness": 0.25 }))
+                .unwrap();
+        assert!(matches!(t, TransitionDto::Dj { expressiveness } if expressiveness == 0.25));
     }
 
     #[test]

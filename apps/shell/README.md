@@ -15,7 +15,7 @@ src/ios.rs        iPhone и iPad: окно входа поверх прилож�
 src/auth.rs       вход через браузер, dalywave://auth, токен в связке ключей
 src/tray.rs       значок в строке меню и трее
 src/downloader.rs загрузчик музыки для сервера (sidecar dalywave-fetcher): запуск, статус, пауза
-src/updates.rs    автообновление
+src/updates.rs    автообновление: проверка, скачивание в фоне, «Обновление готово — Перезапустить»
 src/settings.rs   адрес сервера, язык меню, загрузчик вкл/пауза (settings.json в папке настроек)
 gen/apple/        Xcode-проект iPhone и iPad (xcodegen, project.yml)
 scripts/          значки, сборка Rust для Xcode (build-ios.sh), пересборка Xcode-проекта
@@ -52,7 +52,9 @@ iOS — `Library/Application Support/rest.daly.wave/logs` в контейнер�
 
 Проверки: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`; для iOS —
 `cargo clippy --lib --target aarch64-apple-ios-sim --features tauri/custom-protocol -- -D warnings`
-(с переменными SDK из `scripts/build-ios.sh`). Движок — `make audio-test`.
+(с переменными SDK из `scripts/build-ios.sh`). Движок — `make audio-test`. Переходы «Диджея» на
+реальных треках — без колонок, в WAV: `cargo run --release --example dj_render -- <треки> <вывод> a:b@0.5 …`
+в `crates/client` (треки и их анализ — в каталоге с `index.json`, см. заголовок примера).
 
 ## Стенд
 
@@ -133,6 +135,46 @@ make app
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Потеря ключа — конец автообновлений у установленных
 копий: держите резервную копию в менеджере паролей.
 
+## Выпуск
+
+Обновления раздаёт наш сервер (`crates/server/src/routes/updates.rs`, решение — в
+`docs/decisions.md`): архив обновления лежит в R2, выпуски — в таблице `app_releases`. Приложение
+спрашивает `GET /api/updates/{target}/{arch}/{версия}` при запуске (через 20 с) и раз в 6 часов,
+найденное качает в фоне и проверяет подписью, затем показывает «Обновление готово — Перезапустить»
+в настройках («О приложении») и в трее. Само оно не перезапускается: ставит обновление по
+«Перезапустить», на macOS — ещё и при обычном выходе (⌘Q, «Выйти» в трее). На Windows установщик
+NSIS при этом закрывает приложение и открывает новую версию.
+
+**Версия** — одна: `[package] version` в `Cargo.toml` (в `tauri.conf.json` её нет, Tauri берёт её
+отсюда; это и `appVersion` в `platform_info`). Новая — `make bump-version VERSION=0.2.0`: заодно
+`MARKETING_VERSION` Xcode-проекта и `Cargo.lock`.
+
+**Шаги выпуска:**
+
+1. `make bump-version VERSION=0.2.0`, коммит.
+2. macOS: `make release-mac NOTES="Что нового"` — сборка с подписью обновлений (`make app`),
+   архив `DalyWave.app.tar.gz` с `.sig` уходит в R2 по ссылке от сервера, выпуск регистрируется
+   (`apps/shell/scripts/release.ts`). Другой сервер — `SERVER=http://localhost:8400`.
+3. Windows: тег `git tag v0.2.0 && git push origin v0.2.0` — CI («Приложения») собирает установщик и
+   выпускает его так же (тег обязан совпадать с версией в `Cargo.toml`). Без тега — Run workflow с
+   флажком «Выпустить на сервер обновлений». macOS CI выпускает, только если в секретах есть
+   сертификат Developer ID, иначе — шаг 2.
+
+Повторный выпуск той же версии заменяет прежний. Снять выпуск — удалить строку `app_releases` на
+сервере: приложения, ещё не поставившие его, перестанут его предлагать.
+
+**Токен выпусков** — `DALYWAVE_RELEASE_TOKEN`, один на сервер и конвейер; ключа R2 конвейеру не нужно.
+Завести один раз (значение не печатается):
+
+```sh
+ssh ubuntu@129.159.27.88 'cd ~/dalywave && echo "DALYWAVE_RELEASE_TOKEN=$(openssl rand -hex 32)" >> .env && chmod 600 .env'
+# на сервере: docker compose … up -d api; затем то же значение — в связку ключей Mac и в GitHub
+security add-generic-password -s dalywave-release-token -a "$USER" -w   # спросит значение
+```
+
+В GitHub — секрет `DALYWAVE_RELEASE_TOKEN` (Settings → Secrets → Actions) рядом с
+`TAURI_SIGNING_PRIVATE_KEY` и `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+
 ## iPhone и iPad
 
 `make ios` — Xcode-проект `gen/apple/dalywave-shell.xcodeproj`, дальше Run в Xcode. Подробно — [IOS.md](IOS.md).
@@ -167,6 +209,9 @@ make app
 `services/fetcher/sidecar/build-windows.ps1` собирает `dalywave-fetcher.exe` (PyInstaller), кладёт
 Deno, fpcalc и сервер PO-токенов и проверяет запуск; Tauri упаковывает всё в установщик.
 Подписи кода для Windows нет — SmartScreen предупредит при первом запуске.
+
+**Обновления.** Установленное приложение обновляется само (раздел «Выпуск»): тег `v*` собирает и
+выпускает новую версию, после «Перезапустить» установщик ставит её поверх.
 
 **Запуск сборки.** GitHub → Actions → «Приложения» → Run workflow (ветка main). Через ~25 минут
 в итогах запуска — артефакт `DalyWave-x86_64-pc-windows-msvc` с `DalyWave_0.1.0_x64-setup.exe`.

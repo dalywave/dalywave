@@ -4,8 +4,10 @@
 //!
 //! Старт деки задаётся правилом: «сейчас» или «за N кадров до конца главной деки» (кроссфейд).
 //! Блок колбэка режется так, чтобы точка старта попала точно в нужный кадр.
-//! Для режима «Диджей» сюда добавятся правила по позиции другой деки (доли), эквалайзер и
-//! фильтры на деку; растяжение по времени — в потоке деки, до кольца.
+//! Режим «Диджей»: входящая дека стартует ровно на кадре главной ([`StartRule::AtMainFrame`] —
+//! сильная доля уходящего), автоматика перехода ([`Curves`]) с кадра начала перехода считается
+//! кусками по 32 кадра: громкости, эквалайзер и фильтры дек ([`DeckFx`]), посыл на общее эхо.
+//! На общем выходе — ограничитель пиков. Растяжение по времени — в потоке деки, до кольца.
 //!
 //! Уровень для волны интерфейса меряется здесь же, после паузы и до общей громкости.
 
@@ -14,11 +16,17 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::Instant;
 
+use dalywave_transitions::{Curves, Strip};
+
+use crate::DjSolo;
 use crate::deck::{DeckLink, UNKNOWN};
+use crate::fx::{DeckFx, EchoBus, Limiter};
 use crate::meter::{LevelCell, Meter};
 
 pub(crate) const MAX_DECKS: usize = 4;
 pub(crate) const NO_SLOT: usize = usize::MAX;
+/// Кусок, на который автоматика «Диджея» считается один раз.
+const PIECE: usize = 32;
 
 /// Равномощная пара усилений для кроссфейда в точке t ∈ [0, 1]: (уходящий, входящий).
 /// cos² + sin² = 1 — суммарная мощность некоррелированных сигналов постоянна.
@@ -33,6 +41,11 @@ pub(crate) enum StartRule {
     /// Стартовать, когда у главной деки останется `frames` кадров, с равномощным кроссфейдом.
     BeforeMainEnd {
         frames: u64,
+    },
+    /// «Диджей»: стартовать, когда главная дека отыграет ровно `frame` кадров. Прежняя главная
+    /// не затухает сама — её ведёт автоматика перехода.
+    AtMainFrame {
+        frame: u64,
     },
 }
 
@@ -61,6 +74,17 @@ pub(crate) enum MixerCmd {
         gain: f32,
         ramp: u32,
     },
+    /// Автоматика перехода: начать, когда главная дека отыграет `start_frame` кадров;
+    /// `slot` — входящая дека.
+    Plan {
+        slot: usize,
+        start_frame: u64,
+        curves: Curves,
+    },
+    /// Режим «Диджей»: ограничитель и эхо на общем выходе.
+    Dj(bool),
+    /// Проверки: во время перехода слышна одна дека.
+    Solo(DjSolo),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -214,6 +238,7 @@ impl PartialEq for StartRule {
                     StartRule::BeforeMainEnd { .. },
                     StartRule::BeforeMainEnd { .. }
                 )
+                | (StartRule::AtMainFrame { .. }, StartRule::AtMainFrame { .. })
         )
     }
 }
@@ -226,6 +251,7 @@ struct Slot {
     frames_read: u64,
     starved: bool,
     remove_after_fade: bool,
+    fx: Option<DeckFx>,
 }
 
 impl Slot {
@@ -238,6 +264,7 @@ impl Slot {
             frames_read: 0,
             starved: false,
             remove_after_fade: false,
+            fx: None,
         }
     }
 
@@ -268,8 +295,27 @@ impl Slot {
     }
 }
 
+/// Идущий переход «Диджея».
+#[derive(Clone, Copy, Debug)]
+struct ActivePlan {
+    inc: usize,
+    out: usize,
+    start_frame: u64,
+    curves: Curves,
+    started: bool,
+    /// Кадров с начала перехода.
+    t: u64,
+}
+
 pub(crate) struct Mixer {
     slots: [Slot; MAX_DECKS],
+    rate: u32,
+    dj: bool,
+    solo: DjSolo,
+    plan: Option<ActivePlan>,
+    echo: EchoBus,
+    limiter: Limiter,
+    send: [f32; PIECE * 2],
     main: usize,
     main_ended: bool,
     cmd_rx: rtrb::Consumer<MixerCmd>,
@@ -301,6 +347,13 @@ impl Mixer {
         let start_threshold = (sample_rate as u64 * start_threshold_ms as u64 / 1000) as usize;
         let mixer = Self {
             slots: [Slot::empty(), Slot::empty(), Slot::empty(), Slot::empty()],
+            rate: sample_rate,
+            dj: false,
+            solo: DjSolo::Both,
+            plan: None,
+            echo: EchoBus::new(sample_rate),
+            limiter: Limiter::new(sample_rate),
+            send: [0.0; PIECE * 2],
             main: NO_SLOT,
             main_ended: false,
             cmd_rx,
@@ -342,6 +395,15 @@ impl Mixer {
             std::mem::forget(link);
         }
         self.slots[i] = Slot::empty();
+        if let Some(p) = self.plan
+            && p.inc == i
+        {
+            // Входящая дека ушла раньше конца перехода — уходящий доигрывает без автоматики
+            self.plan = None;
+            if p.started && p.out != NO_SLOT {
+                self.slots[p.out].fx = None;
+            }
+        }
         self.shared.frames_read[i].store(0, Ordering::Relaxed);
         if self.main == i {
             self.main = NO_SLOT;
@@ -376,6 +438,10 @@ impl Mixer {
                 }
                 MixerCmd::StartNow { slot, fade_in } => {
                     if slot < MAX_DECKS && matches!(self.slots[slot].state, SlotState::Waiting(_)) {
+                        // Перешли вручную раньше перехода: автоматика не нужна
+                        if self.plan.is_some_and(|p| p.inc == slot) {
+                            self.end_plan(true);
+                        }
                         self.slots[slot].fade_in = fade_in;
                         self.start(slot, None);
                     }
@@ -417,6 +483,28 @@ impl Mixer {
                     }
                 }
                 MixerCmd::Volume { gain, ramp } => self.volume.linear(gain, ramp),
+                MixerCmd::Plan {
+                    slot,
+                    start_frame,
+                    curves,
+                } => {
+                    if slot < MAX_DECKS {
+                        self.echo.configure(
+                            (curves.echo_delay_ms * f64::from(self.rate) / 1000.0) as usize,
+                            curves.echo_feedback as f32,
+                        );
+                        self.plan = Some(ActivePlan {
+                            inc: slot,
+                            out: NO_SLOT,
+                            start_frame,
+                            curves,
+                            started: false,
+                            t: 0,
+                        });
+                    }
+                }
+                MixerCmd::Dj(on) => self.dj = on,
+                MixerCmd::Solo(solo) => self.solo = solo,
             }
         }
     }
@@ -429,6 +517,28 @@ impl Mixer {
     fn start(&mut self, i: usize, crossfade: Option<u32>) {
         let prev = self.main;
         let fade_in = self.slots[i].fade_in;
+        if let Some(p) = self.plan
+            && p.inc == i
+            && prev != NO_SLOT
+            && prev != i
+        {
+            // «Диджей»: уходящий не трогаем — его ведёт автоматика
+            if !p.started {
+                self.begin_plan();
+            }
+            let s = &mut self.slots[i];
+            s.state = SlotState::Playing;
+            s.starved = false;
+            s.env = Env::fixed(1.0);
+            self.main = i;
+            self.main_ended = false;
+            self.event(MixerEvent::Started {
+                slot: i,
+                crossfade: true,
+                at: Instant::now(),
+            });
+            return;
+        }
         {
             let s = &mut self.slots[i];
             s.state = SlotState::Playing;
@@ -486,6 +596,19 @@ impl Mixer {
                         self.start(i, None);
                     }
                 }
+                StartRule::AtMainFrame { frame } => {
+                    if self.main != NO_SLOT && self.main != i {
+                        if self.slots[self.main].frames_read >= frame && self.ready(i) {
+                            self.start(i, None);
+                        }
+                    } else if self.main == NO_SLOT && self.main_ended && self.ready(i) {
+                        // Уходящий кончился раньше точки перехода
+                        if self.plan.is_some_and(|p| p.inc == i) {
+                            self.plan = None;
+                        }
+                        self.start(i, None);
+                    }
+                }
             }
         }
     }
@@ -507,6 +630,7 @@ impl Mixer {
                 n = n.min((rem - frames) as usize);
             }
         }
+        n = self.limit_frames(n);
         // Конец главной деки — тоже граница: следующая может стартовать ровно за ним.
         if m.finished() && rem > 0 {
             n = n.min(rem as usize);
@@ -514,7 +638,118 @@ impl Mixer {
         n.max(1)
     }
 
+    /// Границы по кадрам главной деки: старт входящей и начало автоматики.
+    fn limit_frames(&self, mut n: usize) -> usize {
+        if self.main == NO_SLOT {
+            return n;
+        }
+        let read = self.slots[self.main].frames_read;
+        for s in &self.slots {
+            if let SlotState::Waiting(StartRule::AtMainFrame { frame }) = s.state
+                && frame > read
+            {
+                n = n.min((frame - read) as usize);
+            }
+        }
+        if let Some(p) = self.plan
+            && !p.started
+            && p.start_frame > read
+        {
+            n = n.min((p.start_frame - read) as usize);
+        }
+        n.max(1)
+    }
+
+    fn begin_plan(&mut self) {
+        let Some(p) = &mut self.plan else { return };
+        p.started = true;
+        p.out = self.main;
+        p.t = 0;
+        let out = p.out;
+        if out != NO_SLOT {
+            let mut fx = self.slots[out].fx.unwrap_or_else(|| DeckFx::new(self.rate));
+            fx.set(Strip::NEUTRAL, true, false);
+            self.slots[out].fx = Some(fx);
+        }
+    }
+
+    /// Конец перехода: уходящий снимается, входящий плавно уходит с обработки на прямой звук.
+    fn end_plan(&mut self, abort: bool) {
+        let Some(p) = self.plan.take() else { return };
+        if p.out != NO_SLOT && p.out != p.inc && self.slots[p.out].state == SlotState::Playing {
+            if abort {
+                self.slots[p.out].fx = None;
+            } else {
+                let declick = self.declick;
+                let s = &mut self.slots[p.out];
+                s.env.linear(0.0, declick);
+                s.remove_after_fade = true;
+            }
+        }
+        if let Some(fx) = &mut self.slots[p.inc].fx {
+            fx.set(Strip::NEUTRAL, false, false);
+        }
+    }
+
+    /// Автоматика на следующий кусок: линейки обеих дек.
+    fn automate(&mut self) {
+        let Some(p) = self.plan else { return };
+        if !p.started {
+            if self.main != NO_SLOT
+                && self.main != p.inc
+                && self.slots[self.main].frames_read >= p.start_frame
+            {
+                self.begin_plan();
+            } else {
+                return;
+            }
+        }
+        let Some(p) = self.plan else { return };
+        let t_ms = p.t as f64 * 1000.0 / f64::from(self.rate);
+        if p.curves.done(t_ms) {
+            self.end_plan(false);
+            return;
+        }
+        let mut mix = p.curves.at(t_ms);
+        // Проверка долей: слышна одна дека и без автоматики — атаки не смазаны сменой баса и
+        // затуханием, видно только время
+        match self.solo {
+            DjSolo::Both => {}
+            DjSolo::Outgoing => {
+                mix.out = Strip::NEUTRAL;
+                mix.inc = Strip::SILENT;
+            }
+            DjSolo::Incoming => {
+                mix.out = Strip::SILENT;
+                mix.inc = Strip::NEUTRAL;
+            }
+        }
+        if p.out != NO_SLOT
+            && let Some(fx) = &mut self.slots[p.out].fx
+        {
+            fx.set(mix.out, true, false);
+        }
+        if self.slots[p.inc].state == SlotState::Playing {
+            let rate = self.rate;
+            let s = &mut self.slots[p.inc];
+            let fresh = s.fx.is_none();
+            let fx = s.fx.get_or_insert_with(|| DeckFx::new(rate));
+            fx.set(mix.inc, true, fresh);
+        }
+    }
+
     fn render_slot(&mut self, i: usize, out: &mut [f32]) {
+        if self.slots[i].fx.is_some_and(|f| f.active()) && out.len() <= PIECE * 2 {
+            self.render_slot_fx(i, out);
+            return;
+        }
+        if self.slots[i].fx.is_some_and(|f| !f.active()) {
+            self.slots[i].fx = None;
+        }
+        self.render_slot_plain(i, out);
+    }
+
+    fn render_slot_plain(&mut self, i: usize, out: &mut [f32]) {
         let n = out.len() / 2;
         let resume_threshold = self.resume_threshold;
         let s = &mut self.slots[i];
@@ -570,6 +805,19 @@ impl Mixer {
         }
     }
 
+    /// То же через обработку деки: кусок не длиннее [`PIECE`].
+    fn render_slot_fx(&mut self, i: usize, out: &mut [f32]) {
+        let mut tmp = [0.0f32; PIECE * 2];
+        let n = out.len() / 2;
+        self.render_slot_plain(i, &mut tmp[..n * 2]);
+        if let Some(fx) = &mut self.slots[i].fx {
+            fx.process(&mut tmp[..n * 2], &mut self.send[..n * 2]);
+        }
+        for (o, x) in out.iter_mut().zip(&tmp[..n * 2]) {
+            *o += *x;
+        }
+    }
+
     /// Рендер блока: `out` — стерео с чередованием каналов.
     pub fn render(&mut self, out: &mut [f32]) {
         self.drain_commands();
@@ -580,18 +828,41 @@ impl Mixer {
             let mut pos = 0;
             while pos < frames {
                 self.check_starts();
-                let n = self.limit(frames - pos);
+                self.automate();
+                let mut n = self.limit(frames - pos);
+                let fx = self.plan.is_some_and(|p| p.started)
+                    || self.echo.active()
+                    || self.slots.iter().any(|s| s.fx.is_some());
+                if fx {
+                    n = n.min(PIECE);
+                    self.send = [0.0; PIECE * 2];
+                }
                 for i in 0..MAX_DECKS {
                     if self.slots[i].state == SlotState::Playing {
                         self.render_slot(i, &mut out[pos * 2..(pos + n) * 2]);
                     }
                 }
+                if fx {
+                    let send = self.send;
+                    self.echo
+                        .process(&send[..n * 2], &mut out[pos * 2..(pos + n) * 2]);
+                }
+                if let Some(p) = &mut self.plan
+                    && p.started
+                {
+                    p.t += n as u64;
+                }
                 pos += n;
             }
             let level = &self.shared.level;
+            let dj = self.dj;
             for pair in out.as_chunks_mut::<2>().0 {
                 let p = self.pause_env.next();
-                let (l, r) = (pair[0] * p, pair[1] * p);
+                let (mut l, mut r) = (pair[0], pair[1]);
+                if dj {
+                    (l, r) = self.limiter.run(l, r);
+                }
+                let (l, r) = (l * p, r * p);
                 self.meter.push(l, r, level);
                 let v = self.volume.next();
                 pair[0] = (l * v).clamp(-1.0, 1.0);
@@ -609,7 +880,9 @@ impl Mixer {
 
     /// Тестовый режим: все подключённые деки имеют данные на `frames` кадров (или кончились).
     pub fn ready_for(&self, frames: usize) -> bool {
-        !self.shared.hold.load(Ordering::Acquire)
+        // Пока ничего не звучит, рендер только запускает деки — придерживать нечего
+        (!self.shared.hold.load(Ordering::Acquire)
+            || !self.slots.iter().any(|s| s.state == SlotState::Playing))
             && self
                 .slots
                 .iter()

@@ -379,3 +379,289 @@ pub fn read_wav(path: &std::path::Path) -> Result<(u32, Vec<f32>), AudioError> {
     let d = decode_all(&SourceSpec::File(path.to_path_buf()))?;
     Ok((d.rate, d.samples))
 }
+
+/// Сверка долей двух дорожек одного рендера (уходящий и входящий по отдельности, см.
+/// `EngineConfig::dj_solo`).
+#[derive(Debug, Clone, Default)]
+pub struct AlignReport {
+    /// Окна, где доли видны в обеих дорожках.
+    pub checked: usize,
+    /// Из них — разошлись не больше чем на `tolerance_ms`.
+    pub within: usize,
+    pub tolerance_ms: f64,
+    pub median_ms: f64,
+    pub worst_ms: f64,
+    /// Расхождение «входящий − уходящий» по окнам, мс.
+    pub offsets: Vec<f64>,
+}
+
+impl AlignReport {
+    pub fn share(&self) -> f64 {
+        if self.checked == 0 {
+            0.0
+        } else {
+            self.within as f64 / self.checked as f64
+        }
+    }
+
+    pub fn summary(&self) -> String {
+        format!(
+            "{}/{} окон по 16 долей в пределах {} мс, медиана {:.1} мс, худшее {:.1} мс",
+            self.within, self.checked, self.tolerance_ms, self.median_ms, self.worst_ms
+        )
+    }
+}
+
+/// Сила атак по миллисекундам: рост логарифма энергии за 3 мс (только рост). Энергия — от
+/// разности соседних сэмплов: верх подчёркнут, у атаки (щелчок бочки, малый, хэт) он резкий,
+/// а гул баса и вокал её не размывают.
+fn onset_strength(samples: &[f32], rate: u32) -> Vec<f32> {
+    let hop = (rate / 1000).max(1) as usize;
+    let mut prev = 0.0f32;
+    let energy: Vec<f32> = samples
+        .chunks(hop * 2)
+        .map(|c| {
+            let mut e = 0.0;
+            for pair in c.chunks(2) {
+                let m = (pair[0] + pair.get(1).copied().unwrap_or(0.0)) * 0.5;
+                let d = m - prev;
+                prev = m;
+                e += d * d;
+            }
+            e
+        })
+        .collect();
+    (0..energy.len())
+        .map(|k| {
+            if k < 3 {
+                0.0
+            } else {
+                ((energy[k] + 1e-10).ln() - (energy[k - 3] + 1e-10).ln()).max(0.0)
+            }
+        })
+        .collect()
+}
+
+/// Насколько атаки дорожки сдвинуты относительно её ожидаемых долей (`beats_ms` — время в
+/// рендере, все из окна): сдвиг ±60 мс, при котором сумма силы атак на долях наибольшая.
+/// None — атаки на долях не выделяются (вступление без ударных, тишина).
+fn grid_lag(strength: &[f32], beats_ms: &[f64]) -> Option<f64> {
+    const LAG: i64 = 60;
+    if beats_ms.len() < 4 {
+        return None;
+    }
+    let at = |t: i64| -> f32 {
+        // ±2 мс: атака растянута на пару миллисекунд
+        (t - 2..=t + 2)
+            .filter_map(|k| usize::try_from(k).ok().and_then(|k| strength.get(k)))
+            .fold(0.0f32, |m, x| m.max(*x))
+    };
+    let score = |lag: i64| -> f64 {
+        beats_ms
+            .iter()
+            .map(|b| f64::from(at(b.round() as i64 + lag)))
+            .sum()
+    };
+    let scores: Vec<(i64, f64)> = (-LAG..=LAG).map(|l| (l, score(l))).collect();
+    let mean = scores.iter().map(|s| s.1).sum::<f64>() / scores.len() as f64;
+    let (i, best) = scores
+        .iter()
+        .copied()
+        .enumerate()
+        .max_by(|a, b| a.1.1.total_cmp(&b.1.1))?;
+    if best.1 <= 1.6 * mean || best.1 <= 0.0 {
+        return None;
+    }
+    // Доли миллисекунды — по параболе через вершину и соседей
+    let frac = match (
+        i.checked_sub(1).map(|j| scores[j].1),
+        scores.get(i + 1).map(|s| s.1),
+    ) {
+        (Some(l), Some(r)) if l + r - 2.0 * best.1 < 0.0 => {
+            (0.5 * (l - r) / (l + r - 2.0 * best.1)).clamp(-0.5, 0.5)
+        }
+        _ => 0.0,
+    };
+    Some(best.0 as f64 + frac)
+}
+
+/// Совпадают ли доли двух дорожек одного рендера. `out_beats_ms` и `in_beats_ms` — где по
+/// анализу (и карте темпа входящего) должны звучать доли каждой дорожки, время в рендере;
+/// сверяется отрезок `span_ms` окнами по 16 долей уходящего. В каждом окне у каждой
+/// дорожки ищется сдвиг её атак относительно своих долей, расхождение — разница сдвигов:
+/// так в счёт идут все удары окна, а не одна атака, которую в живой музыке легко спутать.
+pub fn downbeat_alignment(
+    outgoing: &[f32],
+    incoming: &[f32],
+    rate: u32,
+    out_beats_ms: &[f64],
+    in_beats_ms: &[f64],
+    span_ms: std::ops::Range<f64>,
+    tolerance_ms: f64,
+) -> AlignReport {
+    let so = onset_strength(outgoing, rate);
+    let si = onset_strength(incoming, rate);
+    let beats: Vec<f64> = out_beats_ms
+        .iter()
+        .copied()
+        .filter(|b| span_ms.contains(b))
+        .collect();
+    let mut offsets = Vec::new();
+    for w in beats.chunks(16) {
+        let (a, b) = (w[0] - 1.0, w[w.len() - 1] + 1.0);
+        let inc: Vec<f64> = in_beats_ms
+            .iter()
+            .copied()
+            .filter(|t| *t >= a && *t <= b)
+            .collect();
+        if let (Some(lo), Some(li)) = (grid_lag(&so, w), grid_lag(&si, &inc)) {
+            offsets.push(li - lo);
+        }
+    }
+    let mut abs: Vec<f64> = offsets.iter().map(|x| x.abs()).collect();
+    abs.sort_by(f64::total_cmp);
+    AlignReport {
+        checked: offsets.len(),
+        within: abs.iter().filter(|x| **x <= tolerance_ms).count(),
+        tolerance_ms,
+        median_ms: abs.get(abs.len() / 2).copied().unwrap_or(0.0),
+        worst_ms: abs.last().copied().unwrap_or(0.0),
+        offsets,
+    }
+}
+
+/// Пишет стерео WAV float32.
+pub fn write_wav(path: &std::path::Path, rate: u32, samples: &[f32]) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut f = std::io::BufWriter::new(std::fs::File::create(path)?);
+    let data = (samples.len() * 4) as u32;
+    f.write_all(b"RIFF")?;
+    f.write_all(&(36 + data).to_le_bytes())?;
+    f.write_all(b"WAVEfmt ")?;
+    f.write_all(&16u32.to_le_bytes())?;
+    f.write_all(&3u16.to_le_bytes())?;
+    f.write_all(&2u16.to_le_bytes())?;
+    f.write_all(&rate.to_le_bytes())?;
+    f.write_all(&(rate * 8).to_le_bytes())?;
+    f.write_all(&8u16.to_le_bytes())?;
+    f.write_all(&32u16.to_le_bytes())?;
+    f.write_all(b"data")?;
+    f.write_all(&data.to_le_bytes())?;
+    for s in samples {
+        f.write_all(&s.to_le_bytes())?;
+    }
+    f.flush()
+}
+
+/// Переход «Диджея», выбранный движком в рендере.
+#[derive(Debug, Clone, Default)]
+pub struct PlannedTransition {
+    pub technique: String,
+    pub start_ms: f64,
+    pub in_start_ms: f64,
+    pub length_ms: f64,
+    pub in_offset_ms: f64,
+    pub tempo: dalywave_transitions::TempoMap,
+    pub note: String,
+}
+
+/// Рендер пары треков в режиме «Диджей»: общий звук и (если `stems`) дорожки уходящего и
+/// входящего по отдельности. Кадр 0 каждого рендера — позиция `from_ms` уходящего.
+pub struct DjRender {
+    pub rate: u32,
+    pub mix: Vec<f32>,
+    pub outgoing: Vec<f32>,
+    pub incoming: Vec<f32>,
+    pub plan: PlannedTransition,
+}
+
+fn render_dj_once(
+    a: &TrackSpec,
+    b: &TrackSpec,
+    from_ms: u64,
+    rate: u32,
+    transition: Transition,
+    solo: crate::DjSolo,
+    timeout: Duration,
+) -> Result<(Vec<f32>, PlannedTransition), AudioError> {
+    let cfg = EngineConfig {
+        output: OutputConfig::Capture { sample_rate: rate },
+        transition,
+        normalize: true,
+        dj_solo: solo,
+        ..EngineConfig::default()
+    };
+    let (engine, events) = Engine::new(cfg)?;
+    let t0 = Instant::now();
+    engine.load_queue_at(vec![a.clone(), b.clone()], 0, from_ms, true);
+    let mut plan = PlannedTransition::default();
+    loop {
+        let left = timeout
+            .checked_sub(t0.elapsed())
+            .ok_or_else(|| AudioError::Output("timeout".into()))?;
+        match events.recv_timeout(left) {
+            Ok(Event::TransitionPlanned {
+                technique,
+                start_ms,
+                in_start_ms,
+                length_ms,
+                in_offset_ms,
+                tempo,
+                note,
+                ..
+            }) => {
+                plan = PlannedTransition {
+                    technique: technique.to_string(),
+                    start_ms,
+                    in_start_ms,
+                    length_ms,
+                    in_offset_ms,
+                    tempo,
+                    note,
+                }
+            }
+            Ok(Event::QueueEnded) => break,
+            Ok(_) => {}
+            Err(_) => return Err(AudioError::Output("timeout waiting for queue end".into())),
+        }
+    }
+    std::thread::sleep(Duration::from_millis(50));
+    let mut samples = engine.take_capture();
+    // Тишина до первого кадра уходящего (захват мог начать раньше деки) — не в счёт
+    let first = samples
+        .iter()
+        .position(|x| *x != 0.0)
+        .map(|i| i / 2 * 2)
+        .unwrap_or(0);
+    samples.drain(..first);
+    Ok((samples, plan))
+}
+
+pub fn render_dj(
+    a: &TrackSpec,
+    b: &TrackSpec,
+    from_ms: u64,
+    rate: u32,
+    expressiveness: u8,
+    stems: bool,
+    timeout: Duration,
+) -> Result<DjRender, AudioError> {
+    use crate::DjSolo;
+    let transition = Transition::Dj { expressiveness };
+    let (mix, plan) = render_dj_once(a, b, from_ms, rate, transition, DjSolo::Both, timeout)?;
+    let (outgoing, incoming) = if stems {
+        (
+            render_dj_once(a, b, from_ms, rate, transition, DjSolo::Outgoing, timeout)?.0,
+            render_dj_once(a, b, from_ms, rate, transition, DjSolo::Incoming, timeout)?.0,
+        )
+    } else {
+        (Vec::new(), Vec::new())
+    };
+    Ok(DjRender {
+        rate,
+        mix,
+        outgoing,
+        incoming,
+        plan,
+    })
+}

@@ -43,11 +43,13 @@
 /* Begin PBXFileReference section */
 		00E8B93BF740C8186DB6361D /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		0144B38ADB9470106F94418D /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		02FFEC7FA84D0CC7D6FCDFAC /* net.rs */ = {isa = PBXFileReference; path = net.rs; sourceTree = "<group>"; };
 		062A5A2D7472DB44AB8873E5 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
 		06F48107150D751B1FEB95D3 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
 		15BF5CCB7F35C1D588A8384C /* tray.rs */ = {isa = PBXFileReference; path = tray.rs; sourceTree = "<group>"; };
 		17F5055370C371339A65AFD4 /* macos.rs */ = {isa = PBXFileReference; path = macos.rs; sourceTree = "<group>"; };
+		186F9B3EE551C347F9025F98 /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
 		1AD983A4882E2E568FD6593D /* audio.rs */ = {isa = PBXFileReference; path = audio.rs; sourceTree = "<group>"; };
 		21915CE4038CA63D3585AB63 /* ios.rs */ = {isa = PBXFileReference; path = ios.rs; sourceTree = "<group>"; };
 		253DBBE975A202E6D5DF3810 /* error.rs */ = {isa = PBXFileReference; path = error.rs; sourceTree = "<group>"; };
@@ -57,6 +59,7 @@
 		39AE223214B55ED7B90ABF77 /* settings.rs */ = {isa = PBXFileReference; path = settings.rs; sourceTree = "<group>"; };
 		3C12E0D418269F691759B755 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		51D42D29EB38AED4AEBFFAAE /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		571594673FEEE302CCCE4546 /* smoke.rs */ = {isa = PBXFileReference; path = smoke.rs; sourceTree = "<group>"; };
 		5D23FE966015BD36E8390CBC /* downloader.rs */ = {isa = PBXFileReference; path = downloader.rs; sourceTree = "<group>"; };
 		5EE8D3754EB6635BC61E5266 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
 		6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -67,6 +70,7 @@
 		8680BC5BA77A8F5D01DAD70A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		88A58456576E3E031E1A9E3E /* player.rs */ = {isa = PBXFileReference; path = player.rs; sourceTree = "<group>"; };
 		8939A14EB49E4F5DEA32F192 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		898856C9584657AB9634E073 /* ios_bg.rs */ = {isa = PBXFileReference; path = ios_bg.rs; sourceTree = "<group>"; };
 		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
@@ -81,6 +85,7 @@
 		CBA685D63A1B696AAA3F0582 /* DalyWave.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = DalyWave.icon; sourceTree = "<group>"; };
 		CFA224F3B3C52421C49FE531 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		D439E9BF9652190398434011 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		DE1F407F37E3B60496B5DF7A /* haptics.rs */ = {isa = PBXFileReference; path = haptics.rs; sourceTree = "<group>"; };
 		E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		EB852A5757460E97877E17EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -148,6 +153,7 @@
 				82E855B1FFBF5A66BB26A28E /* auth.rs */,
 				5D23FE966015BD36E8390CBC /* downloader.rs */,
 				253DBBE975A202E6D5DF3810 /* error.rs */,
+				DE1F407F37E3B60496B5DF7A /* haptics.rs */,
 				21915CE4038CA63D3585AB63 /* ios.rs */,
 				0144B38ADB9470106F94418D /* lib.rs */,
 				17F5055370C371339A65AFD4 /* macos.rs */,
@@ -160,6 +166,7 @@
 				15BF5CCB7F35C1D588A8384C /* tray.rs */,
 				73A56A10B0D7E0D2A07AAD02 /* updates.rs */,
 				A5DB1F76A956B88840826EE6 /* window.rs */,
+				EF14BBC3AF04DA37622F55A8 /* offline */,
 			);
 			name = src;
 			path = ../../src;
@@ -216,6 +223,17 @@
 			path = bindings;
 			sourceTree = "<group>";
 		};
+		EF14BBC3AF04DA37622F55A8 /* offline */ = {
+			isa = PBXGroup;
+			children = (
+				898856C9584657AB9634E073 /* ios_bg.rs */,
+				186F9B3EE551C347F9025F98 /* mod.rs */,
+				02FFEC7FA84D0CC7D6FCDFAC /* net.rs */,
+				571594673FEEE302CCCE4546 /* smoke.rs */,
+			);
+			path = offline;
+			sourceTree = "<group>";
+		};
 		F3DD767A9649E2491C831A50 = {
 			isa = PBXGroup;
 			children = (
@@ -241,18 +259,18 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_C50F014F-39A1-4942-8D1A-37BD5D4C41D9" /* x86_64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = x86_64;
-			sourceTree = "<group>";
-		};
-		"TEMP_FB79C601-630B-4579-9474-2986B0B8B5F0" /* arm64 */ = {
+		"TEMP_3C25BDB6-1C13-4E32-89C7-9B53709D74BB" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = arm64;
+			sourceTree = "<group>";
+		};
+		"TEMP_D2FF767E-DC82-4190-BB5F-2046A678158A" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

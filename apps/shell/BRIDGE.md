@@ -137,15 +137,16 @@ const shell = createShell({ invoke, listen })
 | `openExternal(url)` | `open_external { url }` | — http, https, mailto |
 | `server.get()` / `server.set(url)` | `server_url_get` / `server_url_set { url }` | адрес сервера |
 | `setLocale(locale)` | `shell_set_locale { locale }` | — |
-| `updates.check()` | `update_check` | `UpdateInfo \| null` |
-| `updates.install()` | `update_install` | — скачивает, ставит, перезапускает |
+| `updates.check()` | `update_check` | `UpdateInfo \| null` — проверить сейчас, найденное качается в фоне |
+| `updates.state()` | `update_state` | `UpdateState` |
+| `updates.install()` | `update_install` | — «Перезапустить»: ставит скачанное и перезапускает |
 | `player.load(items, { start, startMs, autoplay })` | `player_load { items, start, startMs, autoplay }` | — новая очередь движка |
 | `player.setUpcoming(items)` | `player_set_upcoming { items }` | — всё после текущего трека |
 | `player.play()` / `pause()` / `toggle()` | `player_play` / `player_pause` / `player_toggle` | — |
 | `player.seek(positionMs)` | `player_seek { positionMs }` | — |
 | `player.next()` / `previous()` / `stop()` | `player_next` / `player_previous` / `player_stop` | — по очереди движка |
 | `player.setVolume(volume)` | `player_set_volume { volume }` | — 0…1 |
-| `player.setTransition(t)` | `player_set_transition { transition }` | — `{ mode: 'gapless' }` \| `{ mode: 'crossfade', ms }` |
+| `player.setTransition(t)` | `player_set_transition { transition }` | — `{ mode: 'gapless' }` \| `{ mode: 'crossfade', ms }` \| `{ mode: 'dj', expressiveness }` (0…1) |
 | `player.setNormalize(enabled)` | `player_set_normalize { enabled }` | — выравнивание по LUFS |
 | `player.setLevels(enabled)` | `player_set_levels { enabled }` | — события `player:level` |
 | `player.state()` | `player_state` | `PlayerSnapshot` |
@@ -177,8 +178,10 @@ const shell = createShell({ invoke, listen })
 | `player:level` | `{ rms, peak, bands: [low, mid, high] }` | ~20 раз в секунду, пока включено `setLevels(true)` |
 | `audio:outputs` | `AudioOutputs` | появилось или пропало устройство вывода, сменились устройство по умолчанию или маршрут |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |
-| `update:available` | `UpdateInfo` | фоновая проверка нашла обновление (раз в 6 часов) |
-| `update:progress` | `{ downloadedBytes, totalBytes }` | идёт `updates.install()` |
+| `update:available` | `UpdateInfo` | проверка нашла обновление, скачивание началось |
+| `update:progress` | `{ downloadedBytes, totalBytes }` | ход скачивания, до 4 раз в секунду |
+| `update:ready` | `UpdateInfo` | скачано и проверено подписью — можно «Перезапустить» |
+| `update:state` | `UpdateState` | каждая перемена у обновления (и ход скачивания) |
 | `deep-link:open` | `{ url }` | ссылка `dalywave://…`, кроме возврата входа (на будущее) |
 | `downloader:state` | `DownloaderSnapshot` | загрузчик на компьютере: каждая перемена, ход задания — до 4 раз в секунду |
 
@@ -248,6 +251,16 @@ interface PlayerItem {
   title: string; artist: string; album?: string | null; artworkUrl?: string | null
 }
 ```
+
+**«Диджей»** (`setTransition({ mode: 'dj', expressiveness })`, только приложения). Движок сам берёт
+анализ текущего и следующего трека — `GET /api/tracks/{trackId}/analysis` с токеном устройства (сетка
+долей, фразы, тональность, вокал, энергия; 404 — анализа нет) — и выбирает переход: граница фразы
+уходящего после вокала, вход входящего с сильной доли, приём (сведение по долям со сменой баса,
+фильтр, эхо-выход, резкая смена) и длина 8/16/32 такта по выразительности. Входящий растягивается до
+темпа уходящего без смены высоты и за 4 такта возвращается к своему. Нет анализа, неуверенная сетка,
+темпы расходятся больше чем на 8 % — «Умный» (наложение 4 с после вокала). `player:track` приходит в
+момент вступления входящего; `player:position` у растянутого трека — позиция в файле. Подробно —
+`crates/transitions`, решения — `docs/decisions.md`.
 
 **Ссылки.** Если ссылки нет или она истекла посреди трека (подписанная ссылка R2 живёт 6 часов;
 хранилище отвечает 400/401/403/404/410), движок сам запрашивает `GET /api/tracks/{trackId}/stream`
@@ -332,6 +345,92 @@ AirPlay ушла из сети, ЦАП выдернули) — пауза, вы�
 (`crates/client/audio/tools/serve.py`) играет сразу после запуска, в журнал — треки, позиция,
 уровень, «Сейчас играет» и нагрузка.
 
+## Управление между устройствами
+
+Приложение — устройство в списке «Где играть», как и каждая вкладка сайта (сервер —
+`crates/server/src/connect.rs`, интерфейс — `apps/ui/app/stores/connect.ts`). Всё идёт по тому же
+WebSocket `/api/ws`, что и живые события, сообщениями `connect.*`; отдельных команд оболочки нет.
+
+- **Кто это.** Id установки — в `localStorage` WebView (`dw.connect.device`), имя сервер берёт из
+  входа приложения («MacBook Pro Захара»), вид — `laptop` (macOS), `desktop` (Windows), `phone`,
+  `tablet`. Возможности: громкость и «Диджей».
+- **Активное устройство** владеет очередью и раз в 5 с (и при каждом изменении) публикует снимок:
+  трек, позиция, очередь, громкость, режим переходов. Движок сам переходит к следующему треку
+  (`player:track`) — плеер интерфейса двигает очередь, и снимок уходит пультам.
+- **Команды пульта** (пауза, следующий, перемотка, громкость, «играть альбом здесь»…) приходят
+  интерфейсу и выполняются тем же плеером, что и кнопки на экране: дальше — команды движка
+  `player_*` из таблицы выше. Ответ `connect.ack` уходит сразу после выполнения.
+- **Перенос.** Выбрали другое устройство — здесь звук останавливается (`player_stop`: очередь
+  движка очищается, медиаклавиши больше не играют старое), плеер становится пультом. Перенесли
+  сюда — движок получает очередь и позицию из снимка (`player_load` с `startMs`).
+- **Пульт в приложении.** Медиаклавиши и Пункт управления при пустом движке присылают
+  `media:command` — он уходит командой активному устройству.
+
+**iPhone и iPad в фоне.** Музыку в фоне играет движок, а WebView iOS усыпляет: сокет молчит, снимки
+и знаки жизни не уходят. Через 15 с сервер считает iPhone пропавшим — на других устройствах
+появляется «Продолжить здесь», хотя музыка на телефоне играет; команды с пульта на телефон в фоне
+отвечают `offline`. Вернулись в приложение — мост сам переподключает сокет (`visibilitychange`),
+приложение снова представляется (`connect.hello`), шлёт знак жизни и свежий снимок. Если за это
+время воспроизведение забрали на другое устройство, телефон получает `connect.active` и
+останавливается. Управлять телефоном в фоне можно будет, когда сокет переедет в ядро на Rust
+(после этапа 5).
+
+## Умный офлайн
+
+Все приложения (macOS, Windows, iPhone, iPad): локальная база медиатеки, загрузки на устройство,
+волна без сети (`src/offline/`). В интерфейсе — `bridge.offline` (на сайте `null`), обёртка —
+`app/bridge/tauri/offline.ts`, состояние — `useOfflineStore()`.
+
+| Команда | Аргументы | Результат |
+|---|---|---|
+| `offline_status` | — | `OfflineStatus` (ниже) |
+| `offline_set_settings` | `patch: { limitBytes?, wifiOnly?, reserveEnabled?, forceOffline? }` | `OfflineStatus` |
+| `offline_sync` | — | — синхронизировать базу сейчас (ждёт прохода до 10 с) |
+| `offline_read` | `query: { what, id?, ids?, cursor?, limit?, q? }` | данные в типах API или `null` — в базе нет, идти на сервер. `what`: `overview`, `liked`, `albums`, `artists`, `playlists`, `playlist`, `album`, `artist`, `search`, `tracks` |
+| `offline_pin` / `offline_unpin` | `pin: { kind: 'track' \| 'album' \| 'playlist' \| 'artist' \| 'liked', refId }` | `OfflineStatus` |
+| `offline_clear` | — | `OfflineStatus` — удалить все файлы и закреплённое, умный запас выключается |
+| `offline_downloads` | — | `TrackDownload[]` — все треки на устройстве и ход их загрузки |
+| `offline_source` | `trackId` | `{ durationMs, loudnessLufs, truePeakDb, waveform }` скачанного или `null` |
+| `offline_wave_next` | `session, settings, count, exclude` | `{ track, reason }[]` — волна из скачанного |
+| `offline_wave_react` | `session, trackId, kind, positionMs` | — реакция в волне без сети |
+| `offline_played` | `play: { trackId, playedMs, durationMs, endReason, wave }` | — в историю устройства |
+| `haptic` | `kind` | — тактильный отклик (ниже) |
+
+```ts
+interface OfflineStatus {
+  online: boolean                       // «Без сети» выключено, сеть есть, сервер отвечает
+  network: 'wifi' | 'cellular' | 'none' | 'unknown'
+  synced: boolean; syncedAt: string | null; syncing: boolean
+  settings: { limitBytes: number, wifiOnly: boolean, reserveEnabled: boolean, forceOffline: boolean }
+  usage: { pinnedBytes, reserveBytes, cacheBytes, totalBytes, files: number }
+  downloads: { active, queued, failed, overLimit: number, waitingForWifi: boolean }
+  pins: { kind, refId: string | null, tracksTotal, tracksReady, bytes: number }[]
+  reserve: { tracks, ready: number, builtAt: string | null }
+}
+interface TrackDownload { trackId: string, state: 'queued' | 'downloading' | 'ready' | 'failed', received: number, total: number }
+```
+
+События: `offline:state` (`OfflineStatus`, перемены хода — не чаще раза в секунду), `downloads:progress`
+(`TrackDownload`, до 4 раз в секунду на трек), `offline:synced` (медиатека в базе изменилась — перечитать
+списки).
+
+**Как экраны получают данные.** Медиатека (`library.*`, `playlists.list/get`) — из базы, если она уже
+синхронизирована; каталог (`catalog.album/artist/search/lookup/track`) — с сервера, а без сети или при сбое
+сети — из базы. После изменения медиатеки мост ждёт синхронизации базы — экран сразу видит перемену.
+`media.source` скачанного трека отдаёт громкость и огибающую из базы без ссылки, а плеер оболочки сам
+подставляет файл (`player_load`, `player_set_upcoming`); без сети нескачанное — `unavailable` сразу.
+Волна: без сети (или если сервер не ответил) `wave.start/next` подбирает из скачанного (сессия `offline:…`),
+сеть пропала посреди волны — продолжает её же, не повторяя сыгранное.
+
+**«Без сети»** (`forceOffline`): HTTP моста не уходит на сервер вовсе, плеер не спрашивает ссылки.
+
+**Тактильный отклик** — `haptic(kind)`: `light` | `medium` | `heavy` | `soft` | `rigid` (удар), `selection`,
+`success` | `warning` | `error`. Только iPhone (UIKit); на компьютерах ничего. Неизвестный `kind` — `invalid`.
+
+**Проверка без входа** — `DALYWAVE_OFFLINE_SMOKE=<тестовый сервер>`: своя база, файлы тестового сервера
+качаются тем же путём (iPhone — фоновой сессией), затем «Без сети», волна из скачанного и воспроизведение
+из файлов. В журнал — `offline smoke: …`.
+
 ## Окно и приложение
 
 - Закрытие окна (красная кнопка, ⌘W, Alt+F4, `window.close()`) прячет его в трей: музыка
@@ -370,8 +469,32 @@ interface DownloaderSnapshot {
 
 ## Обновления
 
-Сервер (позже) отвечает на `GET /api/updates/{target}/{arch}/{current_version}`
+Только macOS и Windows. Сервер отвечает на `GET /api/updates/{target}/{arch}/{current_version}`
 (`target` — `darwin` или `windows`, `arch` — `aarch64` или `x86_64`): `204` — обновлений нет;
-`200` — JSON `{ version, notes, pub_date, url, signature }`, где `signature` — содержимое файла
-`.sig` из сборки. Найдя обновление, оболочка шлёт `update:available`; интерфейс показывает
-предложение и вызывает `updates.install()`.
+`200` — JSON `{ version, notes, pub_date, url, signature }`, где `url` — подписанная ссылка R2, а
+`signature` — содержимое файла `.sig` из сборки. Как выпуск попадает на сервер — README, «Выпуск».
+
+Оболочка проверяет при запуске (через 20 с) и раз в 6 часов, найденное сразу качает в фоне в
+папку кэша и проверяет подписью (`update:available` → `update:progress` → `update:ready`); файл
+переживает перезапуск, повторно не качается. Затем — тихо: строка в настройках («О приложении»)
+и пункт «Обновление готово — Перезапустить» в начале меню трея. Само приложение не
+перезапускается никогда: обновление ставит `updates.install()` (кнопка «Перезапустить» или пункт
+трея), а на macOS — ещё и обычный выход (⌘Q, «Выйти»; `installOnQuit: true`). На Windows
+установщик NSIS закрывает приложение (загрузчик перед этим возвращает задание) и запускает новую
+версию.
+
+```ts
+type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'installing' | 'failed'
+interface UpdateState {
+  status: UpdateStatus
+  currentVersion: string           // то же, что appVersion
+  update: UpdateInfo | null        // найденная версия: downloading, ready, installing, сбой скачивания
+  downloadedBytes: number | null
+  totalBytes: number | null
+  checkedAtMs: number | null       // последняя удачная проверка
+  error: string | null             // failed: текст для журнала
+  installOnQuit: boolean           // macOS
+}
+```
+
+`updates.install()` до `ready` сначала скачивает (ход — `update:progress`); ошибка — `{ code: 'update' }`.

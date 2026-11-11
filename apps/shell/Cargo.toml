@@ -21,6 +21,14 @@ tauri-build = { version = "2.7.4", features = [] }
 [dependencies]
 # Звук — свой движок на Rust (crates/client/audio): декодирование, без пауз, кроссфейд
 dalywave-audio = { path = "../../crates/client/audio" }
+# Умный офлайн: локальная база, синхронизация, загрузки на устройство, волна без сети (crates/client)
+dalywave-core = { path = "../../crates/client/core" }
+dalywave-downloads = { path = "../../crates/client/downloads" }
+dalywave-protocol = { path = "../../crates/protocol" }
+dalywave-store = { path = "../../crates/client/store" }
+dalywave-sync = { path = "../../crates/client/sync" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+uuid = { version = "1", features = ["v7", "serde"] }
 tauri = { version = "2.12.5", features = ["tray-icon", "image-png"] }
 tauri-plugin-deep-link = "2.6.3"
 tauri-plugin-log = "2.10.2"
@@ -47,6 +55,8 @@ tauri-plugin-shell = "2.6.0"
 tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }
 # TLS — системный (Security.framework, SChannel): доверие из ОС и никакой сборки C-криптографии
 tauri-plugin-updater = { version = "2.14.1", default-features = false, features = ["native-tls", "system-proxy", "zip"] }
+# Дата выпуска из ответа сервера — интерфейсу в RFC 3339 (тот же time, что у плагина)
+time = { version = "0.3", features = ["formatting"] }
 tauri-plugin-window-state = "2.5.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -20,6 +20,10 @@ crossbeam-channel = "0.5.17"
 ureq = { version = "3.5.1", default-features = false, features = ["rustls"] }
 log = "0.4"
 thiserror = "2"
+# Режим «Диджей»: выбор перехода и кривые автоматики — общий с сервером крейт
+dalywave-transitions = { path = "../../transitions" }
+# Растяжение по времени без смены высоты — Signalsmith Stretch (MIT) через cxx, без libclang
+ssstretch = "0.1.0"
 
 [target.'cfg(target_vendor = "apple")'.dependencies]
 objc2 = "0.6.5"
@@ -37,3 +41,7 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std"
 objc2-media-player = { version = "0.3.2", default-features = false, features = ["objc2-app-kit"] }
 # Список устройств вывода: тип подключения (AirPlay, Bluetooth, USB…) и слежение за их появлением
 objc2-core-audio = { version = "0.3.2", default-features = false, features = ["std", "AudioHardware"] }
+
+[dev-dependencies]
+# Пример dj_render читает анализ треков (JSON сервиса анализа)
+serde_json = "1"

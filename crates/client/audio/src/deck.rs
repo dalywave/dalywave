@@ -9,8 +9,11 @@ use std::time::Duration;
 
 use crossbeam_channel::{Receiver, Sender};
 
+use dalywave_transitions::TempoMap;
+
 use crate::decode::TrackDecoder;
 use crate::resample::StreamResampler;
+use crate::stretch::Stretcher;
 use crate::{AudioError, TrackSpec};
 
 pub(crate) const UNKNOWN: u64 = u64::MAX;
@@ -28,6 +31,26 @@ pub(crate) struct Segment {
     /// Полная длина трека, мс (если контейнер её сообщает).
     pub duration_ms: Option<u64>,
     pub info: String,
+    /// Карта темпа («Диджей»): позиция в треке через `t` мс от начала сегмента. None — 1:1.
+    pub tempo: Option<Arc<TempoMap>>,
+}
+
+impl Segment {
+    /// Позиция в треке через `elapsed_ms` от начала сегмента.
+    pub fn track_ms(&self, elapsed_ms: f64) -> f64 {
+        match &self.tempo {
+            Some(m) => m.src_at(elapsed_ms),
+            None => self.offset_ms as f64 + elapsed_ms,
+        }
+    }
+
+    /// Обратное: через сколько мс от начала сегмента звучит место трека `track_ms`.
+    pub fn elapsed_ms(&self, track_ms: f64) -> f64 {
+        match &self.tempo {
+            Some(m) => m.out_at(track_ms),
+            None => track_ms - self.offset_ms as f64,
+        }
+    }
 }
 
 /// Состояние деки, которое читают микшер (атомики) и контроллер.
@@ -70,6 +93,8 @@ pub(crate) struct PreparedTrack {
     pub decoder: TrackDecoder,
     pub gain: f32,
     pub offset_ms: u64,
+    /// «Диджей»: растянуть по карте темпа (декодер стоит на её начале).
+    pub tempo: Option<TempoMap>,
 }
 
 pub(crate) enum DeckCmd {
@@ -155,6 +180,8 @@ struct Worker {
     pending: Vec<f32>,
     pending_pos: usize,
     src: Vec<f32>,
+    stretch: Option<Stretcher>,
+    stretched: Vec<f32>,
 }
 
 fn write_ring(prod: &mut rtrb::Producer<f32>, data: &[f32]) -> usize {
@@ -196,6 +223,8 @@ impl Worker {
             pending: Vec::with_capacity(32 * 1024),
             pending_pos: 0,
             src: Vec::with_capacity(32 * 1024),
+            stretch: None,
+            stretched: Vec::with_capacity(32 * 1024),
         }
     }
 
@@ -214,6 +243,12 @@ impl Worker {
     }
 
     fn begin_segment(&mut self, deck_start: u64) {
+        // Растяжение — только у первого трека деки: сведение «Диджея» идёт отдельными деками
+        let tempo = self.cur.tempo.take().filter(|m| !m.is_identity());
+        self.stretch = tempo
+            .clone()
+            .map(|m| Stretcher::new(self.cur.decoder.source_rate, m));
+        let tempo = tempo.map(Arc::new);
         let d = &self.cur.decoder;
         let seg = Segment {
             index: self.cur.index,
@@ -222,15 +257,21 @@ impl Worker {
             offset_ms: self.cur.offset_ms,
             duration_ms: d.total_frames.map(|t| t * 1000 / d.source_rate as u64),
             info: d.describe(),
+            tempo: tempo.clone(),
         };
         if let Ok(mut s) = self.shared.segments.lock() {
             s.push(seg);
         }
         // Оценка полной длины деки — для момента старта кроссфейда.
-        let total = d
-            .total_frames
-            .map(|t| t.saturating_sub(d.position))
-            .map(|left| deck_start + self.device_frames(left, d.source_rate));
+        let rate = d.source_rate;
+        let total = d.total_frames.map(|t| match &tempo {
+            // Растянутый трек звучит столько, сколько говорит карта
+            Some(m) => {
+                let end_ms = m.out_at(t as f64 * 1000.0 / f64::from(rate));
+                deck_start + self.device_frames((end_ms * f64::from(rate) / 1000.0) as u64, rate)
+            }
+            None => deck_start + self.device_frames(t.saturating_sub(d.position), rate),
+        });
         self.shared
             .total_frames
             .store(total.unwrap_or(UNKNOWN), Ordering::Relaxed);
@@ -280,6 +321,15 @@ impl Worker {
                 *s *= gain;
             }
         }
+        if let Some(st) = &mut self.stretch {
+            self.stretched.clear();
+            st.process(&self.src, &mut self.stretched);
+            std::mem::swap(&mut self.src, &mut self.stretched);
+        }
+        self.resample_src()
+    }
+
+    fn resample_src(&mut self) -> Result<(), AudioError> {
         let before = self.pending.len();
         match &mut self.resampler {
             Some(r) => r.process(&self.src, &mut self.pending)?,
@@ -287,6 +337,16 @@ impl Worker {
         }
         self.emitted += ((self.pending.len() - before) / 2) as u64;
         self.src.clear();
+        Ok(())
+    }
+
+    /// Конец входа растяжения: остаток и хвост задержки — в ресемплер.
+    fn finish_stretch(&mut self) -> Result<(), AudioError> {
+        if let Some(mut st) = self.stretch.take() {
+            self.src.clear();
+            st.finish(&mut self.src);
+            self.resample_src()?;
+        }
         Ok(())
     }
 
@@ -319,6 +379,7 @@ impl Worker {
                         std::thread::sleep(Duration::from_millis(2));
                         continue;
                     }
+                    self.finish_stretch()?;
                     let Some(next) = self.next.take() else {
                         self.flush_resampler()?;
                         self.flush_pending();
@@ -345,6 +406,7 @@ impl Worker {
                         return Ok(());
                     }
                     // Обрыв посреди трека: доигрываем то, что есть, и сообщаем.
+                    self.finish_stretch()?;
                     self.flush_resampler()?;
                     self.flush_pending();
                     return Err(e);
