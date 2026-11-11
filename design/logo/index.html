@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DalyWave · логотип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0b0e; --panel: #131317; --panel-2: #1a1a20; --line: #25252d; --text: #f3f3f6; --muted: #9b9ba8;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Onest, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+  header { padding: 48px 0 28px; }
+  h1 { font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
+  header p { margin: 0; color: var(--muted); max-width: 640px; }
+  .palettes { display: flex; gap: 8px; margin-top: 22px; flex-wrap: wrap; }
+  .palettes button {
+    display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted); font: 500 14px Onest, sans-serif; cursor: pointer;
+  }
+  .palettes button[aria-pressed="true"] { color: var(--text); border-color: #4a4a56; background: var(--panel-2); }
+  .palettes i { width: 22px; height: 22px; border-radius: 50%; display: block; }
+  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; padding-bottom: 72px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: grid; gap: 22px; min-width: 0; }
+  .card > * { min-width: 0; }
+  .card.pick { border-color: color-mix(in oklab, var(--accent, #a51cff) 55%, var(--line)); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent, #a51cff) 35%, transparent); }
+  .top { display: grid; grid-template-columns: 148px 1fr; gap: 22px; align-items: center; }
+  .top svg { width: 148px; height: 148px; display: block; filter: drop-shadow(0 18px 30px rgba(0,0,0,.45)); }
+  h2 { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  h2 .name { white-space: nowrap; }
+  .badge { font-size: 12px; font-weight: 600; color: #0b0b0e; background: var(--text); padding: 2px 8px; border-radius: 999px; letter-spacing: 0; }
+  .note { margin: 0; color: var(--muted); font-size: 14px; }
+  .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px; }
+  .sizes { display: flex; align-items: flex-end; gap: 16px; }
+  .sizes svg { display: block; }
+  .surfaces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .surface { border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 96px; overflow: hidden; }
+  .surface.dark { background: #000; }
+  .surface.light { background: #f4f4f6; color: #111; }
+  .lockup { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 21px; letter-spacing: -0.025em; white-space: nowrap; }
+  .lockup svg { flex: none; }
+  .tab { display: flex; align-items: center; gap: 8px; background: #2a2a31; border-radius: 10px 10px 0 0; padding: 8px 12px; font-size: 13px; color: #d9d9e0; width: max-content; }
+  .home { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: #fff; }
+  footer { color: var(--muted); font-size: 13px; padding: 0 0 48px; }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    header { padding-top: 28px; }
+    h1 { font-size: 28px; }
+    main { grid-template-columns: 1fr; }
+    .top { grid-template-columns: 112px 1fr; gap: 16px; }
+    .top svg { width: 112px; height: 112px; }
+    .surfaces { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Логотип DalyWave</h1>
+    <p>Знак в духе Apple Music и Spotify: один простой белый символ на цветном поле. У каждого варианта — иконка приложения, мелкие размеры вплоть до вкладки браузера и пара с названием на тёмном и светлом.</p>
+    <div class="palettes" id="palettes"></div>
+  </header>
+  <main id="grid"></main>
+  <footer>Цвет поля переключается сверху; знак от цвета не зависит и работает одним цветом.</footer>
+</div>
+<script>
+const palettes = {
+  night: { name: 'Ночь', stops: ['#4B21FF', '#A21CFF', '#FF3D8E'], accent: '#a51cff' },
+  deep: { name: 'Глубина', stops: ['#101B7A', '#2148FF', '#21C8F0'], accent: '#2f6bff' },
+  dusk: { name: 'Закат', stops: ['#E0215F', '#FF4D3A', '#FFAE3A'], accent: '#ff5a3c' },
+};
+
+// Синусоида по точкам — плавнее, чем кривые вручную
+function sinePath(x0, x1, cy, amp, periods, steps = 96) {
+  let d = '';
+  for (let i = 0; i <= steps; i++) {
+    const x = x0 + (x1 - x0) * i / steps;
+    const y = cy - amp * Math.sin(2 * Math.PI * periods * i / steps);
+    d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
+  }
+  return d;
+}
+// Плавная кривая через точки (Catmull-Rom → кубические Безье)
+function smoothPath(pts) {
+  const p = [pts[0], ...pts, pts[pts.length - 1]];
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < p.length - 2; i++) {
+    const [x0, y0] = p[i - 1], [x1, y1] = p[i], [x2, y2] = p[i + 1], [x3, y3] = p[i + 2];
+    const c1 = [x1 + (x2 - x0) / 6, y1 + (y2 - y0) / 6];
+    const c2 = [x2 - (x3 - x1) / 6, y2 - (y3 - y1) / 6];
+    d += `C${c1[0].toFixed(2)} ${c1[1].toFixed(2)} ${c2[0].toFixed(2)} ${c2[1].toFixed(2)} ${x2} ${y2}`;
+  }
+  return d;
+}
+
+const marks = [
+  {
+    id: 'wave-w', name: 'Волна‑W', pick: true,
+    note: 'Одна плавная линия — и волна, и буква W из названия. Мягкие перегибы вместо острых углов: знак спокойный, но с ритмом. В 16 пикселях читается как «w».',
+    glyph: (c) => `<path d="${smoothPath([[16, 31], [33, 69], [50, 41], [67, 69], [84, 31]])}" fill="none" stroke="${c}" stroke-width="11.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  {
+    id: 'sine', name: 'Синус',
+    note: 'Непрерывная волна — бесконечный поток музыки. Самый простой силуэт, но и самый общий: похожие знаки встречаются часто.',
+    glyph: (c) => `<path d="${sinePath(17, 83, 50, 15, 1.5)}" fill="none" stroke="${c}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  {
+    id: 'dwave', name: 'D из волн',
+    note: 'Буква D — Daly: прямая стойка как источник, полукруг и дуга внутри как звук, который от неё расходится.',
+    glyph: (c) => `<g fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 23V77M32 23h5a27 27 0 0 1 0 54h-5"/>
+        <path d="M46 39.6a13 13 0 0 1 0 20.8"/>
+      </g>`,
+  },
+  {
+    id: 'play', name: 'Плей-волна',
+    note: 'Кнопка воспроизведения, рассечённая волной: главное действие приложения и его название в одном символе.',
+    glyph: (c, uid) => `<defs><mask id="cut-${uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+          <rect width="100" height="100" fill="#fff"/>
+          <path d="${sinePath(10, 90, 50, 9, 1)}" fill="none" stroke="#000" stroke-width="8.5" stroke-linecap="round"/>
+        </mask></defs>
+        <path d="M36 25L36 75L78 50Z" fill="${c}" stroke="${c}" stroke-width="12" stroke-linejoin="round" mask="url(#cut-${uid})"/>`,
+  },
+];
+
+// Форма иконки — суперэллипс, как у иконок iOS и macOS
+function squircle(size, n = 5, steps = 240) {
+  const a = size / 2;
+  let d = '';
+  for (let i = 0; i <= steps; i++) {
+    const t = 2 * Math.PI * i / steps;
+    const c = Math.cos(t), s = Math.sin(t);
+    const x = a + a * Math.sign(c) * Math.abs(c) ** (2 / n);
+    const y = a + a * Math.sign(s) * Math.abs(s) ** (2 / n);
+    d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
+  }
+  return d + 'Z';
+}
+
+let uidCounter = 0;
+function icon(mark, palette, px, variant = 'color') {
+  const uid = `${mark.id}-${uidCounter++}`;
+  const S = 100;
+  const bg = variant === 'color' ? `url(#g-${uid})` : variant === 'black' ? '#000' : '#fff';
+  const fg = variant === 'white' ? '#000' : '#fff';
+  const [s0, s1, s2] = palette.stops;
+  const glyph = mark.glyph(fg, uid);
+  return `<svg width="${px}" height="${px}" viewBox="0 0 ${S} ${S}" role="img" aria-label="${mark.name}">
+    <defs>
+      <linearGradient id="g-${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${s0}"/><stop offset=".55" stop-color="${s1}"/><stop offset="1" stop-color="${s2}"/>
+      </linearGradient>
+      <radialGradient id="h-${uid}" cx=".22" cy=".12" r=".9">
+        <stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/>
+      </radialGradient>
+      <clipPath id="c-${uid}"><path d="${squircle(S)}"/></clipPath>
+    </defs>
+    <g clip-path="url(#c-${uid})">
+      <rect width="${S}" height="${S}" fill="${bg}"/>
+      ${variant === 'color' ? `<rect width="${S}" height="${S}" fill="url(#h-${uid})"/>` : ''}
+      ${variant === 'white' ? `<path d="${squircle(S)}" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="1.5"/>` : ''}
+      <g transform="translate(50 50) scale(.68) translate(-50 -50)">${glyph}</g>
+    </g>
+  </svg>`;
+}
+
+function render(paletteKey) {
+  const p = palettes[paletteKey];
+  document.documentElement.style.setProperty('--accent', p.accent);
+  const grid = document.getElementById('grid');
+  grid.innerHTML = marks.map((m) => `
+    <article class="card ${m.pick ? 'pick' : ''}">
+      <div class="top">
+        ${icon(m, p, 148)}
+        <div>
+          <h2><span class="name">${m.name}</span>${m.pick ? '<span class="badge">выбран</span>' : ''}</h2>
+          <p class="note">${m.note}</p>
+        </div>
+      </div>
+      <div>
+        <p class="label">Размеры: 96, 64, 40, 32, 16</p>
+        <div class="sizes">${[96, 64, 40, 32, 16].map((s) => icon(m, p, s)).join('')}</div>
+      </div>
+      <div>
+        <p class="label">Одним цветом</p>
+        <div class="sizes">${icon(m, p, 64, 'black')}${icon(m, p, 64, 'white')}</div>
+      </div>
+      <div>
+        <p class="label">С названием и в деле</p>
+        <div class="surfaces">
+          <div class="surface dark"><span class="lockup">${icon(m, p, 34)}DalyWave</span></div>
+          <div class="surface light"><span class="lockup">${icon(m, p, 34)}DalyWave</span></div>
+          <div class="surface dark"><span class="home">${icon(m, p, 60)}<span>DalyWave</span></span></div>
+          <div class="surface light" style="align-items:flex-end;padding-bottom:0"><span class="tab">${icon(m, p, 16)}DalyWave — Моя волна</span></div>
+        </div>
+      </div>
+    </article>`).join('');
+}
+
+const bar = document.getElementById('palettes');
+for (const [key, p] of Object.entries(palettes)) {
+  const b = document.createElement('button');
+  b.innerHTML = `<i style="background:linear-gradient(135deg, ${p.stops.join(',')})"></i>${p.name}`;
+  b.setAttribute('aria-pressed', key === 'night');
+  b.onclick = () => { bar.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); render(key); };
+  bar.append(b);
+}
+render('night');
+
+// Фавиконка — рекомендованный знак
+const fav = document.createElement('link');
+fav.rel = 'icon';
+fav.href = 'data:image/svg+xml,' + encodeURIComponent(icon(marks[0], palettes.night, 64).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+document.head.append(fav);
+</script>
+</body>
+</html>
