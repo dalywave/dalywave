@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT extract(hour FROM p.started_at + make_interval(mins => $3))::int AS \"hour!\",\n                  sum(p.played_ms)::bigint AS \"ms!\"\n           FROM play_events p WHERE p.user_id = $1 AND p.started_at >= $2\n           GROUP BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hour!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "ms!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "5e138a847a59eb8a5948e17a101bc8afea2f8a68e433e289f9f4d4d05ec83cd4"
+}

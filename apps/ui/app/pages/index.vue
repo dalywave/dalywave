@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { AlbumSummary, ArtistSummary, Home, Shelf, ShelfItem, Track } from '~/api/types'
+import type { AlbumSummary, ArtistSummary, Home, PlaylistSummary, Shelf, ShelfItem, Track } from '~/api/types'
 
-// Главная: «Моя волна» и полки с сервера — продолжить, новинки подписок, недавно понравилось, ваши артисты
+// Главная: «Моя волна» и полки с сервера в порядке, который сервер выбрал по времени суток: продолжить,
+// миксы дня, радар новинок, новинки подписок, открытия недели, недавно понравилось, забытые, ваши артисты
 const bridge = useBridge()
 const auth = useAuthStore()
 const ui = useUiStore()
@@ -37,6 +38,16 @@ const isNew = (a: AlbumSummary) => !!a.releaseDate && Date.now() - new Date(a.re
 const albums = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'album' } => i.type === 'album') as AlbumSummary[]
 const artists = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'artist' } => i.type === 'artist') as ArtistSummary[]
 const tracks = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'track' } => i.type === 'track') as Track[]
+const playlists = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'playlist' } => i.type === 'playlist') as PlaylistSummary[]
+const TRACK_SHELVES = new Set(['discover_weekly', 'release_radar', 'forgotten_favorites'])
+
+/** Полка треков: играть с выбранного, контекст — «микс» с названием полки */
+function playShelf(s: Shelf, i: number) {
+  const list = tracks(s)
+  const tr = list[i]
+  if (tr && player.current?.track.id === tr.id) return player.toggle()
+  return player.playTracks(list, i, { type: 'mix', id: s.id, title: shelfTitle(s) })
+}
 
 /** Заголовки полок сервер присылает по-русски; переводим по id, неизвестные оставляем как есть */
 function shelfTitle(s: Shelf) {
@@ -70,6 +81,17 @@ function playLiked(list: Track[], i: number) {
       <template v-for="s in home.shelves" :key="s.id">
         <MusicShelf v-if="s.kind === 'continue'" :title="shelfTitle(s)" :cols="3" :rows="s.items.length > 3 ? 2 : 1" phone-width="82%">
           <MusicResumeCard v-for="it in s.items" :key="`${it.type}:${it.id}`" :item="it" />
+        </MusicShelf>
+
+        <MusicShelf v-else-if="s.kind === 'daily_mixes'" :title="shelfTitle(s)" :cols="5">
+          <MusicDailyMixCard v-for="(p, i) in playlists(s)" :key="p.id" :playlist="p" :index="i + 1" />
+        </MusicShelf>
+
+        <MusicShelf v-else-if="TRACK_SHELVES.has(s.kind)" :title="shelfTitle(s)" :hint="t(`hint.${s.kind}`)" :cols="6" phone-width="136px">
+          <template #actions>
+            <UiButton variant="ghost" size="sm" icon="ph:play-fill" @click="playShelf(s, 0)">{{ t('playAll') }}</UiButton>
+          </template>
+          <MusicTrackCard v-for="(tr, i) in tracks(s)" :key="tr.id" :track="tr" :badge="s.kind === 'release_radar' ? 'new' : null" @play="playShelf(s, i)" />
         </MusicShelf>
 
         <MusicShelf v-else-if="s.kind === 'new_releases'" :title="shelfTitle(s)" :cols="5">
@@ -159,6 +181,12 @@ function playLiked(list: Track[], i: number) {
       "night": "Доброй ночи"
     },
     "recent": "Недавно понравилось",
+    "playAll": "Слушать",
+    "hint": {
+      "discover_weekly": "Новое рядом с вашим вкусом",
+      "release_radar": "Свежие релизы ваших артистов",
+      "forgotten_favorites": "Любимое, которое давно не играло"
+    },
     "allLiked": "Все любимые",
     "settings": "Настройки",
     "failed": "Главная не загрузилась",
@@ -180,6 +208,12 @@ function playLiked(list: Track[], i: number) {
       "night": "Good night"
     },
     "recent": "Recently liked",
+    "playAll": "Play",
+    "hint": {
+      "discover_weekly": "New music close to your taste",
+      "release_radar": "Fresh releases from your artists",
+      "forgotten_favorites": "Favorites you haven't played in a while"
+    },
     "allLiked": "All liked",
     "settings": "Settings",
     "failed": "Home didn't load",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FollowedArtist, PlaylistKind, SavedAlbum } from '~/api/types'
+import type { FollowedArtist, PlaylistKind, SavedAlbum, Track } from '~/api/types'
 import type { LibraryItem } from '~/components/library/Entry.vue'
 import type { MenuEntry } from '~/types/ui'
 
@@ -10,8 +10,8 @@ type Filter = 'playlists' | 'albums' | 'artists' | 'downloaded'
 type Sort = 'added' | 'title'
 type View = 'grid' | 'list'
 
-// «Скачанное» вернётся вместе с загрузками на устройство (умный офлайн)
-const FILTERS: Filter[] = ['playlists', 'albums', 'artists']
+// «Скачанное» — только в приложении: закреплённое на этом устройстве
+const BASE_FILTERS: Filter[] = ['playlists', 'albums', 'artists']
 const KIND_OF: Record<Exclude<Filter, 'downloaded'>, LibraryItem['kind']> = { playlists: 'playlist', albums: 'album', artists: 'artist' }
 
 const route = useRoute()
@@ -22,15 +22,18 @@ const player = usePlayerStore()
 const auth = useAuthStore()
 const toast = useToast()
 const ui = useUiStore()
+const offline = useOfflineStore()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
 const { playAlbum, playArtist, playPlaylist } = usePlayActions()
 useHead({ title: () => t('title') })
 
+const FILTERS = computed<Filter[]>(() => (offline.available ? [...BASE_FILTERS, 'downloaded'] : BASE_FILTERS))
+
 // Фильтр живёт в адресе (?tab=albums): ссылки из других мест открывают нужный раздел
 const filter = computed<Filter | null>({
-  get: () => (FILTERS as string[]).includes(String(route.query.tab)) ? route.query.tab as Filter : null,
+  get: () => (FILTERS.value as string[]).includes(String(route.query.tab)) ? route.query.tab as Filter : null,
   set: v => void router.replace({ query: { ...route.query, tab: v ?? undefined } }),
 })
 function toggleFilter(f: Filter) {
@@ -151,9 +154,48 @@ const sorted = computed(() => [...items.value].sort((a, b) => {
 const visible = computed(() => {
   const f = filter.value
   if (!f) return sorted.value
-  if (f === 'downloaded') return []
+  if (f === 'downloaded') return [...sorted.value.filter(i => offline.isPinned(i.kind, i.id)), ...pinnedOutside.value]
   return sorted.value.filter(i => i.kind === KIND_OF[f])
 })
+
+// ---------- Скачанное (приложение) ----------
+
+const likedPinned = computed(() => offline.isPinned('liked', null))
+const pinnedTrackIds = computed(() => (offline.status?.pins ?? []).filter(p => p.kind === 'track' && p.refId).map(p => p.refId!))
+const pinnedTracks = ref<Track[]>([])
+// Закреплённые альбомы, которых нет в медиатеке (скачаны со страницы альбома), — тоже здесь
+const pinnedOutside = ref<LibraryItem[]>([])
+const pinnedAlbumIds = computed(() => (offline.status?.pins ?? []).filter(p => p.kind === 'album' && p.refId).map(p => p.refId!))
+watch([filter, pinnedAlbumIds, items], async ([f, ids, list]) => {
+  const missing = f === 'downloaded' ? ids.filter(id => !list.some(i => i.kind === 'album' && i.id === id)) : []
+  const loaded = await Promise.all(missing.map(id => bridge.catalog.album(id).catch(() => null)))
+  pinnedOutside.value = loaded.filter(d => !!d).map(d => ({
+    key: `album:${d!.album.id}`,
+    kind: 'album',
+    id: d!.album.id,
+    title: d!.album.title,
+    sub: `${tg(`record.${d!.album.recordType}`)} · ${d!.album.artist.name}`,
+    short: d!.album.artist.name,
+    pinned: false,
+    added: new Date().toISOString(),
+    image: d!.album.image,
+    explicit: d!.album.explicit,
+  }))
+}, { immediate: true })
+watch([filter, pinnedTrackIds], async ([f, ids]) => {
+  if (f !== 'downloaded' || !ids.length) {
+    pinnedTracks.value = []
+    return
+  }
+  pinnedTracks.value = await bridge.catalog.lookup(ids).catch(() => [])
+}, { immediate: true })
+const deviceSummary = computed(() => {
+  const s = offline.status
+  if (!s) return ''
+  const n = [...offline.tracks.values()].filter(d => d.state === 'ready').length
+  return t('device', { tracks: formatCount(n, 'track', lang.value), size: formatBytes(s.usage.totalBytes, lang.value) })
+})
+const downloadedEmpty = computed(() => !visible.value.length && !likedPinned.value && !pinnedTracks.value.length)
 
 const newest = computed(() => [...items.value].filter(i => i.kind !== 'artist').sort((a, b) => b.added.localeCompare(a.added)))
 const recentCovers = computed(() => newest.value.slice(0, 3).map(i => i.image ?? i.playlist?.covers[0]).filter(c => !!c))
@@ -305,6 +347,22 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
         <LibraryTile tone="recent" icon="ph:sparkle-fill" :title="t('recent')" :meta="newest[0]?.title" :covers="recentCovers" @click="showRecent" />
       </div>
 
+      <!-- Скачанное: сколько на устройстве, все лайки, отдельные треки -->
+      <div v-if="filter === 'downloaded' && offline.status" class="dl">
+        <p class="dl__sum">
+          <Icon name="ph:arrow-circle-down-fill" class="dl__icon" />
+          <span class="ellipsis">{{ deviceSummary }}</span>
+          <NuxtLink to="/settings#downloads" class="dl__link">{{ t('downloadSettings') }}</NuxtLink>
+        </p>
+        <div v-if="likedPinned" class="tiles">
+          <LibraryTile tone="liked" icon="ph:heart-fill" :title="tg('nav.liked')" :meta="formatCount(library.likedCount, 'track', lang)" to="/liked" />
+        </div>
+        <section v-if="pinnedTracks.length" class="dl__tracks">
+          <h2 class="dl__h2">{{ t('tracks') }}</h2>
+          <MusicTrackList :tracks="pinnedTracks" variant="wide" :context="{ type: 'library', id: 'downloaded', title: t('filter.downloaded') }" :label="t('tracks')" />
+        </section>
+      </div>
+
       <section ref="listEl" class="list" :aria-label="filter ? t(`filter.${filter}`) : t('all')">
         <!-- Сортировка слева, вид справа -->
         <div v-if="visible.length" class="list__bar">
@@ -341,7 +399,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
         </div>
 
         <!-- Пусто: подсказываем следующий шаг -->
-        <UiEmptyState v-else-if="filter === 'downloaded'" icon="ph:arrow-circle-down" :title="t('empty.downloaded')" :text="t('empty.downloadedText')" />
+        <UiEmptyState v-else-if="filter === 'downloaded' && downloadedEmpty" icon="ph:arrow-circle-down" :title="t('empty.downloaded')" :text="t('empty.downloadedText')">
+          <UiButton to="/settings#downloads" icon="ph:gear-six">{{ t('downloadSettings') }}</UiButton>
+        </UiEmptyState>
         <UiEmptyState v-else-if="filter === 'albums'" icon="ph:vinyl-record" :title="t('empty.albums')" :text="t('empty.albumsText')">
           <UiButton to="/search" icon="ph:magnifying-glass">{{ t('find') }}</UiButton>
         </UiEmptyState>
@@ -398,6 +458,15 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 .chip--clear { width: 32px; padding: 0; font-size: 14px; color: var(--text-2); }
 
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+
+.dl { display: flex; flex-direction: column; gap: 16px; }
+.dl__sum { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font-size: var(--fs-small); color: var(--text-2); }
+.dl__icon { flex: none; font-size: 18px; color: var(--accent); }
+.dl__link { flex: none; margin-left: auto; color: var(--text-1); font-weight: 600; }
+.dl__link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dl__link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.dl__tracks { display: flex; flex-direction: column; gap: 8px; }
+.dl__h2 { margin: 0; font-size: var(--fs-h4, 18px); font-weight: 700; }
 
 .list { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 72px; }
 .list__bar { display: flex; align-items: center; gap: 12px; min-height: 40px; }
@@ -459,6 +528,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "created": "Плейлист «{title}» создан",
     "createFailed": "Не получилось создать плейлист — попробуйте ещё раз",
     "find": "Найти музыку",
+    "device": "На устройстве: {tracks} · {size}",
+    "downloadSettings": "Загрузки",
+    "tracks": "Треки",
     "empty": {
       "playlists": "Соберите первый плейлист",
       "playlistsText": "Любимое под рукой — в одном месте",
@@ -495,6 +567,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "created": "Playlist “{title}” created",
     "createFailed": "Couldn't create the playlist — try again",
     "find": "Find music",
+    "device": "On this device: {tracks} · {size}",
+    "downloadSettings": "Downloads",
+    "tracks": "Tracks",
     "empty": {
       "playlists": "Make your first playlist",
       "playlistsText": "Everything you love, in one place",

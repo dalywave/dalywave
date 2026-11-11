@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET status = 'skipped', resolved_by = 'error', file_meta = $2,\n                        candidates = '[]', updated_at = now()\n                 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cb44ca38c749291725394891ecc8d393275a456be983e6d394abeb67518495e4"
+}

@@ -461,7 +461,8 @@ pub async fn storage(State(st): State<AppState>) -> AppResult<Json<StorageOvervi
 pub async fn imports(State(st): State<AppState>) -> AppResult<Json<AdminImportList>> {
     let items = sqlx::query!(
         r#"SELECT i.id, u.name AS user_name, i.kind, i.title, i.status, i.total, i.matched,
-                  jsonb_array_length(i.unmatched)::bigint AS "unmatched!", i.created_at, i.finished_at
+                  (SELECT count(*) FROM import_items x WHERE x.import_id = i.id AND x.status = 'unmatched') AS "unmatched!",
+                  i.phase, i.processed, i.error, i.stats, i.created_at, i.finished_at
            FROM imports i JOIN users u ON u.id = i.user_id
            ORDER BY i.created_at DESC
            LIMIT 100"#
@@ -478,6 +479,10 @@ pub async fn imports(State(st): State<AppState>) -> AppResult<Json<AdminImportLi
         total: r.total,
         matched: r.matched,
         unmatched: r.unmatched,
+        phase: r.phase,
+        processed: r.processed,
+        error: r.error,
+        stats: serde_json::from_value(r.stats).unwrap_or_default(),
         created_at: r.created_at,
         finished_at: r.finished_at,
     })

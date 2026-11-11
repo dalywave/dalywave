@@ -300,12 +300,20 @@ pub struct AdminImport {
     /// `text`, `csv`, `m3u`, `files`, `spotify_archive`.
     pub kind: String,
     pub title: String,
-    /// `running`, `done`, `failed`.
+    /// `running`, `done`, `failed`, `cancelled`.
     pub status: String,
     pub total: i32,
     pub matched: i32,
     /// Несопоставленных позиций.
     pub unmatched: i64,
+    /// `uploading`, `matching`, `applying`, `done`.
+    pub phase: String,
+    /// Разобрано позиций из `total`.
+    pub processed: i32,
+    #[schema(required = true)]
+    pub error: Option<String>,
+    /// Что добавилось в медиатеку.
+    pub stats: crate::imports::ImportStats,
     pub created_at: DateTime<Utc>,
     #[schema(required = true)]
     pub finished_at: Option<DateTime<Utc>>,

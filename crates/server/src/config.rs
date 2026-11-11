@@ -20,6 +20,8 @@ pub const DEFAULT_DEEZER_RATE_API: u32 = 25;
 pub const DEFAULT_DEEZER_RATE_WORKER: u32 = 15;
 /// Короче пароль не принимается: аварийный вход не должен подбираться перебором.
 pub const MIN_ADMIN_PASSWORD_LEN: usize = 32;
+/// Токен выпусков открывает загрузку сборок, которые поставятся всем приложениям: тоже не короче.
+pub const MIN_RELEASE_TOKEN_LEN: usize = 32;
 
 #[derive(Clone)]
 pub struct Config {
@@ -42,6 +44,9 @@ pub struct Config {
     pub deezer: DeezerConfig,
     pub fetcher: FetcherConfig,
     pub ml: MlConfig,
+    /// Токен конвейера выпусков (`make release-mac`, CI): загрузка сборки и регистрация выпуска
+    /// приложения. `None` — выпускать нельзя.
+    pub release_token: Option<String>,
 }
 
 /// Сервис анализа звука (services/ml): векторы, темп, тональность, настроение. В базу он не ходит:
@@ -289,6 +294,13 @@ impl Config {
         let ml = MlConfig {
             url: ml_url.trim_end_matches('/').to_string(),
         };
+        let release_token = var("RELEASE_TOKEN").filter(|t| {
+            let ok = t.chars().count() >= MIN_RELEASE_TOKEN_LEN;
+            if !ok {
+                tracing::warn!("DALYWAVE_RELEASE_TOKEN is shorter than {MIN_RELEASE_TOKEN_LEN} characters: app releases are off");
+            }
+            ok
+        });
 
         Ok(Self {
             database_url: var("DATABASE_URL").unwrap_or_else(|| DEFAULT_DATABASE_URL.into()),
@@ -309,6 +321,7 @@ impl Config {
             deezer,
             fetcher,
             ml,
+            release_token,
         })
     }
 

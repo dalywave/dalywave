@@ -138,6 +138,8 @@ export const useLibraryStore = defineStore('library', () => {
   if (import.meta.client) {
     bridge.live.on('library.changed', reloadSoon)
     bridge.live.onReconnect(reloadSoon)
+    // Приложение: медиатека в локальной базе обновилась после синхронизации
+    bridge.offline?.onSynced(reloadSoon)
   }
 
   return {

@@ -1292,13 +1292,14 @@ async fn taste_makes_mixes_and_home_shows_them(db: PgPool) {
     assert!(report.discovery.unwrap() >= 5);
     let facets = taste::facets(&app.state.db, user).await.unwrap();
     assert!(
-        facets[0].label.starts_with("Trap · Liked"),
+        facets[0].label.starts_with("Трэп · Liked"),
         "{}",
         facets[0].label
     );
     assert!((facets.iter().map(|f| f.weight).sum::<f32>() - 1.0).abs() < 1e-3);
     assert!(facets.iter().all(|f| !f.examples.is_empty()));
 
+    crate::taste::morning(&app.state.db).await;
     let res = app.get("/api/home", &me).await;
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
     let shelves = res.body["shelves"].as_array().unwrap();
@@ -1427,9 +1428,31 @@ async fn admin_sees_the_index_and_tunes_the_scout(db: PgPool) {
         .len();
     assert!(queued > 0);
 
+    // По умолчанию — вкус того, кто смотрит: у администратора своего нет; общий индекс тот же
     let res = app.get("/api/admin/reco", &admin).await;
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let own = &res.body;
+    assert_eq!(own["user"]["name"], "Person boss");
+    assert!(own["facets"].as_array().unwrap().is_empty());
+    assert!(own["impressions"].as_array().unwrap().is_empty());
+    assert!(own["sessions"].as_array().unwrap().is_empty());
+    let names: Vec<&str> = own["listeners"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| l["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["Person boss", "Person ann"], "свой — первым");
+    assert_eq!(own["index"]["size"], 10);
+
+    let res = app
+        .get(&format!("/api/admin/reco?userId={user}"), &admin)
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
     let b = &res.body;
+    assert_eq!(b["user"]["id"], user.to_string());
+    assert!(b["user"]["likes"].as_i64().unwrap() > 0);
+    assert_eq!(b["index"], own["index"], "индекс каталога общий");
     assert_eq!(b["index"]["size"], 10);
     assert_eq!(b["index"]["maxIndex"], 200_000);
     assert_eq!(b["index"]["full"], 0);
@@ -1442,6 +1465,44 @@ async fn admin_sees_the_index_and_tunes_the_scout(db: PgPool) {
     assert_eq!(shown.len(), queued, "начало волны — тоже показы");
     assert!(shown[0]["reason"]["text"].is_string());
     assert_eq!(shown[0]["surface"], "wave");
+    assert!(shown.iter().all(|i| i["userName"] == "Person ann"));
+    let sessions = b["sessions"].as_array().unwrap();
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0]["title"], "Моя волна");
+    assert_eq!(sessions[0]["served"], queued);
+    assert_eq!(sessions[0]["settings"]["character"], "mix");
+    assert!(
+        b["mixes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|m| m["generator"] == "daily_mix" || m["generator"] == "discover_weekly")
+    );
+    // Заготовки — по сочетаниям настроек, с готовым на сервере
+    sqlx::query(
+        "INSERT INTO wave_pools (user_id, combo, track_id, settings)
+         SELECT $1, 'any:new:any:any', t.id, '{\"character\": \"new\"}'::jsonb FROM tracks t LIMIT 3",
+    )
+    .bind(user)
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+    let res = app
+        .get(&format!("/api/admin/reco?userId={user}"), &admin)
+        .await;
+    let pools = res.body["pools"].as_array().unwrap().clone();
+    assert_eq!(pools.len(), 1);
+    assert_eq!(pools[0]["combo"], "any:new:any:any");
+    assert_eq!(pools[0]["tracks"], 3);
+    assert_eq!(pools[0]["ready"], 0);
+    assert_eq!(pools[0]["settings"]["character"], "new");
+    let res = app
+        .get(
+            &format!("/api/admin/reco?userId={}", Uuid::now_v7()),
+            &admin,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
 
     let res = app
         .call(
@@ -1482,10 +1543,41 @@ async fn admin_sees_the_index_and_tunes_the_scout(db: PgPool) {
         .post("/api/admin/reco/run", json!({ "task": "scout" }), &admin)
         .await;
     assert_eq!(res.body["queued"], 0, "уже стоит");
+    // Пересчёт вкуса выбранного слушателя — только его
+    sqlx::query("DELETE FROM jobs WHERE kind = 'taste'")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    let res = app
+        .post(
+            "/api/admin/reco/run",
+            json!({ "task": "taste", "userId": user }),
+            &admin,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["queued"], 1);
+    let for_whom: Vec<String> =
+        sqlx::query_scalar("SELECT payload ->> 'userId' FROM jobs WHERE kind = 'taste'")
+            .fetch_all(&app.state.db)
+            .await
+            .unwrap();
+    assert_eq!(for_whom, vec![user.to_string()]);
+    let res = app
+        .post(
+            "/api/admin/reco/run",
+            json!({ "task": "taste", "userId": Uuid::now_v7() }),
+            &admin,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
     let res = app
         .post("/api/admin/reco/run", json!({ "task": "taste" }), &admin)
         .await;
-    assert_eq!(res.body["queued"], 1);
+    assert_eq!(
+        res.body["queued"], 0,
+        "у ann уже стоит, у остальных нет данных"
+    );
     let kinds = app.audit_kinds().await;
     assert!(kinds.iter().any(|k| k == "reco.settings_changed"));
     assert!(kinds.iter().any(|k| k == "reco.run"));
@@ -1500,4 +1592,63 @@ async fn admin_sees_the_index_and_tunes_the_scout(db: PgPool) {
         let res = app.call(method.clone(), uri, body, &me).await;
         assert_eq!(res.status, StatusCode::FORBIDDEN, "{method} {uri}");
     }
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn chart_finds_are_weighted_by_closeness_to_taste(db: PgPool) {
+    let app = TestApp::new(db).await;
+    let s = Synth::new(app.state.db.clone());
+    let unanalyzed = || Feat {
+        analyzed: false,
+        ..Default::default()
+    };
+    let near = s.artist("Near").await;
+    let far = s.artist("Hop Two").await;
+    let stranger = s.artist("Game Composer").await;
+    let near_chart = s.track(near, "near chart", unanalyzed()).await;
+    let far_top = s.track(far, "far top", unanalyzed()).await;
+    let stranger_chart = s.track(stranger, "boss theme", unanalyzed()).await;
+    sqlx::query(
+        "INSERT INTO scout_artists (artist_id, weight, hops) VALUES ($1, 0.5, 1), ($2, 0.25, 2)",
+    )
+    .bind(near)
+    .bind(far)
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO scout_tracks (track_id, artist_id, source, base) VALUES
+            ($1, NULL, 'chart', 0.4), ($2, $4, 'top', 0.8), ($3, NULL, 'chart', 0.45)",
+    )
+    .bind(near_chart)
+    .bind(far_top)
+    .bind(stranger_chart)
+    .bind(far)
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+    let settings = reco::Settings::load(&app.state.db).await.unwrap();
+    assert_eq!(
+        scout::enqueue_previews(&app.state.db, &settings)
+            .await
+            .unwrap(),
+        3
+    );
+    let priority = |track: Uuid| {
+        let db = app.state.db.clone();
+        async move {
+            sqlx::query_scalar::<_, i16>(
+                "SELECT priority FROM jobs WHERE kind = 'analyze_preview' AND dedupe_key = 'analyze_preview:' || $1",
+            )
+            .bind(track)
+            .fetch_one(&db)
+            .await
+            .unwrap()
+        }
+    };
+    // Чарт с артистом окрестности — по его весу (0,4 × 0,5), чарт незнакомца — четверть (0,45 × 0,25),
+    // а не единица, с которой он обгонял популярное похожих артистов
+    assert_eq!(priority(near_chart).await, 2);
+    assert_eq!(priority(far_top).await, 2);
+    assert_eq!(priority(stranger_chart).await, 1);
 }

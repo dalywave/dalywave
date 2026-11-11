@@ -2,9 +2,9 @@
 // Панель «Сейчас играет» внизу большого экрана: трек и почему он здесь, управление с формой волны,
 // режим переходов, текст, очередь, устройства, громкость
 const player = usePlayerStore()
+const connect = useConnectStore()
 const library = useLibraryStore()
 const ui = useUiStore()
-const bridge = useBridge()
 const { t } = useI18n()
 
 const entry = computed(() => player.current)
@@ -32,7 +32,8 @@ function openPlayer() {
         <div class="bar__artist ellipsis">
           <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`">{{ a.name }}</NuxtLink></template>
         </div>
-        <MusicPendingNote v-if="player.pending" :pending="player.pending" />
+        <MusicConnectChip v-if="connect.remote || connect.orphaned" variant="line" />
+        <MusicPendingNote v-else-if="player.pending" :pending="player.pending" />
         <div v-else-if="entry?.reason" class="bar__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
       </div>
       <div v-else class="bar__meta">
@@ -71,11 +72,12 @@ function openPlayer() {
     </div>
 
     <div class="bar__right">
-      <MusicTransitionModePicker v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" :web="bridge.kind === 'web'" :next-at="nextAt" icon size="sm" />
+      <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" :web="!connect.djAvailable" :next-at="nextAt" icon size="sm" />
       <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="sm" :active="ui.panelOpen && ui.panelTab === 'lyrics'" @click="ui.togglePanel('lyrics')" />
       <UiIconButton icon="ph:queue" :label="t('player.queue')" size="sm" :active="ui.panelOpen && ui.panelTab === 'queue'" @click="ui.togglePanel('queue')" />
       <MusicDevicePicker :devices="player.devices" :playing="player.playing" @open="player.loadDevices()" @select="player.selectDevice" />
-      <MusicVolumeSlider v-model:volume="player.volume" v-model:muted="player.muted" />
+      <!-- Пульт: громкость активного устройства -->
+      <MusicVolumeSlider v-if="connect.volumeControl" v-model:volume="connect.volume" v-model:muted="connect.muted" />
     </div>
   </div>
 </template>

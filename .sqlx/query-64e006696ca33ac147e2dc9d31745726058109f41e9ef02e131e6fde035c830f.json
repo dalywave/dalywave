@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO play_events (client_event_id, user_id, track_id, started_at, played_ms, duration_ms,\n                                    end_reason, source, platform)\n           SELECT md5($1::uuid::text || ':' || i.track_id::text || ':' || to_char(date_trunc('minute', p.ended_at AT TIME ZONE 'UTC'), 'YYYYMMDDHH24MI'))::uuid,\n                  $1::uuid, i.track_id, p.ended_at - make_interval(secs => p.played_ms / 1000.0), p.played_ms, t.duration_ms,\n                  CASE WHEN p.end_reason <> 'auto' THEN p.end_reason\n                       WHEN p.played_ms >= 0.8 * t.duration_ms THEN 'completed'\n                       WHEN p.played_ms < 30000 THEN 'skipped'\n                       ELSE 'stopped' END,\n                  'import', p.platform\n           FROM import_plays p\n           JOIN import_items i ON i.id = p.item_id AND i.status = 'matched' AND i.track_id IS NOT NULL\n           JOIN tracks t ON t.id = i.track_id\n           WHERE p.import_id = $2 AND ($3::uuid IS NULL OR i.id = $3)\n           ON CONFLICT (client_event_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "64e006696ca33ac147e2dc9d31745726058109f41e9ef02e131e6fde035c830f"
+}

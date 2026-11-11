@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH g AS (\n               SELECT unnest(CASE WHEN cardinality(al.genres) > 0 THEN al.genres ELSE NULL END) AS genre,\n                      p.played_ms\n               FROM play_events p JOIN tracks t ON t.id = p.track_id JOIN albums al ON al.id = t.album_id\n               WHERE p.user_id = $1 AND p.started_at >= $2\n           )\n           SELECT genre AS \"genre!\", (sum(played_ms)::real / NULLIF((SELECT sum(played_ms) FROM g), 0))::real AS \"share!\"\n           FROM g WHERE genre IS NOT NULL\n           GROUP BY genre ORDER BY sum(played_ms) DESC, genre LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "genre!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "share!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "0ba7f22b65ea9038ff717173d78b4257c0722919d36f06f0f51a74b322814bfc"
+}

@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.combo, (array_agg(p.settings ORDER BY p.picked_at DESC))[1] AS \"settings!\",\n                  count(*) AS \"tracks!\",\n                  count(*) FILTER (WHERE r.audio_status = 'ready') AS \"ready!\",\n                  max(p.picked_at) AS \"picked_at!\"\n           FROM wave_pools p\n           JOIN tracks t ON t.id = p.track_id\n           LEFT JOIN recordings r ON r.id = t.recording_id\n           WHERE p.user_id = $1\n           GROUP BY p.combo\n           ORDER BY count(*) DESC, p.combo",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "combo",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wave_pools",
+            "name": "combo"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "settings!",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "picked_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "9fc6aad077510f9de9bf1e8c60dee86f80447d00c07dee1afdb4c34c15546295"
+}

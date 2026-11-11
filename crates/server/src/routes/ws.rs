@@ -1,5 +1,5 @@
-//! WebSocket `/api/ws`: события в реальном времени (скачивания, задачи, медиатека); этап 3 добавит
-//! сюда управление плеером. Вход — cookie сайта, `Authorization: Bearer` или `?token=` (не все клиенты
+//! WebSocket `/api/ws`: события в реальном времени (скачивания, задачи, медиатека) и управление
+//! между устройствами (`connect.*`, [`crate::connect`]). Вход — cookie сайта, `Authorization: Bearer` или `?token=` (не все клиенты
 //! WebSocket умеют ставить заголовки). С cookie проверяется Origin: браузер шлёт cookie и на рукопожатие,
 //! начатое чужой страницей.
 
@@ -28,6 +28,7 @@ use utoipa::IntoParams;
 
 use crate::{
     auth::{self, Principal},
+    connect::{self, Link},
     error::{AppError, AppResult, bad},
     extract::Query,
     realtime::{Audience, Envelope},
@@ -93,16 +94,18 @@ pub async fn ws(
         }
     }
     let upgrade = upgrade.map_err(|_| bad("нужно соединение WebSocket"))?;
+    // Снимок состояния с очередью (до пары сотен треков) — самое большое сообщение клиента
     Ok(upgrade
-        .max_message_size(64 * 1024)
+        .max_message_size(1024 * 1024)
         .on_upgrade(move |socket| connection(st, principal, socket)))
 }
 
-fn allowed(principal: &Principal, to: &Audience) -> bool {
+fn allowed(principal: &Principal, link: &Link, to: &Audience) -> bool {
     match to {
         Audience::User(id) => *id == principal.user.id,
         Audience::Admins => principal.roles.contains(&Role::Admin),
         Audience::All => true,
+        Audience::Device { .. } => connect::addressed(link, principal.user.id, to),
     }
 }
 
@@ -165,6 +168,9 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
     let mut session = tokio::time::interval(RECHECK);
     session.tick().await;
     let mut last_seen = Instant::now();
+    let mut link = Link::default();
+    let mut presence = tokio::time::interval(connect::CHECK);
+    presence.tick().await;
     loop {
         let outgoing: Option<Message> = tokio::select! {
             incoming = stream.next() => match incoming {
@@ -173,7 +179,15 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
                     // Незнакомые сообщения пропускаются: клиент может быть новее сервера
                     match serde_json::from_str::<ClientMessage>(body.as_str()) {
                         Ok(ClientMessage::Ping(p)) => text(&ServerEvent::Pong(Pong { id: p.id })),
-                        Err(_) => None,
+                        Ok(msg) => connect::handle(&st, &principal, &mut link, msg)
+                            .await
+                            .and_then(|reply| text(&reply)),
+                        Err(e) => {
+                            if body.as_str().contains("\"connect.") {
+                                tracing::debug!(error = %e, "unreadable connect message");
+                            }
+                            None
+                        }
                     }
                 }
                 Some(Ok(Message::Pong(_) | Message::Ping(_) | Message::Binary(_))) => {
@@ -185,7 +199,7 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
             event = events.recv() => match event {
                 Ok(envelope) => {
                     let Envelope { to, event } = envelope.as_ref();
-                    if allowed(&principal, to) { text(event) } else { None }
+                    if allowed(&principal, &link, to) { text(event) } else { None }
                 }
                 Err(RecvError::Lagged(missed)) => {
                     tracing::warn!(missed, "websocket client lagged behind");
@@ -199,6 +213,10 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
                     break;
                 }
                 Some(Message::Ping(Default::default()))
+            }
+            _ = presence.tick() => {
+                connect::check(&st, principal.user.id, &mut link).await;
+                None
             }
             _ = session.tick() => {
                 if recheck(&st, &mut principal).await {
@@ -220,5 +238,6 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
         }
     }
     let _ = sink.close().await;
+    connect::release(&st, principal.user.id, &link).await;
     tracing::debug!(user = %principal.user.id, "websocket closed");
 }

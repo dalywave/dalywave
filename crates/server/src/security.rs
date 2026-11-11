@@ -57,14 +57,50 @@ pub async fn guard(State(st): State<AppState>, req: Request, next: Next) -> Resp
     if !req.method().is_safe() {
         // Длину знает и само тело: внутри процесса Content-Length может не быть
         let body = HttpBody::size_hint(req.body()).lower() > 0;
-        if let Err(e) = check_unsafe(&st.config, req.headers(), body) {
+        let raw = raw_upload(req.uri().path());
+        if let Err(e) = check_unsafe(&st.config, req.headers(), body && !raw, raw) {
             return e.into_response();
         }
     }
     next.run(req).await
 }
 
-fn check_unsafe(config: &Config, headers: &HeaderMap, body: bool) -> Result<(), AppError> {
+/// Загрузки файлов импорта: тело — сам файл. Такой запрос (не форма и не text/plain) браузер шлёт
+/// только после preflight, а CORS для чужих сайтов закрыт; Origin проверяется как обычно.
+fn raw_upload(path: &str) -> bool {
+    let path = path.strip_prefix("/api").unwrap_or(path);
+    let Some(rest) = path.strip_prefix("/imports/") else {
+        return false;
+    };
+    rest == "spotify"
+        || rest
+            .strip_suffix("/files")
+            .is_some_and(|id| !id.contains('/'))
+}
+
+/// Типы тела, которые форма с чужого сайта может отправить без preflight.
+fn simple_content_type(headers: &HeaderMap) -> bool {
+    let mime = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    matches!(
+        mime.as_str(),
+        "" | "text/plain" | "application/x-www-form-urlencoded" | "multipart/form-data"
+    )
+}
+
+fn check_unsafe(
+    config: &Config,
+    headers: &HeaderMap,
+    body: bool,
+    raw: bool,
+) -> Result<(), AppError> {
     // Bearer-токен чужая страница подставить не может: такой запрос не подделать
     if auth::bearer(headers).is_none() {
         let with_cookie = CookieJar::from_headers(headers)
@@ -79,6 +115,12 @@ fn check_unsafe(config: &Config, headers: &HeaderMap, body: bool) -> Result<(), 
             None if with_cookie => return Err(AppError::BadOrigin),
             _ => {}
         }
+    }
+    if raw {
+        if simple_content_type(headers) && auth::bearer(headers).is_none() {
+            return Err(AppError::UnsupportedMediaType);
+        }
+        return Ok(());
     }
     if (body || has_body(headers)) && !is_json(headers) {
         return Err(AppError::UnsupportedMediaType);
@@ -130,6 +172,7 @@ mod tests {
             deezer: Default::default(),
             fetcher: Default::default(),
             ml: Default::default(),
+            release_token: None,
         }
     }
 
@@ -155,6 +198,23 @@ mod tests {
     }
 
     #[test]
+    fn raw_uploads() {
+        let c = config();
+        assert!(raw_upload("/imports/spotify"));
+        assert!(raw_upload("/api/imports/0193/files"));
+        assert!(!raw_upload("/imports/list"));
+        assert!(!raw_upload("/imports/a/b/files"));
+        let cookie = ("cookie", "dw_session=dws_x");
+        let origin = ("origin", "https://wave.daly.rest");
+        let zip = ("content-type", "application/zip");
+        assert!(check_unsafe(&c, &headers(&[cookie, origin, zip]), false, true).is_ok());
+        // Форма с чужого сайта не пройдёт ни без Origin, ни с простым типом
+        assert!(check_unsafe(&c, &headers(&[cookie, zip]), false, true).is_err());
+        let form = ("content-type", "multipart/form-data; boundary=x");
+        assert!(check_unsafe(&c, &headers(&[cookie, origin, form]), false, true).is_err());
+    }
+
+    #[test]
     fn cookie_requests_need_our_origin() {
         let c = config();
         let cookie = ("cookie", "dw_session=dws_x");
@@ -164,18 +224,20 @@ mod tests {
             check_unsafe(
                 &c,
                 &headers(&[cookie, json, body, ("origin", "https://wave.daly.rest")]),
+                false,
                 false
             )
             .is_ok()
         );
         assert!(
-            check_unsafe(&c, &headers(&[cookie, json, body]), false).is_err(),
+            check_unsafe(&c, &headers(&[cookie, json, body]), false, false).is_err(),
             "без Origin"
         );
         assert!(
             check_unsafe(
                 &c,
                 &headers(&[cookie, ("origin", "https://evil.example")]),
+                false,
                 false
             )
             .is_err()
@@ -185,6 +247,7 @@ mod tests {
             check_unsafe(
                 &c,
                 &headers(&[("authorization", "Bearer dwd_x"), json, body]),
+                false,
                 false
             )
             .is_ok()
@@ -200,6 +263,7 @@ mod tests {
                         json,
                         body
                     ]),
+                    false,
                     false
                 )
                 .is_ok(),
@@ -207,7 +271,7 @@ mod tests {
             );
         }
         // Обмен кода приложения: ни cookie, ни Origin
-        assert!(check_unsafe(&c, &headers(&[json, body]), false).is_ok());
+        assert!(check_unsafe(&c, &headers(&[json, body]), false, false).is_ok());
     }
 
     #[test]
@@ -219,18 +283,18 @@ mod tests {
             ("content-type", "text/plain"),
             ("content-length", "5"),
         ]);
-        assert!(check_unsafe(&c, &form, false).is_err());
+        assert!(check_unsafe(&c, &form, false, false).is_err());
         let empty = headers(&[origin, ("content-length", "0")]);
-        assert!(check_unsafe(&c, &empty, false).is_ok());
+        assert!(check_unsafe(&c, &empty, false, false).is_ok());
         // Тело без заголовков длины всё равно проверяется
-        assert!(check_unsafe(&c, &headers(&[origin]), true).is_err());
+        assert!(check_unsafe(&c, &headers(&[origin]), true, false).is_err());
         let chunked = headers(&[origin, ("transfer-encoding", "chunked")]);
-        assert!(check_unsafe(&c, &chunked, false).is_err());
+        assert!(check_unsafe(&c, &chunked, false, false).is_err());
         let patch = headers(&[
             origin,
             ("content-type", "application/merge-patch+json"),
             ("content-length", "5"),
         ]);
-        assert!(check_unsafe(&c, &patch, false).is_ok());
+        assert!(check_unsafe(&c, &patch, false, false).is_ok());
     }
 }

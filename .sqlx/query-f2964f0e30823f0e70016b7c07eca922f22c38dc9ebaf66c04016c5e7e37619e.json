@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET status = 'pending', track_id = $2, resolved_by = 'manual', updated_at = now()\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f2964f0e30823f0e70016b7c07eca922f22c38dc9ebaf66c04016c5e7e37619e"
+}

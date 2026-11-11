@@ -32,6 +32,14 @@ pub mod kind {
     pub const TASTE: &str = "taste";
     /// Заготовки волны: под частые настройки слушателя — несколько подобранных треков на сервере.
     pub const WAVE_POOL: &str = "wave_pool";
+    /// Ночное обучение сети вкуса: пропуск, дослушивание, лайк; включается, только если точнее правил.
+    pub const TASTE_MODEL: &str = "taste_model";
+    /// Сопоставить позиции импорта с каталогом Deezer (полоса «Импорт»).
+    pub const IMPORT_MATCH: &str = "import_match";
+    /// Разложить найденное импорта в медиатеку: лайки, плейлисты, альбомы, подписки, история.
+    pub const IMPORT_APPLY: &str = "import_apply";
+    /// Свой аудиофайл: теги, сопоставление, проверка отпечатком, громкость, замена копии хуже.
+    pub const IMPORT_FILE: &str = "import_file";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]

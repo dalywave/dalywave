@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH plays AS (\n               SELECT p.track_id,\n                      sum(CASE WHEN p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms\n                               THEN exp(-extract(epoch FROM now() - p.started_at) / 86400.0 / 60.0) ELSE 0 END)::real AS full,\n                      sum(CASE WHEN p.end_reason = 'skipped' AND p.played_ms < 30000\n                               THEN exp(-extract(epoch FROM now() - p.started_at) / 86400.0 / 30.0) ELSE 0 END)::real AS skips\n               FROM play_events p\n               WHERE p.user_id = $1 AND p.started_at > now() - interval '365 days'\n                 AND p.started_at > taste_reset_at($1)\n               GROUP BY p.track_id\n           ), liked AS (\n               SELECT track_id, (extract(epoch FROM now() - created_at) / 86400.0)::real AS age\n               FROM liked_tracks WHERE user_id = $1 AND created_at > taste_reset_at($1)\n           )\n           SELECT t.id AS \"track_id!\", t.recording_id AS \"recording_id!\", l.age AS \"liked_age?\",\n                  COALESCE(p.full, 0)::real AS \"full!\", COALESCE(p.skips, 0)::real AS \"skips!\",\n                  a.sound::real[] AS \"sound!\", a.styles,\n                  ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id AND ta.role = 'main'\n                        ORDER BY ta.position, ta.artist_id) AS \"artists!\"\n           FROM tracks t\n           JOIN track_analysis a ON a.recording_id = t.recording_id AND a.sound IS NOT NULL\n           LEFT JOIN liked l ON l.track_id = t.id\n           LEFT JOIN plays p ON p.track_id = t.id\n           WHERE (l.track_id IS NOT NULL OR p.track_id IS NOT NULL)\n             AND NOT COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f\n                               WHERE f.user_id = $1 AND f.track_id = t.id AND f.kind IN ('dislike', 'undislike')\n                               ORDER BY f.at DESC LIMIT 1), false)\n             AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = t.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "liked_age?",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "full!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "skips!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "sound!",
+        "type_info": "Float4Array",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "styles",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "styles"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "artists!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      null,
+      null,
+      null,
+      true,
+      null
+    ]
+  },
+  "hash": "46368096726fdfc148d22d0461ebaea19ad5c70c79771831325bd08a04116466"
+}

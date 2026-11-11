@@ -49,6 +49,7 @@ pub fn config() -> Config {
         ml: MlConfig {
             url: "http://127.0.0.1:9".into(),
         },
+        release_token: None,
     }
 }
 

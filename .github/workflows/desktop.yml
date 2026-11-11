@@ -7,10 +7,23 @@ name: Приложения
 #     (содержимое ~/.tauri/dalywave-updater.key и пароль из связки ключей, см. apps/shell/README.md);
 #   APPLE_CERTIFICATE (p12 в base64), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY —
 #     подпись Developer ID для macOS. Без них macOS собирается с подписью ad-hoc,
-#     а без ключа обновлений — без файлов автообновления.
+#     а без ключа обновлений — без файлов автообновления;
+#   DALYWAVE_RELEASE_TOKEN — выпуск на сервер обновлений (тот же, что в ~/dalywave/.env сервера).
+# Тег v* (или ручной запуск с «Выпустить») выпускает собранное на сервер обновлений: архив — в R2
+# по ссылке от сервера, затем регистрация выпуска (apps/shell/README.md, «Выпуск»). macOS
+# выпускается отсюда, только если есть сертификат Developer ID, иначе — make release-mac на Mac.
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Выпустить на сервер обновлений
+        type: boolean
+        default: false
+      notes:
+        description: Что нового (видно в настройках приложения)
+        type: string
+        default: ''
   push:
     tags: ['v*']
 
@@ -152,6 +165,27 @@ jobs:
             apps/shell/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             apps/shell/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz*
             apps/shell/target/${{ matrix.target }}/release/bundle/nsis/*.exe*
+
+      - name: Выпуск на сервер обновлений
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+        shell: bash
+        env:
+          DALYWAVE_RELEASE_TOKEN: ${{ secrets.DALYWAVE_RELEASE_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ] && [ -z "$APPLE_CERTIFICATE" ]; then
+            # Сборка ad-hoc не должна заменить у установленных подписанную Developer ID
+            echo "::warning::macOS без сертификата Developer ID не выпускается — make release-mac на Mac"
+            exit 0
+          fi
+          [ -n "$DALYWAVE_RELEASE_TOKEN" ] || { echo "::error::Нет секрета DALYWAVE_RELEASE_TOKEN"; exit 1; }
+          version="$(sed -n '/^\[package\]/,/^\[/s/^version = "\(.*\)"/\1/p' apps/shell/Cargo.toml | head -n1)"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]] && [ "${GITHUB_REF#refs/tags/v}" != "$version" ]; then
+            echo "::error::Тег ${GITHUB_REF#refs/tags/} не совпадает с версией $version в apps/shell/Cargo.toml"
+            exit 1
+          fi
+          bun apps/shell/scripts/release.ts --target "${{ matrix.target }}"
 
       - name: Черновик релиза
         if: startsWith(github.ref, 'refs/tags/v')

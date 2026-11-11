@@ -4,6 +4,7 @@
 withDefaults(defineProps<{ inline?: boolean }>(), {})
 
 const player = usePlayerStore()
+const connect = useConnectStore()
 const ui = useUiStore()
 const { t } = useI18n()
 const track = computed(() => player.current?.track ?? null)
@@ -86,7 +87,9 @@ function onCancel() {
     <MusicCoverArt :image="track.album?.image" size="small" :alt="track.album?.title ?? ''" />
     <button type="button" class="mini__meta" :aria-label="`${t('player.expand')}: ${track.title}`" @click="ui.playerOpen = true">
       <span class="mini__title ellipsis">{{ track.title }}</span>
-      <MusicPendingNote v-if="player.pending" :pending="player.pending" />
+      <!-- Пульт: вместо исполнителя — где играет -->
+      <MusicConnectChip v-if="connect.remote || connect.orphaned" variant="line" />
+      <MusicPendingNote v-else-if="player.pending" :pending="player.pending" />
       <span v-else class="mini__sub ellipsis"><Icon v-if="player.playing" name="ph:waveform" class="mini__wave" />{{ track.artists.map(a => a.name).join(', ') }}</span>
     </button>
     <div class="mini__actions">

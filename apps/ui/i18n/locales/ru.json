@@ -1,8 +1,6 @@
 {
   "app": {
     "name": "DalyWave",
-    "updateAvailable": "Доступна новая версия DalyWave — {version}",
-    "updateInstall": "Обновить",
     "updateFailed": "Не получилось обновить — попробуйте позже"
   },
   "nav": {
@@ -222,6 +220,10 @@
     "goArtist": "Перейти к артисту",
     "goAlbum": "Перейти к альбому",
     "block": "Не рекомендовать",
+    "blockArtist": "Не рекомендовать исполнителя",
+    "blocked": "«{title}» больше не порекомендуем",
+    "blockedArtist": "{name} больше не порекомендуем",
+    "blockFailed": "Не получилось — сервер не ответил",
     "report": "Неверная запись — исправить",
     "status": {
       "none": "Скачается при запуске",
@@ -264,7 +266,11 @@
       "continue": "Продолжить",
       "new-releases": "Новинки подписок",
       "recent-likes": "Недавно понравилось",
-      "top-artists": "Ваши артисты"
+      "top-artists": "Ваши артисты",
+      "daily-mixes": "Миксы дня",
+      "discover-weekly": "Открытия недели",
+      "release-radar": "Радар новинок",
+      "forgotten-favorites": "Забытые любимые"
     }
   },
   "lyrics": {
@@ -326,7 +332,10 @@
         "scout": "Проход разведчика",
         "scout_artist": "Разведка артиста",
         "scout_charts": "Чарты и новинки",
-        "taste": "Пересчёт вкуса"
+        "taste": "Пересчёт вкуса",
+        "import_match": "Поиск для импорта",
+        "import_apply": "Раскладка импорта",
+        "import_file": "Свой файл"
       }
     },
     "acq": {
@@ -375,6 +384,47 @@
     "executor": {
       "server": "Сервер",
       "device": "Загрузчик"
+    }
+  },
+  "connect": {
+    "appName": "Приложение DalyWave",
+    "browser": "Браузер",
+    "webName": "{browser} на {os}",
+    "playingOn": "Играет на: {name}",
+    "playingOnShort": "Играет на устройстве",
+    "lost": "«{name}» не в сети",
+    "lostHint": "Музыка остановилась на «{name}» — можно продолжить здесь с того же места",
+    "continueHere": "Продолжить здесь",
+    "playHere": "Играть здесь",
+    "playingNow": "Играет сейчас",
+    "activeOffline": "Не в сети · играло здесь",
+    "nowSection": "Сейчас играет",
+    "noAnswer": "«{name}» не отвечает — команда не выполнена",
+    "noLink": "Нет связи с сервером — другими устройствами пока не управлять",
+    "offline": "«{name}» не в сети",
+    "failed": "«{name}» не смог это выполнить",
+    "movedTo": "Теперь играет на «{name}»",
+    "remoteVolume": "Громкость на «{name}»"
+  },
+  "offline": {
+    "download": "Скачать",
+    "downloadAll": "Скачать на устройство",
+    "remove": "Удалить с устройства",
+    "downloading": "Скачивается: {done} из {total}",
+    "downloaded": "На устройстве",
+    "pinned": "«{title}» скачивается на устройство",
+    "pinnedPlain": "Скачивается на устройство",
+    "unpinned": "«{title}» удалён с устройства",
+    "unpinnedPlain": "Удалено с устройства",
+    "cleared": "Загрузки удалены",
+    "failed": "Не получилось — попробуйте ещё раз",
+    "offlineNow": "Без сети — играет скачанное",
+    "notDownloaded": "Без сети доступно только скачанное",
+    "track": {
+      "queued": "Ждёт загрузки",
+      "downloading": "Скачивается {p} %",
+      "ready": "Скачано на устройство",
+      "failed": "Не скачалось"
     }
   }
 }

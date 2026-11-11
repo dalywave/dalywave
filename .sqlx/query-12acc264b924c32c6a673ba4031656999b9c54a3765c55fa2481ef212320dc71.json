@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET status = 'unmatched', track_id = NULL, confidence = $2, candidates = $3,\n                file_meta = $4, resolved_by = 'auto', updated_at = now()\n         WHERE id = $1\n         RETURNING import_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "import_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "import_items",
+            "name": "import_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float4",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "12acc264b924c32c6a673ba4031656999b9c54a3765c55fa2481ef212320dc71"
+}

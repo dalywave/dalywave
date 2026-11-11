@@ -1,6 +1,6 @@
 //! Сообщения WebSocket `/api/ws`. JSON-объекты с полем `type`; остальные поля — на одном уровне с ним.
 //!
-//! Этап 3 добавит сюда управление плеером и список устройств — новыми вариантами тех же перечислений.
+//! Управление между устройствами — сообщения `connect.*` (типы в [`crate::connect`]).
 //! Незнакомый `type` клиент должен пропускать, а не считать ошибкой.
 
 use chrono::{DateTime, Utc};
@@ -10,6 +10,10 @@ use uuid::Uuid;
 
 use crate::{
     catalog::AudioStatus,
+    connect::{
+        ConnectAck, ConnectActive, ConnectCommand, ConnectDevices, ConnectEmpty, ConnectHello,
+        ConnectPublish, ConnectSend, ConnectState, ConnectTransfer,
+    },
     jobs::{AcquisitionStatus, JobStatus},
     sync::SyncEntity,
 };
@@ -36,6 +40,21 @@ pub enum ServerEvent {
     /// Часть событий потеряна: перечитать то, что на экране, и запросить `/api/sync`.
     #[serde(rename = "resync")]
     Resync(Resync),
+    /// Управление между устройствами: список устройств изменился.
+    #[serde(rename = "connect.devices")]
+    ConnectDevices(ConnectDevices),
+    /// Снимок состояния активного устройства.
+    #[serde(rename = "connect.state")]
+    ConnectState(ConnectState),
+    /// Активным стало другое устройство; при переносе — с состоянием, которое надо продолжить.
+    #[serde(rename = "connect.active")]
+    ConnectActive(ConnectActive),
+    /// Команда этому устройству от пульта.
+    #[serde(rename = "connect.command")]
+    ConnectCommand(ConnectCommand),
+    /// Ответ устройства на команду этого пульта.
+    #[serde(rename = "connect.ack")]
+    ConnectAck(ConnectAck),
 }
 
 /// Сообщение клиента.
@@ -45,6 +64,27 @@ pub enum ClientMessage {
     /// Проверка связи на уровне приложения; сервер ответит `pong` с тем же `id`.
     #[serde(rename = "ping")]
     Ping(Ping),
+    /// Это соединение — устройство (после каждого подключения).
+    #[serde(rename = "connect.hello")]
+    ConnectHello(ConnectHello),
+    /// «Я на связи» — раз в 5 с; без него 15 с устройство считается пропавшим.
+    #[serde(rename = "connect.heartbeat")]
+    ConnectHeartbeat(ConnectEmpty),
+    /// Снимок состояния; принимается только от активного устройства.
+    #[serde(rename = "connect.state")]
+    ConnectState(ConnectPublish),
+    /// Команда другому устройству.
+    #[serde(rename = "connect.command")]
+    ConnectCommand(ConnectSend),
+    /// Ответ на полученную команду.
+    #[serde(rename = "connect.ack")]
+    ConnectAck(ConnectAck),
+    /// Звук начал играть здесь: это устройство становится активным.
+    #[serde(rename = "connect.claim")]
+    ConnectClaim(ConnectEmpty),
+    /// Перенести воспроизведение на устройство `to`.
+    #[serde(rename = "connect.transfer")]
+    ConnectTransfer(ConnectTransfer),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

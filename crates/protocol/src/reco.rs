@@ -1,13 +1,16 @@
-//! Раздел «Рекомендации» админки: индекс каталога вокруг вкуса, анализ звука, грани вкуса, последние
-//! показы с причинами и настройки разведчика.
+//! Раздел «Рекомендации» админки: вкус выбранного слушателя (грани, показы, сессии волны, заготовки,
+//! миксы) и общий индекс каталога вокруг вкуса — анализ звука и настройки разведчика.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{catalog::Track, wave::Reason};
+use crate::{
+    catalog::Track,
+    wave::{Reason, WaveSettings},
+};
 
 /// Настройки разведчика. Остановить анализ или разведку — пауза полос `analysis` и `scout`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -133,20 +136,173 @@ pub struct MlStatus {
     pub error: Option<String>,
 }
 
-/// Раздел «Рекомендации».
+/// Чей вкус показать.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+#[into_params(parameter_in = Query)]
+pub struct RecoQuery {
+    /// Слушатель; по умолчанию — тот, кто смотрит.
+    pub user_id: Option<Uuid>,
+}
+
+/// Слушатель в выборе раздела: лайки, прослушивания и граней вкуса.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoListener {
+    pub id: Uuid,
+    pub name: String,
+    pub likes: i64,
+    pub plays: i64,
+    pub facets: i64,
+}
+
+/// Сессия волны или радио слушателя и чем кончались её показы.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WaveSessionView {
+    pub id: Uuid,
+    /// «Моя волна», «Радио: Lowborn».
+    pub title: String,
+    pub settings: WaveSettings,
+    /// Сколько треков выдано.
+    pub served: i64,
+    /// Исходы показов: лайки, дослушано, пропуски (с «не нравится»).
+    pub likes: i64,
+    pub completed: i64,
+    pub skips: i64,
+    pub started_at: DateTime<Utc>,
+    pub last_active_at: DateTime<Utc>,
+}
+
+/// Заготовки волны под одно сочетание настроек.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WavePoolView {
+    /// `занятие:характер:настроение:язык[:темп]`.
+    pub combo: String,
+    pub settings: WaveSettings,
+    pub tracks: i64,
+    /// Из них уже на сервере.
+    pub ready: i64,
+    /// Последний подбор.
+    pub picked_at: DateTime<Utc>,
+}
+
+/// Собранный плейлист: «Микс дня» или «Открытия недели».
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MixView {
+    pub id: Uuid,
+    pub title: String,
+    /// `daily_mix` или `discover_weekly`.
+    pub generator: String,
+    pub tracks: i64,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Раздел «Рекомендации»: вкус выбранного слушателя и общий индекс каталога.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RecoOverview {
+    /// Чей вкус показан.
+    pub user: RecoListener,
+    /// Кого можно выбрать: тот, кто смотрит, и все, у кого есть лайки или прослушивания.
+    pub listeners: Vec<RecoListener>,
+    /// Грани вкуса слушателя, самые весомые первыми.
+    pub facets: Vec<FacetView>,
+    /// Последние показы слушателю, новые первыми.
+    pub impressions: Vec<ImpressionView>,
+    /// Последние сессии волны и радио слушателя.
+    pub sessions: Vec<WaveSessionView>,
+    /// Заготовки волны слушателя по сочетаниям настроек.
+    pub pools: Vec<WavePoolView>,
+    /// «Миксы дня» и «Открытия недели» слушателя.
+    pub mixes: Vec<MixView>,
+    /// Общий индекс каталога: один на всех слушателей.
     pub index: IndexStats,
     pub settings: RecoSettings,
     /// Версия, которая собирает поток: `rules-1`, пока своей модели нет.
     #[schema(required = true)]
     pub model_version: Option<String>,
     pub ml: MlStatus,
-    /// Грани вкуса, самые весомые первыми.
-    pub facets: Vec<FacetView>,
-    /// Последние показы, новые первыми.
-    pub impressions: Vec<ImpressionView>,
+    /// Версии сети вкуса с метриками на отложенных данных, новые первыми (и правила).
+    pub models: Vec<ModelVersionView>,
+    /// Последнее обучение сети вкуса.
+    pub training: ModelTraining,
+}
+
+/// Голова сети вкуса на отложенных по времени данных: у сети и у правил.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct HeadMetrics {
+    /// `skip`, `complete`, `like`.
+    pub head: String,
+    /// Сколько положительных исходов в отложенной части.
+    pub positives: i64,
+    #[schema(required = true)]
+    pub auc: Option<f64>,
+    #[schema(required = true)]
+    pub logloss: Option<f64>,
+    #[schema(required = true)]
+    pub baseline_auc: Option<f64>,
+    #[schema(required = true)]
+    pub baseline_logloss: Option<f64>,
+}
+
+/// Версия модели вкуса: правила (`rules-1`) или обученная сеть (`nn-…`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelVersionView {
+    pub id: Uuid,
+    pub version: String,
+    /// Собирает поток сейчас.
+    pub active: bool,
+    /// Сеть (`true`) или правила.
+    pub learned: bool,
+    pub created_at: DateTime<Utc>,
+    /// Средние по головам AUC и logloss на отложенной части: у сети и у правил. У правил — `null`.
+    #[schema(required = true)]
+    pub auc: Option<f64>,
+    #[schema(required = true)]
+    pub logloss: Option<f64>,
+    #[schema(required = true)]
+    pub baseline_auc: Option<f64>,
+    #[schema(required = true)]
+    pub baseline_logloss: Option<f64>,
+    pub heads: Vec<HeadMetrics>,
+    /// Строк на обучение и на проверку.
+    #[schema(required = true)]
+    pub train_rows: Option<i64>,
+    #[schema(required = true)]
+    pub holdout_rows: Option<i64>,
+    /// Обучаемых параметров.
+    #[schema(required = true)]
+    pub params: Option<i64>,
+    /// Точнее ли правил на отложенных данных — то есть включена ли при обучении.
+    #[schema(required = true)]
+    pub beats_rules: Option<bool>,
+    /// Почему не включена или выключена: «правила точнее», «новая версия».
+    #[schema(required = true)]
+    pub note: Option<String>,
+}
+
+/// Последнее обучение сети вкуса (задача `taste_model`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelTraining {
+    /// Обучение стоит в очереди или идёт.
+    pub running: bool,
+    #[schema(required = true)]
+    pub last_run_at: Option<DateTime<Utc>>,
+    /// `trained`, `too_little_data`, `failed`.
+    #[schema(required = true)]
+    pub outcome: Option<String>,
+    /// Что вышло: «Мало данных: 120 прослушиваний из 300», текст ошибки.
+    #[schema(required = true)]
+    pub message: Option<String>,
+    /// Размеченных прослушиваний для обучения сейчас и сколько нужно.
+    pub rows: i64,
+    pub min_rows: i64,
 }
 
 /// Что запустить сейчас, не дожидаясь расписания.
@@ -155,18 +311,23 @@ pub struct RecoOverview {
 pub enum RecoTask {
     /// Проход разведчика: окрестность вкуса, кандидаты, анализ превью в пределах бюджета.
     Scout,
-    /// Грани вкуса, миксы дня и «Открытия недели» — для всех слушателей.
+    /// Грани вкуса, миксы дня и «Открытия недели» — выбранного слушателя или всех.
     Taste,
     /// Полный анализ скачанного, которое ещё не разобрано.
     Analysis,
+    /// Обучить сеть вкуса сейчас; включится, только если точнее правил.
+    Model,
 }
 
-names!(RecoTask { Scout => "scout", Taste => "taste", Analysis => "analysis" });
+names!(RecoTask { Scout => "scout", Taste => "taste", Analysis => "analysis", Model => "model" });
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RecoRun {
     pub task: RecoTask,
+    /// Для `taste`: только этот слушатель; без него — все.
+    #[serde(default)]
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

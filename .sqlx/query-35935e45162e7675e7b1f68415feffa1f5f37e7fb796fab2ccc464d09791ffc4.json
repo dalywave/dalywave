@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM jobs WHERE kind = 'taste_model'\n                                AND (status IN ('queued', 'running')\n                                     OR (status IN ('done', 'failed') AND finished_at > now() - make_interval(hours => $1))))\n                  AND (SELECT count(*) FROM play_events WHERE started_at > now() - interval '365 days') >= $2\n                  AS \"due!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "due!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "35935e45162e7675e7b1f68415feffa1f5f37e7fb796fab2ccc464d09791ffc4"
+}

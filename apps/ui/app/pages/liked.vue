@@ -72,6 +72,7 @@ function play(shuffle = false) {
         <template #actions>
           <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :disabled="!liked.length" @click="play()">{{ playing ? tg('common.pause') : tg('common.play') }}</UiButton>
           <UiButton size="lg" icon="ph:shuffle" :disabled="!liked.length" @click="play(true)">{{ t('shuffle') }}</UiButton>
+          <MusicDownloadButton kind="liked" :title="t('title')" />
         </template>
       </MusicPageHeader>
 

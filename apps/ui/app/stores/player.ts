@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { ContextType, EndReason, Track, WaveFeedbackKind } from '~/api/types'
+import type { ConnectQueueItem, ContextType, EndReason, PlaybackState, RemoteCommand, Track, WaveFeedbackKind, WaveSeed } from '~/api/types'
 import type { EngineTrack, MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveStart, WaveTrack } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { coverColors } from '~/utils/cover-colors'
@@ -237,7 +237,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   /** Приложение: очередь после текущего — движку, чтобы он готовил следующий трек и переходил сам */
   function syncUpcoming() {
-    if (!native || !current.value || pending.value) return
+    if (!native || !current.value || pending.value || mirrored.value) return
     const ahead = [...manual.value, ...upcoming.value].slice(0, ENGINE_AHEAD)
     engine.setUpcoming(ahead.map((e) => {
       const known = prefetched?.uid === e.uid && prefetched.result.kind === 'ready' ? prefetched.result.source : null
@@ -316,6 +316,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   async function play() {
+    if (routed({ action: 'play' })) return
     if (!current.value) return startWave()
     if (pending.value) return
     await engine.play()
@@ -326,6 +327,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function pause() {
+    if (routed({ action: 'pause' })) return
     engine.pause()
     playing.value = false
     visual()?.setPlaying(false)
@@ -333,10 +335,12 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function toggle() {
+    if (routed({ action: 'toggle' })) return
     return playing.value ? pause() : play()
   }
 
   async function next(reason: EndReason = 'skipped') {
+    if (routed({ action: 'next' }, () => next(reason))) return
     if (transitioning) return
     finishListen(reason)
     const prev = current.value
@@ -358,6 +362,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   async function prev() {
+    if (routed({ action: 'previous' }, prev)) return
     if (positionMs.value > 4000 || !history.value.length) {
       seek(0)
       return
@@ -370,6 +375,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function seek(ms: number) {
+    if (routed({ action: 'seek', positionMs: Math.max(0, Math.round(ms)) }, () => seek(ms))) return
     const clamped = Math.max(0, Math.min(durationMs.value || 0, ms))
     engine.seek(clamped)
     positionMs.value = clamped
@@ -380,6 +386,7 @@ export const usePlayerStore = defineStore('player', () => {
   /** Играть список (альбом, плейлист, подборку) с позиции */
   async function playTracks(tracks: Track[], index: number, ctx: PlayContext, opts: { shuffle?: boolean } = {}) {
     if (!tracks.length) return
+    if (routed(remotePlayTracks(tracks, index, ctx, opts))) return
     let list = tracks.slice()
     let start = Math.min(Math.max(0, index), list.length - 1)
     if (opts.shuffle) {
@@ -464,7 +471,9 @@ export const usePlayerStore = defineStore('player', () => {
 
   /** «Моя волна»: бесконечный поток под текущие настройки. Начало сервер подбирает под настройки
    *  и, если его ещё нет на сервере, сначала скачивает: до тех пор — «Готовим волну…», а то, что играло, играет */
-  async function startWave(settings?: Partial<WaveSettings>) {
+  async function startWave(settings?: Partial<WaveSettings>, radio?: { seed: WaveSeed, title: string }) {
+    // Радио от затравки пульт пока не передаёт — оно запускается здесь
+    if (!radio && routed({ action: 'startWave', settings: settings ? { ...wave.value, ...settings } : null })) return
     if (settings) wave.value = { ...wave.value, ...settings }
     applyMood(wave.value.mood)
     const run = ++prepRun
@@ -473,7 +482,7 @@ export const usePlayerStore = defineStore('player', () => {
     let start: WaveStart | null
     try {
       // Сессия на сервере помнит выданное и реакции; её id — и в событиях прослушивания
-      start = await bridge.wave.start(wave.value)
+      start = await bridge.wave.start(wave.value, radio?.seed)
       if (run !== prepRun) return
       if (start.state === 'preparing') {
         breathe(true)
@@ -499,7 +508,7 @@ export const usePlayerStore = defineStore('player', () => {
     finishListen('skipped')
     if (current.value) history.value.push(current.value)
     waveSessionId.value = start.id
-    context.value = { type: 'wave', id: start.id, title: t('wave.title') }
+    context.value = { type: 'wave', id: start.id, title: radio?.title ?? t('wave.title') }
     upcoming.value = start.queue.slice(1).map(w => entryOf(w.track, 'wave', w.reason))
     prefetched = null
     visual()?.start()
@@ -507,6 +516,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function playNext(track: Track) {
+    if (routed({ action: 'playNext', track }, () => playNext(track))) return
     manual.value.unshift(entryOf(track, 'manual'))
     prefetched = null
     prefetchNext()
@@ -515,6 +525,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function enqueue(track: Track) {
+    if (routed({ action: 'enqueue', track }, () => enqueue(track))) return
     manual.value.push(entryOf(track, 'manual'))
     bridge.events.feedback({ kind: 'queue_add', trackId: track.id })
     toast.show({ text: t('player.enqueued', { title: track.title }), icon: 'ph:list-plus' })
@@ -527,6 +538,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function remove(uid: string) {
+    if (routed({ action: 'remove', uid })) return
     for (const list of [manual, upcoming]) {
       const i = list.value.findIndex(e => e.uid === uid)
       if (i < 0) continue
@@ -537,6 +549,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function clearManual() {
+    if (routed({ action: 'clearManual' })) return
     const was = manual.value
     manual.value = []
     toast.show({ text: t('player.manualCleared'), icon: 'ph:trash', undo: () => (manual.value = [...was, ...manual.value]) })
@@ -544,12 +557,14 @@ export const usePlayerStore = defineStore('player', () => {
 
   /** Перетаскивание в очереди «добавлено вручную» */
   function moveManual(from: number, to: number) {
+    if (routed({ action: 'moveManual', from, to })) return
     const [e] = manual.value.splice(from, 1)
     if (e) manual.value.splice(to, 0, e)
   }
 
   /** Нажатие на трек в очереди: играть его сейчас. Пропущенное из волны или списка уходит */
   async function jumpTo(uid: string) {
+    if (routed({ action: 'jumpTo', uid }, () => jumpTo(uid))) return
     let entry: QueueEntry | undefined
     const mi = manual.value.findIndex(e => e.uid === uid)
     if (mi >= 0) {
@@ -633,13 +648,15 @@ export const usePlayerStore = defineStore('player', () => {
 
   // ---------- Устройства ----------
 
+  // Список ведёт хранилище управления между устройствами (stores/connect.ts): оно же пишет сюда devices
   async function loadDevices() {
+    const connect = useConnectStore()
+    if (connect.started) return connect.refresh()
     devices.value = await bridge.devices().catch(() => devices.value)
   }
 
   function selectDevice(d: PlaybackDevice) {
-    if (d.current) return
-    toast.show({ text: t('devices.soon', { name: d.name }), icon: 'ph:devices' })
+    useConnectStore().select(d)
   }
 
   // ---------- Реакции волны ----------
@@ -677,6 +694,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   async function dislike(track: Track | null = current.value?.track ?? null) {
     if (!track) return
+    if (mirrored.value && current.value?.track.id === track.id && routed({ action: 'dislike' })) return
     feedbackFor('dislike', track)
     toast.show({ text: t('player.disliked', { title: track.title }), icon: 'ph:prohibit', undo: () => feedbackFor('undislike', track) })
     if (current.value?.track.id === track.id) await next('skipped')
@@ -684,6 +702,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   async function notNow() {
+    if (routed({ action: 'notNow' })) return
     const track = current.value?.track
     if (!track) return
     feedbackFor('not_now', track)
@@ -692,6 +711,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function moreLikeThis() {
+    if (routed({ action: 'moreLikeThis' })) return
     const track = current.value?.track
     if (!track) return
     feedbackFor('more_like_this', track)
@@ -712,6 +732,8 @@ export const usePlayerStore = defineStore('player', () => {
   // ---------- Настройки волны ----------
 
   function setWave(patch: Partial<WaveSettings>) {
+    // Пульт: новые настройки — волне на активном устройстве (свои настройки волны не трогаем)
+    if (mirrored.value && waveActive.value && routed({ action: 'setWave', settings: { ...wave.value, ...patch } })) return
     const before = { ...wave.value }
     wave.value = { ...wave.value, ...patch }
     if (patch.mood && patch.mood !== before.mood) applyMood(patch.mood)
@@ -777,6 +799,138 @@ export const usePlayerStore = defineStore('player', () => {
     muted.value = !muted.value
   }
 
+  // ---------- Управление между устройствами (stores/connect.ts) ----------
+  // Пульт: в плеере — снимок активного устройства, звук здесь не играет, действия уходят командами.
+  // Всё переключение — в функциях connect*; действия плеера только спрашивают routed()
+
+  /** Плеер показывает другое устройство (пульт или «Продолжить здесь») */
+  const mirrored = ref(false)
+  let connectRoute: ((cmd: RemoteCommand, local?: () => unknown) => boolean) | null = null
+
+  /** Хранилище управления подключает маршрут команд: true — действие ушло на другое устройство */
+  function setConnectRoute(fn: ((cmd: RemoteCommand, local?: () => unknown) => boolean) | null) {
+    connectRoute = fn
+  }
+
+  function routed(cmd: RemoteCommand, local?: () => unknown): boolean {
+    return mirrored.value && !!connectRoute?.(cmd, local)
+  }
+
+  /** «Играть альбом там»: устройство загрузит треки по id (не больше 500 — окно от выбранного) */
+  function remotePlayTracks(tracks: Track[], index: number, ctx: PlayContext, opts: { shuffle?: boolean }): RemoteCommand {
+    const from = opts.shuffle ? 0 : Math.max(0, Math.min(index, tracks.length - 1))
+    return {
+      action: 'playTracks',
+      trackIds: tracks.slice(from, from + 500).map(tr => tr.id),
+      index: 0,
+      context: { type: ctx.type, id: ctx.id ?? null, title: ctx.title },
+      shuffle: !!opts.shuffle,
+    }
+  }
+
+  const toItem = (e: QueueEntry): ConnectQueueItem => ({ uid: e.uid, track: e.track, source: e.source, reason: e.reason ?? null })
+  const fromItem = (q: ConnectQueueItem): QueueEntry => ({ uid: q.uid, track: q.track, source: q.source, reason: q.reason ?? undefined })
+
+  /** Снимок для пультов: очередь — окном (ближайшее и немного истории), чтобы сообщение было небольшим */
+  function connectSnapshot(): PlaybackState {
+    const ctx = context.value
+    return {
+      current: current.value ? toItem(current.value) : null,
+      manual: manual.value.slice(0, 50).map(toItem),
+      upcoming: upcoming.value.slice(0, 100).map(toItem),
+      history: history.value.slice(-20).map(toItem),
+      context: ctx ? { type: ctx.type, id: ctx.id ?? null, title: ctx.title } : null,
+      playing: playing.value,
+      pending: pending.value?.status ?? null,
+      positionMs: Math.max(0, Math.round(positionMs.value)),
+      durationMs: Math.max(0, Math.round(durationMs.value || current.value?.track.durationMs || 0)),
+      volume: volume.value,
+      muted: muted.value,
+      transition: transition.value,
+      waveSessionId: waveActive.value ? waveSessionId.value : null,
+      wave: waveActive.value ? { ...wave.value } : null,
+      peaks: peaks.value.map(p => Math.round(p * 100) / 100),
+    }
+  }
+
+  /** Звук переходит на другое устройство: здесь всё останавливается, плеер становится пультом */
+  function connectYield() {
+    if (mirrored.value) return
+    prepRun++
+    wavePrep.value = null
+    waveLoading.value = false
+    finishListen('transferred')
+    transitioning = false
+    prefetched = null
+    if (current.value) {
+      engine.pause()
+      // Приложение: очередь движка очищается — медиаклавиши здесь больше не играют старое
+      engine.load(null, { durationMs: 0 })
+    }
+    mirrored.value = true
+    playing.value = false
+    buffering.value = false
+    visual()?.setPlaying(false)
+    if (import.meta.client) bridge.media.nowPlaying(null)
+  }
+
+  /** Пульт: показать снимок активного устройства; позиция — уже досчитанная на сейчас */
+  function connectMirror(s: PlaybackState, atMs: number) {
+    connectYield()
+    const cur = s.current ? fromItem(s.current) : null
+    const changed = current.value?.track.id !== cur?.track.id
+    current.value = cur
+    manual.value = (s.manual ?? []).map(fromItem)
+    upcoming.value = (s.upcoming ?? []).map(fromItem)
+    history.value = (s.history ?? []).map(fromItem)
+    context.value = s.context ? { type: s.context.type, id: s.context.id ?? null, title: s.context.title } : null
+    playing.value = !!s.playing
+    pending.value = s.pending && cur ? { uid: cur.uid, status: s.pending, queuePosition: null } : null
+    positionMs.value = atMs
+    durationMs.value = s.durationMs || cur?.track.durationMs || 0
+    waveSessionId.value = s.waveSessionId ?? null
+    source.value = null
+    if (s.peaks?.length) peaks.value = s.peaks
+    else if (changed) peaks.value = []
+    if (cur && changed) {
+      void applyCover(cur.track)
+      if (!s.peaks?.length) {
+        void bridge.media.waveform(cur.track, PEAK_BARS).then((p) => {
+          if (mirrored.value && current.value?.uid === cur.uid && !peaks.value.length) peaks.value = p
+        }).catch(() => {})
+      }
+    }
+  }
+
+  /** Это устройство продолжает с того же места с той же очередью (перенос или «Продолжить здесь») */
+  async function connectTakeOver(s: PlaybackState | null, atMs: number, autoplay: boolean) {
+    mirrored.value = false
+    const cur = s?.current ? fromItem(s.current) : null
+    manual.value = (s?.manual ?? []).map(fromItem)
+    upcoming.value = (s?.upcoming ?? []).map(fromItem)
+    history.value = (s?.history ?? []).map(fromItem)
+    context.value = s?.context ? { type: s.context.type, id: s.context.id ?? null, title: s.context.title } : null
+    waveSessionId.value = s?.waveSessionId ?? null
+    prefetched = null
+    if (!cur) {
+      current.value = null
+      playing.value = false
+      pending.value = null
+      positionMs.value = 0
+      durationMs.value = 0
+      peaks.value = []
+      return
+    }
+    await startEntry(cur, { startMs: Math.max(0, atMs), autoplay })
+  }
+
+  /** «Продолжить здесь» не нужно — человек сам включил здесь другое: плеер снова свой */
+  function connectLeave() {
+    mirrored.value = false
+    playing.value = false
+    pending.value = null
+  }
+
   // ---------- Система: экран блокировки, медиаклавиши, «Сейчас играет» ----------
 
   // При смене трека, запуске, паузе и перемотке; позицию между ними система досчитывает сама
@@ -815,11 +969,16 @@ export const usePlayerStore = defineStore('player', () => {
     watch(volume, v => engine.setVolume(v))
     watch(muted, m => engine.setMuted(m))
     // Приложение: переход и выравнивание громкости делает движок; очередь он получает наперёд
-    watch([effectiveMode, normalize], ([mode, norm]) => engine.configure({ transition: mode === 'gapless' ? 'gapless' : 'crossfade', fadeMs: FADE_MS[mode], normalize: norm }), { immediate: true })
+    // «Диджей» (только приложения): сведение по долям в движке; выразительность — шагом 0,05, чтобы ползунок не дёргал движок
+    watch([effectiveMode, normalize, () => Math.round(expressiveness.value * 20) / 20], ([mode, norm, expr]) => engine.configure({ transition: mode === 'gapless' ? 'gapless' : mode === 'dj' ? 'dj' : 'crossfade', fadeMs: FADE_MS[mode], normalize: norm, expressiveness: expr }), { immediate: true })
     watch(() => [...manual.value, ...upcoming.value].map(e => e.uid).join(), () => syncUpcoming())
-    engine.on('advance', (uid, reason) => void onEngineAdvance(uid, reason))
+    engine.on('advance', (uid, reason) => {
+      if (!mirrored.value) void onEngineAdvance(uid, reason)
+    })
 
     engine.on('time', (ms) => {
+      // Пульт: позицию ведёт снимок активного устройства
+      if (mirrored.value) return
       positionMs.value = ms
       if (listen) {
         const d = ms - listen.lastPos
@@ -841,9 +1000,10 @@ export const usePlayerStore = defineStore('player', () => {
       }
     })
     engine.on('ended', () => {
-      if (!transitioning) void next('completed')
+      if (!transitioning && !mirrored.value) void next('completed')
     })
     engine.on('state', (s) => {
+      if (mirrored.value) return
       const changed = playing.value !== s.playing
       playing.value = s.playing
       buffering.value = s.buffering
@@ -851,7 +1011,7 @@ export const usePlayerStore = defineStore('player', () => {
       if (changed) publishNowPlaying()
     })
     engine.on('error', (_e, uid) => {
-      if (!current.value || (uid && uid !== current.value.uid)) return
+      if (mirrored.value || !current.value || (uid && uid !== current.value.uid)) return
       toast.error(t('player.trackFailed', { title: current.value.track.title }))
     })
 
@@ -862,7 +1022,8 @@ export const usePlayerStore = defineStore('player', () => {
       library.setAudioStatus(e.trackId, e.audioStatus)
       const p = pending.value
       const cur = current.value
-      if (!p || !cur || cur.track.id !== e.trackId) return
+      // Пульт: трек ждёт активное устройство, не мы
+      if (!p || !cur || cur.track.id !== e.trackId || mirrored.value) return
       if (e.audioStatus === 'ready') void startEntry(cur, { autoplay: true })
       else if (e.audioStatus === 'unavailable' || e.audioStatus === 'failed') {
         pending.value = null
@@ -884,5 +1045,6 @@ export const usePlayerStore = defineStore('player', () => {
     transitionAtMs, progress, nextEntry, peaks, devices,
     play, pause, toggle, next, prev, seek, playTracks, startWave, cancelWavePrep, playNext, enqueue, remove, clearManual, moveManual,
     jumpTo, dislike, notNow, moreLikeThis, toggleLike, setWave, applyPreset, setVolume, toggleMute, loadDevices, selectDevice,
+    mirrored, setConnectRoute, connectSnapshot, connectYield, connectMirror, connectTakeOver, connectLeave,
   }
 })

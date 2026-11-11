@@ -237,6 +237,16 @@ impl Deezer {
         self.get(&format!("/track/{id}")).await
     }
 
+    /// Трек по ISRC (`track/isrc:…`); у кода может быть несколько релизов — Deezer отдаёт один.
+    pub async fn track_by_isrc(&self, isrc: &str) -> Result<Track, DeezerError> {
+        let code: String = isrc.chars().filter(char::is_ascii_alphanumeric).collect();
+        if code.is_empty() {
+            return Err(DeezerError::NotFound);
+        }
+        self.get(&format!("/track/isrc:{}", code.to_ascii_uppercase()))
+            .await
+    }
+
     pub async fn search_tracks(&self, q: &str, limit: u32) -> Result<Vec<Track>, DeezerError> {
         let page: Page<Track> = self.get(&search_path("track", q, limit)).await?;
         Ok(page.data)

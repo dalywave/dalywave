@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id, s.settings, s.state ->> 'title' AS title,\n                  COALESCE((s.state ->> 'step')::bigint, 0) AS \"served!\",\n                  count(i.id) FILTER (WHERE i.outcome IN ('like', 'more_like_this')) AS \"likes!\",\n                  count(i.id) FILTER (WHERE i.outcome = 'completed') AS \"completed!\",\n                  count(i.id) FILTER (WHERE i.outcome IN ('skip', 'dislike')) AS \"skips!\",\n                  s.started_at, s.last_active_at\n           FROM wave_sessions s\n           LEFT JOIN recommendation_impressions i ON i.wave_session_id = s.id\n           WHERE s.user_id = $1\n           GROUP BY s.id\n           ORDER BY s.last_active_at DESC, s.id DESC\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "settings",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "settings"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "served!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "likes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "completed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "skips!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "last_active_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "wave_sessions",
+            "name": "last_active_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "40a56dab102e3857c818e92a3a2c86e96c79268ef77e308362bc3c777f9e3318"
+}

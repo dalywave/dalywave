@@ -4,12 +4,13 @@
 // токен устройства в связке ключей; запросы — на адрес сервера с `Authorization: Bearer`.
 // Звук — движок на Rust (./audio.ts); «Сейчас играет» и пульт системы ведёт он же.
 import type { Me } from '~/api/types'
-import type { Bridge, Platform, WindowChrome, WindowState } from '../types'
+import type { AppUpdateState, Bridge, Platform, WindowChrome, WindowState } from '../types'
 import { createWebBridge } from '../web'
 import { NativeAudioEngine } from './audio'
 import { createTauriDownloader } from './downloader'
+import { createOfflineBridge, haptic, withOffline } from './offline'
 import { createTauriOutputs } from './outputs'
-import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell } from './shell'
+import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell, type UpdateState } from './shell'
 
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && ('__DALYWAVE_SHELL__' in window || '__TAURI_INTERNALS__' in window)
@@ -45,6 +46,18 @@ function on(subscribe: (shell: Shell) => Promise<() => void>): () => void {
   return () => {
     stopped = true
     off?.()
+  }
+}
+
+function toUpdateState(s: UpdateState): AppUpdateState {
+  const u = s.update
+  return {
+    status: s.status,
+    currentVersion: s.currentVersion,
+    update: u ? { version: u.version, currentVersion: u.currentVersion, notes: u.notes } : null,
+    progress: s.status === 'downloading' && s.totalBytes ? Math.min(1, (s.downloadedBytes ?? 0) / s.totalBytes) : null,
+    error: s.error,
+    installOnQuit: s.installOnQuit,
   }
 }
 
@@ -106,8 +119,18 @@ export function createTauriBridge(): Bridge {
     }).catch(() => {})
   }
 
-  return createWebBridge({
+  // Умный офлайн: медиатека из локальной базы, скачанное, волна без сети (./offline.ts)
+  const offline = createOfflineBridge()
+  let forceOffline = false
+  offline.onStatus(s => (forceOffline = s.settings.forceOffline))
+  void offline.status().then(s => (forceOffline = s.settings.forceOffline)).catch(() => {})
+
+  return withOffline(createWebBridge({
     kind: 'tauri',
+    offline,
+    haptic,
+    // «Без сети»: запросы на сервер не уходят — экраны берут локальную базу и скачанное
+    blocked: () => forceOffline,
     platform,
     isDesktopApp: desktop,
     chrome,
@@ -190,12 +213,18 @@ export function createTauriBridge(): Bridge {
         }))
       },
     },
+    // Обновляется только приложение для компьютера: на iPhone и iPad команд обновления нет
     updates: {
       onAvailable: cb => on(shell => shell.on('update:available', u => cb({ version: u.version, currentVersion: u.currentVersion, notes: u.notes }))),
+      state: async () => (desktop ? toUpdateState(await (await loadShell()).updates.state()) : null),
+      onState: cb => (desktop ? on(shell => shell.on('update:state', s => cb(toUpdateState(s)))) : () => {}),
+      check: async () => {
+        if (desktop) await (await loadShell()).updates.check()
+      },
       install: async () => (await loadShell()).updates.install(),
     },
     setLocale(locale) {
       void loadShell().then(shell => shell.setLocale(locale)).catch(() => {})
     },
-  })
+  }), offline)
 }

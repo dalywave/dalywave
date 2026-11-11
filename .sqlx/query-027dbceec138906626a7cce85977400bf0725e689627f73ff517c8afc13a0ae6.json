@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT stats FROM imports WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "stats",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "stats"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "027dbceec138906626a7cce85977400bf0725e689627f73ff517c8afc13a0ae6"
+}

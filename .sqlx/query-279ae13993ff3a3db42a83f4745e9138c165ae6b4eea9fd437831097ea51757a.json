@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT j.id FROM jobs j\n             WHERE j.status IN ('queued', 'running') AND j.kind IN ('import_match', 'import_apply', 'import_file')\n               AND (j.payload ->> 'importId' = $1::uuid::text\n                    OR j.payload ->> 'itemId' IN (SELECT i.id::text FROM import_items i WHERE i.import_id = $1::uuid))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "279ae13993ff3a3db42a83f4745e9138c165ae6b4eea9fd437831097ea51757a"
+}

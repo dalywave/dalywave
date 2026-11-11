@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 import platform
 import tempfile
@@ -18,6 +19,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
 
 from . import __version__
 from .analysis import Analyzer, TooShortError
@@ -25,6 +27,8 @@ from .audio import AudioError, decode, ffmpeg_version
 from .config import Settings
 from .download import read_lock, verify
 from .manifest import MODELS, versions
+from .taste_model import HEADS, TooLittleDataError, TrainData, b64_array
+from .taste_model import train as train_taste
 
 log = logging.getLogger("dalywave_ml")
 
@@ -59,6 +63,26 @@ class EmbedTextRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=500)
+
+
+class TrainTasteRequest(BaseModel):
+    """Набор для сети вкуса. Массивы — base64 little-endian; строки упорядочены по времени."""
+
+    model_config = ConfigDict(extra="forbid", alias_generator=to_camel, populate_by_name=True)
+
+    vectors: str = Field(description="float16, vectorRows × (soundDim + semanticDim)")
+    vector_rows: int = Field(ge=1)
+    sound_dim: int = Field(ge=1)
+    semantic_dim: int = Field(ge=1)
+    row_vector: str = Field(description="int32, rows: строка набора → строка vectors")
+    scalars: str = Field(description="float32, rows × scalarDim")
+    scalar_dim: int = Field(ge=1)
+    rows: int = Field(ge=0)
+    labels: str = Field(description="float32, rows × 3: skip, complete, like")
+    baseline: str = Field(description="float32, rows: оценка правил")
+    holdout_from: int = Field(ge=0)
+    feature_names: list[str] = Field(default_factory=list)
+    seed: int = 0
 
 
 def _error(status: int, code: str, message: str) -> JSONResponse:
@@ -107,6 +131,7 @@ def create_app(settings: Settings | None = None, analyzer: Analyzer | None = Non
     # Анализ — строго один за раз на процесс: модели и так занимают все ядра.
     analysis_lock = threading.Lock()
     text_lock = threading.Lock()
+    train_lock = threading.Lock()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -158,6 +183,7 @@ def create_app(settings: Settings | None = None, analyzer: Analyzer | None = Non
             "ok": state["analyzer"] is not None,
             "version": __version__,
             "busy": analysis_lock.locked(),
+            "training": train_lock.locked(),
             "modelsLoaded": state["analyzer"] is not None,
             "error": state["error"],
             "runtime": {
@@ -235,6 +261,62 @@ def create_app(settings: Settings | None = None, analyzer: Analyzer | None = Non
                 result["timingsMs"]["total"],
             )
             return result
+
+    @app.post("/v1/taste/train")
+    def taste_train(req: TrainTasteRequest) -> dict[str, Any]:
+        # Обучение не ждёт анализа и не мешает ему: свой замок, один набор за раз
+        if not train_lock.acquire(blocking=False):
+            raise ApiError(409, "busy", "Сеть вкуса уже обучается")
+        try:
+            started = time.perf_counter()
+            width = req.sound_dim + req.semantic_dim
+            try:
+                data = TrainData(
+                    vectors=b64_array(req.vectors, "<f2", req.vector_rows * width)
+                    .astype("<f4")
+                    .reshape(req.vector_rows, width),
+                    row_vector=b64_array(req.row_vector, "<i4", req.rows),
+                    scalars=b64_array(req.scalars, "<f4", req.rows * req.scalar_dim).reshape(
+                        req.rows, req.scalar_dim
+                    ),
+                    labels=b64_array(req.labels, "<f4", req.rows * len(HEADS)).reshape(
+                        req.rows, len(HEADS)
+                    ),
+                    baseline=b64_array(req.baseline, "<f4", req.rows),
+                    holdout_from=req.holdout_from,
+                    sound_dim=req.sound_dim,
+                    semantic_dim=req.semantic_dim,
+                    feature_names=req.feature_names,
+                )
+                result = train_taste(data, seed=req.seed)
+            except TooLittleDataError as e:
+                raise ApiError(422, "too_little_data", f"Мало данных для обучения: {e}") from e
+            except ValueError as e:
+                raise ApiError(422, "invalid_dataset", f"Неверный набор: {e}") from e
+            took = round((time.perf_counter() - started) * 1000)
+            log.info(
+                "сеть вкуса: %d строк, %d эпох, AUC %s против правил %s, %d мс",
+                req.rows,
+                result.epochs,
+                result.metrics["auc"],
+                result.metrics["baselineAuc"],
+                took,
+            )
+            return {
+                "onnx": base64.b64encode(result.onnx).decode(),
+                "inputDim": result.params.input_dim,
+                "heads": list(HEADS),
+                "params": result.params.trainable,
+                "reduced": {
+                    "sound": int(result.params.sound_proj.shape[1]),
+                    "semantic": int(result.params.semantic_proj.shape[1]),
+                },
+                "epochs": result.epochs,
+                "metrics": result.metrics,
+                "tookMs": took,
+            }
+        finally:
+            train_lock.release()
 
     @app.post("/v1/embed-text")
     def embed_text(req: EmbedTextRequest) -> dict[str, Any]:

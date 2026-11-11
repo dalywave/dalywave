@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/protocol", "crates/server"]
+members = ["crates/protocol", "crates/server", "crates/transitions"]
 exclude = ["spikes"]
 
 [workspace.package]
@@ -11,6 +11,7 @@ publish = false
 
 [workspace.dependencies]
 dalywave-protocol = { path = "crates/protocol" }
+dalywave-transitions = { path = "crates/transitions" }
 
 anyhow = "1"
 axum = { version = "0.8.9", features = ["ws"] }
@@ -26,8 +27,12 @@ http-body-util = "0.1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 ipnet = "2"
 object_store = { version = "0.14", default-features = false, features = ["aws"] }
+# Сеть вкуса на сервере: onnxruntime статически (готовые сборки pyke, в том числе linux aarch64),
+# загрузка при сборке — по rustls, без OpenSSL в образе сборки
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-rustls", "api-24"] }
 p256 = { version = "0.14", features = ["ecdsa"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.11"
@@ -61,9 +66,11 @@ tower-http = { version = "0.7", features = [
 ] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+unicode-normalization = "0.1"
 url = "2"
 utoipa = { version = "6", features = ["uuid", "chrono"] }
 uuid = { version = "1", features = ["v7", "serde"] }
+zip = { version = "9.5", default-features = false, features = ["deflate-flate2"] }
 
 [profile.release]
 lto = "thin"

@@ -99,6 +99,11 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/auth/password",
         "/api/auth/providers",
         "/api/catalog/deezer/{kind}/{deezerId}",
+        "/api/devices",
+        "/api/devices/current/downloads",
+        "/api/devices/current/downloads/{id}",
+        "/api/devices/current/files",
+        "/api/devices/current/set",
         "/api/events",
         "/api/fetcher/jobs/claim",
         "/api/fetcher/jobs/{id}/lease",
@@ -107,6 +112,15 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/healthz",
         "/api/home",
         "/api/images/{kind}/{id}/{file}",
+        "/api/imports",
+        "/api/imports/files",
+        "/api/imports/list",
+        "/api/imports/spotify",
+        "/api/imports/{id}",
+        "/api/imports/{id}/files",
+        "/api/imports/{id}/finish",
+        "/api/imports/{id}/items",
+        "/api/imports/{id}/items/{itemId}",
         "/api/library",
         "/api/library/albums",
         "/api/library/albums/{id}",
@@ -124,11 +138,18 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/playlists/{id}/items/{itemId}",
         "/api/playlists/{id}/items/{itemId}/move",
         "/api/playlists/{id}/pin",
+        "/api/releases",
+        "/api/releases/uploads",
         "/api/search",
         "/api/search/sound",
         "/api/sync",
+        "/api/taste",
+        "/api/taste/dampers/{id}",
+        "/api/taste/facets/{id}/less",
+        "/api/taste/reset",
         "/api/tracks/lookup",
         "/api/tracks/{id}",
+        "/api/tracks/{id}/analysis",
         "/api/tracks/{id}/similar",
         "/api/tracks/{id}/stream",
         "/api/updates/{target}/{arch}/{current_version}",
@@ -168,6 +189,8 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "ClientMessage",
         "AcquirePayload",
         "TrackStream",
+        "TrackAnalysis",
+        "AnalysisCues",
         "Acquisition",
         "AdminAcquisitionPage",
         "ResolveRequest",
@@ -192,6 +215,7 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
     assert_eq!(schemas["Me"]["properties"]["sessionId"]["format"], "uuid");
     assert!(res.body["components"]["securitySchemes"]["session"].is_object());
     assert!(res.body["components"]["securitySchemes"]["downloader"].is_object());
+    assert!(res.body["components"]["securitySchemes"]["release"].is_object());
 }
 
 #[sqlx::test(migrator = "dalywave_server::MIGRATOR")]

@@ -1,6 +1,6 @@
-//! Главная: «Продолжить», «Миксы дня», «Новинки подписок», «Открытия недели», «Недавно понравилось»,
-//! «Забытые любимые», «Ваши артисты». Миксы и открытия — плейлисты вида `mix`, которые собирает ночной
-//! пересчёт вкуса ([`crate::reco::taste`]).
+//! Главная: «Продолжить», «Миксы дня», «Радар новинок», «Новинки подписок», «Открытия недели», «Недавно
+//! понравилось», «Забытые любимые», «Ваши артисты». Миксы и открытия — плейлисты вида `mix`, которые
+//! собирает ночной пересчёт вкуса ([`crate::reco::taste`]). Порядок полок — от времени суток слушателя.
 
 use std::collections::HashMap;
 
@@ -10,11 +10,111 @@ use dalywave_protocol::home::{Home, Shelf, ShelfItem, ShelfKind};
 use uuid::Uuid;
 
 use crate::{
-    auth::Principal, catalog::views, error::AppResult, extract::Json, reco::wave,
-    routes::playlists, state::AppState,
+    auth::Principal,
+    catalog::views,
+    error::AppResult,
+    extract::Json,
+    reco::{DayPart, Settings, wave},
+    routes::playlists,
+    state::AppState,
 };
 
 const SHELF_SIZE: i64 = 20;
+/// Треков в «Радаре новинок» и сколько из одного релиза.
+const RADAR_SIZE: i64 = 30;
+const RADAR_PER_RELEASE: i64 = 3;
+
+/// Порядок полок по времени суток: утром — свежее (миксы, новинки), днём — открытия, вечером — любимое
+/// и забытое, ночью — миксы и знакомое. «Продолжить» всегда рядом с верхом.
+pub fn shelf_order(part: DayPart) -> [&'static str; 8] {
+    match part {
+        DayPart::Morning => [
+            "continue",
+            "daily-mixes",
+            "release-radar",
+            "new-releases",
+            "discover-weekly",
+            "recent-likes",
+            "forgotten-favorites",
+            "top-artists",
+        ],
+        DayPart::Day => [
+            "continue",
+            "discover-weekly",
+            "daily-mixes",
+            "release-radar",
+            "new-releases",
+            "recent-likes",
+            "top-artists",
+            "forgotten-favorites",
+        ],
+        DayPart::Evening => [
+            "continue",
+            "daily-mixes",
+            "forgotten-favorites",
+            "discover-weekly",
+            "recent-likes",
+            "release-radar",
+            "new-releases",
+            "top-artists",
+        ],
+        DayPart::Night => [
+            "daily-mixes",
+            "continue",
+            "forgotten-favorites",
+            "recent-likes",
+            "discover-weekly",
+            "release-radar",
+            "new-releases",
+            "top-artists",
+        ],
+    }
+}
+
+/// «Радар новинок»: до трёх самых популярных треков каждого релиза за 30 дней у подписок, лайкнутых
+/// артистов и тех, кого дослушивал хотя бы трижды за три месяца; «не рекомендовать» и «не нравится» — мимо.
+async fn release_radar(st: &AppState, user: Uuid) -> AppResult<Vec<Uuid>> {
+    Ok(sqlx::query_scalar!(
+        r#"WITH mine AS (
+               SELECT artist_id FROM followed_artists WHERE user_id = $1
+               UNION
+               SELECT ta.artist_id FROM liked_tracks l
+               JOIN track_artists ta ON ta.track_id = l.track_id AND ta.role = 'main'
+               WHERE l.user_id = $1 AND l.created_at > taste_reset_at($1)
+               UNION
+               SELECT ta.artist_id FROM play_events p
+               JOIN track_artists ta ON ta.track_id = p.track_id AND ta.role = 'main'
+               WHERE p.user_id = $1 AND p.started_at > now() - interval '90 days'
+                 AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)
+               GROUP BY ta.artist_id HAVING count(*) >= 3
+           ), releases AS (
+               SELECT DISTINCT al.id, al.release_date FROM artist_releases r
+               JOIN albums al ON al.id = r.album_id
+               WHERE r.artist_id IN (SELECT artist_id FROM mine)
+                 AND al.release_date >= current_date - 30 AND al.release_date <= current_date
+                 AND NOT EXISTS (SELECT 1 FROM blocked_items b
+                                 WHERE b.user_id = $1 AND b.kind = 'artist' AND b.ref_id = al.artist_id)
+           )
+           SELECT pick.id AS "id!" FROM releases rl
+           CROSS JOIN LATERAL (
+               SELECT t.id, t.rank FROM tracks t
+               WHERE t.album_id = rl.id
+                 AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = t.id)
+                 AND NOT COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f
+                                   WHERE f.user_id = $1 AND f.track_id = t.id AND f.kind IN ('dislike', 'undislike')
+                                   ORDER BY f.at DESC LIMIT 1), false)
+               ORDER BY t.rank DESC NULLS LAST, t.disc_number, t.track_position, t.id
+               LIMIT $2
+           ) pick
+           ORDER BY rl.release_date DESC, rl.id, pick.rank DESC NULLS LAST, pick.id
+           LIMIT $3"#,
+        user,
+        RADAR_PER_RELEASE,
+        RADAR_SIZE,
+    )
+    .fetch_all(&st.db)
+    .await?)
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/home", get(home))
@@ -39,7 +139,8 @@ async fn continue_items(st: &AppState, user: Uuid) -> AppResult<Vec<ShelfItem>> 
                       CASE WHEN pe.context_type IN ('album', 'playlist', 'artist') AND pe.context_id IS NOT NULL
                            THEN pe.context_id ELSE t.album_id::text END AS ref
                FROM play_events pe JOIN tracks t ON t.id = pe.track_id
-               WHERE pe.user_id = $1
+               -- История из архива Spotify питает вкус, но «Продолжить» — только своё недавнее
+               WHERE pe.user_id = $1 AND pe.source <> 'import'
                ORDER BY pe.started_at DESC
                LIMIT 300
            )
@@ -149,6 +250,7 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
     .fetch_all(&st.db)
     .await?;
     let forgotten_ids = wave::forgotten(&st.db, user, SHELF_SIZE).await?;
+    let radar_ids = release_radar(&st, user).await?;
 
     let shelves = [
         shelf(
@@ -164,6 +266,16 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
             mix_ids
                 .iter()
                 .filter_map(|id| mixes.get(id).cloned().map(ShelfItem::Playlist))
+                .collect(),
+        ),
+        shelf(
+            "release-radar",
+            "Радар новинок",
+            ShelfKind::ReleaseRadar,
+            views::tracks(&st.db, &radar_ids, user)
+                .await?
+                .into_iter()
+                .map(ShelfItem::Track)
                 .collect(),
         ),
         shelf(
@@ -217,8 +329,17 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
                 .collect(),
         ),
     ];
+    let settings = Settings::load(&st.db).await?;
+    let order = shelf_order(DayPart::of_hour(settings.local_hour(Utc::now())));
+    let mut shelves: Vec<Shelf> = shelves.into_iter().flatten().collect();
+    shelves.sort_by_key(|s| {
+        order
+            .iter()
+            .position(|id| *id == s.id)
+            .unwrap_or(order.len())
+    });
     Ok(Json(Home {
-        shelves: shelves.into_iter().flatten().collect(),
+        shelves,
         generated_at: Utc::now(),
     }))
 }

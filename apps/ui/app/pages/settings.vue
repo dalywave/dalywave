@@ -84,6 +84,12 @@ const language = computed({
       </SettingsRow>
     </SettingsGroup>
 
+    <SettingsGroup :title="t('library')">
+      <SettingsRow as="button" :title="t('import')" :description="t('importDesc')" @click="navigateTo('/import')">
+        <Icon name="ph:caret-right" class="set__chev" aria-hidden="true" />
+      </SettingsRow>
+    </SettingsGroup>
+
     <SettingsGroup :title="t('playback')">
       <SettingsRow :title="t('normalize')">
         <UiSwitch v-model="player.normalize" :label="t('normalize')" hide-label />
@@ -118,6 +124,9 @@ const language = computed({
     </SettingsGroup>
 
     <SettingsGroup :title="t('wave')">
+      <SettingsRow as="button" :title="t('taste')" :description="t('tasteDesc')" @click="navigateTo('/taste')">
+        <Icon name="ph:caret-right" class="set__chev" />
+      </SettingsRow>
       <SettingsRow :title="t('waveRow')">
         <UiButton size="sm" :disabled="waveIsDefault" @click="resetWave">{{ t('waveResetBtn') }}</UiButton>
       </SettingsRow>
@@ -138,9 +147,14 @@ const language = computed({
     </SettingsGroup>
 
     <!-- Сюда одной строкой встают разделы других модулей, например <DownloaderSettings /> -->
+    <!-- Приложение: загрузки на это устройство (умный офлайн) -->
+    <SettingsDownloads />
+
     <ShellDownloaderSettings />
 
     <SettingsGroup :title="t('about')">
+      <!-- Приложение для компьютера: версия и «Обновление готово — Перезапустить» -->
+      <ShellAppUpdateRow />
       <SettingsRow :title="t('server')">
         <span class="status" :class="health ? 'status--ok' : healthFailed ? 'status--bad' : ''"><i />{{ health ? t('serverOk') : healthFailed ? t('serverDown') : '…' }}</span>
       </SettingsRow>
@@ -168,7 +182,9 @@ const language = computed({
 .acct :deep(.sr__desc) { overflow-wrap: anywhere; }
 
 .set__radios { display: contents; }
+.set__chev { font-size: 16px; color: var(--text-4); }
 .set__quiet { font-size: var(--fs-caption); font-weight: 500; color: var(--text-3); }
+.set__chev { font-size: 18px; color: var(--text-3); }
 
 /* Выразительность — под выбранным «Умным» или «Диджеем» */
 .expr { display: flex; flex: 1; flex-direction: column; gap: 6px; padding-right: 32px; }
@@ -197,11 +213,16 @@ const language = computed({
     "roleAdmin": "Администратор",
     "logout": "Выйти",
     "logoutFailed": "Не получилось выйти — попробуйте ещё раз",
+    "library": "Медиатека",
+    "import": "Перенести музыку",
+    "importDesc": "Из Spotify, списком или своими файлами",
     "playback": "Воспроизведение",
     "normalize": "Выравнивать громкость",
     "scrubber": "Полоса прокрутки",
     "transitions": "Переходы между треками",
     "wave": "Моя волна",
+    "taste": "Мой вкус",
+    "tasteDesc": "Что волна знает о вас и как это поправить",
     "waveRow": "Настройки волны",
     "waveResetBtn": "Сбросить",
     "waveReset": "Настройки волны сброшены",
@@ -215,7 +236,7 @@ const language = computed({
     "server": "Сервер",
     "serverOk": "Работает",
     "serverDown": "Не отвечает",
-    "version": "Версия"
+    "version": "Версия сервера"
   },
   "en": {
     "title": "Settings",
@@ -223,11 +244,16 @@ const language = computed({
     "roleAdmin": "Admin",
     "logout": "Sign out",
     "logoutFailed": "Couldn't sign out — try again",
+    "library": "Library",
+    "import": "Bring your music",
+    "importDesc": "From Spotify, a list or your own files",
     "playback": "Playback",
     "normalize": "Normalize volume",
     "scrubber": "Progress bar",
     "transitions": "Transitions",
     "wave": "My Wave",
+    "taste": "My taste",
+    "tasteDesc": "What the wave knows about you and how to tune it",
     "waveRow": "Wave settings",
     "waveResetBtn": "Reset",
     "waveReset": "Wave settings reset",
@@ -241,7 +267,7 @@ const language = computed({
     "server": "Server",
     "serverOk": "Running",
     "serverDown": "Not responding",
-    "version": "Version"
+    "version": "Server version"
   }
 }
 </i18n>

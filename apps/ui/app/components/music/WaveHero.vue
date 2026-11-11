@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WaveMood, WaveSettings } from '~/bridge/types'
+import type { MenuEntry } from '~/types/ui'
 import { waveSummary } from '~/utils/wave-options'
 
 // «Моя волна» на главной: живая волна, что играет и почему, настройки без «стены чипов»
@@ -37,12 +38,22 @@ function onPlay() {
 function savePreset() {
   toast.show({ text: t('wave.preset.saveSoon'), icon: 'ph:bookmark-simple' })
 }
+
+const moreItems = computed<MenuEntry[]>(() => [
+  { label: tl('taste'), icon: 'ph:fingerprint', onSelect: () => void navigateTo('/taste') },
+  { label: tl('resetSettings'), icon: 'ph:arrow-counter-clockwise', disabled: player.wave.mood === 'any' && player.wave.activity === 'any' && player.wave.character === 'mix' && player.wave.language === 'any', onSelect: () => player.setWave({ mood: 'any', activity: 'any', character: 'mix', language: 'any' }) },
+])
 </script>
 
 <template>
   <section class="hero" :aria-label="t('wave.title')">
     <div class="hero__stage">
       <div class="hero__wave"><MusicWaveCanvas :layout="ui.isPhone ? 'hero-phone' : 'hero'" /></div>
+      <div class="hero__more">
+        <UiMenu :items="moreItems">
+          <UiIconButton icon="ph:dots-three-bold" :label="tl('more')" tone="glass" :size="ui.isPhone ? 'md' : 'sm'" />
+        </UiMenu>
+      </div>
       <div class="hero__intro">
         <div v-if="greeting" class="hero__eyebrow">{{ greeting }}</div>
         <h1 class="hero__title">{{ t('wave.title') }}</h1>
@@ -98,6 +109,7 @@ function savePreset() {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
 }
 .hero__wave { position: absolute; inset: 0; z-index: -1; }
+.hero__more { position: absolute; top: 20px; right: 20px; z-index: 1; }
 .hero__wave::after {
   content: '';
   position: absolute;
@@ -156,6 +168,7 @@ function savePreset() {
   .hero__now, .hero__eyebrow, .hero__dock { display: none; }
   .hero__intro { gap: 6px; }
   .hero__title { font-size: 34px; }
+  .hero__more { top: 12px; right: 12px; }
   .hero__summary { font-size: 15px; }
   .hero__below { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 }
@@ -167,13 +180,19 @@ function savePreset() {
     "preparing": "Готовим волну…",
     "hint": "Подбираем музыку под эти настройки",
     "progress": "Готово {ready} из {need}",
-    "cancel": "Отменить"
+    "cancel": "Отменить",
+    "more": "Ещё",
+    "taste": "Мой вкус",
+    "resetSettings": "Сбросить настройки волны"
   },
   "en": {
     "preparing": "Preparing your wave…",
     "hint": "Picking music for these settings",
     "progress": "{ready} of {need} ready",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "more": "More",
+    "taste": "My taste",
+    "resetSettings": "Reset wave settings"
   }
 }
 </i18n>

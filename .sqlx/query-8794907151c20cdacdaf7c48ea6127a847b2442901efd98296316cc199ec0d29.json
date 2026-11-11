@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FILTER (WHERE p.started_at >= $2) AS \"plays!\",\n                  (COALESCE(sum(p.played_ms) FILTER (WHERE p.started_at >= $2), 0) / 60000)::bigint AS \"minutes!\",\n                  (COALESCE(sum(p.played_ms) FILTER (WHERE p.started_at < $2), 0) / 60000)::bigint AS \"previous!\",\n                  count(DISTINCT p.track_id) FILTER (WHERE p.started_at >= $2) AS \"tracks!\",\n                  (SELECT count(DISTINCT ta.artist_id) FROM play_events q\n                   JOIN track_artists ta ON ta.track_id = q.track_id AND ta.role = 'main'\n                   WHERE q.user_id = $1 AND q.started_at >= $2) AS \"artists!\"\n           FROM play_events p WHERE p.user_id = $1 AND p.started_at >= $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plays!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "minutes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "previous!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "artists!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "8794907151c20cdacdaf7c48ea6127a847b2442901efd98296316cc199ec0d29"
+}

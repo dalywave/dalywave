@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET applied = true, updated_at = now()\n         WHERE import_id = $1 AND status = 'matched' AND NOT applied AND ($2::uuid IS NULL OR id = $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8af0f3ae8ed69a07ff7b83d3e5f430e639a79bca8e31ee33cdab4e92b0f2d1ba"
+}

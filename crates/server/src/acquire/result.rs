@@ -362,7 +362,7 @@ fn plan(result: &FetcherResult, payload: &AcquirePayload) -> Result<bool, Decisi
     }
 }
 
-fn parse_codec(raw: &str) -> Option<AudioCodec> {
+pub(crate) fn parse_codec(raw: &str) -> Option<AudioCodec> {
     match raw.to_ascii_lowercase().as_str() {
         "mp4a" | "m4a" => Some(AudioCodec::Aac),
         other => other.parse().ok(),
@@ -687,7 +687,7 @@ pub async fn examine(
 
 /// Порядок качества файлов: lossless лучше любого сжатия, проверенный отпечатком — непроверенного,
 /// дальше — битрейт с поправкой на кодек (Opus 130 кбит/с не хуже AAC 170).
-fn quality(codec: AudioCodec, verified: bool, kbps: Option<i32>) -> (bool, bool, i64) {
+pub(crate) fn quality(codec: AudioCodec, verified: bool, kbps: Option<i32>) -> (bool, bool, i64) {
     let lossless = matches!(codec, AudioCodec::Flac | AudioCodec::Alac | AudioCodec::Pcm);
     let factor = match codec {
         AudioCodec::Opus => 1.0,

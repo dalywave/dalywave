@@ -1,0 +1,125 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT i.id, u.name AS user_name, i.surface, i.track_id, i.reason, i.score, i.outcome, i.wave_session_id,\n                i.shown_at\n         FROM recommendation_impressions i JOIN users u ON u.id = i.user_id\n         WHERE i.user_id = $1\n         ORDER BY i.shown_at DESC, i.id DESC\n         LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "surface",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "surface"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "reason",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "score",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "outcome",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "outcome"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "wave_session_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "wave_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "shown_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "shown_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "b29adedd0977538ed050193fbb77b34cbfb9bee45f7b9e274147a3205e642820"
+}

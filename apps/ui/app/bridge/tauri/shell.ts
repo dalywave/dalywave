@@ -108,7 +108,7 @@ export interface PlayerItem {
   artworkUrl?: string | null
 }
 
-export type PlayerTransition = { mode: 'gapless' } | { mode: 'crossfade', ms: number }
+export type PlayerTransition = { mode: 'gapless' } | { mode: 'crossfade', ms: number } | { mode: 'dj', expressiveness: number }
 export type PlayerStateName = 'idle' | 'loading' | 'playing' | 'paused' | 'ended'
 
 export interface PlayerSnapshot {
@@ -164,6 +164,29 @@ export interface UpdateInfo {
   currentVersion: string
   notes: string | null
   date: string | null
+}
+
+/**
+ * Обновление приложения (macOS, Windows): найденное скачивается в фоне само, приложение никогда не
+ * перезапускается без человека.
+ * - `idle` — обновлений нет; `checking` — спрашиваем сервер; `downloading` — качаем `update`;
+ * - `ready` — скачано и проверено подписью: «Перезапустить» (`updates.install()`);
+ * - `installing` — ставим; `failed` — проверка или скачивание не удались (`error`).
+ */
+export type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'installing' | 'failed'
+
+export interface UpdateState {
+  status: UpdateStatus
+  currentVersion: string
+  /** Найденная версия: при downloading, ready, installing и сбое скачивания */
+  update: UpdateInfo | null
+  downloadedBytes: number | null
+  totalBytes: number | null
+  /** Последняя удачная проверка, мс от эпохи Unix */
+  checkedAtMs: number | null
+  error: string | null
+  /** macOS: готовое обновление ставится и при обычном выходе из приложения */
+  installOnQuit: boolean
 }
 
 /**
@@ -258,6 +281,10 @@ export interface ShellEvents {
   'server:changed': { serverUrl: string }
   'update:available': UpdateInfo
   'update:progress': { downloadedBytes: number, totalBytes: number | null }
+  /** Обновление скачано и проверено — можно предложить «Перезапустить» */
+  'update:ready': UpdateInfo
+  /** Каждая перемена у обновления; ход скачивания — до 4 раз в секунду */
+  'update:state': UpdateState
   /** Ссылки dalywave:// кроме возврата входа — на будущее (треки, альбомы) */
   'deep-link:open': { url: string }
   /** macOS: загрузчик на этом Mac — при каждой перемене, ход задания — до 4 раз в секунду */
@@ -349,8 +376,10 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
     /** Язык меню в трее и строке меню */
     setLocale: (locale: Locale) => call<void>('shell_set_locale', { locale }),
     updates: {
+      /** Проверить сейчас; найденное скачивается в фоне (итог — `update:state`) */
       check: () => call<UpdateInfo | null>('update_check'),
-      /** Скачивает, ставит и перезапускает приложение */
+      state: () => call<UpdateState>('update_state'),
+      /** «Перезапустить»: ставит скачанное обновление и перезапускает приложение */
       install: () => call<void>('update_install'),
     },
     /** Загрузчик музыки на этом Mac — только macOS (на других системах команд нет) */

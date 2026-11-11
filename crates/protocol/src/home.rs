@@ -27,6 +27,8 @@ pub enum ShelfKind {
     DiscoverWeekly,
     /// «Забытые любимые»: любимое, которое давно не играло.
     ForgottenFavorites,
+    /// «Радар новинок»: треки свежих (30 дней) релизов подписок и артистов, которых часто слушаешь.
+    ReleaseRadar,
 }
 
 names!(ShelfKind {
@@ -37,6 +39,7 @@ names!(ShelfKind {
     DailyMixes => "daily_mixes",
     DiscoverWeekly => "discover_weekly",
     ForgottenFavorites => "forgotten_favorites",
+    ReleaseRadar => "release_radar",
 });
 
 /// Элемент полки: поле `type` говорит, что внутри.
@@ -53,7 +56,7 @@ pub enum ShelfItem {
 #[serde(rename_all = "camelCase")]
 pub struct Shelf {
     /// Постоянный id полки: `continue`, `daily-mixes`, `new-releases`, `discover-weekly`, `recent-likes`,
-    /// `forgotten-favorites`, `top-artists`.
+    /// `forgotten-favorites`, `top-artists`, `release-radar`.
     pub id: String,
     /// Заголовок по-русски; английский интерфейс берёт свой по `id`.
     pub title: String,

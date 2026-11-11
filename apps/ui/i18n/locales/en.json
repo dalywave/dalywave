@@ -1,8 +1,6 @@
 {
   "app": {
     "name": "DalyWave",
-    "updateAvailable": "A new DalyWave version is available — {version}",
-    "updateInstall": "Update",
     "updateFailed": "Couldn't update — try again later"
   },
   "nav": {
@@ -222,6 +220,10 @@
     "goArtist": "Go to artist",
     "goAlbum": "Go to album",
     "block": "Don't recommend",
+    "blockArtist": "Don't recommend artist",
+    "blocked": "We won't recommend “{title}” again",
+    "blockedArtist": "We won't recommend {name} again",
+    "blockFailed": "That didn't work — the server didn't respond",
     "report": "Wrong match — fix",
     "status": {
       "none": "Downloads when played",
@@ -264,7 +266,11 @@
       "continue": "Jump back in",
       "new-releases": "New from artists you follow",
       "recent-likes": "Recently liked",
-      "top-artists": "Your artists"
+      "top-artists": "Your artists",
+      "daily-mixes": "Daily mixes",
+      "discover-weekly": "Discover weekly",
+      "release-radar": "Release radar",
+      "forgotten-favorites": "Forgotten favorites"
     }
   },
   "lyrics": {
@@ -326,7 +332,10 @@
         "scout": "Scout pass",
         "scout_artist": "Artist scouting",
         "scout_charts": "Charts and new releases",
-        "taste": "Taste rebuild"
+        "taste": "Taste rebuild",
+        "import_match": "Import matching",
+        "import_apply": "Import apply",
+        "import_file": "Own file"
       }
     },
     "acq": {
@@ -375,6 +384,47 @@
     "executor": {
       "server": "Server",
       "device": "Downloader"
+    }
+  },
+  "connect": {
+    "appName": "DalyWave app",
+    "browser": "Browser",
+    "webName": "{browser} on {os}",
+    "playingOn": "Playing on: {name}",
+    "playingOnShort": "Playing on another device",
+    "lost": "“{name}” is offline",
+    "lostHint": "Music stopped on “{name}” — continue here from the same spot",
+    "continueHere": "Continue here",
+    "playHere": "Play here",
+    "playingNow": "Playing now",
+    "activeOffline": "Offline · was playing",
+    "nowSection": "Now playing",
+    "noAnswer": "“{name}” isn’t responding — the command didn’t go through",
+    "noLink": "No connection to the server — can’t control other devices right now",
+    "offline": "“{name}” is offline",
+    "failed": "“{name}” couldn’t do that",
+    "movedTo": "Now playing on “{name}”",
+    "remoteVolume": "Volume on “{name}”"
+  },
+  "offline": {
+    "download": "Download",
+    "downloadAll": "Download to this device",
+    "remove": "Remove from device",
+    "downloading": "Downloading: {done} of {total}",
+    "downloaded": "On this device",
+    "pinned": "“{title}” is downloading to this device",
+    "pinnedPlain": "Downloading to this device",
+    "unpinned": "“{title}” removed from this device",
+    "unpinnedPlain": "Removed from this device",
+    "cleared": "Downloads removed",
+    "failed": "That didn't work — try again",
+    "offlineNow": "Offline — playing downloads",
+    "notDownloaded": "Offline, only downloads are available",
+    "track": {
+      "queued": "Waiting to download",
+      "downloading": "Downloading {p}%",
+      "ready": "Downloaded to this device",
+      "failed": "Didn't download"
     }
   }
 }

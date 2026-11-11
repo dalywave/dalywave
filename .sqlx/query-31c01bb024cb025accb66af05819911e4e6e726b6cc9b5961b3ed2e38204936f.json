@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM tracks t JOIN recordings r ON r.id = t.recording_id\n           WHERE t.id = ANY($1) AND r.audio_status = 'ready'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "31c01bb024cb025accb66af05819911e4e6e726b6cc9b5961b3ed2e38204936f"
+}

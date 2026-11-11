@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO device_sets (device_id, track_id, kind, score)\n         SELECT $1, t, 'favorite', s FROM unnest($2::uuid[], $3::real[]) AS x(t, s)\n         ON CONFLICT (device_id, track_id) DO UPDATE SET kind = EXCLUDED.kind, score = EXCLUDED.score\n         WHERE (device_sets.kind, device_sets.score) IS DISTINCT FROM (EXCLUDED.kind, EXCLUDED.score)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "Float4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7e60c4da62d129afe8e5c6f10be453f5dbc240d6c66851a61332aa0e893bce35"
+}

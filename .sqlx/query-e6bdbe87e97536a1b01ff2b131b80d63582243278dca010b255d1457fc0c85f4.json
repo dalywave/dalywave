@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET status = 'skipped', resolved_by = 'manual', updated_at = now()\n             WHERE id = $1 AND status <> 'matched'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6bdbe87e97536a1b01ff2b131b80d63582243278dca010b255d1457fc0c85f4"
+}

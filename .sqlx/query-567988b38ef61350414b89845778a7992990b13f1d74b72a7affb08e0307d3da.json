@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices WHERE user_id = $1 AND id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "online!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "567988b38ef61350414b89845778a7992990b13f1d74b72a7affb08e0307d3da"
+}

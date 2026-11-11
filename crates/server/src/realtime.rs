@@ -21,13 +21,19 @@ const MAX_PAYLOAD: usize = 7900;
 const BUFFER: usize = 1024;
 
 /// Кому событие.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Audience {
     User(Uuid),
     /// Людям с правом admin.
     Admins,
     All,
+    /// Одному устройству человека (управление между устройствами): соединению, которое представилось
+    /// этим id в `connect.hello`.
+    Device {
+        user: Uuid,
+        device: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +65,12 @@ pub async fn publish(db: impl PgExecutor<'_>, to: Audience, event: ServerEvent) 
     {
         tracing::warn!(error = %e, "could not publish a realtime event");
     }
+}
+
+/// Сразу раздаёт событие соединениям этого процесса, минуя Postgres. Так ходит управление между
+/// устройствами: все WebSocket — в процессе API, задержка важна, а снимок очереди больше предела NOTIFY.
+pub fn deliver(hub: &Hub, to: Audience, event: ServerEvent) {
+    hub.send(Envelope { to, event });
 }
 
 /// Раздаёт события открытым соединениям этого процесса.

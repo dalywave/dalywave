@@ -90,12 +90,20 @@ async fn home_shelves_follow_listening(db: PgPool) {
         .await
         .unwrap();
 
+    // Утром: свежий сингл подписки — и на «Радаре новинок», и в «Новинках подписок»
+    crate::taste::morning(&app.state.db).await;
     let res = app.get("/api/home", &me).await;
     let shelves = res.body["shelves"].as_array().unwrap();
     let ids: Vec<&str> = shelves.iter().map(|s| s["id"].as_str().unwrap()).collect();
     assert_eq!(
         ids,
-        vec!["continue", "new-releases", "recent-likes", "top-artists"]
+        vec![
+            "continue",
+            "release-radar",
+            "new-releases",
+            "recent-likes",
+            "top-artists"
+        ]
     );
     assert_eq!(shelves[0]["title"], "Продолжить");
     assert_eq!(shelves[0]["kind"], "continue");
@@ -117,18 +125,18 @@ async fn home_shelves_follow_listening(db: PgPool) {
     assert_eq!(cont[2]["title"], "Вечер");
 
     // «Новинки подписок»: релиз за 60 дней, без будущих
-    let fresh = shelves[1]["items"].as_array().unwrap();
+    let fresh = shelves[2]["items"].as_array().unwrap();
     assert!(fresh.iter().all(|i| i["type"] == "album"));
     assert!(fresh.iter().any(|i| i["id"] == single.as_str()));
     assert!(fresh.iter().all(|i| i["title"] != "melancholy"));
     assert!(fresh.iter().all(|i| i["id"] != ep.as_str()));
 
-    let likes = shelves[2]["items"].as_array().unwrap();
+    let likes = shelves[3]["items"].as_array().unwrap();
     assert_eq!(likes[0]["type"], "track");
     assert_eq!(likes[0]["id"], t[4].as_str());
     assert_eq!(likes[0]["liked"], true);
 
-    let top = shelves[3]["items"].as_array().unwrap();
+    let top = shelves[4]["items"].as_array().unwrap();
     assert_eq!(top[0]["type"], "artist");
     assert_eq!(top[0]["name"], "Lowborn");
     assert_eq!(top[0]["followed"], true);

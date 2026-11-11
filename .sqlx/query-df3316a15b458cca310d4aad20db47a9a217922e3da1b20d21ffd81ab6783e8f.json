@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO playlist_items (playlist_id, track_id, position)\n             SELECT $1, t, p FROM unnest($2::uuid[], $3::float8[]) AS x(t, p)\n             WHERE NOT EXISTS (SELECT 1 FROM playlist_items i WHERE i.playlist_id = $1 AND i.track_id = x.t)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "df3316a15b458cca310d4aad20db47a9a217922e3da1b20d21ffd81ab6783e8f"
+}

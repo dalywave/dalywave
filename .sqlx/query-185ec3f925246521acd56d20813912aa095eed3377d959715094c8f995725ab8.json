@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT deezer_id AS \"deezer_id!\" FROM artists\n                   WHERE search_norm(name) = search_norm($1) AND deezer_id IS NOT NULL\n                   ORDER BY fans DESC NULLS LAST LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "deezer_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "deezer_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "185ec3f925246521acd56d20813912aa095eed3377d959715094c8f995725ab8"
+}

@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH ins AS (\n             INSERT INTO device_downloads (device_id, kind, ref_id) VALUES ($1, $2, $3)\n             ON CONFLICT (device_id, kind, coalesce(ref_id, '00000000-0000-0000-0000-000000000000')) DO NOTHING\n             RETURNING id, kind, ref_id, created_at\n         )\n         SELECT id AS \"id!\", kind AS \"kind!\", ref_id, created_at AS \"created_at!\" FROM ins\n         UNION ALL\n         SELECT id, kind, ref_id, created_at FROM device_downloads\n         WHERE device_id = $1 AND kind = $2 AND coalesce(ref_id, $4) = coalesce($3, $4)\n         LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "kind!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "ref_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "1e4ed443f650fefa0adc9cc04a053a31f1613115cbba397c44eee0f315628b4a"
+}

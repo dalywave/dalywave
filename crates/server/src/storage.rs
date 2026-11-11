@@ -64,6 +64,13 @@ pub enum StorageError {
     Key(#[from] object_store::path::Error),
 }
 
+fn io_error(e: std::io::Error) -> StorageError {
+    StorageError::Store(object_store::Error::Generic {
+        store: "local file",
+        source: Box::new(e),
+    })
+}
+
 /// Файл, который читается потоком.
 pub struct Object {
     pub size: u64,
@@ -223,6 +230,64 @@ impl Storage {
             .put_opts(&path, PutPayload::from(data.into()), opts)
             .await?;
         Ok(())
+    }
+
+    /// Загрузка с диска частями (большие файлы — импорт, свои аудиофайлы) без чтения целиком в память.
+    pub async fn put_file(
+        &self,
+        key: &str,
+        file: &std::path::Path,
+        content_type: &str,
+    ) -> Result<u64, StorageError> {
+        use tokio::io::AsyncReadExt;
+        let path = Path::parse(key)?;
+        let mut attributes = Attributes::new();
+        attributes.insert(Attribute::ContentType, content_type.to_string().into());
+        let opts = object_store::PutMultipartOptions {
+            attributes,
+            ..Default::default()
+        };
+        let upload = self.store.put_multipart_opts(&path, opts).await?;
+        let mut writer = object_store::WriteMultipart::new(upload);
+        let mut f = tokio::fs::File::open(file).await.map_err(io_error)?;
+        let mut buf = vec![0u8; 1024 * 1024];
+        let mut total = 0u64;
+        loop {
+            let n = match f.read(&mut buf).await {
+                Ok(n) => n,
+                Err(e) => {
+                    let _ = writer.abort().await;
+                    return Err(io_error(e));
+                }
+            };
+            if n == 0 {
+                break;
+            }
+            writer.wait_for_capacity(4).await?;
+            writer.write(&buf[..n]);
+            total += n as u64;
+        }
+        writer.finish().await?;
+        Ok(total)
+    }
+
+    /// Файл из хранилища на диск; возвращает размер.
+    pub async fn download_to(
+        &self,
+        key: &str,
+        file: &std::path::Path,
+    ) -> Result<u64, StorageError> {
+        use tokio::io::AsyncWriteExt;
+        let mut obj = self.get(key).await?;
+        let mut f = tokio::fs::File::create(file).await.map_err(io_error)?;
+        let mut total = 0u64;
+        while let Some(chunk) = obj.stream.next().await {
+            let chunk = chunk?;
+            total += chunk.len() as u64;
+            f.write_all(&chunk).await.map_err(io_error)?;
+        }
+        f.flush().await.map_err(io_error)?;
+        Ok(total)
     }
 
     /// Файл потоком; `NotFound`, если его нет.

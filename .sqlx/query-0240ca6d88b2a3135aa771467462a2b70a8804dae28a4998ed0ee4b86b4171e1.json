@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.title, p.rules ->> 'generator' AS \"generator!\", p.updated_at,\n                  (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS \"tracks!\"\n           FROM playlists p\n           WHERE p.user_id = $1 AND p.kind = 'mix' AND p.rules ->> 'generator' IS NOT NULL\n           ORDER BY p.rules ->> 'generator', (p.rules ->> 'slot')::int NULLS LAST, p.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "generator!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      null
+    ]
+  },
+  "hash": "0240ca6d88b2a3135aa771467462a2b70a8804dae28a4998ed0ee4b86b4171e1"
+}

@@ -1,0 +1,109 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, kind, platform, app_version, capabilities, last_seen_at,\n                  (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices\n           WHERE user_id = $1\n             AND (id = $2\n                  OR (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3))\n                  OR (kind <> 'web' AND last_seen_at > now() - interval '30 days'))\n           ORDER BY (id = $2) DESC NULLS LAST,\n                    (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) DESC,\n                    last_seen_at DESC\n           LIMIT 30",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "platform"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "app_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "app_version"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "capabilities",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "capabilities"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "last_seen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "online!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "09dbf8ea1c9a705a2717a4809ab5fc4ba30897f1791d7b7b040febca80a51209"
+}

@@ -35,6 +35,17 @@ pub const RECENT_ARTISTS: usize = 8;
 pub const SERVED_MEMORY: usize = 400;
 /// Пропущенный рано или нелюбимый артист отдыхает столько треков.
 const ARTIST_REST_STEPS: u32 = 10;
+/// Незнакомый трек незнакомого артиста должен быть не дальше этого от одной из граней вкуса (или от «что
+/// сейчас заходит»): у любимого слушателя сходство с ближайшей гранью почти всегда выше (на реальных
+/// лайках меньше 0,69 — один из двадцати), а всё, что дальше, — не открытие, а случайный край индекса:
+/// музыка из игр и кино рядом с русским рэпом.
+pub const NOVELTY_FLOOR: f32 = 0.65;
+/// Саундтрек, а у слушателя нет грани с саундтреками: минус столько (при полной уверенности).
+const SOUNDTRACK_PENALTY: f32 = 0.5;
+/// Штраф «меньше такого» при полной силе у самого центра приглушённой грани.
+const DAMPER_PENALTY: f32 = 0.6;
+/// Сумма вероятностей «Stage & Screen», при которой трек — точно саундтрек.
+const SCREEN_SURE: f32 = 0.3;
 
 /// Откуда кандидат: от этого зависит подпись.
 #[derive(Debug, Clone, PartialEq)]
@@ -564,6 +575,8 @@ pub struct RankContext<'a> {
     pub now: DateTime<Utc>,
     /// Сходство, начиная с которого незнакомый трек подписывается «Похоже на …», а не «Новое для тебя».
     pub similar_threshold: f32,
+    /// В гранях вкуса есть саундтреки: музыку кино и игр не штрафовать.
+    pub soundtrack_ok: bool,
 }
 
 impl RankContext<'_> {
@@ -656,12 +669,96 @@ pub fn score(e: &Entry, ctx: &RankContext, rng: &mut Rng) -> f32 {
             s += 0.05;
         }
     }
+    // Музыка кино и игр рядом со вкусом по звучанию, но не по сути: без грани с саундтреками — вниз
+    if !ctx.soundtrack_ok && !e.origin.seeded() && !familiar && !c.artist_familiar {
+        s -= SOUNDTRACK_PENALTY * soundtrack(c);
+    }
+    // «Меньше такого»: приглушённое направление уходит вниз, но не исчезает — радио от такого трека играет
+    if !e.origin.seeded() {
+        s -= DAMPER_PENALTY * c.damped;
+    }
+    // Сеть вкуса — только когда она точнее правил на отложенных данных (`model::annotate`)
+    if let Some(m) = c.model {
+        s += m;
+    }
     // Файл на сервере — лишь при равенстве: настройки важнее того, что уже скачано
     if c.ready() {
         s += 0.03;
     }
     let jitter = if ctx.state.skip_streak >= 2 { 0.2 } else { 0.1 };
     s + jitter * rng.next_f32()
+}
+
+/// Название похоже на саундтрек: «OST», «Soundtrack», «Original Score», «из фильма»…
+fn soundtrack_title(title: &str) -> bool {
+    let t = title.to_lowercase();
+    const PHRASES: [&str; 12] = [
+        "soundtrack",
+        "original score",
+        "original motion picture",
+        "music from the",
+        "video game",
+        "game music",
+        "from the game",
+        "from the film",
+        "саундтрек",
+        "из фильма",
+        "из игры",
+        "из сериала",
+    ];
+    PHRASES.iter().any(|p| t.contains(p))
+        || t.split(|c: char| !c.is_alphanumeric() && c != '.')
+            .any(|w| matches!(w.trim_matches('.'), "ost" | "o.s.t"))
+}
+
+/// Насколько трек — музыка кино и игр, 0..1: жанр Deezer («Films/Games» и подобные) или название трека
+/// и альбома — наверняка, стили Discogs «Stage & Screen» — по их вероятности.
+pub fn soundtrack(c: &Cand) -> f32 {
+    let genre = c.album_genres.iter().any(|g| {
+        let g = g.to_lowercase();
+        ["film", "game", "soundtrack", "movie", "кино", "игр"]
+            .iter()
+            .any(|w| g.contains(w))
+    });
+    let title =
+        soundtrack_title(&c.title) || c.album_title.as_deref().is_some_and(soundtrack_title);
+    if genre || title {
+        1.0
+    } else {
+        (c.screen / SCREEN_SURE).clamp(0.0, 1.0)
+    }
+}
+
+/// Насколько трек близок ко вкусу: к ближайшей грани или к «что сейчас заходит».
+pub fn closeness(c: &Cand) -> Option<f32> {
+    match (c.taste_sim, c.hit_sim) {
+        (Some(a), Some(b)) => Some(a.max(b)),
+        (a, b) => a.or(b),
+    }
+}
+
+/// Незнакомый трек незнакомого артиста дальше [`NOVELTY_FLOOR`] от вкуса. Соседи затравки радио
+/// и треки без анализа не отсеиваются: у радио своя мера, у неразобранного её нет.
+pub fn below_floor(e: &Entry) -> bool {
+    let c = &e.cand;
+    !e.origin.seeded()
+        && !c.heard()
+        && !c.artist_familiar
+        && closeness(c).is_some_and(|s| s < NOVELTY_FLOOR)
+}
+
+/// Отсев далёкого незнакомого. Если после него неслышанного осталось меньше `want` (маленький индекс,
+/// новый слушатель), добираются ближайшие из отсеянных — волна не должна обрываться.
+pub fn novelty_floor(entries: Vec<Entry>, want: usize) -> Vec<Entry> {
+    let (mut keep, mut far): (Vec<Entry>, Vec<Entry>) =
+        entries.into_iter().partition(|e| !below_floor(e));
+    let fresh = keep.iter().filter(|e| !e.cand.heard()).count();
+    if fresh < want {
+        let key = |e: &Entry| closeness(&e.cand).unwrap_or(0.0);
+        far.sort_by(|a, b| key(b).total_cmp(&key(a)));
+        keep.extend(far.into_iter().take(want - fresh));
+    }
+    keep
 }
 
 /// Отбор с ослаблением границ: самая строгая ступень, на которой набирается вдвое больше нужного,
@@ -869,6 +966,7 @@ mod tests {
             state,
             now: Utc::now(),
             similar_threshold: 0.8,
+            soundtrack_ok: false,
         }
     }
 
@@ -1269,6 +1367,104 @@ mod tests {
         }
         assert_eq!(state.served.len(), SERVED_MEMORY);
         assert!(state.recent_artists.len() <= RECENT_ARTISTS);
+    }
+
+    #[test]
+    fn unfamiliar_far_from_taste_does_not_pass_the_floor() {
+        let stranger = |n: u128, sim: f32| {
+            let mut c = cand(n, n);
+            c.taste_sim = Some(sim);
+            entry(c, sim)
+        };
+        // Далеко от всех граней — отсев; у порога и ближе — проходит
+        assert!(below_floor(&stranger(1, 0.5)));
+        assert!(!below_floor(&stranger(2, NOVELTY_FLOOR)));
+        assert!(!below_floor(&stranger(3, 0.9)));
+        // Близко к «что сейчас заходит» — тоже вкус
+        let mut hit = stranger(4, 0.5);
+        hit.cand.hit_sim = Some(0.8);
+        assert!(!below_floor(&hit));
+        // Знакомый артист, слышанный трек, радио и неразобранное — не трогаем
+        let mut artist = stranger(5, 0.4);
+        artist.cand.artist_familiar = true;
+        assert!(!below_floor(&artist));
+        let mut heard = stranger(6, 0.4);
+        heard.cand.last_played = Some(Utc::now() - Duration::days(40));
+        assert!(!below_floor(&heard));
+        let radio = Entry {
+            origin: Origin::Seed {
+                label: "Alan Wake".into(),
+                artist: None,
+            },
+            ..stranger(7, 0.3)
+        };
+        assert!(!below_floor(&radio));
+        let mut unknown = stranger(8, 0.3);
+        unknown.cand.taste_sim = None;
+        assert!(!below_floor(&unknown));
+
+        // Хватает близкого незнакомого — далёкое уходит целиком
+        let pool: Vec<Entry> = (10..16)
+            .map(|n| stranger(n, 0.8))
+            .chain((20..30).map(|n| stranger(n, 0.4 + 0.01 * (n - 20) as f32)))
+            .collect();
+        let kept = novelty_floor(pool.clone(), 5);
+        assert_eq!(kept.len(), 6);
+        assert!(kept.iter().all(|e| e.sim >= NOVELTY_FLOOR));
+        // Не хватает — добираются ближайшие из далёких, а не случайные
+        let kept = novelty_floor(pool, 8);
+        assert_eq!(kept.len(), 8);
+        let far: Vec<f32> = kept
+            .iter()
+            .filter(|e| e.sim < NOVELTY_FLOOR)
+            .map(|e| e.sim)
+            .collect();
+        assert_eq!(far.len(), 2);
+        assert!(far.iter().all(|s| *s > 0.475), "{far:?}");
+    }
+
+    #[test]
+    fn soundtracks_sink_unless_taste_has_them() {
+        let mut ost = cand(1, 1);
+        ost.album_genres = vec!["Films/Games".into()];
+        assert_eq!(soundtrack(&ost), 1.0);
+        let mut named = cand(2, 2);
+        named.album_title = Some("Teamfight Tactics (Original Game Soundtrack)".into());
+        assert_eq!(soundtrack(&named), 1.0);
+        named.album_title = Some("Elden Ring OST".into());
+        assert_eq!(soundtrack(&named), 1.0);
+        named.album_title = Some("Ghost Gardens".into());
+        named.title = "Lost Inside".into();
+        assert_eq!(soundtrack(&named), 0.0, "«ost» внутри слова — не саундтрек");
+        let mut styled = cand(3, 3);
+        styled.screen = 0.15;
+        assert!((soundtrack(&styled) - 0.5).abs() < 1e-6);
+        let plain = cand(4, 4);
+        assert_eq!(soundtrack(&plain), 0.0);
+
+        let settings = WaveSettings::default();
+        let state = SessionState::default();
+        let base = ctx(&settings, &state);
+        let score_of = |c: &Cand, ctx: &RankContext| {
+            score(
+                &entry(c.clone(), 0.8),
+                ctx,
+                &mut Rng::from_uuid(Uuid::nil(), 0),
+            )
+        };
+        assert!(score_of(&ost, &base) < score_of(&plain, &base) - 0.4);
+        // В гранях есть саундтреки — штрафа нет
+        let fan = RankContext {
+            soundtrack_ok: true,
+            ..base.clone()
+        };
+        assert!((score_of(&ost, &fan) - score_of(&plain, &fan)).abs() < 1e-6);
+        // Любимый саундтрек не штрафуется
+        let mut liked = ost.clone();
+        liked.liked = true;
+        let mut liked_plain = plain.clone();
+        liked_plain.liked = true;
+        assert!((score_of(&liked, &base) - score_of(&liked_plain, &base)).abs() < 1e-6);
     }
 
     #[test]

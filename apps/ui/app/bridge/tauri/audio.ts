@@ -230,8 +230,12 @@ export class NativeAudioEngine implements AudioEngine {
     this.run(sh => sh.player.setUpcoming(items))
   }
 
-  configure(opts: { transition: 'gapless' | 'crossfade', fadeMs: number, normalize: boolean }) {
-    const transition: PlayerTransition = opts.transition === 'gapless' ? { mode: 'gapless' } : { mode: 'crossfade', ms: opts.fadeMs }
+  configure(opts: { transition: 'gapless' | 'crossfade' | 'dj', fadeMs: number, normalize: boolean, expressiveness?: number }) {
+    const transition: PlayerTransition = opts.transition === 'gapless'
+      ? { mode: 'gapless' }
+      : opts.transition === 'dj'
+        ? { mode: 'dj', expressiveness: opts.expressiveness ?? 0.6 }
+        : { mode: 'crossfade', ms: opts.fadeMs }
     const key = JSON.stringify([transition, opts.normalize])
     if (key === this.sentConfig) return
     this.sentConfig = key

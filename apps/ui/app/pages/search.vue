@@ -15,7 +15,7 @@ const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
 const { items: recentItems, add: addRecent } = useSearchRecent()
 
-const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
+const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists', 'sound']
 const q = computed(() => (typeof route.query.q === 'string' ? route.query.q.trim() : ''))
 const scope = computed<SearchScope>(() => (route.query.scope === 'library' ? 'library' : 'catalog'))
 const type = computed<SearchType>(() => (TYPES.includes(route.query.type as SearchType) ? route.query.type as SearchType : 'all'))
@@ -49,6 +49,8 @@ async function run(force = false) {
     loaded = { key: '', limit: 0 }
     return
   }
+  // «По звучанию» ищет сам (SearchSoundResults)
+  if (type.value === 'sound') return
   const key = `${scope.value}:${query}`
   const limit = type.value === 'all' ? 24 : 50
   if (!force && loaded.key === key && loaded.limit >= limit && state.value === 'ready') return
@@ -133,6 +135,22 @@ const empty = computed(() => {
   const r = results.value
   return !!r && !r.tracks.length && !r.albums.length && !r.artists.length && !playlists.value.length
 })
+// Запрос похож на описание звучания («спокойный инструментал для работы»): несколько слов и ни один
+// артист, альбом или трек каталога не совпал с ним явно — тогда под результатами «Похоже по звучанию»
+const words = computed(() => q.value.split(/\s+/).filter(w => w.length > 1).length)
+const descriptive = computed(() => {
+  const r = results.value
+  if (!r || scope.value === 'library' || words.value < 2) return false
+  const needle = norm(q.value)
+  const strong = r.artists.some(a => norm(a.name) === needle)
+    || r.albums.some(a => norm(a.title) === needle)
+    || r.tracks.some((tr) => {
+      const title = norm(tr.title)
+      return title.includes(needle) || (needle.includes(title) && tr.artists.some(a => needle.includes(norm(a.name))))
+    })
+  return !strong
+})
+const soundLink = computed(() => filterLink('sound'))
 const ctx = computed(() => ({ type: 'search' as const, id: q.value, title: t('resultsFor', { q: q.value }) }))
 const { playArtist, playAlbum, isPlayingContext } = usePlayActions()
 
@@ -266,6 +284,8 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       </template>
     </div>
 
+    <SearchSoundResults v-else-if="type === 'sound'" :text="q" />
+
     <div v-else-if="state === 'loading' && !results" class="search__skel" aria-busy="true">
       <template v-if="ui.isPhone">
         <div v-for="n in 7" :key="n" class="skrow">
@@ -285,6 +305,8 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
     <UiEmptyState v-else-if="state === 'error'" icon="ph:cloud-warning" :title="tg('common.loadFailed')" :text="tg('common.loadFailedText')" tone="error">
       <UiButton icon="ph:arrow-clockwise" @click="run(true)">{{ tg('common.retry') }}</UiButton>
     </UiEmptyState>
+
+    <SearchSoundResults v-else-if="empty && scope === 'catalog' && words >= 2" :text="q" />
 
     <UiEmptyState v-else-if="empty" icon="ph:magnifying-glass" :title="scope === 'library' ? t('nothingMine') : t('nothing')" :text="t('nothingFor', { q })">
       <UiButton v-if="scope === 'library'" variant="secondary" @click="libraryModel = false">{{ t('searchEverywhere') }}</UiButton>
@@ -333,6 +355,8 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
             <MusicTrackList :tracks="results.tracks.slice(0, 5)" variant="compact" plain :context="ctx" :label="t('tracks')" />
           </section>
         </div>
+
+        <SearchSoundResults v-if="descriptive" :text="q" compact :all-link="soundLink" />
 
         <MusicShelf v-if="results.artists.length" :title="t('artists')" :cols="6" phone-width="104px" :to="results.artists.length > 6 ? filterLink('artists') : undefined">
           <template v-if="ui.isPhone">

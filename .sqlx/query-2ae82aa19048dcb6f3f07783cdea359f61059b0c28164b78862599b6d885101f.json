@@ -1,0 +1,164 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.recording_id, a.sound::real[] AS \"sound!\", a.semantic::real[] AS semantic, a.bpm, a.bpm_confidence,\n                  a.key_camelot, a.key_confidence, a.energy, a.valence, a.danceability, a.voice, a.approachability,\n                  (a.moods ->> 'relaxed')::real AS relaxed, (a.moods ->> 'party')::real AS party\n           FROM track_analysis a WHERE a.recording_id = ANY($1) AND a.sound IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sound!",
+        "type_info": "Float4Array",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "semantic",
+        "type_info": "Float4Array",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "bpm",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "bpm"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "bpm_confidence",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "bpm_confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "key_camelot",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "key_camelot"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "key_confidence",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "key_confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "energy",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "energy"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "valence",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "valence"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "danceability",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "danceability"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "voice",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "voice"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "approachability",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "approachability"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "relaxed",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "party",
+        "type_info": "Float4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "2ae82aa19048dcb6f3f07783cdea359f61059b0c28164b78862599b6d885101f"
+}

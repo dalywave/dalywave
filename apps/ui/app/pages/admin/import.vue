@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { AdminImportList } from '~/api/types'
+import type { AdminImport, AdminImportList } from '~/api/types'
 
-// Импорт: история импортов всех людей — что, чьё, сколько сопоставлено и что осталось без пары.
-// Идущий импорт обновляется сам. Импорт архива Spotify появится позже
+// Импорт: история импортов всех людей — что, чьё, на каком шаге, сколько сопоставлено и что осталось
+// без пары. Идущий импорт обновляется сам
 definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
@@ -14,8 +14,28 @@ const { data, state, load } = useLoad<AdminImportList>(() => bridge.admin.import
 const running = computed(() => data.value?.items.some(i => i.status === 'running') ?? false)
 useIntervalFn(() => {
   if (running.value) void load()
-}, 5000)
-const pct = (matched: number, total: number) => (total ? Math.round((matched / total) * 100) : 0)
+}, 3000)
+const pct = (done: number, total: number) => (total ? Math.round((done / total) * 100) : 0)
+
+const STAT_RU: Record<string, [string, string, string]> = {
+  likes: ['лайк', 'лайка', 'лайков'],
+  playlists: ['плейлист', 'плейлиста', 'плейлистов'],
+  albums: ['альбом', 'альбома', 'альбомов'],
+  artists: ['подписка', 'подписки', 'подписок'],
+  plays: ['прослушивание', 'прослушивания', 'прослушиваний'],
+  files: ['файл', 'файла', 'файлов'],
+  upgraded: ['замена', 'замены', 'замен'],
+}
+
+/** «1 240 лайков · 38 плейлистов · 52 000 прослушиваний» — только ненулевое */
+function statsLine(i: AdminImport): string {
+  const s = i.stats
+  const parts: [number, string][] = [[s.likes, 'likes'], [s.playlists, 'playlists'], [s.albums, 'albums'], [s.artists, 'artists'], [s.plays, 'plays'], [s.files, 'files'], [s.upgraded, 'upgraded']]
+  return parts
+    .filter(([n]) => n > 0)
+    .map(([n, k]) => `${formatNumber(n, lang.value)}\u00a0${lang.value === 'en' ? t(`stat.${k}`) : plural(n, STAT_RU[k] ?? ['', '', ''])}`)
+    .join(' · ')
+}
 </script>
 
 <template>
@@ -43,10 +63,11 @@ const pct = (matched: number, total: number) => (total ? Math.round((matched / t
             <span class="ap-num ap-hide-phone">{{ t('col.when') }}</span>
           </div>
           <div v-for="i in data.items" :key="i.id" class="ap-tr">
-            <span class="ap-cell"><b>{{ i.title }}</b><small>{{ t(`kind.${i.kind}`) }} · {{ i.userName }}</small></span>
+            <span class="ap-cell"><b>{{ i.title }}</b><small>{{ t(`kind.${i.kind}`) }} · {{ i.userName }}<template v-if="statsLine(i)"> · {{ statsLine(i) }}</template></small></span>
             <span class="ap-cell">
-              <b :class="i.status === 'done' ? 'ap-ok' : i.status === 'failed' ? 'ap-bad' : 'ap-on'">{{ t(`status.${i.status}`) }}</b>
-              <span v-if="i.status === 'running'" class="im__bar"><i :style="{ width: `${pct(i.matched, i.total)}%` }" /></span>
+              <b :class="i.status === 'done' ? 'ap-ok' : i.status === 'failed' ? 'ap-bad' : i.status === 'cancelled' ? 'ap-muted' : 'ap-on'">{{ i.status === 'running' ? t(`phase.${i.phase}`) : t(`status.${i.status}`) }}</b>
+              <span v-if="i.status === 'running'" class="im__bar"><i :style="{ width: `${pct(i.processed, i.total)}%` }" /></span>
+              <small v-else-if="i.error" class="ap-bad">{{ i.error }}</small>
             </span>
             <span class="ap-num">{{ formatNumber(i.matched, lang) }} / {{ formatNumber(i.total, lang) }}</span>
             <span class="ap-num" :class="{ 'ap-warn': i.unmatched }">{{ i.unmatched ? formatNumber(i.unmatched, lang) : '—' }}</span>
@@ -74,19 +95,22 @@ const pct = (matched: number, total: number) => (total ? Math.round((matched / t
     "title": "Импорт",
     "history": "История",
     "empty": "Импортов пока не было",
-    "emptyText": "Здесь появятся импорты списков и архива данных Spotify — с прогрессом и позициями, которые не нашлись",
+    "emptyText": "Здесь появятся переносы архива Spotify, списков и своих файлов — с ходом и позициями, которые не нашлись",
     "col": { "what": "Что", "state": "Состояние", "matched": "Найдено", "unmatched": "Без пары", "when": "Когда" },
     "kind": { "text": "Список текстом", "csv": "Таблица CSV", "m3u": "Плейлист M3U", "files": "Файлы", "spotify_archive": "Архив Spotify" },
-    "status": { "running": "Идёт", "done": "Готово", "failed": "Ошибка" }
+    "status": { "running": "Идёт", "done": "Готово", "failed": "Ошибка", "cancelled": "Остановлен" },
+    "phase": { "uploading": "Загрузка файлов", "matching": "Поиск в каталоге", "applying": "Раскладка", "done": "Готово" }
   },
   "en": {
     "title": "Import",
     "history": "History",
     "empty": "No imports yet",
-    "emptyText": "Imports of lists and the Spotify data archive will show up here — with progress and items that weren't found",
+    "emptyText": "Transfers of the Spotify archive, lists and your own files will show up here — with progress and items that weren't found",
     "col": { "what": "What", "state": "State", "matched": "Found", "unmatched": "Unmatched", "when": "When" },
     "kind": { "text": "Text list", "csv": "CSV table", "m3u": "M3U playlist", "files": "Files", "spotify_archive": "Spotify archive" },
-    "status": { "running": "Running", "done": "Done", "failed": "Failed" }
+    "status": { "running": "Running", "done": "Done", "failed": "Failed", "cancelled": "Stopped" },
+    "phase": { "uploading": "Uploading files", "matching": "Catalog search", "applying": "Applying", "done": "Done" },
+    "stat": { "likes": "likes", "playlists": "playlists", "albums": "albums", "artists": "follows", "plays": "plays", "files": "files", "upgraded": "upgraded" }
   }
 }
 </i18n>

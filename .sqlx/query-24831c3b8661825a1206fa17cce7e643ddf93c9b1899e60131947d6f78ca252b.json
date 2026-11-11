@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM import_plays p USING import_items i\n         WHERE p.import_id = $1 AND i.id = p.item_id AND i.status = 'matched' AND ($2::uuid IS NULL OR i.id = $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "24831c3b8661825a1206fa17cce7e643ddf93c9b1899e60131947d6f78ca252b"
+}

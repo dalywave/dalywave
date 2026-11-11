@@ -1,13 +1,14 @@
 // Мост сайта: HTTP к нашему API, звук — WebAudioEngine, события — пачками, живые события — WebSocket.
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
-import type { EventResult, LikedTrackPage, Track, WaveSession } from '~/api/types'
+import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AudioEngine, AudioRoutes, Bridge, Downloader, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
+import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
-import { createHttp, done, toApiError, unwrap, type HttpOptions } from './http'
+import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
 import { createLive } from './live'
 import { devOutputs, safariOutputs } from './outputs'
 
@@ -56,6 +57,10 @@ export interface WebBridgeOptions extends HttpOptions {
   downloader?: Downloader | null
   /** Вывод звука приложения; на сайте — окно AirPlay Safari, если оно есть */
   outputs?: AudioRoutes | null
+  /** Загрузки на устройство (приложение) */
+  offline?: OfflineBridge | null
+  /** Тактильный отклик (приложение на iPhone) */
+  haptic?: (kind: HapticKind) => void
 }
 
 /** Только разработка: загрузчик изображает мок — `?downloader=idle|working|paused|offline|…` */
@@ -65,6 +70,35 @@ function devDownloader(): Downloader | null {
     if (scenario) return lazyDownloader(() => import('../mock/downloader').then(m => m.createDevDownloader(scenario)))
   }
   return null
+}
+
+/** Только разработка: строка обновления в настройках — `?update=idle|checking|downloading|ready|installing|failed` */
+function devUpdates(): Bridge['updates'] | null {
+  if (!import.meta.dev || typeof location === 'undefined') return null
+  const status = new URLSearchParams(location.search).get('update') as AppUpdateState['status'] | null
+  if (!status) return null
+  const found = status !== 'idle' && status !== 'checking'
+  const state: AppUpdateState = {
+    status,
+    currentVersion: '0.1.0',
+    update: found ? { version: '0.2.0', currentVersion: '0.1.0', notes: null } : null,
+    progress: status === 'downloading' ? 0.42 : null,
+    error: status === 'failed' ? 'network' : null,
+    installOnQuit: true,
+  }
+  return { onAvailable: () => () => {}, state: async () => state, onState: () => () => {}, check: async () => {}, install: async () => {} }
+}
+
+/** Только разработка: загрузки на устройство изображает мок — `localStorage['dw.offlineMock']` (снимки экранов) */
+function devOffline(): OfflineBridge | null {
+  if (!import.meta.dev || typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem('dw.offlineMock')
+    return raw ? createDevOffline(raw) : null
+  }
+  catch {
+    return null
+  }
 }
 
 /** Только разработка: вывод звука изображает мок — `?outputs=picker|list` */
@@ -99,6 +133,43 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
   let paths: string[] | null = null
   let mock: DevMock | null = null
   let readyJob: Promise<void> | null = null
+
+  /** Загрузка файла телом запроса с прогрессом: у fetch его нет, поэтому XMLHttpRequest */
+  async function upload<T>(method: 'POST' | 'PUT', path: string, file: Blob, type: string, onProgress?: (share: number) => void, signal?: AbortSignal): Promise<T> {
+    const token = opts.token ? await opts.token() : null
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open(method, http.url(path))
+      xhr.withCredentials = !http.baseUrl
+      xhr.setRequestHeader('Content-Type', type)
+      xhr.setRequestHeader('Accept', 'application/json')
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total)
+      }
+      xhr.onload = () => {
+        let body: unknown
+        try {
+          body = xhr.responseText ? JSON.parse(xhr.responseText) : null
+        }
+        catch {
+          body = null
+        }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(body as T)
+        else {
+          if (xhr.status === 401) {
+            opts.onUnauthorized?.()
+            endSession()
+          }
+          reject(toApiError(xhr.status, body))
+        }
+      }
+      xhr.onerror = () => reject(toApiError(0, null))
+      xhr.onabort = () => reject(new DOMException('Загрузка отменена', 'AbortError'))
+      signal?.addEventListener('abort', () => xhr.abort(), { once: true })
+      xhr.send(file)
+    })
+  }
 
   async function likedTracks(limit = 200): Promise<Track[]> {
     const page: LikedTrackPage = await unwrap(api.GET('/api/library/tracks', { params: { query: { limit } } }))
@@ -227,10 +298,12 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       onState: opts.window?.onState ?? (() => () => {}),
       trackSnap: opts.window?.trackSnap ?? (() => () => {}),
     },
-    updates: opts.updates ?? { onAvailable: () => () => {}, install: noWindow },
+    updates: opts.updates ?? devUpdates() ?? { onAvailable: () => () => {}, state: async () => null, onState: () => () => {}, check: noWindow, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
+    offline: opts.offline !== undefined ? opts.offline : devOffline(),
+    haptic: opts.haptic ?? (() => {}),
 
     auth: {
       providers: () => unwrap(api.GET('/api/auth/providers')),
@@ -266,9 +339,17 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         const list = await unwrap(api.POST('/api/tracks/lookup', { body: { ids } }))
         return list.items
       },
+      soundSearch: (text, limit = 12) => unwrap(api.POST('/api/search/sound', { body: { text, limit } })),
     },
 
     home: () => unwrap(api.GET('/api/home')),
+
+    taste: {
+      overview: () => unwrap(api.GET('/api/taste')),
+      less: facetId => unwrap(api.POST('/api/taste/facets/{id}/less', { params: { path: { id: facetId } } })),
+      undoLess: damperId => done(api.DELETE('/api/taste/dampers/{id}', { params: { path: { id: damperId } } })),
+      reset: () => done(api.POST('/api/taste/reset', { body: { confirm: true } })),
+    },
 
     library: {
       overview: () => unwrap(api.GET('/api/library')),
@@ -285,6 +366,19 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       block: (kind, id) => done(api.PUT('/api/library/blocked/{kind}/{id}', { params: { path: { kind, id } } })),
       unblock: (kind, id) => done(api.DELETE('/api/library/blocked/{kind}/{id}', { params: { path: { kind, id } } })),
       history: cursor => unwrap(api.GET('/api/me/history', { params: { query: { cursor: cursor ?? undefined } } })),
+    },
+
+    imports: {
+      list: () => unwrap(api.GET('/api/imports')),
+      get: id => unwrap(api.GET('/api/imports/{id}', { params: { path: { id } } })),
+      items: (id, status, cursor, limit = 50) => unwrap(api.GET('/api/imports/{id}/items', { params: { path: { id }, query: { status: status ?? undefined, cursor: cursor ?? undefined, limit } } })),
+      fix: (id, itemId, fix) => unwrap(api.PUT('/api/imports/{id}/items/{itemId}', { params: { path: { id, itemId } }, body: fix })),
+      remove: id => done(api.DELETE('/api/imports/{id}', { params: { path: { id } } })),
+      spotify: (file, onProgress, signal) => upload<ImportSummary>('POST', `/api/imports/spotify${query({ name: file.name })}`, file, 'application/zip', onProgress, signal),
+      fromList: body => unwrap(api.POST('/api/imports/list', { body })),
+      startFiles: title => unwrap(api.POST('/api/imports/files', { body: { title } })),
+      file: (id, file, onProgress, signal) => upload<ImportItem>('PUT', `/api/imports/${encodeURIComponent(id)}/files${query({ name: file.name })}`, file, file.type || 'application/octet-stream', onProgress, signal),
+      finish: id => unwrap(api.POST('/api/imports/{id}/finish', { params: { path: { id } } })),
     },
 
     playlists: {
@@ -305,13 +399,13 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
 
     wave: {
-      async start(settings) {
+      async start(settings, seed) {
         await ready()
         if (mock && mocked('wave')) {
           const queue = await mock.waveNext(settings, 6, [])
           return { id: crypto.randomUUID(), state: 'ready', ready: queue.length, need: 0, queue }
         }
-        return waveStart(await unwrap(api.POST('/api/wave/sessions', { body: { settings } })))
+        return waveStart(await unwrap(api.POST('/api/wave/sessions', { body: { settings: seed ? { ...settings, seed } : settings } })))
       },
       async session(id) {
         await ready()
@@ -424,9 +518,9 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       imports: () => unwrap(api.GET('/api/admin/imports')),
       settings: () => unwrap(api.GET('/api/admin/settings')),
       updateSettings: patch => unwrap(api.PATCH('/api/admin/settings', { body: patch })),
-      reco: () => unwrap(api.GET('/api/admin/reco')),
+      reco: userId => unwrap(api.GET('/api/admin/reco', { params: { query: { userId: userId || undefined } } })),
       updateReco: patch => unwrap(api.PATCH('/api/admin/reco/settings', { body: patch })),
-      runReco: task => unwrap(api.POST('/api/admin/reco/run', { body: { task } })),
+      runReco: (task, userId) => unwrap(api.POST('/api/admin/reco/run', { body: { task, userId: userId || undefined } })),
     },
 
     audio,

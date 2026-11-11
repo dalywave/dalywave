@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT wave_session_id AS \"session!\", track_id FROM recommendation_impressions\n           WHERE outcome IN ('like', 'more_like_this') AND wave_session_id IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "wave_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "8045190ea9946ec2d4548b6bc7e63f4cbf5b6d5860cbbc7b3218c5a9324fe32d"
+}

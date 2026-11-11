@@ -5,7 +5,10 @@
 //! в `recommendation_impressions` — на них будет учиться и проверяться маленькая нейросеть вкуса.
 
 pub mod analysis;
+pub mod device_set;
+pub mod model;
 pub mod prep;
+pub mod profile;
 pub mod rank;
 pub mod scout;
 pub mod taste;
@@ -358,6 +361,17 @@ pub struct Cand {
     /// Сходство с «что сейчас заходит» и «что пропускается» сессии.
     pub hit_sim: Option<f32>,
     pub miss_sim: Option<f32>,
+    /// Сходство с ближайшей гранью вкуса слушателя: нет граней или анализа — `None`.
+    pub taste_sim: Option<f32>,
+    /// Альбом трека и его жанры Deezer — по ним узнаются саундтреки.
+    pub album_title: Option<String>,
+    pub album_genres: Vec<String>,
+    /// Сумма вероятностей стилей Discogs «Stage & Screen» (саундтреки, музыка к фильмам и играм).
+    pub screen: f32,
+    /// Насколько трек под «меньше такого» слушателя, 0..1 (`taste_damp`).
+    pub damped: f32,
+    /// Оценка сети вкуса относительно остальных кандидатов ([`model::annotate`]); сеть выключена — `None`.
+    pub model: Option<f32>,
 }
 
 impl Cand {
@@ -437,7 +451,14 @@ pub async fn candidates(
                   CASE WHEN $3::real[] IS NULL OR a.sound IS NULL THEN NULL
                        ELSE (1 - (a.sound <=> $3::real[]::halfvec(1280)))::real END AS hit_sim,
                   CASE WHEN $4::real[] IS NULL OR a.sound IS NULL THEN NULL
-                       ELSE (1 - (a.sound <=> $4::real[]::halfvec(1280)))::real END AS miss_sim
+                       ELSE (1 - (a.sound <=> $4::real[]::halfvec(1280)))::real END AS miss_sim,
+                  (SELECT max(1 - (a.sound <=> f.centroid)) FROM taste_facets f WHERE f.user_id = $2)::real
+                      AS taste_sim,
+                  al.title AS "album_title?", COALESCE(al.genres, '{}') AS "album_genres!",
+                  COALESCE((SELECT sum((s ->> 'p')::real) FROM jsonb_array_elements(
+                                CASE WHEN jsonb_typeof(a.styles) = 'array' THEN a.styles ELSE '[]' END) s
+                            WHERE s ->> 'name' LIKE 'Stage & Screen%'), 0)::real AS "screen!",
+                  CASE WHEN a.sound IS NULL THEN 0 ELSE taste_damp($2, a.sound, 0.72, 0.86) END::real AS "damped!"
            FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)
            JOIN tracks t ON t.id = ids.id
            LEFT JOIN recordings r ON r.id = t.recording_id
@@ -484,12 +505,19 @@ pub async fn candidates(
             artist_familiar: r.artist_familiar,
             hit_sim: r.hit_sim,
             miss_sim: r.miss_sim,
+            taste_sim: r.taste_sim,
+            album_title: r.album_title,
+            album_genres: r.album_genres,
+            screen: r.screen,
+            damped: r.damped,
+            model: None,
         })
         .collect())
 }
 
 /// Плановые задачи рекомендаций — раз в час из обслуживания воркера: проход разведчика, заготовки волны,
-/// полный анализ неразобранного скачанного, ночной пересчёт вкуса, чистка старых сессий и показов.
+/// полный анализ неразобранного скачанного, ночной пересчёт вкуса и обучение сети вкуса, чистка старых
+/// сессий и показов.
 pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     let settings = Settings::load(db).await?;
     let mut conn = db.acquire().await?;
@@ -519,6 +547,7 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     drop(conn);
     let analysis = analysis::schedule_backfill(db, 500).await?;
     let taste = taste::schedule(db, &settings).await?;
+    let model = model::schedule(db, &settings).await?;
     let sessions =
         sqlx::query!("DELETE FROM wave_sessions WHERE last_active_at < now() - interval '30 days'")
             .execute(db)
@@ -535,6 +564,7 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
         pools,
         analysis,
         taste,
+        model,
         sessions_deleted: sessions,
         impressions_deleted: impressions,
     })
@@ -547,6 +577,8 @@ pub struct ScheduleReport {
     pub pools: bool,
     pub analysis: usize,
     pub taste: usize,
+    /// Поставлено ночное обучение сети вкуса.
+    pub model: bool,
     pub sessions_deleted: u64,
     pub impressions_deleted: u64,
 }

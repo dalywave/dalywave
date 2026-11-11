@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, track_id AS \"track_id!\" FROM import_items\n         WHERE import_id = $1 AND status = 'matched' AND NOT applied AND track_id IS NOT NULL\n           AND kind IN ('track', 'file') AND ($2::uuid IS NULL OR id = $2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "import_items",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "import_items",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "85814f24ebc391838f44ed261ba3e9378743b1d4826f9f3f337c170de38c87a9"
+}

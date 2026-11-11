@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH prev AS (SELECT active_connect_id FROM playback_state WHERE user_id = $1 FOR UPDATE)\n           INSERT INTO playback_state (user_id, active_connect_id, state, updated_at)\n           VALUES ($1, $2, '{}', now())\n           ON CONFLICT (user_id) DO UPDATE SET active_connect_id = EXCLUDED.active_connect_id\n           RETURNING (SELECT active_connect_id FROM prev) AS \"prev\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "prev",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8d1a4408f3a9f1efe6fd36a2177487cc72ab15c8a3bc4fa9beb43f5d3905e829"
+}

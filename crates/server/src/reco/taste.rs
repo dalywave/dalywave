@@ -75,10 +75,11 @@ async fn listened(db: &PgPool, user_id: Uuid) -> Result<Vec<Listened>, sqlx::Err
                                THEN exp(-extract(epoch FROM now() - p.started_at) / 86400.0 / 30.0) ELSE 0 END)::real AS skips
                FROM play_events p
                WHERE p.user_id = $1 AND p.started_at > now() - interval '365 days'
+                 AND p.started_at > taste_reset_at($1)
                GROUP BY p.track_id
            ), liked AS (
                SELECT track_id, (extract(epoch FROM now() - created_at) / 86400.0)::real AS age
-               FROM liked_tracks WHERE user_id = $1
+               FROM liked_tracks WHERE user_id = $1 AND created_at > taste_reset_at($1)
            )
            SELECT t.id AS "track_id!", t.recording_id AS "recording_id!", l.age AS "liked_age?",
                   COALESCE(p.full, 0)::real AS "full!", COALESCE(p.skips, 0)::real AS "skips!",
@@ -127,12 +128,110 @@ pub fn facet_count(tracks: usize) -> usize {
     k.min((tracks / MIN_TRACKS).max(1))
 }
 
+/// Стиль годится в подпись грани, только если его средняя вероятность по трекам грани не ниже этой
+/// и во столько раз выше следующего: Discogs-EffNet уверенно узнаёт западные жанры, а русский рэп
+/// и гиперпоп у него расплываются по «K-pop», «Grime» и «Trap» — такая догадка в подписи только врёт.
+const STYLE_MIN: f32 = 0.35;
+const STYLE_LEAD: f32 = 1.5;
+
 /// Стиль Discogs без жанра: «Hip Hop---Trap» → «Trap».
 fn style_name(raw: &str) -> &str {
     raw.rsplit("---").next().unwrap_or(raw).trim()
 }
 
-/// Подпись грани: главный стиль и два главных артиста — «Trap · Lowborn, Mzlff».
+/// Главный стиль грани по средним вероятностям стилей её треков — если он уверенный и заметно впереди
+/// остальных; иначе `None`, и подпись — только артисты.
+pub fn dominant_style(means: &HashMap<String, f32>) -> Option<&str> {
+    let mut ranked: Vec<(&String, f32)> = means.iter().map(|(k, v)| (k, *v)).collect();
+    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(b.0)));
+    let (style, top) = *ranked.first()?;
+    let runner_up = ranked.get(1).map_or(0.0, |r| r.1);
+    (top >= STYLE_MIN && top >= STYLE_LEAD * runner_up).then_some(style.as_str())
+}
+
+/// Короткое русское имя стиля Discogs «Жанр---Стиль»; незнакомый стиль — русское имя жанра.
+pub fn style_ru(raw: &str) -> String {
+    let style = style_name(raw);
+    let known = match style {
+        "Trap" => "Трэп",
+        "Cloud Rap" => "Клауд-рэп",
+        "Pop Rap" => "Поп-рэп",
+        "Grime" => "Грайм",
+        "Hardcore Hip-Hop" => "Хардкор-рэп",
+        "Horrorcore" => "Хоррор-рэп",
+        "Gangsta" => "Гангста-рэп",
+        "Conscious" => "Осознанный рэп",
+        "Boom Bap" => "Бум-бэп",
+        "Screw" => "Скрю",
+        "Drill" => "Дрилл",
+        "Crunk" => "Кранк",
+        "Alternative Rock" => "Альт-рок",
+        "Indie Rock" => "Инди-рок",
+        "Pop Rock" => "Поп-рок",
+        "Punk" => "Панк",
+        "Pop Punk" => "Поп-панк",
+        "Post-Punk" => "Пост-панк",
+        "Post-Hardcore" => "Пост-хардкор",
+        "Emo" => "Эмо",
+        "Grunge" => "Гранж",
+        "Nu Metal" => "Ню-метал",
+        "Heavy Metal" => "Хеви-метал",
+        "Metalcore" => "Металкор",
+        "Shoegaze" => "Шугейз",
+        "Coldwave" => "Колдвейв",
+        "Darkwave" => "Дарквейв",
+        "New Wave" => "Нью-вейв",
+        "Synth-pop" => "Синти-поп",
+        "Dance-pop" => "Данс-поп",
+        "Electro" => "Электро",
+        "Electro House" => "Электро-хаус",
+        "House" => "Хаус",
+        "Deep House" => "Дип-хаус",
+        "Tropical House" => "Тропикал-хаус",
+        "Techno" => "Техно",
+        "Drum n Bass" => "Драм-н-бейс",
+        "Dubstep" => "Дабстеп",
+        "Hardcore" => "Хардкор",
+        "Experimental" => "Эксперимент",
+        "Ambient" => "Эмбиент",
+        "Witch House" => "Витч-хаус",
+        "Indie Pop" => "Инди-поп",
+        "K-pop" => "K-pop",
+        "Ballad" => "Баллады",
+        "Chanson" => "Шансон",
+        "Reggaeton" => "Реггетон",
+        "Contemporary R&B" => "R&B",
+        "Neo Soul" => "Неосоул",
+        "Soundtrack" => "Саундтреки",
+        "Score" => "Музыка к фильмам",
+        "Video Game Music" => "Музыка из игр",
+        _ => "",
+    };
+    if !known.is_empty() {
+        return known.into();
+    }
+    let genre = raw.split("---").next().unwrap_or(raw).trim();
+    match genre {
+        "Hip Hop" => "Хип-хоп",
+        "Rock" => "Рок",
+        "Electronic" => "Электроника",
+        "Pop" => "Поп",
+        "Funk / Soul" => "Соул",
+        "Jazz" => "Джаз",
+        "Classical" => "Классика",
+        "Latin" => "Латино",
+        "Reggae" => "Регги",
+        "Blues" => "Блюз",
+        "Folk, World, & Country" => "Фолк",
+        "Stage & Screen" => "Саундтреки",
+        "Non-Music" => "Не музыка",
+        _ => style,
+    }
+    .into()
+}
+
+/// Подпись грани: уверенный стиль (по-русски) и два главных артиста — «Трэп · Lowborn, Mzlff»; стиля
+/// нет — только артисты.
 pub fn facet_label(style: Option<&str>, artists: &[String]) -> String {
     let names = artists
         .iter()
@@ -146,6 +245,15 @@ pub fn facet_label(style: Option<&str>, artists: &[String]) -> String {
         (None, false) => names,
         (None, true) => "Ваш вкус".into(),
     }
+}
+
+/// Доля «Stage & Screen» (саундтреки, музыка к фильмам и играм) в средних вероятностях стилей грани.
+pub fn soundtrack_share(means: &HashMap<String, f32>) -> f32 {
+    means
+        .iter()
+        .filter(|(k, _)| k.starts_with("Stage & Screen"))
+        .map(|(_, v)| *v)
+        .sum()
 }
 
 /// Грань в базе.
@@ -163,6 +271,9 @@ pub struct Facet {
     pub artists: Vec<(Uuid, String)>,
 }
 
+/// Грань, в которой саундтреков столько, считается любящей их: музыку кино и игр волна ей не штрафует.
+pub const SOUNDTRACK_TASTE: f32 = 0.15;
+
 impl Facet {
     /// Поправка грани на время суток и устройство: больше 1 — её слушают тогда чаще.
     pub fn lift(&self, part: DayPart, platform: Option<&str>) -> f32 {
@@ -178,11 +289,22 @@ impl Facet {
         }
         lift.clamp(0.5, 2.0)
     }
+
+    /// Слушатель любит саундтреки этой грани: их доля в стилях грани заметна.
+    pub fn likes_soundtracks(&self) -> bool {
+        self.context
+            .get("soundtrack")
+            .and_then(Value::as_f64)
+            .is_some_and(|x| x as f32 >= SOUNDTRACK_TASTE)
+    }
 }
 
+/// Грани слушателя; вес приглушённой «меньше такого» грани снижен (до пятой части при полной силе).
 pub async fn facets(db: &PgPool, user_id: Uuid) -> Result<Vec<Facet>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"SELECT f.id, f.position, f.label, f.centroid::real[] AS "centroid!", f.weight, f.tracks, f.context,
+        r#"SELECT f.id, f.position, f.label, f.centroid::real[] AS "centroid!",
+                  (f.weight * (1 - 0.8 * taste_damp(f.user_id, f.centroid, 0.85, 0.97)))::real AS "weight!",
+                  f.tracks, f.context,
                   f.examples,
                   ARRAY(SELECT a.name FROM unnest(f.artists) WITH ORDINALITY AS x(id, ord)
                         JOIN artists a ON a.id = x.id ORDER BY x.ord) AS "names!",
@@ -291,9 +413,10 @@ pub async fn rebuild(
     drop_small(&mut clusters, &points, &weights, MIN_TRACKS);
 
     let plays: Vec<(Uuid, DateTime<Utc>, Option<String>)> = sqlx::query!(
-        r#"SELECT p.track_id, p.started_at, d.platform AS "platform?"
+        r#"SELECT p.track_id, p.started_at, COALESCE(d.platform, p.platform) AS "platform?"
            FROM play_events p LEFT JOIN devices d ON d.id = p.device_id
            WHERE p.user_id = $1 AND p.started_at > now() - interval '180 days'
+             AND p.started_at > taste_reset_at($1)
              AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)"#,
         user_id,
     )
@@ -345,17 +468,21 @@ pub async fn rebuild(
                     s.get("name").and_then(Value::as_str),
                     s.get("p").and_then(Value::as_f64),
                 ) {
-                    *styles.entry(style_name(name).to_string()).or_default() += l.weight * p as f32;
+                    *styles.entry(name.to_string()).or_default() += l.weight * p as f32;
                 }
             }
         }
         let mut artists: Vec<(Uuid, f32)> = artists.into_iter().collect();
         artists.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
-        let style = styles
+        // Средняя вероятность стиля по трекам грани (у трека без стиля в первой десятке — ноль)
+        let means: HashMap<String, f32> = styles
             .into_iter()
-            .max_by(|a, b| a.1.total_cmp(&b.1).then(b.0.cmp(&a.0)))
-            .map(|(s, _)| s);
+            .map(|(k, v)| (k, v / weight.max(1e-6)))
+            .collect();
+        let style = dominant_style(&means).map(style_ru);
         let member_ids: HashSet<Uuid> = members.iter().map(|i| items[*i].track_id).collect();
+        let mut context = context(&member_ids, &plays, settings);
+        context["soundtrack"] = json!((soundtrack_share(&means) * 1000.0).round() / 1000.0);
         drafts.push(Draft {
             centroid: centroid.clone(),
             weight: weight / total,
@@ -367,7 +494,7 @@ pub async fn rebuild(
                 .collect(),
             artists: artists.into_iter().take(5).map(|(a, _)| a).collect(),
             style,
-            context: context(&member_ids, &plays, settings),
+            context,
         });
     }
     drafts.sort_by(|a, b| b.weight.total_cmp(&a.weight));
@@ -844,13 +971,91 @@ mod tests {
         assert_eq!(style_name("Phonk"), "Phonk");
         assert_eq!(
             facet_label(
-                Some("Trap"),
+                Some("Трэп"),
                 &["Lowborn".into(), "Mzlff".into(), "5opka".into()]
             ),
-            "Trap · Lowborn, Mzlff"
+            "Трэп · Lowborn, Mzlff"
         );
         assert_eq!(facet_label(None, &["Lowborn".into()]), "Lowborn");
         assert_eq!(facet_label(None, &[]), "Ваш вкус");
+    }
+
+    fn means(items: &[(&str, f32)]) -> HashMap<String, f32> {
+        items.iter().map(|(k, v)| (k.to_string(), *v)).collect()
+    }
+
+    #[test]
+    fn facet_label_trusts_only_a_confident_style() {
+        let artists = ["Mytch".to_string(), "Lowborn".to_string()];
+        // Русский рэп и гиперпоп: EffNet размазывает их по K-pop, Trap и Grime — стиля в подписи нет
+        let blurred = means(&[
+            ("Pop---K-pop", 0.21),
+            ("Hip Hop---Trap", 0.18),
+            ("Hip Hop---Grime", 0.12),
+        ]);
+        assert_eq!(dominant_style(&blurred), None);
+        assert_eq!(
+            facet_label(dominant_style(&blurred).map(style_ru).as_deref(), &artists),
+            "Mytch, Lowborn"
+        );
+        // Высокая, но не главенствующая вероятность — тоже догадка
+        let close = means(&[("Hip Hop---Trap", 0.4), ("Hip Hop---Cloud Rap", 0.3)]);
+        assert_eq!(dominant_style(&close), None);
+        // Уверенный и далеко впереди — в подпись, по-русски
+        let clear = means(&[("Hip Hop---Trap", 0.52), ("Hip Hop---Cloud Rap", 0.2)]);
+        assert_eq!(dominant_style(&clear), Some("Hip Hop---Trap"));
+        assert_eq!(
+            facet_label(dominant_style(&clear).map(style_ru).as_deref(), &artists),
+            "Трэп · Mytch, Lowborn"
+        );
+        let alone = means(&[("Rock---Alternative Rock", 0.36)]);
+        assert_eq!(dominant_style(&alone), Some("Rock---Alternative Rock"));
+        assert_eq!(dominant_style(&HashMap::new()), None);
+    }
+
+    #[test]
+    fn discogs_styles_get_short_russian_names() {
+        assert_eq!(style_ru("Hip Hop---Trap"), "Трэп");
+        assert_eq!(style_ru("Rock---Alternative Rock"), "Альт-рок");
+        assert_eq!(style_ru("Electronic---Coldwave"), "Колдвейв");
+        assert_eq!(
+            style_ru("Stage & Screen---Video Game Music"),
+            "Музыка из игр"
+        );
+        // Незнакомый стиль — по жанру
+        assert_eq!(style_ru("Rock---Neofolk"), "Рок");
+        assert_eq!(style_ru("Electronic---Rhythmic Noise"), "Электроника");
+        assert_eq!(style_ru("Brand New---Thing"), "Thing");
+    }
+
+    #[test]
+    fn soundtrack_share_counts_stage_and_screen() {
+        let m = means(&[
+            ("Stage & Screen---Soundtrack", 0.1),
+            ("Stage & Screen---Score", 0.08),
+            ("Hip Hop---Trap", 0.3),
+        ]);
+        assert!((soundtrack_share(&m) - 0.18).abs() < 1e-6);
+        let facet = |share: f32| Facet {
+            id: Uuid::nil(),
+            position: 0,
+            label: String::new(),
+            centroid: vec![],
+            weight: 1.0,
+            tracks: 1,
+            context: json!({ "soundtrack": share }),
+            examples: vec![],
+            artists: vec![],
+        };
+        assert!(facet(0.2).likes_soundtracks());
+        assert!(!facet(0.05).likes_soundtracks());
+        assert!(
+            !Facet {
+                context: json!({}),
+                ..facet(0.0)
+            }
+            .likes_soundtracks()
+        );
     }
 
     #[test]

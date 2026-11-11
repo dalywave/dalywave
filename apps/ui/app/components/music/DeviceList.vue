@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { PlaybackDevice } from '~/bridge/types'
 
-// Список «Где играть»: текущее — акцентом и с эквалайзером, не в сети — приглушено.
+// Список «Где играть»: где играет звук (активное устройство) — акцентом, с эквалайзером и галочкой,
+// не в сети — приглушено. Нажатие на другое устройство переносит туда воспроизведение, на это —
+// «Играть здесь» (или «Продолжить здесь», если активное пропало).
 // `compact` — всплывающая панель и правая панель на большом экране; `sheet` — лист на телефоне:
 // строки на всю ширину с тонкими разделителями, разделы «Это устройство», другие устройства
 // DalyWave и вывод звука (AirPlay и Bluetooth), если платформа его умеет
@@ -23,11 +25,20 @@ const ICON: Record<PlaybackDevice['kind'], string> = {
   web: 'ph:browser',
 }
 
+// Звук играет не здесь — активное устройство первым, отдельным разделом
+const playingElsewhere = computed(() => props.devices.find(d => d.active && !d.current) ?? null)
 const here = computed(() => props.devices.filter(d => d.current))
-const others = computed(() => props.devices.filter(d => !d.current))
+const others = computed(() => props.devices.filter(d => !d.current && d !== playingElsewhere.value))
+// Ни одно устройство не активно (ничего ещё не играло) — звук здесь
+const noneActive = computed(() => !props.devices.some(d => d.active))
+const isOn = (d: PlaybackDevice) => !!d.active || (d.current && noneActive.value)
 
 function meta(d: PlaybackDevice) {
-  if (d.current) return t('devices.here')
+  if (d.current) {
+    if (isOn(d)) return t('devices.here')
+    return playingElsewhere.value && !playingElsewhere.value.online ? t('connect.continueHere') : t('connect.playHere')
+  }
+  if (d.active) return d.online ? t('connect.playingNow') : t('connect.activeOffline')
   if (!d.online) return d.lastSeenAt ? `${t('devices.offline')} · ${t('devices.lastSeen', { when: formatRelative(d.lastSeenAt, lang.value) })}` : t('devices.offline')
   return d.kind === 'web' ? t('devices.tab') : t('devices.onlineOne')
 }
@@ -39,22 +50,38 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 <template>
   <!-- Телефон: лист -->
   <div v-if="variant === 'sheet'" class="dsheet">
-    <section v-if="here.length" class="dsec">
-      <h3 class="dsec__title">{{ t('devices.thisDevice') }}</h3>
-      <button v-for="d in here" :key="d.id" type="button" class="drow is-current" aria-current="true" @click="emit('select', d)">
-        <Icon :name="ICON[d.kind]" class="drow__icon" />
+    <section v-if="playingElsewhere" class="dsec">
+      <h3 class="dsec__title">{{ t('connect.nowSection') }}</h3>
+      <button type="button" class="drow is-current" :class="{ 'is-offline': !playingElsewhere.online }" aria-current="true" @click="emit('select', playingElsewhere)">
+        <Icon :name="ICON[playingElsewhere.kind]" class="drow__icon" />
         <span class="drow__text">
-          <span class="drow__name ellipsis">{{ d.name }}</span>
+          <span class="drow__name ellipsis">{{ playingElsewhere.name }}</span>
           <span class="drow__meta">
-            <span class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
-            {{ meta(d) }}
+            <span v-if="playingElsewhere.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
+            {{ meta(playingElsewhere) }}
           </span>
         </span>
         <Icon name="ph:check-bold" class="drow__check" />
       </button>
     </section>
 
-    <section class="dsec">
+    <section v-if="here.length" class="dsec">
+      <h3 class="dsec__title">{{ t('devices.thisDevice') }}</h3>
+      <button v-for="d in here" :key="d.id" type="button" class="drow" :class="{ 'is-current': isOn(d), 'is-cta': !isOn(d) }" :aria-current="isOn(d) || undefined" @click="emit('select', d)">
+        <Icon :name="ICON[d.kind]" class="drow__icon" />
+        <span class="drow__text">
+          <span class="drow__name ellipsis">{{ d.name }}</span>
+          <span class="drow__meta">
+            <span v-if="isOn(d)" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
+            {{ meta(d) }}
+          </span>
+        </span>
+        <Icon v-if="isOn(d)" name="ph:check-bold" class="drow__check" />
+        <Icon v-else name="ph:play-circle" class="drow__check drow__check--cta" />
+      </button>
+    </section>
+
+    <section v-if="others.length || !playingElsewhere" class="dsec">
       <h3 class="dsec__title">{{ t('devices.otherApps') }}</h3>
       <button v-for="d in others" :key="d.id" type="button" class="drow" :class="{ 'is-offline': !d.online }" @click="emit('select', d)">
         <Icon :name="ICON[d.kind]" class="drow__icon" />
@@ -63,7 +90,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
           <span class="drow__meta ellipsis">{{ meta(d) }}</span>
         </span>
       </button>
-      <p v-if="!others.length" class="dsec__empty">{{ t('devices.none') }}</p>
+      <p v-if="!others.length && !playingElsewhere" class="dsec__empty">{{ t('devices.none') }}</p>
     </section>
 
     <section v-if="out.mode === 'picker'" class="dsec">
@@ -110,19 +137,19 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
       type="button"
       role="listitem"
       class="dev"
-      :class="{ 'is-current': d.current, 'is-offline': !d.online }"
-      :aria-current="d.current || undefined"
+      :class="{ 'is-current': isOn(d), 'is-offline': !d.online, 'is-cta': d.current && !isOn(d) }"
+      :aria-current="isOn(d) || undefined"
       @click="emit('select', d)"
     >
       <span class="dev__icon"><Icon :name="ICON[d.kind]" /></span>
       <span class="dev__text">
         <span class="dev__name ellipsis">{{ d.name }}</span>
         <span class="dev__meta">
-          <span v-if="d.current" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
+          <span v-if="isOn(d) && d.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
           {{ meta(d) }}
         </span>
       </span>
-      <Icon v-if="d.current" name="ph:check" class="dev__check" />
+      <Icon v-if="isOn(d)" name="ph:check" class="dev__check" />
     </button>
     <template v-if="out.mode">
       <div class="pop__sep" role="presentation" />
@@ -171,6 +198,8 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .dev.is-current .dev__name { color: var(--accent); }
 .dev__meta { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--text-3); }
 .dev.is-offline { opacity: 0.5; }
+.dev.is-current.is-offline { opacity: 0.7; }
+.dev.is-cta .dev__meta { color: var(--accent); }
 .dev__check { font-size: 18px; color: var(--accent); }
 .dev__eq { display: inline-flex; align-items: flex-end; gap: 1.5px; width: 11px; height: 11px; flex: none; color: var(--accent); }
 .dev__eq i { flex: 1; height: 100%; border-radius: 1px; background: currentColor; transform-origin: bottom; animation: eq-bounce 1s var(--ease-in-out) infinite; }
@@ -207,4 +236,6 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .drow__meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--text-3); }
 .drow.is-offline .drow__name, .drow.is-offline .drow__icon { color: var(--text-3); }
 .drow__check { flex: none; font-size: 18px; color: var(--accent); }
+.drow__check--cta { font-size: 24px; }
+.drow.is-cta .drow__meta { color: var(--accent); }
 </style>

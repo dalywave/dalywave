@@ -41,6 +41,10 @@ pub enum SyncEntity {
     Playlists,
     PlaylistItems,
     DeviceDownloads,
+    /// Набор волны этого устройства (умный офлайн).
+    DeviceSets,
+    /// Признаки звучания записи — для волны без сети.
+    TrackFeatures,
 }
 
 names!(SyncEntity {
@@ -55,6 +59,8 @@ names!(SyncEntity {
     Playlists => "playlists",
     PlaylistItems => "playlistItems",
     DeviceDownloads => "deviceDownloads",
+    DeviceSets => "deviceSets",
+    TrackFeatures => "trackFeatures",
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -210,6 +216,45 @@ pub struct SyncDeviceDownload {
     pub ref_id: Option<Uuid>,
 }
 
+/// Трек набора волны этого устройства: любимое (`favorite`) или новое (`fresh`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncDeviceSetItem {
+    pub track_id: Uuid,
+    pub rev: i64,
+    pub device_id: Uuid,
+    pub kind: String,
+    pub score: f32,
+}
+
+/// Признаки звучания записи из анализа: по ним волна подбирает треки без сети.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncTrackFeatures {
+    pub recording_id: Uuid,
+    pub rev: i64,
+    #[schema(required = true)]
+    pub energy: Option<f32>,
+    #[schema(required = true)]
+    pub valence: Option<f32>,
+    #[schema(required = true)]
+    pub danceability: Option<f32>,
+    #[schema(required = true)]
+    pub bpm: Option<f32>,
+    #[schema(required = true)]
+    pub key_camelot: Option<String>,
+    #[schema(required = true)]
+    pub voice: Option<f32>,
+    #[schema(required = true)]
+    pub language: Option<String>,
+    #[schema(required = true)]
+    pub approachability: Option<f32>,
+    #[schema(required = true)]
+    pub relaxed: Option<f32>,
+    #[schema(required = true)]
+    pub party: Option<f32>,
+}
+
 /// Удаление строки. `key` — ключ строки в camelCase, например `{ "trackId": … }` у `likedTracks`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -239,6 +284,11 @@ pub struct SyncPage {
     pub playlists: Vec<SyncPlaylist>,
     pub playlist_items: Vec<SyncPlaylistItem>,
     pub device_downloads: Vec<SyncDeviceDownload>,
+    /// Только этого устройства (вход токеном приложения).
+    #[serde(default)]
+    pub device_sets: Vec<SyncDeviceSetItem>,
+    #[serde(default)]
+    pub track_features: Vec<SyncTrackFeatures>,
     pub tombstones: Vec<SyncTombstone>,
 }
 

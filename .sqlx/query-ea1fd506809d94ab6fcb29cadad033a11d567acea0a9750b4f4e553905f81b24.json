@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE model_versions SET artifact = NULL\n         WHERE kind = 'taste' AND NOT active AND artifact IS NOT NULL\n           AND id NOT IN (SELECT id FROM model_versions WHERE kind = 'taste' AND artifact IS NOT NULL\n                          ORDER BY created_at DESC LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ea1fd506809d94ab6fcb29cadad033a11d567acea0a9750b4f4e553905f81b24"
+}

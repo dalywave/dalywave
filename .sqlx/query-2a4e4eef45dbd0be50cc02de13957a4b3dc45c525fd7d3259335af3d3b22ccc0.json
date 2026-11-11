@@ -1,0 +1,184 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.rev, a.file_id, a.duration_ms, a.bpm, a.bpm_confidence, a.key_camelot, a.key_confidence,\n                a.energy, a.intro_end_ms, a.outro_start_ms, a.beats_ms, a.downbeats_ms, a.vocal_segments,\n                a.energy_curve\n           FROM tracks t\n           JOIN track_analysis a ON a.recording_id = t.recording_id\n          WHERE t.id = $1 AND a.source = 'full'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rev",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "rev"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "bpm",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "bpm"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "bpm_confidence",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "bpm_confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "key_camelot",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "key_camelot"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "key_confidence",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "key_confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "energy",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "energy"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "intro_end_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "intro_end_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "outro_start_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "outro_start_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "beats_ms",
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "beats_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "downbeats_ms",
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "downbeats_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "vocal_segments",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "vocal_segments"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "energy_curve",
+        "type_info": "Int2Array",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "energy_curve"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "2a4e4eef45dbd0be50cc02de13957a4b3dc45c525fd7d3259335af3d3b22ccc0"
+}

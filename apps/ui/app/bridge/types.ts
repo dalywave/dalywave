@@ -5,10 +5,12 @@ import type {
   AddPlaylistItems, AdminAcquisition, AdminAcquisitionPage, AdminImportList, AdminOverview, AdminRecordingPage,
   AcquisitionStatus, AudioStatus, DownloaderToken, RecoOverview, RecoRunResult, RecoSettings,
   RecoSettingsPatch, RecoTask, ResolveRequest, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
-  DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
+  ClientMessage, DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
+  SoundSearchResults, TasteDamper, TasteOverview, WaveSeed,
+  ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -104,14 +106,19 @@ export type SourceResult =
   /** Звука нет: записи нет в источниках или файл недоступен */
   | { kind: 'unavailable' }
 
-/** Устройство для «Где играть». Список с сервера появится на этапе управления между устройствами */
+/** Устройство для «Где играть»: приложения и вкладки сайта (управление между устройствами) */
 export interface PlaybackDevice {
   id: string
   name: string
   kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web'
+  /** Это устройство */
   current: boolean
   online: boolean
   lastSeenAt: string | null
+  /** Звук играет здесь (активное устройство) — даже если оно пропало из сети */
+  active?: boolean
+  /** Громкость меняется с пульта */
+  volume?: boolean
 }
 
 /** Куда идёт звук этого устройства: динамики, наушники, Bluetooth, AirPlay */
@@ -204,7 +211,8 @@ export interface AudioEngine {
   /** Что играть после текущего (приложение): движок готовит заранее и переходит сам */
   setUpcoming(tracks: EngineTrack[]): void
   /** Переход и выравнивание громкости (приложение) */
-  configure(opts: { transition: 'gapless' | 'crossfade', fadeMs: number, normalize: boolean }): void
+  /** `dj` — сведение по долям в движке приложения; на сайте его нет (там «Умный»). `expressiveness` 0…1 */
+  configure(opts: { transition: 'gapless' | 'crossfade' | 'dj', fadeMs: number, normalize: boolean, expressiveness?: number }): void
   on<E extends keyof AudioEngineEvents>(event: E, cb: AudioEngineEvents[E]): () => void
 }
 
@@ -252,6 +260,18 @@ export interface AppUpdate {
   notes: string | null
 }
 
+/** Обновление приложения для компьютера: найденное качается в фоне само, ставится по
+ *  «Перезапустить» (на macOS — ещё и при выходе). Смысл состояний — apps/shell/BRIDGE.md, «Обновления» */
+export interface AppUpdateState {
+  status: 'idle' | 'checking' | 'downloading' | 'ready' | 'installing' | 'failed'
+  currentVersion: string
+  update: AppUpdate | null
+  /** Доля скачанного 0…1, пока качается; null — размер неизвестен */
+  progress: number | null
+  error: string | null
+  installOnQuit: boolean
+}
+
 /** Загрузчик музыки в приложении для компьютера (macOS, Windows): пока приложение открыто,
  *  компьютер качает музыку для сервера со своего адреса. Ведёт оболочка — apps/shell/BRIDGE.md */
 export interface Downloader {
@@ -266,6 +286,73 @@ export interface Downloader {
   recreateToken(): Promise<DownloaderSnapshot>
   /** Журнал загрузчика в системном просмотрщике */
   openLog(): Promise<void>
+}
+
+/** Что можно закрепить на устройстве */
+export type DownloadKind = 'track' | 'album' | 'playlist' | 'artist' | 'liked'
+
+/** Тактильный отклик (iPhone): удар, выбор, уведомление; на остальных устройствах — ничего */
+export type HapticKind = 'light' | 'medium' | 'heavy' | 'soft' | 'rigid' | 'selection' | 'success' | 'warning' | 'error'
+
+/** Настройки загрузок этого устройства */
+export interface OfflineSettings {
+  limitBytes: number
+  /** Качать только по Wi-Fi (на компьютере не влияет) */
+  wifiOnly: boolean
+  /** Умный запас: набор волны с сервера докачивается сам */
+  reserveEnabled: boolean
+  /** «Без сети»: только скачанное, на сервер приложение не ходит */
+  forceOffline: boolean
+}
+
+/** Закреплённое и сколько из него уже на устройстве */
+export interface OfflinePin {
+  kind: DownloadKind
+  refId: string | null
+  tracksTotal: number
+  tracksReady: number
+  bytes: number
+}
+
+/** Загрузки и офлайн приложения — apps/shell/BRIDGE.md, «Умный офлайн» */
+export interface OfflineStatus {
+  online: boolean
+  network: 'wifi' | 'cellular' | 'none' | 'unknown'
+  /** Медиатека в локальной базе: экраны читают её первой */
+  synced: boolean
+  syncedAt: string | null
+  syncing: boolean
+  settings: OfflineSettings
+  usage: { pinnedBytes: number, reserveBytes: number, cacheBytes: number, totalBytes: number, files: number }
+  downloads: { active: number, queued: number, failed: number, overLimit: number, waitingForWifi: boolean }
+  pins: OfflinePin[]
+  reserve: { tracks: number, ready: number, builtAt: string | null }
+}
+
+/** Загрузка трека на устройство */
+export interface TrackDownload {
+  trackId: string
+  state: 'queued' | 'downloading' | 'ready' | 'failed'
+  received: number
+  total: number
+}
+
+/** Умный офлайн приложения: закреплённое, умный запас, место. На сайте — null */
+export interface OfflineBridge {
+  status(): Promise<OfflineStatus>
+  onStatus(cb: (status: OfflineStatus) => void): () => void
+  setSettings(patch: Partial<OfflineSettings>): Promise<OfflineStatus>
+  /** Синхронизировать локальную базу сейчас */
+  sync(): Promise<void>
+  /** Медиатека в локальной базе изменилась — перечитать списки */
+  onSynced(cb: () => void): () => void
+  pin(kind: DownloadKind, refId: string | null): Promise<OfflineStatus>
+  unpin(kind: DownloadKind, refId: string | null): Promise<OfflineStatus>
+  /** «Удалить всё»: файлы, закреплённое; умный запас выключается */
+  clear(): Promise<OfflineStatus>
+  /** Все треки на устройстве и ход их загрузки */
+  downloads(): Promise<TrackDownload[]>
+  onProgress(cb: (d: TrackDownload) => void): () => void
 }
 
 export interface Bridge {
@@ -293,9 +380,15 @@ export interface Bridge {
     trackSnap(button: HTMLElement): () => void
   }
 
-  /** Обновления приложения (на сайте — ничего) */
+  /** Обновления приложения (на сайте и телефонах — ничего: `state()` отдаёт null) */
   updates: {
     onAvailable(cb: (update: AppUpdate) => void): () => void
+    state(): Promise<AppUpdateState | null>
+    /** Каждая перемена: проверка, ход скачивания, «готово» */
+    onState(cb: (state: AppUpdateState) => void): () => void
+    /** Проверить сейчас; найденное скачается в фоне */
+    check(): Promise<void>
+    /** «Перезапустить»: поставить скачанное и перезапустить приложение */
     install(): Promise<void>
   }
 
@@ -307,6 +400,12 @@ export interface Bridge {
 
   /** Куда идёт звук (AirPlay, Bluetooth, динамики); null — платформа не умеет, строки нет */
   readonly outputs: AudioRoutes | null
+
+  /** Загрузки на устройство и медиатека без сети (приложение); на сайте — null */
+  readonly offline: OfflineBridge | null
+
+  /** Тактильный отклик (iPhone); на остальных — ничего */
+  haptic(kind: HapticKind): void
 
   auth: {
     providers(): Promise<AuthProviders>
@@ -333,9 +432,22 @@ export interface Bridge {
     track(id: string): Promise<Track>
     /** Треки по id, до 500 за раз; неизвестные пропускаются */
     lookup(ids: string[]): Promise<Track[]>
+    /** Поиск словами по звучанию: «спокойный инструментал для работы» — из медиатеки и индекса каталога */
+    soundSearch(text: string, limit?: number): Promise<SoundSearchResults>
   }
 
   home(): Promise<Home>
+
+  /** «Мой вкус»: грани, статистика и ручки управления рекомендациями */
+  taste: {
+    overview(): Promise<TasteOverview>
+    /** «Меньше такого» для грани; повтор — сильнее */
+    less(facetId: string): Promise<TasteDamper>
+    /** Отменить «меньше такого» */
+    undoLess(damperId: string): Promise<void>
+    /** Сбросить вкус: грани и миксы собираются заново по новым прослушиваниям */
+    reset(): Promise<void>
+  }
 
   library: {
     overview(): Promise<LibraryOverview>
@@ -354,6 +466,25 @@ export interface Bridge {
     history(cursor?: string | null): Promise<HistoryPage>
   }
 
+  /** Перенос музыки: архив Spotify, списки и свои файлы. Сопоставление идёт на сервере в фоне */
+  imports: {
+    list(): Promise<ImportList>
+    get(id: string): Promise<ImportSummary>
+    items(id: string, status?: ImportItemStatus | null, cursor?: string | null, limit?: number): Promise<ImportItemPage>
+    /** Выбрать трек для позиции (наш id или кандидат Deezer) или пропустить её */
+    fix(id: string, itemId: string, fix: ImportItemFix): Promise<ImportItem>
+    /** Идущий импорт — остановить, законченный — убрать из истории (медиатека не меняется) */
+    remove(id: string): Promise<void>
+    /** Архив `my_spotify_data.zip` целиком; `onProgress` — доля отправленного 0..1 */
+    spotify(file: File, onProgress?: (share: number) => void, signal?: AbortSignal): Promise<ImportSummary>
+    /** Список «Артист — Трек», CSV или M3U — в новый плейлист или в «Мне нравится» */
+    fromList(body: ListImportRequest): Promise<ImportSummary>
+    /** Новый импорт файлов: дальше `file` по одному, затем `finish` */
+    startFiles(title?: string): Promise<ImportSummary>
+    file(id: string, file: File, onProgress?: (share: number) => void, signal?: AbortSignal): Promise<ImportItem>
+    finish(id: string): Promise<ImportSummary>
+  }
+
   playlists: {
     list(): Promise<PlaylistList>
     get(id: string): Promise<PlaylistDetail>
@@ -369,8 +500,8 @@ export interface Bridge {
   /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */
   wave: {
     /** Новая сессия под настройки (они у сессии не меняются: другие настройки — новая сессия)
-     *  с подобранным началом */
-    start(settings: WaveSettings): Promise<WaveStart>
+     *  с подобранным началом; `seed` — радио от трека, артиста, альбома, плейлиста или описания словами */
+    start(settings: WaveSettings, seed?: WaveSeed): Promise<WaveStart>
     /** Ход подготовки начала: готово ли и сколько из нужного уже на сервере */
     session(id: string): Promise<WaveStart>
     /** Следующие треки с подписью «почему этот трек»; `exclude` — сыгранное до смены настроек */
@@ -402,6 +533,8 @@ export interface Bridge {
     on<T extends ServerEventType>(type: T, cb: (event: ServerEventOf<T>) => void): () => void
     /** Связь восстановилась после обрыва — данные могли устареть */
     onReconnect(cb: () => void): () => void
+    /** Сообщение серверу (управление между устройствами); false — соединения сейчас нет */
+    send(msg: ClientMessage): boolean
   }
 
   devices(): Promise<PlaybackDevice[]>
@@ -433,9 +566,11 @@ export interface Bridge {
     imports(): Promise<AdminImportList>
     settings(): Promise<ServerSettings>
     updateSettings(patch: ServerSettingsPatch): Promise<ServerSettings>
-    reco(): Promise<RecoOverview>
+    /** Вкус слушателя (по умолчанию — свой) и общий индекс каталога */
+    reco(userId?: string | null): Promise<RecoOverview>
     updateReco(patch: RecoSettingsPatch): Promise<RecoSettings>
-    runReco(task: RecoTask): Promise<RecoRunResult>
+    /** `taste` с `userId` — пересчёт только этого слушателя */
+    runReco(task: RecoTask, userId?: string | null): Promise<RecoRunResult>
   }
 
   audio: AudioEngine

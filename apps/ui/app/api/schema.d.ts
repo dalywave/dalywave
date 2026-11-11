@@ -623,6 +623,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/current/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_downloads"];
+        put?: never;
+        post: operations["add_download"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/current/downloads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_download"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/current/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["files"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/current/set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rebuild_set"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -744,6 +824,150 @@ export interface paths {
         };
         get: operations["image"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_get_imports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_files"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["import_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/spotify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upload_spotify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["one_get_imports_id_"];
+        put?: never;
+        post?: never;
+        delete: operations["remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/{id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upload_file"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/{id}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["finish_files"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/{id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["items"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/{id}/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["fix_item"];
         post?: never;
         delete?: never;
         options?: never;
@@ -953,7 +1177,7 @@ export interface paths {
         get: operations["detail"];
         put?: never;
         post?: never;
-        delete: operations["remove"];
+        delete: operations["remove_delete_playlists_id_"];
         options?: never;
         head?: never;
         patch: operations["update"];
@@ -1023,6 +1247,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search": {
         parameters: {
             query?: never;
@@ -1071,6 +1327,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/taste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overview_get_taste"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/taste/dampers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_damper"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/taste/facets/{id}/less": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["less"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/taste/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/lookup": {
         parameters: {
             query?: never;
@@ -1095,6 +1415,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["track"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tracks/{id}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["track_analysis"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1402,6 +1738,7 @@ export interface components {
         AdminImport: {
             /** Format: date-time */
             createdAt: string;
+            error: string | null;
             /** Format: date-time */
             finishedAt: string | null;
             /** Format: uuid */
@@ -1410,7 +1747,16 @@ export interface components {
             kind: string;
             /** Format: int32 */
             matched: number;
-            /** @description `running`, `done`, `failed`. */
+            /** @description `uploading`, `matching`, `applying`, `done`. */
+            phase: string;
+            /**
+             * Format: int32
+             * @description Разобрано позиций из `total`.
+             */
+            processed: number;
+            /** @description Что добавилось в медиатеку. */
+            stats: components["schemas"]["ImportStats"];
+            /** @description `running`, `done`, `failed`, `cancelled`. */
             status: string;
             title: string;
             /** Format: int32 */
@@ -1528,6 +1874,13 @@ export interface components {
             /** Format: int32 */
             tracksCount: number | null;
         };
+        /** @description Предложенные точки сведения: с какой сильной доли входить в трек и где из него выходить. */
+        AnalysisCues: {
+            /** Format: int32 */
+            mixInMs: number;
+            /** Format: int32 */
+            mixOutMs: number;
+        };
         AnalyzeFullPayload: {
             /** Format: uuid */
             recordingId: string;
@@ -1536,6 +1889,16 @@ export interface components {
         AnalyzePreviewPayload: {
             /** Format: uuid */
             trackId: string;
+        };
+        AppRelease: {
+            arch: string;
+            notes?: string | null;
+            /** Format: date-time */
+            publishedAt: string;
+            /** Format: int64 */
+            sizeBytes: number;
+            target: string;
+            version: string;
         };
         AppToken: {
             device: components["schemas"]["Device"];
@@ -1758,15 +2121,149 @@ export interface components {
             job: components["schemas"]["FetcherJob"];
         };
         /** @description Сообщение клиента. */
-        ClientMessage: components["schemas"]["Ping"] & {
+        ClientMessage: (components["schemas"]["Ping"] & {
             /** @enum {string} */
             type: "ping";
+        }) | (components["schemas"]["ConnectHello"] & {
+            /** @enum {string} */
+            type: "connect.hello";
+        }) | (components["schemas"]["ConnectEmpty"] & {
+            /** @enum {string} */
+            type: "connect.heartbeat";
+        }) | (components["schemas"]["ConnectPublish"] & {
+            /** @enum {string} */
+            type: "connect.state";
+        }) | (components["schemas"]["ConnectSend"] & {
+            /** @enum {string} */
+            type: "connect.command";
+        }) | (components["schemas"]["ConnectAck"] & {
+            /** @enum {string} */
+            type: "connect.ack";
+        }) | (components["schemas"]["ConnectEmpty"] & {
+            /** @enum {string} */
+            type: "connect.claim";
+        }) | (components["schemas"]["ConnectTransfer"] & {
+            /** @enum {string} */
+            type: "connect.transfer";
+        });
+        /** @description Подтверждение команды: клиент шлёт его с `to` (кому), сервер доставляет с `from` (от кого). */
+        ConnectAck: {
+            /** @description Машинная причина: `offline` (устройства нет в сети), `failed`, `unsupported`. */
+            error?: string | null;
+            from?: string | null;
+            id: string;
+            ok: boolean;
+            to?: string | null;
+        };
+        /**
+         * @description Активным стало другое устройство (или то же после переподключения). Прежнее активное
+         *     останавливает звук и становится пультом; при переносе `to` берёт `state` и продолжает.
+         */
+        ConnectActive: {
+            deviceId: string | null;
+            /** @description Кто был активным до этого. */
+            from: string | null;
+            state: components["schemas"]["PlaybackState"] | null;
+            /** @description Перенос воспроизведения: новое активное устройство продолжает `state`. */
+            transfer: boolean;
+        };
+        /** @description Что устройство умеет — пульт прячет то, чего нет. */
+        ConnectCapabilities: {
+            /** @description Режим переходов «Диджей» (движок приложения). */
+            dj?: boolean;
+            /** @description Громкость меняется из приложения (у Safari на iPhone — только кнопками телефона). */
+            volume?: boolean;
+        };
+        /** @description Команда от устройства `from`: выполнить и ответить `connect.ack`. */
+        ConnectCommand: {
+            command: components["schemas"]["RemoteCommand"];
+            from: string;
+            id: string;
+        };
+        /** @description Устройство в списке «Где играть». */
+        ConnectDevice: {
+            /** @description Звук играет здесь (даже если устройство пропало из сети). */
+            active: boolean;
+            appVersion: string | null;
+            capabilities: components["schemas"]["ConnectCapabilities"];
+            id: string;
+            kind: components["schemas"]["ConnectKind"];
+            /** Format: date-time */
+            lastSeenAt: string;
+            name: string;
+            /** @description Соединение открыто и устройство напоминало о себе за последние 15 с. */
+            online: boolean;
+            platform: components["schemas"]["Platform"];
+        };
+        /** @description Список устройств: активное — первым, затем в сети, затем недавние. */
+        ConnectDevices: {
+            activeDeviceId: string | null;
+            devices: components["schemas"]["ConnectDevice"][];
+        };
+        /** @description Сигнал без данных: `connect.heartbeat`, `connect.claim`. */
+        ConnectEmpty: {
+            /** @description Необязательная метка — для журнала клиента; сервер её не читает. */
+            id?: string | null;
+        };
+        /** @description Первое сообщение устройства после `hello` сервера: кто оно. Повторяется после каждого переподключения. */
+        ConnectHello: {
+            appVersion?: string | null;
+            capabilities?: components["schemas"]["ConnectCapabilities"];
+            /** @description Постоянный id приложения или id вкладки; до 64 символов. */
+            deviceId: string;
+            kind: components["schemas"]["ConnectKind"];
+            /** @description Имя для списка. У приложений сервер берёт имя устройства из входа («MacBook Pro Захара»). */
+            name: string;
+            platform: components["schemas"]["Platform"];
+        };
+        /**
+         * @description Вид устройства — для значка в списке.
+         * @enum {string}
+         */
+        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet";
+        /** @description `GET /api/devices`: устройства и последнее состояние. */
+        ConnectOverview: {
+            activeDeviceId: string | null;
+            devices: components["schemas"]["ConnectDevice"][];
+            state: components["schemas"]["PlaybackState"] | null;
+        };
+        /** @description Активное устройство публикует снимок. */
+        ConnectPublish: {
+            state: components["schemas"]["PlaybackState"];
+        };
+        /** @description Команда устройству `to`. Ответ — `connect.ack` с тем же `id`. */
+        ConnectSend: {
+            command: components["schemas"]["RemoteCommand"];
+            id: string;
+            to: string;
+        };
+        /** @description Снимок активного устройства — всем устройствам человека. */
+        ConnectState: {
+            deviceId: string;
+            state: components["schemas"]["PlaybackState"];
+        };
+        /** @description «Перенести воспроизведение»: устройство `to` продолжит с того же места с той же очередью. */
+        ConnectTransfer: {
+            /** @description Если задан — ответ `connect.ack` с этим `id` (например, `offline`, если устройства нет в сети). */
+            id?: string | null;
+            /** @description Играть ли после переноса; не задано — как было. */
+            play?: boolean | null;
+            to: string;
         };
         /**
          * @description Откуда запущено.
          * @enum {string}
          */
         ContextType: "album" | "playlist" | "artist" | "wave" | "radio" | "mix" | "search" | "library" | "queue" | "remote";
+        DayPartShare: {
+            /** @description `morning` (5–12), `day` (12–17), `evening` (17–23), `night`. */
+            part: string;
+            /**
+             * Format: float
+             * @description Доля времени прослушивания, 0..1.
+             */
+            share: number;
+        };
         DayStats: {
             /** Format: int64 */
             acquisitionsFailed: number;
@@ -1795,6 +2292,58 @@ export interface components {
             name: string;
             platform: components["schemas"]["Platform"];
         };
+        /** @description Закреплённое на устройстве. */
+        DeviceDownload: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["DownloadKind"];
+            /** Format: uuid */
+            refId: string | null;
+            /**
+             * Format: int64
+             * @description Треков в нём на сервере сейчас и всего.
+             */
+            tracksReady: number;
+            /** Format: int64 */
+            tracksTotal: number;
+        };
+        DeviceDownloadList: {
+            items: components["schemas"]["DeviceDownload"][];
+        };
+        /** @description Набор волны устройства после пересборки. Сами строки приходят синхронизацией (`deviceSets`). */
+        DeviceSet: {
+            /** Format: date-time */
+            builtAt: string;
+            /** Format: int64 */
+            favorites: number;
+            /** Format: int64 */
+            fresh: number;
+            /**
+             * Format: int64
+             * @description Ушло из набора: новое, которое уже сыграно, и то, что больше не подходит.
+             */
+            removed: number;
+        };
+        /** @description Собрать набор волны для устройства: сколько треков любимого и нового поместится в запас. */
+        DeviceSetRequest: {
+            /**
+             * Format: int32
+             * @description 0–2000.
+             */
+            favorites: number;
+            /**
+             * Format: int32
+             * @description 0–2000.
+             */
+            fresh: number;
+        };
+        /**
+         * @description Что закрепить на устройстве.
+         * @enum {string}
+         */
+        DownloadKind: "track" | "album" | "playlist" | "artist" | "liked";
         /** @description Что докачивать на сервер по подписке на артиста. */
         DownloadPolicy: {
             albums: boolean;
@@ -1954,6 +2503,50 @@ export interface components {
             preferVideoIds: string[];
             upload: components["schemas"]["UploadTarget"];
         };
+        /** @description Файл трека для загрузки на устройство. */
+        FileLink: {
+            codec: components["schemas"]["AudioCodec"];
+            container: components["schemas"]["AudioContainer"];
+            /** Format: int32 */
+            durationMs: number;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            fileId: string;
+            /** Format: float */
+            loudnessLufs: number | null;
+            mimeType: string;
+            /** Format: uuid */
+            recordingId: string;
+            /** @description SHA-256 в hex, если известен. */
+            sha256: string | null;
+            /**
+             * Format: int64
+             * @description Размер файла: по нему приложение проверяет скачанное.
+             */
+            sizeBytes: number;
+            /** Format: uuid */
+            trackId: string;
+            /** Format: float */
+            truePeakDb: number | null;
+            /** @description Подписанная ссылка на файл; поддерживает `Range` — недокачанное продолжается. */
+            url: string;
+            /** @description Огибающая для полосы прокрутки: 512 точек, 0..1000. */
+            waveform: number[] | null;
+        };
+        FileLinks: {
+            items: components["schemas"]["FileLink"][];
+            /** @description Файла на сервере ещё нет: скачивание поставлено в очередь, спросить позже. */
+            pending: string[];
+        };
+        /** @description Ссылки на файлы треков: до 200 за раз. */
+        FileLinksRequest: {
+            trackIds: string[];
+        };
+        /** @description Новый импорт файлов: дальше файлы грузятся по одному, затем `finish`. */
+        FilesImportRequest: {
+            title?: string | null;
+        };
         /** @description Подписаться или изменить подписку: только переданные поля. */
         FollowRequest: {
             downloadPolicy?: components["schemas"]["DownloadPolicy"] | null;
@@ -1984,6 +2577,24 @@ export interface components {
         FollowedArtistPage: {
             items: components["schemas"]["FollowedArtist"][];
             nextCursor: string | null;
+        };
+        /** @description Голова сети вкуса на отложенных по времени данных: у сети и у правил. */
+        HeadMetrics: {
+            /** Format: double */
+            auc: number | null;
+            /** Format: double */
+            baselineAuc: number | null;
+            /** Format: double */
+            baselineLogloss: number | null;
+            /** @description `skip`, `complete`, `like`. */
+            head: string;
+            /** Format: double */
+            logloss: number | null;
+            /**
+             * Format: int64
+             * @description Сколько положительных исходов в отложенной части.
+             */
+            positives: number;
         };
         Health: {
             db: components["schemas"]["HealthStatus"];
@@ -2043,6 +2654,226 @@ export interface components {
             /** @description 250×250. */
             small: string;
         };
+        /** @description Кандидат Deezer для позиции, которая нашлась неуверенно. */
+        ImportCandidate: {
+            album: string | null;
+            artist: string;
+            /** Format: int64 */
+            deezerId: number;
+            /** Format: int32 */
+            durationMs: number | null;
+            /**
+             * Format: float
+             * @description Оценка совпадения 0..1.
+             */
+            score: number;
+            title: string;
+        };
+        /** @description Загруженный файл: формат и что с ним стало. */
+        ImportFileInfo: {
+            /**
+             * Format: int32
+             * @default null
+             */
+            bitDepth: number | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            bitrateKbps: number | null;
+            /** @default null */
+            codec: string | null;
+            /**
+             * @description Файл не прочитался: почему.
+             * @default null
+             */
+            error: string | null;
+            /** @default false */
+            lossless: boolean;
+            /** @default  */
+            name: string;
+            /**
+             * Format: int32
+             * @default null
+             */
+            sampleRate: number | null;
+            /**
+             * Format: int64
+             * @default 0
+             */
+            sizeBytes: number;
+            /**
+             * @description Стал основным файлом записи (лучше прежнего).
+             * @default false
+             */
+            upgraded: boolean;
+            /**
+             * @description Отпечаток совпал с превью Deezer; `null` — сравнить было не с чем.
+             * @default null
+             */
+            verified: boolean | null;
+        };
+        ImportFilePayload: {
+            /** Format: uuid */
+            itemId: string;
+            /**
+             * Format: uuid
+             * @description Трек выбрал человек: файл кладётся к нему без поиска.
+             */
+            trackId?: string | null;
+        };
+        ImportItem: {
+            album: string | null;
+            /** @description Как позиция называлась в источнике. */
+            artist: string;
+            /** @description Лучшие кандидаты, если найти уверенно не вышло. */
+            candidates: components["schemas"]["ImportCandidate"][];
+            /** Format: float */
+            confidence: number | null;
+            file: components["schemas"]["ImportFileInfo"] | null;
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ImportItemKind"];
+            liked: boolean;
+            /**
+             * Format: int32
+             * @description Сколько раз позиция встречается в истории прослушиваний.
+             */
+            plays: number;
+            /** Format: int32 */
+            position: number;
+            status: components["schemas"]["ImportItemStatus"];
+            title: string;
+            track: components["schemas"]["Track"] | null;
+        };
+        /** @description Исправить позицию: выбрать трек (наш id из поиска или кандидат Deezer) или пропустить. */
+        ImportItemFix: {
+            /** Format: uuid */
+            albumId?: string | null;
+            /** Format: uuid */
+            artistId?: string | null;
+            /** Format: int64 */
+            deezerId?: number | null;
+            /** @description Не искать больше: позиция пропускается. */
+            skip?: boolean;
+            /** Format: uuid */
+            trackId?: string | null;
+        };
+        /** @enum {string} */
+        ImportItemKind: "track" | "album" | "artist" | "file";
+        ImportItemPage: {
+            items: components["schemas"]["ImportItem"][];
+            nextCursor: string | null;
+        };
+        /** @enum {string} */
+        ImportItemStatus: "pending" | "matched" | "unmatched" | "skipped";
+        /** @description Задачи импорта (полоса «Импорт»). */
+        ImportJobPayload: {
+            /** Format: uuid */
+            importId: string;
+        };
+        /**
+         * @description Что импортируется. Хранится в `imports.kind`.
+         * @enum {string}
+         */
+        ImportKind: "text" | "csv" | "m3u" | "files" | "spotify_archive";
+        ImportList: {
+            items: components["schemas"]["ImportSummary"][];
+        };
+        /**
+         * @description Шаг импорта: файлы ещё грузятся → сопоставление с каталогом → раскладка в медиатеку → готово.
+         * @enum {string}
+         */
+        ImportPhase: "uploading" | "matching" | "applying" | "done";
+        /** @description Что добавилось в медиатеку. */
+        ImportStats: {
+            /**
+             * Format: int64
+             * @default 0
+             */
+            albums: number;
+            /**
+             * Format: int64
+             * @default 0
+             */
+            artists: number;
+            /**
+             * Format: int64
+             * @description Принятых файлов.
+             * @default 0
+             */
+            files: number;
+            /**
+             * Format: int64
+             * @default 0
+             */
+            likes: number;
+            /**
+             * Format: int64
+             * @default 0
+             */
+            playlistTracks: number;
+            /**
+             * Format: int64
+             * @default 0
+             */
+            playlists: number;
+            /**
+             * Format: int64
+             * @description Прослушиваний из истории.
+             * @default 0
+             */
+            plays: number;
+            /**
+             * Format: int64
+             * @description Файлов, заменивших копию хуже качеством.
+             * @default 0
+             */
+            upgraded: number;
+        };
+        /** @enum {string} */
+        ImportStatus: "running" | "done" | "failed" | "cancelled";
+        ImportSummary: {
+            /** Format: date-time */
+            createdAt: string;
+            error: string | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ImportKind"];
+            /** Format: int32 */
+            matched: number;
+            phase: components["schemas"]["ImportPhase"];
+            /**
+             * Format: uuid
+             * @description Плейлист, куда легли треки списка.
+             */
+            playlistId: string | null;
+            /**
+             * Format: int32
+             * @description Разобрано (найдено, не найдено или пропущено).
+             */
+            processed: number;
+            stats: components["schemas"]["ImportStats"];
+            status: components["schemas"]["ImportStatus"];
+            title: string;
+            /**
+             * Format: int32
+             * @description Позиций для сопоставления.
+             */
+            total: number;
+            /**
+             * Format: int64
+             * @description Ждут проверки.
+             */
+            unmatched: number;
+        };
+        /**
+         * @description Куда кладётся найденное из списка.
+         * @enum {string}
+         */
+        ImportTarget: "likes" | "playlist" | "library";
         /** @description Показ рекомендации и чем он кончился. */
         ImpressionView: {
             /** Format: uuid */
@@ -2286,6 +3117,40 @@ export interface components {
             items: components["schemas"]["LikedTrack"][];
             nextCursor: string | null;
         };
+        /** @enum {string} */
+        ListFormat: "text" | "csv" | "m3u";
+        /** @description Импорт списка. Формат без указания определяется по тексту. */
+        ListImportRequest: {
+            format?: components["schemas"]["ListFormat"] | null;
+            /** @description Название нового плейлиста; по умолчанию — имя файла или «Импорт от …». */
+            playlistTitle?: string | null;
+            target?: components["schemas"]["ImportTarget"] | null;
+            text: string;
+        };
+        /** @description Прослушивания за текущий месяц по времени слушателя. */
+        ListeningStats: {
+            /** Format: int64 */
+            artists: number;
+            dayParts: components["schemas"]["DayPartShare"][];
+            /** Format: int64 */
+            minutes: number;
+            /** Format: int64 */
+            plays: number;
+            /**
+             * Format: int64
+             * @description Столько же за прошлый месяц — для сравнения.
+             */
+            previousMinutes: number;
+            /**
+             * Format: date-time
+             * @description Начало месяца.
+             */
+            since: string;
+            topArtists: components["schemas"]["TopArtist"][];
+            topGenres: components["schemas"]["TopGenre"][];
+            /** Format: int64 */
+            tracks: number;
+        };
         /** @description Кто вошёл. Отвечает и людям без ролей: интерфейс показывает им «ждём доступа». */
         Me: {
             device: components["schemas"]["Device"] | null;
@@ -2303,6 +3168,18 @@ export interface components {
             id: string;
             owner: components["schemas"]["ImageOwner"];
         };
+        /** @description Собранный плейлист: «Микс дня» или «Открытия недели». */
+        MixView: {
+            /** @description `daily_mix` или `discover_weekly`. */
+            generator: string;
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: int64 */
+            tracks: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         /** @description Сервис анализа звука. */
         MlStatus: {
             error: string | null;
@@ -2310,6 +3187,64 @@ export interface components {
             health: Record<string, never> | null;
             reachable: boolean;
             url: string;
+        };
+        /** @description Последнее обучение сети вкуса (задача `taste_model`). */
+        ModelTraining: {
+            /** Format: date-time */
+            lastRunAt: string | null;
+            /** @description Что вышло: «Мало данных: 120 прослушиваний из 300», текст ошибки. */
+            message: string | null;
+            /** Format: int64 */
+            minRows: number;
+            /** @description `trained`, `too_little_data`, `failed`. */
+            outcome: string | null;
+            /**
+             * Format: int64
+             * @description Размеченных прослушиваний для обучения сейчас и сколько нужно.
+             */
+            rows: number;
+            /** @description Обучение стоит в очереди или идёт. */
+            running: boolean;
+        };
+        /** @description Версия модели вкуса: правила (`rules-1`) или обученная сеть (`nn-…`). */
+        ModelVersionView: {
+            /** @description Собирает поток сейчас. */
+            active: boolean;
+            /**
+             * Format: double
+             * @description Средние по головам AUC и logloss на отложенной части: у сети и у правил. У правил — `null`.
+             */
+            auc: number | null;
+            /** Format: double */
+            baselineAuc: number | null;
+            /** Format: double */
+            baselineLogloss: number | null;
+            /** @description Точнее ли правил на отложенных данных — то есть включена ли при обучении. */
+            beatsRules: boolean | null;
+            /** Format: date-time */
+            createdAt: string;
+            heads: components["schemas"]["HeadMetrics"][];
+            /** Format: int64 */
+            holdoutRows: number | null;
+            /** Format: uuid */
+            id: string;
+            /** @description Сеть (`true`) или правила. */
+            learned: boolean;
+            /** Format: double */
+            logloss: number | null;
+            /** @description Почему не включена или выключена: «правила точнее», «новая версия». */
+            note: string | null;
+            /**
+             * Format: int64
+             * @description Обучаемых параметров.
+             */
+            params: number | null;
+            /**
+             * Format: int64
+             * @description Строк на обучение и на проверку.
+             */
+            trainRows: number | null;
+            version: string;
         };
         /** @description Переставить позицию: после другой или в начало (`afterItemId: null`). */
         MovePlaylistItem: {
@@ -2323,6 +3258,12 @@ export interface components {
             position: number;
             /** @description Позиции остальных треков пересчитаны: интерфейсу стоит перечитать плейлист. */
             rebalanced: boolean;
+        };
+        /** @description Закрепить на этом устройстве. `refId` — у всех, кроме `liked`. */
+        NewDeviceDownload: {
+            kind: components["schemas"]["DownloadKind"];
+            /** Format: uuid */
+            refId?: string | null;
         };
         NewDownloader: {
             /** @description Например «Mac Захара». */
@@ -2344,6 +3285,11 @@ export interface components {
         PasswordLogin: {
             password: string;
         };
+        /**
+         * @description Трек выбран, но файла на сервере ещё нет.
+         * @enum {string}
+         */
+        PendingStatus: "acquiring" | "waiting_for_downloader";
         /** @enum {string} */
         Permission: "play" | "library" | "admin" | "downloader";
         Ping: {
@@ -2351,6 +3297,12 @@ export interface components {
         };
         /** @enum {string} */
         Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android";
+        /** @description Что играет: альбом, плейлист, волна… */
+        PlayContext: {
+            id?: string | null;
+            title: string;
+            type: components["schemas"]["ContextType"];
+        };
         /** @description Одно прослушивание. */
         PlayEvent: {
             /** Format: uuid */
@@ -2387,6 +3339,40 @@ export interface components {
         };
         /** @enum {string} */
         PlaySource: "stream" | "offline";
+        /** @description Снимок состояния активного устройства. Очередь — окно: ближайшие треки и немного истории. */
+        PlaybackState: {
+            /**
+             * Format: date-time
+             * @description Когда снят снимок — время сервера (его ставит сервер при приёме).
+             */
+            at?: string | null;
+            context?: components["schemas"]["PlayContext"] | null;
+            current?: components["schemas"]["QueueItem"] | null;
+            /** Format: int32 */
+            durationMs?: number;
+            history?: components["schemas"]["QueueItem"][];
+            manual?: components["schemas"]["QueueItem"][];
+            muted?: boolean;
+            /** @description Форма волны текущего трека, 0…1 — для полосы прокрутки на пульте. */
+            peaks?: number[];
+            pending?: components["schemas"]["PendingStatus"] | null;
+            playing?: boolean;
+            /**
+             * Format: int32
+             * @description Позиция на момент `at`.
+             */
+            positionMs?: number;
+            transition?: components["schemas"]["TransitionMode"];
+            upcoming?: components["schemas"]["QueueItem"][];
+            /**
+             * Format: float
+             * @description 0…1
+             */
+            volume?: number;
+            wave?: components["schemas"]["WaveSettings"] | null;
+            /** Format: uuid */
+            waveSessionId?: string | null;
+        };
         PlaylistDetail: {
             items: components["schemas"]["PlaylistItem"][];
             playlist: components["schemas"]["PlaylistSummary"];
@@ -2433,6 +3419,19 @@ export interface components {
         Pong: {
             id: string | null;
         };
+        /** @description Элемент очереди: `uid` — id элемента у активного устройства (команды ссылаются на него). */
+        QueueItem: {
+            /** @description «Почему этот трек» у волны. */
+            reason?: string | null;
+            source: components["schemas"]["QueueSource"];
+            track: components["schemas"]["Track"];
+            uid: string;
+        };
+        /**
+         * @description Откуда элемент очереди.
+         * @enum {string}
+         */
+        QueueSource: "manual" | "context" | "wave";
         /** @description Подпись под названием трека: вид для иконки и готовый текст по-русски. */
         Reason: {
             kind: components["schemas"]["ReasonKind"];
@@ -2443,20 +3442,52 @@ export interface components {
          * @enum {string}
          */
         ReasonKind: "similar" | "session" | "seed" | "query" | "new_to_you" | "forgotten" | "favorite" | "often" | "new_release" | "popular" | "rare";
-        /** @description Раздел «Рекомендации». */
+        /** @description Слушатель в выборе раздела: лайки, прослушивания и граней вкуса. */
+        RecoListener: {
+            /** Format: int64 */
+            facets: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            likes: number;
+            name: string;
+            /** Format: int64 */
+            plays: number;
+        };
+        /** @description Раздел «Рекомендации»: вкус выбранного слушателя и общий индекс каталога. */
         RecoOverview: {
-            /** @description Грани вкуса, самые весомые первыми. */
+            /** @description Грани вкуса слушателя, самые весомые первыми. */
             facets: components["schemas"]["FacetView"][];
-            /** @description Последние показы, новые первыми. */
+            /** @description Последние показы слушателю, новые первыми. */
             impressions: components["schemas"]["ImpressionView"][];
+            /** @description Общий индекс каталога: один на всех слушателей. */
             index: components["schemas"]["IndexStats"];
+            /** @description Кого можно выбрать: тот, кто смотрит, и все, у кого есть лайки или прослушивания. */
+            listeners: components["schemas"]["RecoListener"][];
+            /** @description «Миксы дня» и «Открытия недели» слушателя. */
+            mixes: components["schemas"]["MixView"][];
             ml: components["schemas"]["MlStatus"];
             /** @description Версия, которая собирает поток: `rules-1`, пока своей модели нет. */
             modelVersion: string | null;
+            /** @description Версии сети вкуса с метриками на отложенных данных, новые первыми (и правила). */
+            models: components["schemas"]["ModelVersionView"][];
+            /** @description Заготовки волны слушателя по сочетаниям настроек. */
+            pools: components["schemas"]["WavePoolView"][];
+            /** @description Последние сессии волны и радио слушателя. */
+            sessions: components["schemas"]["WaveSessionView"][];
             settings: components["schemas"]["RecoSettings"];
+            /** @description Последнее обучение сети вкуса. */
+            training: components["schemas"]["ModelTraining"];
+            /** @description Чей вкус показан. */
+            user: components["schemas"]["RecoListener"];
         };
         RecoRun: {
             task: components["schemas"]["RecoTask"];
+            /**
+             * Format: uuid
+             * @description Для `taste`: только этот слушатель; без него — все.
+             */
+            userId?: string | null;
         };
         RecoRunResult: {
             /**
@@ -2527,7 +3558,7 @@ export interface components {
          * @description Что запустить сейчас, не дожидаясь расписания.
          * @enum {string}
          */
-        RecoTask: "scout" | "taste" | "analysis";
+        RecoTask: "scout" | "taste" | "analysis" | "model";
         /**
          * @description Тип релиза у Deezer.
          * @enum {string}
@@ -2554,12 +3585,135 @@ export interface components {
             reason?: string | null;
             workerId?: string | null;
         };
+        ReleaseUpload: {
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description Ключ файла в хранилище */
+            key: string;
+            /** @description Подписанная ссылка: `PUT` с телом файла */
+            url: string;
+        };
+        ReleaseUploadRequest: {
+            /** @description `aarch64`, `x86_64`, `i686`, `armv7` */
+            arch: string;
+            /** @description Имя файла обновления, например `DalyWave.app.tar.gz` или `DalyWave_0.2.0_x64-setup.exe` */
+            fileName: string;
+            /** @description `darwin`, `windows`, `linux` */
+            target: string;
+            /** @description SemVer, например `0.2.0` */
+            version: string;
+        };
         /** @description Дискография по типам релизов, новые первыми. */
         Releases: {
             albums: components["schemas"]["AlbumSummary"][];
             compilations: components["schemas"]["AlbumSummary"][];
             eps: components["schemas"]["AlbumSummary"][];
             singles: components["schemas"]["AlbumSummary"][];
+        };
+        /** @description Команда пульта. Поле `action`, параметры — рядом с ним. */
+        RemoteCommand: {
+            /** @enum {string} */
+            action: "play";
+        } | {
+            /** @enum {string} */
+            action: "pause";
+        } | {
+            /** @enum {string} */
+            action: "toggle";
+        } | {
+            /** @enum {string} */
+            action: "next";
+        } | {
+            /** @enum {string} */
+            action: "previous";
+        } | (components["schemas"]["RemoteSeek"] & {
+            /** @enum {string} */
+            action: "seek";
+        }) | (components["schemas"]["RemoteVolume"] & {
+            /** @enum {string} */
+            action: "setVolume";
+        }) | (components["schemas"]["RemoteMuted"] & {
+            /** @enum {string} */
+            action: "setMuted";
+        }) | (components["schemas"]["RemoteTransition"] & {
+            /** @enum {string} */
+            action: "setTransition";
+        }) | {
+            /** @enum {string} */
+            action: "dislike";
+        } | {
+            /** @enum {string} */
+            action: "notNow";
+        } | {
+            /** @enum {string} */
+            action: "moreLikeThis";
+        } | (components["schemas"]["RemotePlayTracks"] & {
+            /** @enum {string} */
+            action: "playTracks";
+        }) | (components["schemas"]["RemoteWave"] & {
+            /** @enum {string} */
+            action: "startWave";
+        }) | (components["schemas"]["RemoteWave"] & {
+            /** @enum {string} */
+            action: "setWave";
+        }) | (components["schemas"]["RemoteQueueItem"] & {
+            /** @enum {string} */
+            action: "jumpTo";
+        }) | (components["schemas"]["RemoteQueueItem"] & {
+            /** @enum {string} */
+            action: "remove";
+        }) | (components["schemas"]["RemoteTrack"] & {
+            /** @enum {string} */
+            action: "playNext";
+        }) | (components["schemas"]["RemoteTrack"] & {
+            /** @enum {string} */
+            action: "enqueue";
+        }) | {
+            /** @enum {string} */
+            action: "clearManual";
+        } | (components["schemas"]["RemoteMove"] & {
+            /** @enum {string} */
+            action: "moveManual";
+        });
+        RemoteMove: {
+            /** Format: int32 */
+            from: number;
+            /** Format: int32 */
+            to: number;
+        };
+        RemoteMuted: {
+            muted: boolean;
+        };
+        /** @description Играть список на устройстве: треки — по id (устройство загрузит их само). */
+        RemotePlayTracks: {
+            context: components["schemas"]["PlayContext"];
+            /** Format: int32 */
+            index?: number;
+            shuffle?: boolean;
+            trackIds: string[];
+        };
+        RemoteQueueItem: {
+            uid: string;
+        };
+        RemoteSeek: {
+            /** Format: int32 */
+            positionMs: number;
+        };
+        RemoteTrack: {
+            track: components["schemas"]["Track"];
+        };
+        RemoteTransition: {
+            mode: components["schemas"]["TransitionMode"];
+        };
+        RemoteVolume: {
+            /**
+             * Format: float
+             * @description 0…1
+             */
+            volume: number;
+        };
+        RemoteWave: {
+            settings?: components["schemas"]["WaveSettings"] | null;
         };
         /**
          * @description Скачать запись заново: по ссылке (YouTube, SoundCloud, Bandcamp…) или поиском, если ссылки нет.
@@ -2653,6 +3807,21 @@ export interface components {
         }) | (components["schemas"]["Resync"] & {
             /** @enum {string} */
             type: "resync";
+        }) | (components["schemas"]["ConnectDevices"] & {
+            /** @enum {string} */
+            type: "connect.devices";
+        }) | (components["schemas"]["ConnectState"] & {
+            /** @enum {string} */
+            type: "connect.state";
+        }) | (components["schemas"]["ConnectActive"] & {
+            /** @enum {string} */
+            type: "connect.active";
+        }) | (components["schemas"]["ConnectCommand"] & {
+            /** @enum {string} */
+            type: "connect.command";
+        }) | (components["schemas"]["ConnectAck"] & {
+            /** @enum {string} */
+            type: "connect.ack";
         });
         /** @description Серверный fetcher — второй исполнитель (`DALYWAVE_FETCHER_MODE` с `server`). */
         ServerFetcher: {
@@ -2720,7 +3889,7 @@ export interface components {
         Shelf: {
             /**
              * @description Постоянный id полки: `continue`, `daily-mixes`, `new-releases`, `discover-weekly`, `recent-likes`,
-             *     `forgotten-favorites`, `top-artists`.
+             *     `forgotten-favorites`, `top-artists`, `release-radar`.
              */
             id: string;
             items: components["schemas"]["ShelfItem"][];
@@ -2743,7 +3912,7 @@ export interface components {
             type: "playlist";
         });
         /** @enum {string} */
-        ShelfKind: "continue" | "new_releases" | "recent_likes" | "top_artists" | "daily_mixes" | "discover_weekly" | "forgotten_favorites";
+        ShelfKind: "continue" | "new_releases" | "recent_likes" | "top_artists" | "daily_mixes" | "discover_weekly" | "forgotten_favorites" | "release_radar";
         /** @description Поиск словами по звучанию: «грустный инди под дождь». */
         SoundSearch: {
             /**
@@ -2971,6 +4140,18 @@ export interface components {
             /** Format: int64 */
             rev: number;
         };
+        /** @description Трек набора волны этого устройства: любимое (`favorite`) или новое (`fresh`). */
+        SyncDeviceSetItem: {
+            /** Format: uuid */
+            deviceId: string;
+            kind: string;
+            /** Format: int64 */
+            rev: number;
+            /** Format: float */
+            score: number;
+            /** Format: uuid */
+            trackId: string;
+        };
         SyncDiscographyPayload: {
             /** Format: uuid */
             artistId: string;
@@ -2979,7 +4160,7 @@ export interface components {
          * @description Таблица локальной базы.
          * @enum {string}
          */
-        SyncEntity: "artists" | "albums" | "tracks" | "recordings" | "likedTracks" | "savedAlbums" | "followedArtists" | "blockedItems" | "playlists" | "playlistItems" | "deviceDownloads";
+        SyncEntity: "artists" | "albums" | "tracks" | "recordings" | "likedTracks" | "savedAlbums" | "followedArtists" | "blockedItems" | "playlists" | "playlistItems" | "deviceDownloads" | "deviceSets" | "trackFeatures";
         SyncFollowedArtist: {
             /** Format: uuid */
             artistId: string;
@@ -3005,6 +4186,8 @@ export interface components {
             /** @description Передать в `since` в следующий раз. */
             cursor: string;
             deviceDownloads: components["schemas"]["SyncDeviceDownload"][];
+            /** @description Только этого устройства (вход токеном приложения). */
+            deviceSets?: components["schemas"]["SyncDeviceSetItem"][];
             followedArtists: components["schemas"]["SyncFollowedArtist"][];
             /** @description Есть ещё изменения: запросить следующую страницу сразу. */
             hasMore: boolean;
@@ -3014,6 +4197,7 @@ export interface components {
             recordings: components["schemas"]["SyncRecording"][];
             savedAlbums: components["schemas"]["SyncSavedAlbum"][];
             tombstones: components["schemas"]["SyncTombstone"][];
+            trackFeatures?: components["schemas"]["SyncTrackFeatures"][];
             tracks: components["schemas"]["SyncTrack"][];
         };
         SyncPlaylist: {
@@ -3102,11 +4286,148 @@ export interface components {
             artistId: string;
             role: components["schemas"]["ArtistRole"];
         };
+        /** @description Признаки звучания записи из анализа: по ним волна подбирает треки без сети. */
+        SyncTrackFeatures: {
+            /** Format: float */
+            approachability: number | null;
+            /** Format: float */
+            bpm: number | null;
+            /** Format: float */
+            danceability: number | null;
+            /** Format: float */
+            energy: number | null;
+            keyCamelot: string | null;
+            language: string | null;
+            /** Format: float */
+            party: number | null;
+            /** Format: uuid */
+            recordingId: string;
+            /** Format: float */
+            relaxed: number | null;
+            /** Format: int64 */
+            rev: number;
+            /** Format: float */
+            valence: number | null;
+            /** Format: float */
+            voice: number | null;
+        };
+        /** @description «Меньше такого»: приглушённое направление звучания. Переживает ночной пересчёт граней. */
+        TasteDamper: {
+            /** Format: date-time */
+            createdAt: string;
+            /** @description До трёх треков, по которым понятно, о чём речь. */
+            examples: components["schemas"]["Track"][];
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /**
+             * Format: float
+             * @description Сила, 0..1: первое нажатие — 0,5, каждое следующее — сильнее, до 1.
+             */
+            strength: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description Грань вкуса глазами слушателя. */
+        TasteFacet: {
+            /** @description Главные артисты грани (до трёх). */
+            artists: components["schemas"]["ArtistSummary"][];
+            /**
+             * Format: float
+             * @description Насколько грань приглушена «меньше такого», 0..1.
+             */
+            damped: number;
+            /**
+             * Format: uuid
+             * @description «Меньше такого», которое её приглушает: отмена — `DELETE /api/taste/dampers/{id}`.
+             */
+            damperId: string | null;
+            /** @description Треки-примеры (до шести), самые характерные первыми. */
+            examples: components["schemas"]["Track"][];
+            /** Format: uuid */
+            id: string;
+            /** @description «Трэп · Lowborn, Mzlff» */
+            label: string;
+            /** @description Когда эту грань слушают заметно чаще остальных: `morning`, `day`, `evening`, `night`. */
+            peak: string | null;
+            /**
+             * Format: float
+             * @description Доля во вкусе, 0..1, с учётом «меньше такого»; сумма по граням — 1.
+             */
+            share: number;
+            /** Format: int32 */
+            tracks: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description Из чего волна знает вкус. */
+        TasteKnowledge: {
+            /**
+             * Format: int64
+             * @description Из лайкнутого и дослушанного разобрано по звучанию.
+             */
+            analyzed: number;
+            /** Format: int64 */
+            blocked: number;
+            /** Format: int64 */
+            dislikes: number;
+            /** Format: int64 */
+            likes: number;
+            /**
+             * Format: int64
+             * @description Треков, которые слушатель дослушивал.
+             */
+            listened: number;
+            /**
+             * Format: int64
+             * @description Реакций в волне (лайк, пропуск, «не сейчас»…) за 30 дней.
+             */
+            reactions: number;
+            /**
+             * Format: date-time
+             * @description Последний сброс вкуса: прослушивания до него грани не строят.
+             */
+            resetAt: string | null;
+            /**
+             * Format: date-time
+             * @description Когда грани собирались в последний раз.
+             */
+            updatedAt: string | null;
+        };
+        /** @description `GET /api/taste`. */
+        TasteOverview: {
+            dampers: components["schemas"]["TasteDamper"][];
+            facets: components["schemas"]["TasteFacet"][];
+            knows: components["schemas"]["TasteKnowledge"];
+            stats: components["schemas"]["ListeningStats"];
+        };
         TastePayload: {
             /** @description Собрать «Открытия недели» заново, даже если им нет недели. */
             refreshDiscovery?: boolean;
             /** Format: uuid */
             userId: string;
+        };
+        /** @description `POST /api/taste/reset`: подтверждение обязательно — сброс не отменить. */
+        TasteReset: {
+            confirm: boolean;
+        };
+        TopArtist: {
+            artist: components["schemas"]["ArtistSummary"];
+            /** Format: int64 */
+            minutes: number;
+            /** Format: int64 */
+            plays: number;
+        };
+        TopGenre: {
+            /** @description Жанр Deezer как есть («Rap/Hip Hop») — английский интерфейс показывает его. */
+            id: string;
+            /** @description По-русски («Рэп и хип-хоп»). */
+            name: string;
+            /**
+             * Format: float
+             * @description Доля времени прослушивания, 0..1.
+             */
+            share: number;
         };
         /** @description Трек каталога — позиция в альбоме. Одна запись (ISRC) может быть у нескольких треков. */
         Track: {
@@ -3135,6 +4456,46 @@ export interface components {
             trackPosition: number | null;
             /** @description Версия из названия у Deezer: «Slowed», «Remastered 2011». Пустая строка, если её нет. */
             version: string;
+        };
+        /** @description Ответ `GET /api/tracks/{id}/analysis`. Списки — пустые, а не `null`, если данных нет. */
+        TrackAnalysis: {
+            beatsMs: number[];
+            /** Format: float */
+            bpm: number | null;
+            /**
+             * Format: float
+             * @description Уверенность модели в сетке долей, 0…1.
+             */
+            bpmConfidence: number | null;
+            cues: components["schemas"]["AnalysisCues"] | null;
+            downbeatsMs: number[];
+            /** Format: int32 */
+            durationMs: number | null;
+            /** Format: float */
+            energy: number | null;
+            /** @description Энергия по секундам, 0…1000. */
+            energyCurve: number[];
+            /**
+             * Format: uuid
+             * @description Файл, к которому привязана сетка: не совпал с `fileId` потока — сетка от другого файла.
+             */
+            fileId: string | null;
+            /** Format: int32 */
+            introEndMs: number | null;
+            /** @description 8A, 11B … */
+            keyCamelot: string | null;
+            /** Format: float */
+            keyConfidence: number | null;
+            /** @description Начала фраз по 16 тактов (подмножество `phrasesMs`). */
+            majorPhrasesMs: number[];
+            /** Format: int32 */
+            outroStartMs: number | null;
+            /** @description Начала фраз по 8 тактов. */
+            phrasesMs: number[];
+            /** Format: uuid */
+            trackId: string;
+            /** @description Участки с вокалом: `[начало, конец]` в мс. */
+            vocalSegments: number[][];
         };
         TrackArtist: {
             /** Format: uuid */
@@ -3165,6 +4526,27 @@ export interface components {
             /** @enum {string} */
             status: "waiting_for_downloader";
         });
+        /**
+         * @description Режим переходов между треками.
+         * @enum {string}
+         */
+        TransitionMode: "gapless" | "smooth" | "smart" | "dj";
+        /**
+         * @description Ответ в формате tauri-plugin-updater. Имена полей задаёт плагин (`pub_date`), поэтому здесь
+         *     не camelCase.
+         */
+        UpdateManifest: {
+            /** @description Что нового */
+            notes?: string | null;
+            /** Format: date-time */
+            pub_date: string;
+            /** @description Содержимое `.sig` из сборки: плагин проверяет файл ключом из `tauri.conf.json` */
+            signature: string;
+            /** @description Подписанная ссылка на файл обновления, живёт 6 часов */
+            url: string;
+            /** @description SemVer новой версии */
+            version: string;
+        };
         /**
          * @description Куда положить файл: подписанная ссылка хранилища. Content-Type в подпись не входит —
          *     контейнер известен только после скачивания.
@@ -3246,6 +4628,24 @@ export interface components {
         WaveLanguage: "any" | "ru" | "foreign" | "none";
         /** @enum {string} */
         WaveMood: "any" | "energetic" | "happy" | "calm" | "sad";
+        /** @description Заготовки волны под одно сочетание настроек. */
+        WavePoolView: {
+            /** @description `занятие:характер:настроение:язык[:темп]`. */
+            combo: string;
+            /**
+             * Format: date-time
+             * @description Последний подбор.
+             */
+            pickedAt: string;
+            /**
+             * Format: int64
+             * @description Из них уже на сервере.
+             */
+            ready: number;
+            settings: components["schemas"]["WaveSettings"];
+            /** Format: int64 */
+            tracks: number;
+        };
         /**
          * @description Готова ли волна к запуску.
          * @enum {string}
@@ -3285,6 +4685,32 @@ export interface components {
             /** @description `preparing` — первые треки под настройки ещё скачиваются; `ready` — очередь можно играть. */
             state: components["schemas"]["WavePrepState"];
             /** @description Подпись: «Моя волна», «Радио: Lowborn», «По запросу «…»». */
+            title: string;
+        };
+        /** @description Сессия волны или радио слушателя и чем кончались её показы. */
+        WaveSessionView: {
+            /** Format: int64 */
+            completed: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            lastActiveAt: string;
+            /**
+             * Format: int64
+             * @description Исходы показов: лайки, дослушано, пропуски (с «не нравится»).
+             */
+            likes: number;
+            /**
+             * Format: int64
+             * @description Сколько треков выдано.
+             */
+            served: number;
+            settings: components["schemas"]["WaveSettings"];
+            /** Format: int64 */
+            skips: number;
+            /** Format: date-time */
+            startedAt: string;
+            /** @description «Моя волна», «Радио: Lowborn». */
             title: string;
         };
         /** @description Настройки волны; не переданные — по умолчанию: любое занятие, знакомое и новое, любое настроение и язык. */
@@ -3850,14 +5276,17 @@ export interface operations {
     };
     reco_overview: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Слушатель; по умолчанию — тот, кто смотрит. */
+                userId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Индекс и анализ, грани вкуса, последние показы, сервис анализа, настройки */
+            /** @description Вкус слушателя (грани, показы, сессии, заготовки, миксы) и общий индекс каталога: анализ, находки разведчика, сервис анализа, настройки */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3868,6 +5297,15 @@ export interface operations {
             };
             /** @description Нет права admin */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого слушателя */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3901,6 +5339,15 @@ export interface operations {
             };
             /** @description Неизвестная задача */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого слушателя */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4748,6 +6195,211 @@ export interface operations {
             };
         };
     };
+    devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Устройства (активное первым) и последний снимок с позицией на сейчас */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectOverview"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_downloads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Что закреплено на этом устройстве и сколько из этого на сервере */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDownloadList"];
+                };
+            };
+            /** @description Вход не токеном приложения */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    add_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewDeviceDownload"];
+            };
+        };
+        responses: {
+            /** @description Закреплено (повторный запрос возвращает то же); недостающее на сервере ставится на скачивание */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDownload"];
+                };
+            };
+            /** @description Нет refId или вход не токеном приложения */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого трека, альбома, плейлиста или артиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id закреплённого */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Откреплено (или уже не было) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Вход не токеном приложения */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    files: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileLinksRequest"];
+            };
+        };
+        responses: {
+            /** @description Подписанные ссылки на файлы (6 часов) с размером и хешем; чего нет на сервере — `pending`, оно ставится на скачивание */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileLinks"];
+                };
+            };
+            /** @description Больше 200 треков или вход не токеном приложения */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Хранилище не подписало ссылку */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    rebuild_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceSetRequest"];
+            };
+        };
+        responses: {
+            /** @description Набор волны устройства пересобран; строки придут синхронизацией (`deviceSets`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSet"];
+                };
+            };
+            /** @description Вход не токеном приложения */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     ingest: {
         parameters: {
             query?: never;
@@ -5054,6 +6706,375 @@ export interface operations {
                 content?: never;
             };
             /** @description Нет такой картинки */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_get_imports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Свои импорты, новые первыми (до 50) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportList"];
+                };
+            };
+        };
+    };
+    start_files: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FilesImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Импорт файлов открыт: дальше файлы по одному, затем finish */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+        };
+    };
+    import_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Список разобран, поиск треков идёт в фоне */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description В тексте не нашлось ни одного трека */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    upload_spotify: {
+        parameters: {
+            query?: {
+                /** @description Имя файла, как у человека на диске. */
+                name?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Архив `my_spotify_data.zip` (или один JSON из него), до 500 МБ */
+        requestBody: {
+            content: {
+                "application/zip": number[];
+            };
+        };
+        responses: {
+            /** @description Архив разобран, сопоставление идёт в фоне */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Не архив Spotify или он повреждён */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Импорт архива уже идёт */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 500 МБ */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    one_get_imports_id_: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id импорта */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Импорт: шаг, прогресс, итог */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Нет такого импорта */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id импорта */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Идущий импорт остановлен, законченный — убран из истории (медиатека не меняется) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого импорта */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    upload_file: {
+        parameters: {
+            query?: {
+                /** @description Имя файла, как у человека на диске. */
+                name?: string;
+            };
+            header?: never;
+            path: {
+                /** @description id импорта файлов */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Аудиофайл: FLAC, ALAC/M4A, MP3, Opus, Ogg, WAV, AIFF — до 1 ГБ */
+        requestBody: {
+            content: {
+                "application/octet-stream": number[];
+            };
+        };
+        responses: {
+            /** @description Файл принят и ждёт обработки */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportItem"];
+                };
+            };
+            /** @description Не аудиофайл или формат не поддерживается */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Импорт уже закрыт для новых файлов */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Файл больше 1 ГБ */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    finish_files: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id импорта файлов */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Файлы загружены; импорт закончится, когда все обработаются */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Нет такого импорта */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    items: {
+        parameters: {
+            query?: {
+                /** @description Только позиции в этом состоянии; без него — все. */
+                status?: components["schemas"]["ImportItemStatus"];
+                cursor?: string;
+                /** @description 1–200, по умолчанию 50. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description id импорта */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Позиции по порядку источника */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportItemPage"];
+                };
+            };
+            /** @description Нет такого импорта */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    fix_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id импорта */
+                id: string;
+                /** @description id позиции */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportItemFix"];
+            };
+        };
+        responses: {
+            /** @description Позиция исправлена; если импорт уже разложен — найденное сразу в медиатеке */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportItem"];
+                };
+            };
+            /** @description Не указан трек или он не подходит к позиции */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого импорта, позиции или трека */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5560,7 +7581,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    remove_delete_playlists_id_: {
         parameters: {
             query?: never;
             header?: never;
@@ -5810,6 +7831,99 @@ export interface operations {
             };
         };
     };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Выпуск зарегистрирован (та же версия — заменён): приложения получат его при следующей проверке */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppRelease"];
+                };
+            };
+            /** @description Неверные поля */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Токен выпусков не принят */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `not_uploaded` — файла ещё нет в хранилище */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Ссылка на загрузку файла обновления прямо в хранилище (`PUT`, час) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseUpload"];
+                };
+            };
+            /** @description Неизвестная платформа, не SemVer или плохое имя файла */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Токен выпусков не принят */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     search: {
         parameters: {
             query: {
@@ -5933,6 +8047,110 @@ export interface operations {
             };
         };
     };
+    overview_get_taste: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Грани вкуса с примерами, «меньше такого», прослушивания за месяц и из чего волна знает вкус */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TasteOverview"];
+                };
+            };
+        };
+    };
+    remove_damper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id приглушения */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description «Меньше такого» отменено (повтор безопасен) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    less: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id грани */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Грань приглушена: волна и миксы реже берут похожее, её доля во вкусе меньше. Повтор — сильнее (до полной силы) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TasteDamper"];
+                };
+            };
+            /** @description Нет такой грани у слушателя */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TasteReset"];
+            };
+        };
+        responses: {
+            /** @description Вкус сброшен: грани, «меньше такого», миксы и заготовки волны собираются заново по новым прослушиваниям. Медиатека и «не рекомендовать» остаются */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет подтверждения (`confirm: true`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     lookup_tracks: {
         parameters: {
             query?: never;
@@ -5988,6 +8206,51 @@ export interface operations {
                 };
             };
             /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    track_analysis: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description ETag прошлого ответа: не изменился — 304 */
+                "If-None-Match"?: string | null;
+            };
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Анализ полного файла записи: доли, фразы по 8 и 16 тактов, точки сведения. Кешируется на час (`private`), ETag меняется с анализом */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    /** @description Версия анализа */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackAnalysis"];
+                };
+            };
+            /** @description Анализ не изменился с переданного `If-None-Match` */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого трека (`not_found`) или полного анализа его записи ещё нет (`analysis_missing`: файл не скачан или не разобран) */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6106,7 +8369,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Платформа: `darwin`, `windows`, `linux`, `ios` */
+                /** @description Платформа: `darwin`, `windows`, `linux` */
                 target: string;
                 /** @description Архитектура: `aarch64`, `x86_64` */
                 arch: string;
@@ -6117,12 +8380,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Есть версия новее: формат tauri-plugin-updater */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateManifest"];
+                };
+            };
             /** @description Обновлений нет */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Версия — не SemVer */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
             };
         };
     };

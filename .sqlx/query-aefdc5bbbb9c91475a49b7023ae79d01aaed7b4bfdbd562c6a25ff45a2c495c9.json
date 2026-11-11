@@ -1,0 +1,177 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT i.id, u.name AS user_name, i.kind, i.title, i.status, i.total, i.matched,\n                  (SELECT count(*) FROM import_items x WHERE x.import_id = i.id AND x.status = 'unmatched') AS \"unmatched!\",\n                  i.phase, i.processed, i.error, i.stats, i.created_at, i.finished_at\n           FROM imports i JOIN users u ON u.id = i.user_id\n           ORDER BY i.created_at DESC\n           LIMIT 100",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "total",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "total"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "matched",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "matched"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "unmatched!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "phase",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "phase"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "processed",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "processed"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "error"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "stats",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "stats"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "finished_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "aefdc5bbbb9c91475a49b7023ae79d01aaed7b4bfdbd562c6a25ff45a2c495c9"
+}

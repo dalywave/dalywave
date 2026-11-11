@@ -23,6 +23,9 @@ pub enum AppError {
     PasswordDisabled,
     #[error("не найдено")]
     NotFound,
+    /// 404 со своим кодом: сущность есть, а нужной части у неё нет — приложение отличает это от «нет такого».
+    #[error("{message}")]
+    Missing { code: &'static str, message: String },
     #[error("{0}")]
     BadRequest(String),
     /// Код приложения неверен, истёк, уже использован или не сходится с PKCE.
@@ -63,6 +66,7 @@ impl AppError {
             Self::BadOrigin => (StatusCode::FORBIDDEN, "bad_origin"),
             Self::PasswordDisabled => (StatusCode::FORBIDDEN, "password_disabled"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
+            Self::Missing { code, .. } => (StatusCode::NOT_FOUND, code),
             Self::BadRequest(_) => (StatusCode::BAD_REQUEST, "bad_request"),
             Self::InvalidGrant(_) => (StatusCode::BAD_REQUEST, "invalid_grant"),
             Self::Conflict { code, .. } => (StatusCode::CONFLICT, code),

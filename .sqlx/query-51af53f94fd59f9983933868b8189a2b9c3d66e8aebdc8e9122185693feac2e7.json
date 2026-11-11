@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE imports SET phase = 'applying', updated_at = now() WHERE id = $1 AND phase = 'matching'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "51af53f94fd59f9983933868b8189a2b9c3d66e8aebdc8e9122185693feac2e7"
+}

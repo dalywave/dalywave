@@ -145,6 +145,22 @@ impl TextVector {
     }
 }
 
+/// Ответ `POST /v1/taste/train`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TasteTrained {
+    /// ONNX в base64: `features [N, D]` → `probs [N, 3]` (skip, complete, like).
+    pub onnx: String,
+    pub input_dim: usize,
+    pub params: i64,
+    pub epochs: i64,
+    /// `train`, `holdout`, `heads.{skip,complete,like}.{auc,logloss,baselineAuc,baselineLogloss,positives}`,
+    /// средние `auc`, `logloss`, `baselineAuc`, `baselineLogloss`.
+    pub metrics: Value,
+    #[serde(default)]
+    pub reduced: Value,
+}
+
 pub struct Ml {
     http: reqwest::Client,
     base: String,
@@ -217,6 +233,13 @@ impl Ml {
             Some(Duration::from_secs(20)),
         )
         .await
+    }
+
+    /// Обучение сети вкуса (`POST /v1/taste/train`): набор — base64 little-endian, ответ — ONNX и
+    /// метрики сети и правил на отложенной по времени части. Минуты на CPU сервиса — свой долгий срок.
+    pub async fn train_taste(&self, body: &Value) -> Result<TasteTrained, MlError> {
+        self.post("/v1/taste/train", body, Some(Duration::from_secs(30 * 60)))
+            .await
     }
 
     /// Ответ `/v1/healthz`: загружены ли модели, занят ли сервис.

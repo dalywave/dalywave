@@ -8,6 +8,7 @@ defineProps<{ items: MenuEntry[] }>()
 const emit = defineEmits<{ open: [target: EventTarget | null] }>()
 
 const sheet = useMenuSheet()
+const bridge = useBridge()
 const sheetOpen = ref(false)
 let pressed: EventTarget | null = null
 
@@ -22,6 +23,8 @@ function onPress(e: PointerEvent) {
 
 async function onOpenRequest(v: boolean) {
   if (!v) return
+  // Долгое нажатие открыло меню — отклик пальцу (iPhone)
+  bridge.haptic('medium')
   emit('open', pressed)
   await nextTick()
   sheetOpen.value = true

@@ -11,6 +11,8 @@ useShortcuts()
 
 // Живые события сервера: загрузки треков, изменения медиатеки с других устройств
 onMounted(() => bridge.live.connect())
+// Управление между устройствами: это окно — устройство в списке «Где играть»
+onMounted(() => useConnectStore().start())
 
 // Окно приложения: во весь экран «светофора» нет, без фокуса заголовок приглушён
 const win = reactive({ maximized: false, focused: true, fullscreen: false })
@@ -20,19 +22,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => offWin?.())
 
-// Обновление приложения: предложить поставить
-const toast = useToast()
-const { t } = useI18n()
-let offUpdate: (() => void) | null = null
-onMounted(() => {
-  offUpdate = bridge.updates.onAvailable(u => toast.show({
-    text: t('app.updateAvailable', { version: u.version }),
-    icon: 'ph:arrow-circle-up',
-    duration: 20000,
-    action: { label: t('app.updateInstall'), onClick: () => void bridge.updates.install().catch(() => toast.error(t('app.updateFailed'))) },
-  }))
-})
-onBeforeUnmount(() => offUpdate?.())
+// Обновление приложения качается в фоне само и ждёт «Перезапустить» в настройках («О приложении»)
+// и в трее — без всплывающих предложений: ни музыку, ни работу оно не прерывает
 
 const main = ref<HTMLElement | null>(null)
 const scrolled = ref(false)

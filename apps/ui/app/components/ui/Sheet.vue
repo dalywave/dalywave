@@ -24,6 +24,7 @@ const props = withDefaults(defineProps<{
 
 const open = defineModel<boolean>('open', { default: false })
 const ui = useUiStore()
+const bridge = useBridge()
 
 const frame = ref<HTMLElement | null>(null)
 const body = ref<HTMLElement | null>(null)
@@ -148,7 +149,7 @@ watch(inner, (el) => {
 onBeforeUnmount(() => resize?.disconnect())
 
 // ---------- Жест ----------
-let g: { id: number, x: number, y: number, from: number, lastY: number, lastT: number, v: number, axis: 'x' | 'y' | null, scroller: HTMLElement | null } | null = null
+let g: { id: number, x: number, y: number, from: number, lastY: number, lastT: number, v: number, axis: 'x' | 'y' | null, scroller: HTMLElement | null, past: boolean } | null = null
 let swallowClick = false
 
 function onDown(e: PointerEvent) {
@@ -161,7 +162,7 @@ function onDown(e: PointerEvent) {
     if (c) y.value = new DOMMatrixReadOnly(getComputedStyle(c).transform).m42
     animating.value = false
   }
-  g = { id: e.pointerId, x: e.clientX, y: e.clientY, from: y.value, lastY: e.clientY, lastT: e.timeStamp, v: 0, axis: null, scroller: target.closest<HTMLElement>('.uis__body') }
+  g = { id: e.pointerId, x: e.clientX, y: e.clientY, from: y.value, lastY: e.clientY, lastT: e.timeStamp, v: 0, axis: null, scroller: target.closest<HTMLElement>('.uis__body'), past: false }
   // Палец быстрее листа: первые движения могут прийти уже над фоном — слушаем окно
   listen(true)
 }
@@ -212,6 +213,12 @@ function onMove(e: PointerEvent) {
   d.lastT = e.timeStamp
   const raw = d.from + dy
   y.value = raw >= 0 ? raw : -rubber(-raw)
+  // iPhone: щелчок, когда жест перешёл порог закрытия (и когда вернулся обратно)
+  const past = y.value > (stops.value[0]! + closedY) / 2
+  if (past !== d.past) {
+    d.past = past
+    bridge.haptic('selection')
+  }
 }
 
 function onUp(e: PointerEvent) {
@@ -241,7 +248,10 @@ function onUp(e: PointerEvent) {
     open.value = false
     return
   }
-  level.value = stops.value.indexOf(best)
+  const to = stops.value.indexOf(best)
+  // Лист встал на другую ступень — щелчок, как у листов iOS
+  if (to !== level.value) bridge.haptic('selection')
+  level.value = to
   settle(best)
 }
 

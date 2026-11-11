@@ -1,5 +1,5 @@
 <script lang="ts">
-export type SearchType = 'all' | 'tracks' | 'artists' | 'albums' | 'playlists'
+export type SearchType = 'all' | 'tracks' | 'artists' | 'albums' | 'playlists' | 'sound'
 </script>
 
 <script setup lang="ts">
@@ -8,6 +8,17 @@ const type = defineModel<SearchType>('type', { required: true })
 const library = defineModel<boolean>('library', { required: true })
 const { t } = useI18n({ useScope: 'local' })
 const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
+
+// «По звучанию» — последний в ряду: выбранный, он не должен прятаться за краем узкого экрана
+const soundChip = ref<HTMLElement | null>(null)
+function revealSound() {
+  const chip = soundChip.value
+  const row = chip?.parentElement
+  if (type.value !== 'sound' || !chip || !row) return
+  row.scrollLeft = Math.max(0, chip.offsetLeft + chip.offsetWidth - row.clientWidth + 16)
+}
+onMounted(revealSound)
+watch(type, () => void nextTick(revealSound))
 </script>
 
 <template>
@@ -27,6 +38,12 @@ const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
       @click="type = x"
     >
       {{ t(`type.${x}`) }}
+    </button>
+    <span class="filters__sep" aria-hidden="true" />
+    <!-- Поиск словами по звучанию: «спокойный инструментал для работы» -->
+    <button ref="soundChip" type="button" class="fchip fchip--sound" :class="{ 'is-on': type === 'sound' }" :aria-pressed="type === 'sound'" @click="type = type === 'sound' ? 'all' : 'sound'">
+      <Icon name="ph:waveform" class="fchip__icon" />
+      {{ t('type.sound') }}
     </button>
   </div>
 </template>
@@ -62,6 +79,9 @@ const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
 /* «В медиатеке» — переключатель, а не выбор вида: обводка вместо заливки */
 .fchip--scope.is-on { background: transparent; color: var(--text-1); box-shadow: inset 0 0 0 1.5px var(--text-1); }
 .fchip__icon { font-size: 15px; }
+.fchip--sound { padding-left: 11px; }
+.fchip--sound .fchip__icon { color: var(--accent); }
+.fchip--sound.is-on .fchip__icon { color: inherit; }
 </style>
 
 <i18n lang="json">
@@ -69,12 +89,12 @@ const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
   "ru": {
     "label": "Фильтры",
     "library": "В медиатеке",
-    "type": { "all": "Всё", "tracks": "Треки", "artists": "Артисты", "albums": "Альбомы", "playlists": "Плейлисты" }
+    "type": { "all": "Всё", "tracks": "Треки", "artists": "Артисты", "albums": "Альбомы", "playlists": "Плейлисты", "sound": "По звучанию" }
   },
   "en": {
     "label": "Filters",
     "library": "In library",
-    "type": { "all": "All", "tracks": "Songs", "artists": "Artists", "albums": "Albums", "playlists": "Playlists" }
+    "type": { "all": "All", "tracks": "Songs", "artists": "Artists", "albums": "Albums", "playlists": "Playlists", "sound": "By sound" }
   }
 }
 </i18n>

@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT deezer_id, confidence, candidates,\n                  (deezer_id IS NOT NULL OR matched_at > now() - make_interval(days => $2::float8::int)) AS \"fresh!\"\n           FROM import_matches WHERE key = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "import_matches",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "confidence",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "import_matches",
+            "name": "confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "candidates",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "import_matches",
+            "name": "candidates"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "fresh!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "20427a48e8dd48c2bfae47fcd3d0721f20119061660536fedbdf58d2c80a7741"
+}

@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT f.id, f.user_id, u.name AS user_name, f.position, f.label, f.weight, f.tracks, f.context,\n                f.examples, f.updated_at\n         FROM taste_facets f JOIN users u ON u.id = f.user_id\n         WHERE f.user_id = $1\n         ORDER BY f.position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "user_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "position",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "label"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "weight",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "weight"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "tracks",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "tracks"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "context",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "context"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "examples",
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "examples"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4a4d3ad4e128a35b6c28fa5b799a1a778862c9c4f9bc2685f44330ee81c29631"
+}

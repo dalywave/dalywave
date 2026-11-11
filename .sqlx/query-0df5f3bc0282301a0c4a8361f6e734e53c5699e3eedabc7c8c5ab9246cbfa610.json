@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS \"id!\" FROM unnest($1::uuid[]) WITH ORDINALITY AS x(id, ord)\n           JOIN tracks t ON t.id = x.id\n           LEFT JOIN recordings r ON r.id = t.recording_id\n           WHERE r.audio_status IS DISTINCT FROM 'ready'\n             AND r.audio_status IS DISTINCT FROM 'unavailable'\n             AND r.audio_status IS DISTINCT FROM 'disputed'\n           ORDER BY x.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0df5f3bc0282301a0c4a8361f6e734e53c5699e3eedabc7c8c5ab9246cbfa610"
+}

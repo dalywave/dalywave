@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT artist, album AS \"album!\" FROM import_items\n         WHERE import_id = $1 AND status = 'pending' AND kind = 'track' AND album IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "import_items",
+            "name": "artist"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "album!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "import_items",
+            "name": "album"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "01e8ce60e219e2334e1d1173d4c97644ea194b0b0c446ae350938a33c53cf8bd"
+}

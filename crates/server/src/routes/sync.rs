@@ -15,9 +15,10 @@ use dalywave_protocol::{
     catalog::{ArtistRole, AudioStatus, RecordType},
     library::{BlockedKind, PlaylistKind},
     sync::{
-        SyncAlbum, SyncArtist, SyncBlockedItem, SyncDeviceDownload, SyncEntity, SyncFollowedArtist,
-        SyncLikedTrack, SyncPage, SyncPlaylist, SyncPlaylistItem, SyncQuery, SyncRecording,
-        SyncSavedAlbum, SyncTombstone, SyncTrack, SyncTrackArtist,
+        SyncAlbum, SyncArtist, SyncBlockedItem, SyncDeviceDownload, SyncDeviceSetItem, SyncEntity,
+        SyncFollowedArtist, SyncLikedTrack, SyncPage, SyncPlaylist, SyncPlaylistItem, SyncQuery,
+        SyncRecording, SyncSavedAlbum, SyncTombstone, SyncTrack, SyncTrackArtist,
+        SyncTrackFeatures,
     },
 };
 use serde_json::{Map, Value};
@@ -86,6 +87,8 @@ enum Change {
     Playlist(SyncPlaylist),
     Item(SyncPlaylistItem),
     Download(SyncDeviceDownload),
+    Set(SyncDeviceSetItem),
+    Features(SyncTrackFeatures),
     Tombstone(SyncTombstone),
 }
 
@@ -103,6 +106,8 @@ impl Change {
             Self::Playlist(r) => r.rev,
             Self::Item(r) => r.rev,
             Self::Download(r) => r.rev,
+            Self::Set(r) => r.rev,
+            Self::Features(r) => r.rev,
             Self::Tombstone(r) => r.rev,
         }
     }
@@ -245,6 +250,40 @@ impl From<RecordingRow> for SyncRecording {
     }
 }
 
+struct FeaturesRow {
+    recording_id: Uuid,
+    rev: i64,
+    energy: Option<f32>,
+    valence: Option<f32>,
+    danceability: Option<f32>,
+    bpm: Option<f32>,
+    key_camelot: Option<String>,
+    voice: Option<f32>,
+    language: Option<String>,
+    approachability: Option<f32>,
+    relaxed: Option<f32>,
+    party: Option<f32>,
+}
+
+impl From<FeaturesRow> for SyncTrackFeatures {
+    fn from(r: FeaturesRow) -> Self {
+        Self {
+            recording_id: r.recording_id,
+            rev: r.rev,
+            energy: r.energy,
+            valence: r.valence,
+            danceability: r.danceability,
+            bpm: r.bpm,
+            key_camelot: r.key_camelot,
+            voice: r.voice,
+            language: r.language,
+            approachability: r.approachability,
+            relaxed: r.relaxed,
+            party: r.party,
+        }
+    }
+}
+
 fn tombstone(
     rev: i64,
     table: &str,
@@ -259,6 +298,7 @@ fn tombstone(
         "playlists" => SyncEntity::Playlists,
         "playlist_items" => SyncEntity::PlaylistItems,
         "device_downloads" => SyncEntity::DeviceDownloads,
+        "device_sets" => SyncEntity::DeviceSets,
         "artists" => SyncEntity::Artists,
         "albums" => SyncEntity::Albums,
         "tracks" => SyncEntity::Tracks,
@@ -342,7 +382,7 @@ pub async fn sync(
         cur.next
     };
     let w = cur.watermark.to_string();
-    let changes = collect(&mut tx, user, &w, cur.after, limit + 1).await?;
+    let changes = collect(&mut tx, user, principal.device_id, &w, cur.after, limit + 1).await?;
     let mut changes = changes;
     changes.sort_by_key(Change::rev);
     let has_more = changes.len() > limit as usize;
@@ -377,6 +417,8 @@ pub async fn sync(
             Change::Playlist(r) => page.playlists.push(r),
             Change::Item(r) => page.playlist_items.push(r),
             Change::Download(r) => page.device_downloads.push(r),
+            Change::Set(r) => page.device_sets.push(r),
+            Change::Features(r) => page.track_features.push(r),
             Change::Tombstone(r) => page.tombstones.push(r),
         }
     }
@@ -389,6 +431,7 @@ pub async fn sync(
 async fn collect(
     conn: &mut PgConnection,
     user: Uuid,
+    device: Option<Uuid>,
     w: &str,
     after: i64,
     fetch: i64,
@@ -540,6 +583,50 @@ async fn collect(
             })
         }),
     );
+    // Набор волны — только этого устройства: у сайта его нет
+    if let Some(device) = device {
+        out.extend(
+            sqlx::query!(
+                "SELECT track_id, device_id, kind, score, rev FROM device_sets
+                 WHERE device_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
+                device,
+                w,
+                after,
+                fetch,
+            )
+            .fetch_all(&mut *conn)
+            .await?
+            .into_iter()
+            .map(|r| {
+                Change::Set(SyncDeviceSetItem {
+                    track_id: r.track_id,
+                    rev: r.rev,
+                    device_id: r.device_id,
+                    kind: r.kind,
+                    score: r.score,
+                })
+            }),
+        );
+    }
+    out.extend(
+        sqlx::query_as!(
+            FeaturesRow,
+            r#"SELECT recording_id, rev, energy, valence, danceability, bpm, key_camelot, voice, language,
+                      approachability, (moods ->> 'relaxed')::real AS relaxed, (moods ->> 'party')::real AS party
+               FROM track_analysis
+               WHERE recording_id IN (SELECT t.recording_id FROM tracks t WHERE t.id IN (SELECT user_track_ids($1)))
+                 AND txid >= $2::text::xid8 AND rev > $3
+               ORDER BY rev LIMIT $4"#,
+            user,
+            w,
+            after,
+            fetch,
+        )
+        .fetch_all(&mut *conn)
+        .await?
+        .into_iter()
+        .map(|r| Change::Features(r.into())),
+    );
     out.extend(
         sqlx::query!(
             "SELECT rev, table_name, row_key, deleted_at FROM tombstones
@@ -647,6 +734,7 @@ async fn add_dependencies(conn: &mut PgConnection, page: &mut SyncPage) -> Resul
                 .filter(|d| d.kind == "track")
                 .filter_map(|d| d.ref_id),
         )
+        .chain(page.device_sets.iter().map(|s| s.track_id))
         .collect();
     let mut album_ids: Vec<Uuid> = page
         .saved_albums
@@ -676,8 +764,12 @@ async fn add_dependencies(conn: &mut PgConnection, page: &mut SyncPage) -> Resul
                 .filter_map(|d| d.ref_id),
         )
         .collect();
-    if track_ids.is_empty() && album_ids.is_empty() && artist_ids.is_empty() {
-        return Ok(());
+    if track_ids.is_empty()
+        && album_ids.is_empty()
+        && artist_ids.is_empty()
+        && page.tracks.is_empty()
+    {
+        return add_features(conn, page).await;
     }
     // Сохранённый альбом приходит со всеми своими треками
     if !album_ids.is_empty() {
@@ -710,8 +802,13 @@ async fn add_dependencies(conn: &mut PgConnection, page: &mut SyncPage) -> Resul
         artist_ids.extend(t.artist_ids.iter().copied());
         recording_ids.extend(t.recording_id);
     }
-    // Записи уже отданных треков тоже нужны, если сами треки пришли без них
-    recording_ids.extend(page.tracks.iter().filter_map(|t| t.recording_id));
+    // Записи, альбомы и артисты уже отданных треков тоже нужны, если сами треки пришли без них
+    // (трек обновился в той же транзакции, что и лайк, — и пришёл изменением, а не зависимостью)
+    for t in &page.tracks {
+        recording_ids.extend(t.recording_id);
+        album_ids.extend(t.album_id);
+        artist_ids.extend(t.artists.iter().map(|a| a.artist_id));
+    }
     page.tracks.extend(tracks.into_iter().map(SyncTrack::from));
 
     let have: HashSet<Uuid> = page.albums.iter().map(|a| a.id).collect();
@@ -757,6 +854,35 @@ async fn add_dependencies(conn: &mut PgConnection, page: &mut SyncPage) -> Resul
     .await?;
     page.recordings
         .extend(recordings.into_iter().map(SyncRecording::from));
+    add_features(conn, page).await
+}
+
+/// Признаки звучания записей этой страницы: волна без сети подбирает по ним настроение и темп.
+async fn add_features(conn: &mut PgConnection, page: &mut SyncPage) -> Result<(), sqlx::Error> {
+    let have: HashSet<Uuid> = page.track_features.iter().map(|f| f.recording_id).collect();
+    let mut ids: Vec<Uuid> = page
+        .recordings
+        .iter()
+        .map(|r| r.id)
+        .chain(page.tracks.iter().filter_map(|t| t.recording_id))
+        .filter(|id| !have.contains(id))
+        .collect();
+    if ids.is_empty() {
+        return Ok(());
+    }
+    ids.sort();
+    ids.dedup();
+    let rows = sqlx::query_as!(
+        FeaturesRow,
+        r#"SELECT recording_id, rev, energy, valence, danceability, bpm, key_camelot, voice, language,
+                  approachability, (moods ->> 'relaxed')::real AS relaxed, (moods ->> 'party')::real AS party
+           FROM track_analysis WHERE recording_id = ANY($1)"#,
+        &ids,
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+    page.track_features
+        .extend(rows.into_iter().map(SyncTrackFeatures::from));
     Ok(())
 }
 

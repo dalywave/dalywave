@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM device_sets WHERE device_id = $1 AND NOT (track_id = ANY($2))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "21a6a75fc0d49a41de22d9236b6b1f67e4921225f72a182ac997295d8ba30f1a"
+}

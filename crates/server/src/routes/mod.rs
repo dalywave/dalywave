@@ -1,13 +1,17 @@
 pub mod acquisitions;
 pub mod admin;
 pub mod admin_catalog;
+pub mod analysis;
 pub mod auth;
 pub mod catalog;
+pub mod connect;
 pub mod events;
 pub mod fetcher;
 pub mod home;
 pub mod images;
+pub mod imports;
 pub mod library;
+pub mod offline;
 pub mod playlists;
 pub mod queue;
 pub mod reco;
@@ -15,6 +19,7 @@ pub mod sources;
 pub mod stream;
 pub mod sync;
 pub mod system;
+pub mod taste;
 pub mod updates;
 pub mod wave;
 pub mod ws;
@@ -56,7 +61,8 @@ async fn method_not_allowed() -> AppError {
 /// Разделы закрыты слоями: каталог — любой ролью (`require_access`), медиатека — правом library,
 /// события прослушивания, поток трека и волна — правом play, админка — admin. Человек без ролей получает
 /// 403 `no_access`, как требует экран «ждём доступа». Картинки открыты всем, WebSocket проверяет вход
-/// сам, `/api/fetcher/*` — только токен загрузчика `dwk_…` (право `downloader`).
+/// сам, `/api/fetcher/*` — только токен загрузчика `dwk_…` (право `downloader`), `/api/releases*` —
+/// только токен конвейера выпусков (`DALYWAVE_RELEASE_TOKEN`).
 pub fn router(state: AppState) -> Router {
     let admin = admin::routes()
         .merge(queue::routes())
@@ -71,11 +77,16 @@ pub fn router(state: AppState) -> Router {
     let library = library::routes()
         .merge(playlists::routes())
         .merge(home::routes())
+        .merge(taste::routes())
         .merge(sync::routes())
+        .merge(imports::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
     let play = events::routes()
         .merge(stream::routes())
+        .merge(analysis::routes())
         .merge(wave::routes())
+        .merge(connect::routes())
+        .merge(offline::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())

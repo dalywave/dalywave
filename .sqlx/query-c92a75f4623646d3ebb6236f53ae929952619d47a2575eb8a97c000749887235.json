@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT file_key AS \"key!\" FROM import_items\n           WHERE import_id = $1 AND file_key IS NOT NULL AND status <> 'matched'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "import_items",
+            "name": "file_key"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "c92a75f4623646d3ebb6236f53ae929952619d47a2575eb8a97c000749887235"
+}

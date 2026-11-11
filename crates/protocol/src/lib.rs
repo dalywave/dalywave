@@ -36,19 +36,24 @@ macro_rules! names {
 }
 
 pub mod admin;
+pub mod analysis;
 pub mod auth;
 pub mod catalog;
+pub mod connect;
 pub mod error;
 pub mod events;
 pub mod fetcher;
 pub mod home;
+pub mod imports;
 pub mod jobs;
 pub mod library;
+pub mod offline;
 pub mod realtime;
 pub mod reco;
 pub mod stream;
 pub mod sync;
 pub mod system;
+pub mod taste;
 pub mod wave;
 
 pub use error::{ErrorBody, ErrorInfo};

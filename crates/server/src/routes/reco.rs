@@ -1,20 +1,22 @@
-//! Раздел «Рекомендации» админки: индекс каталога и анализ звука, грани вкуса с примерами, последние
-//! показы с причинами, сервис анализа, настройки разведчика и запуск задач вне расписания.
+//! Раздел «Рекомендации» админки. Вкус — у каждого слушателя свой (`?userId=`, по умолчанию — тот, кто
+//! смотрит): грани с примерами, последние показы с исходами, сессии волны, заготовки, миксы. Индекс
+//! каталога общий: анализ звука, находки разведчика, сервис анализа, настройки и запуск задач вне расписания.
 //! Весь роутер закрыт правом admin (см. `routes::router`).
 
 use std::collections::HashMap;
 
 use axum::{
     Router,
-    extract::State,
+    extract::{Query, State},
     routing::{get, patch, post},
 };
 use dalywave_protocol::{
     ErrorBody,
     jobs::kind,
     reco::{
-        FacetView, ImpressionView, IndexStats, MlStatus, RecoOverview, RecoRun, RecoRunResult,
-        RecoSettings, RecoSettingsPatch, RecoTask, ScoutSourceStats,
+        FacetView, ImpressionView, IndexStats, MixView, MlStatus, RecoListener, RecoOverview,
+        RecoQuery, RecoRun, RecoRunResult, RecoSettings, RecoSettingsPatch, RecoTask,
+        ScoutSourceStats, WavePoolView, WaveSessionView,
     },
     wave::Reason,
 };
@@ -25,10 +27,10 @@ use crate::{
     audit,
     auth::Principal,
     catalog::views,
-    error::{AppResult, bad},
+    error::{AppError, AppResult, bad},
     extract::Json,
     jobs::{self, NewJob, lanes},
-    reco::{Settings, analysis, scout, taste},
+    reco::{Settings, analysis, model, scout, taste},
     state::AppState,
 };
 
@@ -39,26 +41,103 @@ pub fn routes() -> Router<AppState> {
         .route("/reco/run", post(run_reco))
 }
 
-/// Сколько примеров у грани и сколько последних показов.
+/// Сколько примеров у грани, последних показов и сессий волны.
 const EXAMPLES: usize = 5;
 const IMPRESSIONS: i64 = 50;
+const SESSIONS: i64 = 10;
 
 #[utoipa::path(
     get,
     path = "/api/admin/reco",
     tag = "admin",
     security(("session" = []), ("device" = [])),
+    params(RecoQuery),
     responses(
-        (status = 200, description = "Индекс и анализ, грани вкуса, последние показы, сервис анализа, настройки", body = RecoOverview),
+        (status = 200, description = "Вкус слушателя (грани, показы, сессии, заготовки, миксы) и общий индекс \
+                                      каталога: анализ, находки разведчика, сервис анализа, настройки", body = RecoOverview),
         (status = 403, description = "Нет права admin", body = ErrorBody),
+        (status = 404, description = "Нет такого слушателя", body = ErrorBody),
     ),
 )]
 pub async fn reco_overview(
     State(st): State<AppState>,
     principal: Principal,
+    Query(q): Query<RecoQuery>,
 ) -> AppResult<Json<RecoOverview>> {
-    let viewer = principal.user.id;
+    let user_id = q.user_id.unwrap_or(principal.user.id);
+    let listeners = listeners(&st, principal.user.id, user_id).await?;
+    let user = listeners
+        .iter()
+        .find(|l| l.id == user_id)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
     let settings = Settings::load(&st.db).await?;
+    let index = index_stats(&st, &settings).await?;
+    let model_version =
+        sqlx::query_scalar!("SELECT version FROM model_versions WHERE kind = 'taste' AND active")
+            .fetch_optional(&st.db)
+            .await?;
+    let ml = match st.ml.health().await {
+        Ok(health) => MlStatus {
+            url: st.ml.url().to_string(),
+            reachable: true,
+            health: Some(health),
+            error: None,
+        },
+        Err(e) => MlStatus {
+            url: st.ml.url().to_string(),
+            reachable: false,
+            health: None,
+            error: Some(e.to_string()),
+        },
+    };
+    Ok(Json(RecoOverview {
+        facets: facets(&st, user_id).await?,
+        impressions: impressions(&st, user_id).await?,
+        sessions: sessions(&st, user_id).await?,
+        pools: pools(&st, user_id).await?,
+        mixes: mixes(&st, user_id).await?,
+        user,
+        listeners,
+        index,
+        settings: settings.view(),
+        model_version,
+        ml,
+        models: model::versions(&st.db).await?,
+        training: model::training(&st.db).await?,
+    }))
+}
+
+/// Кого можно выбрать: тот, кто смотрит, выбранный и все, у кого есть лайки или прослушивания.
+async fn listeners(st: &AppState, viewer: Uuid, selected: Uuid) -> AppResult<Vec<RecoListener>> {
+    Ok(sqlx::query!(
+        r#"SELECT u.id, u.name,
+                  (SELECT count(*) FROM liked_tracks l WHERE l.user_id = u.id) AS "likes!",
+                  (SELECT count(*) FROM play_events p WHERE p.user_id = u.id) AS "plays!",
+                  (SELECT count(*) FROM taste_facets f WHERE f.user_id = u.id) AS "facets!"
+           FROM users u
+           WHERE u.id = $1 OR u.id = $2
+              OR (NOT u.disabled AND (EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = u.id)
+                                      OR EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = u.id)))
+           ORDER BY u.id = $1 DESC, u.name, u.id"#,
+        viewer,
+        selected,
+    )
+    .fetch_all(&st.db)
+    .await?
+    .into_iter()
+    .map(|r| RecoListener {
+        id: r.id,
+        name: r.name,
+        likes: r.likes,
+        plays: r.plays,
+        facets: r.facets,
+    })
+    .collect())
+}
+
+/// Общий индекс каталога: анализы, окрестность разведчика, очередь, находки по видам.
+async fn index_stats(st: &AppState, settings: &Settings) -> AppResult<IndexStats> {
     let s = sqlx::query!(
         r#"SELECT
               (SELECT count(*) FROM track_analysis WHERE source = 'preview') AS "size!",
@@ -92,29 +171,42 @@ pub async fn reco_overview(
         pending: r.pending,
     })
     .collect();
-    let model_version =
-        sqlx::query_scalar!("SELECT version FROM model_versions WHERE kind = 'taste' AND active")
-            .fetch_optional(&st.db)
-            .await?;
+    Ok(IndexStats {
+        size: s.size,
+        max_index: i64::from(settings.max_index),
+        full: s.full,
+        ready_without_analysis: s.ready_without,
+        by_source,
+        artists: s.artists,
+        seeds: s.seeds,
+        queued_full: s.queued_full,
+        queued_preview: s.queued_preview,
+        analyzed_24h: s.analyzed,
+        failed_24h: s.failed,
+    })
+}
 
-    let facet_rows = sqlx::query!(
+async fn facets(st: &AppState, user_id: Uuid) -> AppResult<Vec<FacetView>> {
+    let rows = sqlx::query!(
         "SELECT f.id, f.user_id, u.name AS user_name, f.position, f.label, f.weight, f.tracks, f.context,
                 f.examples, f.updated_at
          FROM taste_facets f JOIN users u ON u.id = f.user_id
-         ORDER BY u.name, f.user_id, f.position"
+         WHERE f.user_id = $1
+         ORDER BY f.position",
+        user_id,
     )
     .fetch_all(&st.db)
     .await?;
-    let example_ids: Vec<Uuid> = facet_rows
+    let ids: Vec<Uuid> = rows
         .iter()
         .flat_map(|f| f.examples.iter().take(EXAMPLES).copied())
         .collect();
-    let examples: HashMap<Uuid, _> = views::tracks(&st.db, &example_ids, viewer)
+    let examples: HashMap<Uuid, _> = views::tracks(&st.db, &ids, user_id)
         .await?
         .into_iter()
         .map(|t| (t.id, t))
         .collect();
-    let facets = facet_rows
+    Ok(rows
         .into_iter()
         .map(|f| FacetView {
             examples: f
@@ -133,25 +225,29 @@ pub async fn reco_overview(
             context: f.context,
             updated_at: f.updated_at,
         })
-        .collect();
+        .collect())
+}
 
+async fn impressions(st: &AppState, user_id: Uuid) -> AppResult<Vec<ImpressionView>> {
     let shown = sqlx::query!(
         "SELECT i.id, u.name AS user_name, i.surface, i.track_id, i.reason, i.score, i.outcome, i.wave_session_id,
                 i.shown_at
          FROM recommendation_impressions i JOIN users u ON u.id = i.user_id
-         ORDER BY i.id DESC
-         LIMIT $1",
+         WHERE i.user_id = $1
+         ORDER BY i.shown_at DESC, i.id DESC
+         LIMIT $2",
+        user_id,
         IMPRESSIONS,
     )
     .fetch_all(&st.db)
     .await?;
-    let shown_ids: Vec<Uuid> = shown.iter().map(|i| i.track_id).collect();
-    let tracks: HashMap<Uuid, _> = views::tracks(&st.db, &shown_ids, viewer)
+    let ids: Vec<Uuid> = shown.iter().map(|i| i.track_id).collect();
+    let tracks: HashMap<Uuid, _> = views::tracks(&st.db, &ids, user_id)
         .await?
         .into_iter()
         .map(|t| (t.id, t))
         .collect();
-    let impressions = shown
+    Ok(shown
         .into_iter()
         .filter_map(|i| {
             Some(ImpressionView {
@@ -168,42 +264,93 @@ pub async fn reco_overview(
                 shown_at: i.shown_at,
             })
         })
-        .collect();
+        .collect())
+}
 
-    let ml = match st.ml.health().await {
-        Ok(health) => MlStatus {
-            url: st.ml.url().to_string(),
-            reachable: true,
-            health: Some(health),
-            error: None,
-        },
-        Err(e) => MlStatus {
-            url: st.ml.url().to_string(),
-            reachable: false,
-            health: None,
-            error: Some(e.to_string()),
-        },
-    };
-    Ok(Json(RecoOverview {
-        index: IndexStats {
-            size: s.size,
-            max_index: i64::from(settings.max_index),
-            full: s.full,
-            ready_without_analysis: s.ready_without,
-            by_source,
-            artists: s.artists,
-            seeds: s.seeds,
-            queued_full: s.queued_full,
-            queued_preview: s.queued_preview,
-            analyzed_24h: s.analyzed,
-            failed_24h: s.failed,
-        },
-        settings: settings.view(),
-        model_version,
-        ml,
-        facets,
-        impressions,
-    }))
+async fn sessions(st: &AppState, user_id: Uuid) -> AppResult<Vec<WaveSessionView>> {
+    Ok(sqlx::query!(
+        r#"SELECT s.id, s.settings, s.state ->> 'title' AS title,
+                  COALESCE((s.state ->> 'step')::bigint, 0) AS "served!",
+                  count(i.id) FILTER (WHERE i.outcome IN ('like', 'more_like_this')) AS "likes!",
+                  count(i.id) FILTER (WHERE i.outcome = 'completed') AS "completed!",
+                  count(i.id) FILTER (WHERE i.outcome IN ('skip', 'dislike')) AS "skips!",
+                  s.started_at, s.last_active_at
+           FROM wave_sessions s
+           LEFT JOIN recommendation_impressions i ON i.wave_session_id = s.id
+           WHERE s.user_id = $1
+           GROUP BY s.id
+           ORDER BY s.last_active_at DESC, s.id DESC
+           LIMIT $2"#,
+        user_id,
+        SESSIONS,
+    )
+    .fetch_all(&st.db)
+    .await?
+    .into_iter()
+    .map(|r| WaveSessionView {
+        id: r.id,
+        title: r
+            .title
+            .filter(|t| !t.is_empty())
+            .unwrap_or_else(|| "Моя волна".into()),
+        settings: serde_json::from_value(r.settings).unwrap_or_default(),
+        served: r.served,
+        likes: r.likes,
+        completed: r.completed,
+        skips: r.skips,
+        started_at: r.started_at,
+        last_active_at: r.last_active_at,
+    })
+    .collect())
+}
+
+async fn pools(st: &AppState, user_id: Uuid) -> AppResult<Vec<WavePoolView>> {
+    Ok(sqlx::query!(
+        r#"SELECT p.combo, (array_agg(p.settings ORDER BY p.picked_at DESC))[1] AS "settings!",
+                  count(*) AS "tracks!",
+                  count(*) FILTER (WHERE r.audio_status = 'ready') AS "ready!",
+                  max(p.picked_at) AS "picked_at!"
+           FROM wave_pools p
+           JOIN tracks t ON t.id = p.track_id
+           LEFT JOIN recordings r ON r.id = t.recording_id
+           WHERE p.user_id = $1
+           GROUP BY p.combo
+           ORDER BY count(*) DESC, p.combo"#,
+        user_id,
+    )
+    .fetch_all(&st.db)
+    .await?
+    .into_iter()
+    .map(|r| WavePoolView {
+        combo: r.combo,
+        settings: serde_json::from_value(r.settings).unwrap_or_default(),
+        tracks: r.tracks,
+        ready: r.ready,
+        picked_at: r.picked_at,
+    })
+    .collect())
+}
+
+async fn mixes(st: &AppState, user_id: Uuid) -> AppResult<Vec<MixView>> {
+    Ok(sqlx::query!(
+        r#"SELECT p.id, p.title, p.rules ->> 'generator' AS "generator!", p.updated_at,
+                  (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS "tracks!"
+           FROM playlists p
+           WHERE p.user_id = $1 AND p.kind = 'mix' AND p.rules ->> 'generator' IS NOT NULL
+           ORDER BY p.rules ->> 'generator', (p.rules ->> 'slot')::int NULLS LAST, p.id"#,
+        user_id,
+    )
+    .fetch_all(&st.db)
+    .await?
+    .into_iter()
+    .map(|r| MixView {
+        id: r.id,
+        title: r.title,
+        generator: r.generator,
+        tracks: r.tracks,
+        updated_at: r.updated_at,
+    })
+    .collect())
 }
 
 #[utoipa::path(
@@ -289,6 +436,7 @@ pub async fn update_reco_settings(
     responses(
         (status = 200, description = "Задачи поставлены (уже стоящие в очереди не дублируются)", body = RecoRunResult),
         (status = 400, description = "Неизвестная задача", body = ErrorBody),
+        (status = 404, description = "Нет такого слушателя", body = ErrorBody),
     ),
 )]
 pub async fn run_reco(
@@ -309,13 +457,24 @@ pub async fn run_reco(
             i64::from(job.created)
         }
         RecoTask::Taste => {
-            let users = sqlx::query_scalar!(
-                "SELECT u.id FROM users u WHERE NOT u.disabled
-                   AND (EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = u.id)
-                        OR EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = u.id))"
-            )
-            .fetch_all(&st.db)
-            .await?;
+            let users = match body.user_id {
+                Some(user) => {
+                    sqlx::query_scalar!("SELECT id FROM users WHERE id = $1", user)
+                        .fetch_optional(&st.db)
+                        .await?
+                        .ok_or(AppError::NotFound)?;
+                    vec![user]
+                }
+                None => {
+                    sqlx::query_scalar!(
+                        "SELECT u.id FROM users u WHERE NOT u.disabled
+                           AND (EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = u.id)
+                                OR EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = u.id))"
+                    )
+                    .fetch_all(&st.db)
+                    .await?
+                }
+            };
             let mut conn = st.db.acquire().await?;
             let mut n = 0;
             for user in users {
@@ -324,13 +483,14 @@ pub async fn run_reco(
             n
         }
         RecoTask::Analysis => analysis::schedule_backfill(&st.db, 5000).await? as i64,
+        RecoTask::Model => i64::from(model::request(&st.db).await?),
     };
     audit::record(
         &st.db,
         Some(principal.user.id),
         audit::RECO_RUN,
         Some(body.task.as_str().to_string()),
-        json!({ "queued": queued }),
+        json!({ "queued": queued, "userId": body.user_id }),
     )
     .await?;
     Ok(Json(RecoRunResult { queued }))

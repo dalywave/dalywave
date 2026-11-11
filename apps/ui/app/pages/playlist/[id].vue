@@ -5,6 +5,7 @@ import type { MenuEntry } from '~/types/ui'
 const route = useRoute()
 const bridge = useBridge()
 const toast = useToast()
+const offline = useOfflineStore()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
@@ -27,6 +28,12 @@ const moreItems = computed<MenuEntry[]>(() => {
     { label: t('shuffle'), icon: 'ph:shuffle', onSelect: () => playPlaylist(p.id, { shuffle: true }) },
     { label: p.pinned ? t('unpin') : t('pin'), icon: 'ph:push-pin', onSelect: () => toast.show({ text: t('editSoon'), icon: 'ph:push-pin' }) },
     { label: t('edit'), icon: 'ph:pencil-simple', onSelect: () => toast.show({ text: t('editSoon'), icon: 'ph:pencil-simple' }) },
+    // Приложение: скачать плейлист на устройство
+    ...(offline.available
+      ? [offline.isPinned('playlist', p.id)
+          ? { label: tg('offline.remove'), icon: 'ph:x-circle', onSelect: () => offline.unpin('playlist', p.id, p.title) }
+          : { label: tg('offline.downloadAll'), icon: 'ph:arrow-circle-down', onSelect: () => offline.pin('playlist', p.id, p.title) }]
+      : []),
   ]
 })
 </script>
@@ -55,6 +62,7 @@ const moreItems = computed<MenuEntry[]>(() => {
             {{ playing ? tg('common.pause') : isContext('playlist', pl.id) ? t('resume') : tg('common.play') }}
           </UiButton>
           <UiButton size="lg" icon="ph:shuffle" :disabled="!tracks.length" @click="playPlaylist(pl.id, { shuffle: true })">{{ t('shuffle') }}</UiButton>
+          <MusicDownloadButton kind="playlist" :ref-id="pl.id" :title="pl.title" />
           <UiMenu :items="moreItems" align="start">
             <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />
           </UiMenu>

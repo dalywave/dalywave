@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO playback_state (user_id, active_connect_id, state, updated_at) VALUES ($1, $2, $3, now())\n         ON CONFLICT (user_id) DO UPDATE SET active_connect_id = EXCLUDED.active_connect_id,\n             state = EXCLUDED.state, updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dc2fec96e267bb311544e7f7ef0b1fa650dbcb5c8f2b1d44745a34122785f1aa"
+}

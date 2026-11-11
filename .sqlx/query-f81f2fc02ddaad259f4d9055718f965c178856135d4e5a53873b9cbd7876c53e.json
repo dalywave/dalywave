@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO followed_artists (user_id, artist_id, download_policy, notify)\n             SELECT $1, a, $3, true FROM unnest($2::uuid[]) AS a\n             ON CONFLICT (user_id, artist_id) DO NOTHING\n             RETURNING artist_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "artist_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f81f2fc02ddaad259f4d9055718f965c178856135d4e5a53873b9cbd7876c53e"
+}

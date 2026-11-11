@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO import_matches (key, kind, deezer_id, confidence, candidates, manual)\n         VALUES ($1, $2, $3, $4, $5, $6)\n         ON CONFLICT (key) DO UPDATE SET\n            deezer_id = EXCLUDED.deezer_id, confidence = EXCLUDED.confidence, candidates = EXCLUDED.candidates,\n            manual = EXCLUDED.manual, matched_at = now()\n         WHERE NOT import_matches.manual OR EXCLUDED.manual",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8",
+        "Float4",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "16f3cd16a0d5d61aabbd4a02f0f410053b327860b9fcbca54b1011182146a9ed"
+}

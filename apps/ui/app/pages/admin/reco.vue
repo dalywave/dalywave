@@ -1,17 +1,37 @@
 <script setup lang="ts">
-import type { FacetView, RecoOverview, RecoSettingsPatch, RecoTask } from '~/api/types'
+import type { FacetView, RecoListener, RecoOverview, RecoSettingsPatch, RecoTask } from '~/api/types'
 
-// Рекомендации: размер индекса каталога и доля проанализированного, находки разведчика, грани вкуса,
-// последние показы с причинами, сервис анализа и настройки разведчика ползунками
+// Рекомендации. Вкус у каждого слушателя свой — выбор слушателя сверху (по умолчанию — свой): грани,
+// последние показы с исходами, сессии волны, заготовки, миксы. Индекс каталога общий для всех — отдельным
+// разделом: размер и анализ, находки разведчика, его настройки, сеть вкуса (версии с метриками, «Обучить»),
+// сервис анализа
 definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
+const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
 
-const { data, state, load } = useLoad<RecoOverview>(() => bridge.admin.reco())
+const userId = ref<string>(typeof route.query.user === 'string' ? route.query.user : '')
+const { data, state, load } = useLoad<RecoOverview>(() => bridge.admin.reco(userId.value || null), () => userId.value)
+// Список слушателей не пропадает, пока грузится выбранный
+const listeners = ref<RecoListener[]>([])
+watch(data, (d) => {
+  if (d) listeners.value = d.listeners
+})
+const viewerId = computed(() => listeners.value[0]?.id ?? null)
+const selected = computed({
+  get: () => userId.value || data.value?.user.id || viewerId.value || '',
+  set: (v: string) => {
+    userId.value = v === viewerId.value ? '' : v
+    void router.replace({ query: { ...route.query, user: userId.value || undefined } })
+  },
+})
+const user = computed(() => data.value?.user)
+
 const ix = computed(() => data.value?.index)
 const n = (v: number) => formatNumber(v, lang.value)
 const analysedShare = computed(() => {
@@ -20,8 +40,12 @@ const analysedShare = computed(() => {
   const all = i.full + i.readyWithoutAnalysis
   return all ? Math.round((i.full / all) * 100) : null
 })
+const poolTotals = computed(() => {
+  const pools = data.value?.pools ?? []
+  return { ready: pools.reduce((s, p) => s + p.ready, 0), all: pools.reduce((s, p) => s + p.tracks, 0) }
+})
 
-// ---------- Настройки ----------
+// ---------- Настройки разведчика ----------
 
 const form = reactive({ tracksPerDay: 3000, maxIndex: 200000, maxHops: 2, hopDecay: 0.5 })
 watch(() => data.value?.settings, (s) => {
@@ -60,7 +84,8 @@ const running = ref<RecoTask | null>(null)
 async function run(task: RecoTask) {
   running.value = task
   try {
-    const r = await bridge.admin.runReco(task)
+    // Вкус — только выбранного слушателя; разведка и анализ — общие
+    const r = await bridge.admin.runReco(task, task === 'taste' ? user.value?.id : null)
     toast.show({ text: r.queued ? t('run.queued', { n: r.queued }) : t('run.nothing'), icon: 'ph:play-circle' })
     await load()
   }
@@ -72,19 +97,32 @@ async function run(task: RecoTask) {
   }
 }
 
-// ---------- Грани и показы ----------
+// ---------- Вкус слушателя ----------
 
-const byUser = computed(() => {
-  const groups = new Map<string, { name: string, facets: FacetView[] }>()
-  for (const f of data.value?.facets ?? []) {
-    const g = groups.get(f.userId) ?? { name: f.userName, facets: [] }
-    g.facets.push(f)
-    groups.set(f.userId, g)
-  }
-  return [...groups.values()]
-})
+const facets = computed<FacetView[]>(() => data.value?.facets ?? [])
 const OUTCOME_TONE: Record<string, string> = { like: 'ap-ok', completed: 'ap-ok', more_like_this: 'ap-ok', skip: 'ap-warn', not_now: 'ap-warn', dislike: 'ap-bad' }
 const outcome = (o: string | null) => (o ? t(`outcome.${o}`) : '—')
+// Настройки из API — с необязательными полями: не переданное — по умолчанию
+const summary = (s: RecoOverview['sessions'][number]['settings']) => waveSummary({
+  activity: s.activity ?? 'any',
+  character: s.character ?? 'mix',
+  mood: s.mood ?? 'any',
+  language: s.language ?? 'any',
+}, lang.value === 'en' ? 'en' : 'ru')
+// ---------- Сеть вкуса ----------
+
+const models = computed(() => data.value?.models ?? [])
+const training = computed(() => data.value?.training)
+const metric = (v: number | null | undefined) => (v == null ? '—' : v.toFixed(3).replace('.', lang.value === 'en' ? '.' : ','))
+const dataShare = computed(() => {
+  const tr = training.value
+  return tr && tr.minRows ? Math.min(1, tr.rows / tr.minRows) : 0
+})
+function modelState(m: RecoOverview['models'][number]) {
+  if (m.active) return { text: t('nn.state.active'), tone: 'ap-ok' }
+  if (!m.learned) return { text: t('nn.state.rulesOff'), tone: 'ap-muted' }
+  return m.beatsRules ? { text: t('nn.state.replaced'), tone: 'ap-muted' } : { text: t('nn.state.worse'), tone: 'ap-warn' }
+}
 const ml = computed(() => data.value?.ml)
 const mlVersion = computed(() => (ml.value?.health as { version?: string } | null)?.version ?? null)
 const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } | null)?.modelsLoaded)
@@ -94,11 +132,106 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   <div class="ap">
     <header class="ap-head">
       <h1 class="ap-title">{{ t('title') }}</h1>
-      <span v-if="data?.modelVersion" class="rc__model">{{ t('model', { v: data.modelVersion }) }}</span>
+      <div class="ap-head__side">
+        <span v-if="data?.modelVersion" class="rc__model">{{ t('model', { v: data.modelVersion }) }}</span>
+        <label v-if="listeners.length" class="rc__who">
+          <span class="rc__who-label">{{ t('who') }}</span>
+          <select v-model="selected" class="ap-input ap-select" :aria-label="t('who')">
+            <option v-for="l in listeners" :key="l.id" :value="l.id">{{ l.id === viewerId ? t('me', { name: l.name }) : l.name }}</option>
+          </select>
+        </label>
+      </div>
     </header>
 
-    <AdminState :loading="state === 'loading'" :error="state === 'error'" :rows="6" @retry="load">
-      <template v-if="data && ix">
+    <AdminState :loading="state === 'loading'" :error="state === 'error' || state === 'missing'" :rows="6" @retry="load">
+      <template v-if="data && ix && user">
+        <!-- Вкус выбранного слушателя -->
+        <header class="rc__group">
+          <span class="rc__eyebrow">{{ t('user.eyebrow') }}</span>
+          <h2 class="rc__group-title">{{ user.name }}</h2>
+          <p class="ap-hint">{{ t('user.hint') }}</p>
+        </header>
+
+        <div class="ap-stats" style="--n: 4">
+          <div class="ap-stat"><span class="ap-stat__value">{{ n(user.likes) }}</span><span class="ap-stat__label">{{ t('ustats.likes') }}</span></div>
+          <div class="ap-stat"><span class="ap-stat__value">{{ n(user.plays) }}</span><span class="ap-stat__label">{{ t('ustats.plays') }}</span></div>
+          <div class="ap-stat"><span class="ap-stat__value">{{ n(user.facets) }}</span><span class="ap-stat__label">{{ t('ustats.facets') }}</span></div>
+          <div class="ap-stat">
+            <span class="ap-stat__value">{{ n(poolTotals.ready) }}</span>
+            <span class="ap-stat__label">{{ t('ustats.pools') }}</span>
+            <span class="ap-stat__extra">{{ t('stats.of', { n: n(poolTotals.all) }) }}</span>
+          </div>
+        </div>
+
+        <AdminSection :title="t('facets.title')" :hint="t('facets.hint')">
+          <template #tools>
+            <UiButton size="sm" icon="ph:sparkle" :loading="running === 'taste'" @click="run('taste')">{{ t('run.taste') }}</UiButton>
+          </template>
+          <p v-if="!facets.length" class="ap-hint">{{ t('facets.empty') }}</p>
+          <div v-else class="ap-table rc__facets">
+            <div v-for="f in facets" :key="f.id" class="ap-tr">
+              <span class="ap-cell"><b>{{ f.label }}</b><small>{{ f.examples.slice(0, 3).map(x => `${x.title} — ${artistNames(x.artists)}`).join(' · ') }}</small></span>
+              <span class="rc__weight"><i :style="{ width: `${f.weight * 100}%` }" /></span>
+              <span class="ap-num">{{ Math.round(f.weight * 100) }}%</span>
+              <span class="ap-num ap-muted">{{ formatCount(f.tracks, 'track', lang) }}</span>
+            </div>
+          </div>
+        </AdminSection>
+
+        <AdminSection :title="t('shown.title')" :hint="t('shown.hint')">
+          <p v-if="!data.impressions.length" class="ap-hint">{{ t('shown.empty') }}</p>
+          <div v-else class="ap-table rc__shown">
+            <div v-for="i in data.impressions.slice(0, 15)" :key="i.id" class="ap-tr">
+              <span class="ap-muted tnum ap-hide-phone">{{ formatDateTime(i.shownAt, lang) }}</span>
+              <span class="ap-cell"><b>{{ i.track.title }}</b><small>{{ artistNames(i.track.artists) }}</small></span>
+              <span class="ap-cell ap-hide-phone"><b class="rc__reason">{{ i.reason?.text ?? '—' }}</b><small>{{ t(`surface.${i.surface}`) }}</small></span>
+              <span class="ap-num" :class="OUTCOME_TONE[i.outcome ?? '']">{{ outcome(i.outcome) }}</span>
+            </div>
+          </div>
+        </AdminSection>
+
+        <div class="ap-cols">
+          <AdminSection :title="t('sessions.title')" :hint="t('sessions.hint')">
+            <p v-if="!data.sessions.length" class="ap-hint">{{ t('sessions.empty') }}</p>
+            <div v-else class="ap-table rc__sessions">
+              <div v-for="s in data.sessions" :key="s.id" class="ap-tr">
+                <span class="ap-cell"><b>{{ s.title }}</b><small>{{ summary(s.settings) }}</small></span>
+                <span class="ap-cell rc__end"><b class="tnum">{{ formatCount(s.served, 'track', lang) }}</b><small class="tnum ap-hide-phone">{{ t('sessions.outcomes', { l: s.likes, c: s.completed, s: s.skips }) }}</small></span>
+                <span class="ap-num ap-muted ap-hide-phone">{{ formatRelative(s.lastActiveAt, lang) }}</span>
+              </div>
+            </div>
+          </AdminSection>
+
+          <AdminSection :title="t('pools.title')" :hint="t('pools.hint')">
+            <p v-if="!data.pools.length" class="ap-hint">{{ t('pools.empty') }}</p>
+            <div v-else class="ap-table rc__pools">
+              <div v-for="p in data.pools" :key="p.combo" class="ap-tr">
+                <span class="ap-cell"><b>{{ summary(p.settings) }}</b><small class="ap-mono">{{ p.combo }}</small></span>
+                <span class="rc__weight" :title="t('pools.ready', { r: p.ready, n: p.tracks })"><i :style="{ width: `${p.tracks ? (p.ready / p.tracks) * 100 : 0}%` }" /></span>
+                <span class="ap-num tnum">{{ p.ready }}/{{ p.tracks }}</span>
+              </div>
+            </div>
+          </AdminSection>
+        </div>
+
+        <AdminSection :title="t('mixes.title')" :hint="t('mixes.hint')">
+          <p v-if="!data.mixes.length" class="ap-hint">{{ t('mixes.empty') }}</p>
+          <div v-else class="ap-table rc__mixes">
+            <div v-for="m in data.mixes" :key="m.id" class="ap-tr">
+              <span class="ap-cell"><b>{{ m.title }}</b><small>{{ t(`mixes.kind.${m.generator}`) }}</small></span>
+              <span class="ap-num tnum">{{ formatCount(m.tracks, 'track', lang) }}</span>
+              <span class="ap-num ap-muted ap-hide-phone">{{ formatRelative(m.updatedAt, lang) }}</span>
+            </div>
+          </div>
+        </AdminSection>
+
+        <!-- Общий индекс каталога: один на всех слушателей -->
+        <header class="rc__group rc__group--shared">
+          <span class="rc__eyebrow">{{ t('shared.eyebrow') }}</span>
+          <h2 class="rc__group-title">{{ t('shared.title') }}</h2>
+          <p class="ap-hint">{{ t('shared.hint') }}</p>
+        </header>
+
         <div class="ap-stats" style="--n: 5">
           <div class="ap-stat"><span class="ap-stat__value">{{ n(ix.size) }}</span><span class="ap-stat__label">{{ t('stats.index') }}</span><span class="ap-stat__extra">{{ t('stats.of', { n: n(ix.maxIndex) }) }}</span></div>
           <div class="ap-stat"><span class="ap-stat__value">{{ analysedShare != null ? `${analysedShare}%` : '—' }}</span><span class="ap-stat__label">{{ t('stats.analysed') }}</span><span class="ap-stat__extra">{{ t('stats.files', { n: n(ix.full) }) }}</span></div>
@@ -152,34 +285,38 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
             <div class="rc__run">
               <UiButton size="sm" icon="ph:compass" :loading="running === 'scout'" @click="run('scout')">{{ t('run.scout') }}</UiButton>
               <UiButton size="sm" icon="ph:waveform" :loading="running === 'analysis'" @click="run('analysis')">{{ t('run.analysis') }}</UiButton>
-              <UiButton size="sm" icon="ph:sparkle" :loading="running === 'taste'" @click="run('taste')">{{ t('run.taste') }}</UiButton>
             </div>
           </AdminSection>
         </div>
 
-        <AdminSection :title="t('facets.title')" :hint="t('facets.hint')">
-          <p v-if="!byUser.length" class="ap-hint">{{ t('facets.empty') }}</p>
-          <div v-for="g in byUser" :key="g.name" class="rc__user">
-            <h3 v-if="byUser.length > 1" class="rc__uname">{{ g.name }}</h3>
-            <div class="ap-table rc__facets">
-              <div v-for="f in g.facets" :key="f.id" class="ap-tr">
-                <span class="ap-cell"><b>{{ f.label }}</b><small>{{ f.examples.slice(0, 3).map(x => `${x.title} — ${artistNames(x.artists)}`).join(' · ') }}</small></span>
-                <span class="rc__weight"><i :style="{ width: `${f.weight * 100}%` }" /></span>
-                <span class="ap-num">{{ Math.round(f.weight * 100) }}%</span>
-                <span class="ap-num ap-muted">{{ formatCount(f.tracks, 'track', lang) }}</span>
-              </div>
+        <AdminSection :title="t('nn.title')" :hint="t('nn.hint')">
+          <template #tools>
+            <UiButton size="sm" icon="ph:brain" :loading="running === 'model' || training?.running" :disabled="training?.running" @click="run('model')">{{ training?.running ? t('nn.training') : t('run.model') }}</UiButton>
+          </template>
+          <div v-if="training" class="rc__nn-status">
+            <div class="rc__nn-line">
+              <span class="rc__nn-label">{{ t('nn.data') }}</span>
+              <span class="rc__weight rc__nn-meter"><i :style="{ width: `${dataShare * 100}%` }" /></span>
+              <span class="tnum rc__nn-count">{{ training.rows >= training.minRows ? t('nn.enough', { n: n(training.rows) }) : t('nn.of', { n: n(training.rows), m: n(training.minRows) }) }}</span>
             </div>
+            <p v-if="training.lastRunAt" class="ap-hint">
+              <span :class="training.outcome === 'failed' ? 'ap-bad' : ''">{{ training.message ?? t(`nn.outcome.${training.outcome ?? 'none'}`) }}</span>
+              · {{ formatRelative(training.lastRunAt, lang) }}
+            </p>
+            <p v-else class="ap-hint">{{ t('nn.never') }}</p>
           </div>
-        </AdminSection>
-
-        <AdminSection :title="t('shown.title')" :hint="t('shown.hint')">
-          <p v-if="!data.impressions.length" class="ap-hint">{{ t('shown.empty') }}</p>
-          <div v-else class="ap-table rc__shown">
-            <div v-for="i in data.impressions.slice(0, 30)" :key="i.id" class="ap-tr">
-              <span class="ap-muted tnum ap-hide-phone">{{ formatDateTime(i.shownAt, lang) }}</span>
-              <span class="ap-cell"><b>{{ i.track.title }}</b><small>{{ artistNames(i.track.artists) }}</small></span>
-              <span class="ap-cell ap-hide-phone"><b class="rc__reason">{{ i.reason?.text ?? '—' }}</b><small>{{ t(`surface.${i.surface}`) }}</small></span>
-              <span class="ap-num" :class="OUTCOME_TONE[i.outcome ?? '']">{{ outcome(i.outcome) }}</span>
+          <div class="ap-table rc__nn">
+            <div class="ap-tr ap-tr--head">
+              <span>{{ t('nn.version') }}</span>
+              <span class="ap-num">{{ t('nn.auc') }}</span>
+              <span class="ap-num ap-hide-phone">{{ t('nn.logloss') }}</span>
+              <span class="ap-num">{{ t('nn.state.title') }}</span>
+            </div>
+            <div v-for="m in models" :key="m.id" class="ap-tr">
+              <span class="ap-cell"><b class="ap-mono">{{ m.version }}</b><small>{{ m.learned ? (m.note ?? formatRelative(m.createdAt, lang)) : t('nn.rules') }}</small></span>
+              <span class="ap-cell rc__end"><b class="tnum">{{ metric(m.auc) }}</b><small v-if="m.learned" class="tnum">{{ t('nn.vs', { v: metric(m.baselineAuc) }) }}</small></span>
+              <span class="ap-cell rc__end ap-hide-phone"><b class="tnum">{{ metric(m.logloss) }}</b><small v-if="m.learned" class="tnum">{{ t('nn.vs', { v: metric(m.baselineLogloss) }) }}</small></span>
+              <span class="ap-num" :class="modelState(m).tone">{{ modelState(m).text }}</span>
             </div>
           </div>
         </AdminSection>
@@ -200,32 +337,58 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
 
 <style scoped>
 .rc__model { font-size: var(--fs-caption); font-weight: 600; color: var(--text-2); }
+.rc__who { display: flex; align-items: center; gap: 8px; }
+.rc__who-label { font-size: var(--fs-small); color: var(--text-3); }
+.rc__who .ap-select { min-width: 200px; max-width: 280px; text-overflow: ellipsis; }
+.rc__group { display: flex; flex-direction: column; gap: 4px; margin-bottom: -16px; }
+.rc__group--shared { padding-top: 32px; border-top: 1px solid var(--hair); }
+.rc__eyebrow { font-size: 11px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
+.rc__group-title { margin: 0; overflow: hidden; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); text-overflow: ellipsis; white-space: nowrap; }
 .rc__slider { display: flex; align-items: center; gap: 16px; width: 280px; max-width: 100%; }
 .rc__slider > :first-child { flex: 1; min-width: 0; }
 .rc__slider b { min-width: 72px; font-size: var(--fs-small); font-weight: 600; text-align: right; }
 .rc__src { --cols: minmax(0, 1fr) 80px 96px 80px; }
 .rc__src .ap-tr { min-height: 44px; }
 .rc__run { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
-.rc__user { display: flex; flex-direction: column; gap: 4px; }
-.rc__uname { margin: 8px 0 0; font-size: var(--fs-small); font-weight: 650; color: var(--text-2); }
 .rc__facets { --cols: minmax(0, 2fr) minmax(80px, 1fr) 52px 84px; }
 .rc__weight { display: block; height: 6px; overflow: hidden; border-radius: 3px; background: var(--fill-1); }
 .rc__weight i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .rc__shown { --cols: 112px minmax(0, 1.2fr) minmax(0, 1.4fr) 112px; }
 .rc__reason { font-weight: 500 !important; }
+.rc__sessions { --cols: minmax(0, 1fr) auto 88px; }
+.rc__end { align-items: flex-end; text-align: right; }
+.rc__pools { --cols: minmax(0, 1fr) 64px 48px; }
+.rc__mixes { --cols: minmax(0, 1fr) 96px 104px; }
+.rc__nn-status { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
+.rc__nn-line { display: flex; align-items: center; gap: 12px; }
+.rc__nn-label { font-size: var(--fs-small); color: var(--text-2); }
+.rc__nn-meter { flex: 1; max-width: 240px; }
+.rc__nn-count { font-size: var(--fs-small); font-weight: 600; }
+.rc__nn { --cols: minmax(0, 1fr) 96px 96px 120px; }
+.rc__nn .ap-tr { min-height: 52px; }
 .rc__err { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 @media (max-width: 1099px) {
-  .ap-stats { --n: 3 !important; row-gap: 16px; }
-  .ap-stat:nth-child(4) { padding-left: 0; border-left: 0; }
+  .ap-stats[style*="--n: 5"] { --n: 3 !important; row-gap: 16px; }
+  .ap-stats[style*="--n: 5"] .ap-stat:nth-child(4) { padding-left: 0; border-left: 0; }
 }
 @media (max-width: 699px) {
-  .ap-stat:nth-child(4) { padding-left: 16px; border-left: 1px solid var(--hair); }
-  .ap-stat:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .ap-head__side { width: 100%; }
+  .rc__model { display: none; }
+  .rc__who { flex: 1; }
+  .rc__who .ap-select { flex: 1; min-width: 0; max-width: none; height: 44px; }
+  .rc__group { margin-bottom: -8px; }
+  .rc__group--shared { padding-top: 24px; }
+  .ap-stats .ap-stat:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .ap-stats .ap-stat:nth-child(even), .ap-stats[style*="--n: 5"] .ap-stat:nth-child(4) { padding-left: 16px; border-left: 1px solid var(--hair); }
   .rc__slider { width: 100%; }
   .rc__facets { --cols: minmax(0, 1fr) 48px; }
   .rc__facets .ap-tr > :nth-child(2), .rc__facets .ap-tr > :nth-child(4) { display: none; }
   .rc__shown { --cols: minmax(0, 1fr) auto; }
+  .rc__sessions { --cols: minmax(0, 1fr) auto; }
+  .rc__mixes { --cols: minmax(0, 1fr) auto; }
   .rc__src { --cols: minmax(0, 1fr) 64px 72px 64px; }
+  .rc__nn { --cols: minmax(0, 1fr) 72px 96px; }
+  .rc__nn-meter { max-width: none; }
 }
 </style>
 
@@ -234,7 +397,24 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   "ru": {
     "title": "Рекомендации",
     "model": "Модель {v}",
+    "who": "Слушатель",
+    "me": "{name} (вы)",
     "failed": "Не получилось — попробуйте ещё раз",
+    "user": {
+      "eyebrow": "Вкус слушателя",
+      "hint": "Грани, показы, сессии, заготовки и миксы — только этого слушателя"
+    },
+    "ustats": {
+      "likes": "лайки",
+      "plays": "прослушивания",
+      "facets": "грани вкуса",
+      "pools": "заготовки на сервере"
+    },
+    "shared": {
+      "eyebrow": "Общее для всех",
+      "title": "Общий индекс каталога",
+      "hint": "Что разобрано по звучанию и что ищет разведчик — один индекс на всех слушателей"
+    },
     "stats": {
       "index": "в индексе каталога",
       "of": "из {n}",
@@ -271,13 +451,33 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
       "scout": "Разведать сейчас",
       "analysis": "Разобрать скачанное",
       "taste": "Пересчитать вкус",
+      "model": "Обучить",
       "queued": "Поставлено задач: {n}",
       "nothing": "Всё уже в очереди"
     },
     "facets": { "title": "Грани вкуса", "hint": "Из лайков и дослушанного; пересчитываются ночью", "empty": "Граней пока нет: нужно больше лайков и прослушиваний" },
     "shown": { "title": "Последние показы", "hint": "Что и почему подсказала волна и чем это кончилось", "empty": "Показов пока не было" },
-    "surface": { "wave": "волна", "radio": "радио", "similar": "похожие", "mix": "микс", "discovery": "открытия" },
+    "sessions": { "title": "Сессии волны", "hint": "Последние десять: сколько выдано и как приняли", "empty": "Волну ещё не запускали", "outcomes": "лайки: {l} · дослушано: {c} · пропуски: {s}" },
+    "pools": { "title": "Заготовки волны", "hint": "Под частые настройки: готово на сервере из подобранного", "empty": "Заготовок пока нет — пересчёт раз в час", "ready": "Готово {r} из {n}" },
+    "mixes": { "title": "Миксы", "hint": "Собираются при пересчёте вкуса", "empty": "Миксов пока нет", "kind": { "daily_mix": "Микс дня", "discover_weekly": "Открытия недели" } },
+    "surface": { "wave": "волна", "radio": "радио", "similar": "похожие", "mix": "микс", "discovery": "открытия", "autoplay": "автовоспроизведение" },
     "outcome": { "like": "Лайк", "dislike": "Не нравится", "skip": "Пропуск", "not_now": "Не сейчас", "more_like_this": "Ещё такого", "completed": "Дослушан" },
+    "nn": {
+      "title": "Сеть вкуса",
+      "hint": "Учится ночью на прослушиваниях и включается сама, только если на отложенных данных точнее правил",
+      "data": "Данные",
+      "of": "{n} из {m} прослушиваний",
+      "enough": "{n} прослушиваний",
+      "never": "Ещё не обучалась",
+      "training": "Обучается…",
+      "version": "Версия",
+      "auc": "AUC",
+      "logloss": "Logloss",
+      "vs": "правила {v}",
+      "rules": "Правила: пока сеть не точнее",
+      "outcome": { "trained": "Обучена", "too_little_data": "Мало данных", "failed": "Не получилось", "none": "—" },
+      "state": { "title": "Состояние", "active": "Работает", "replaced": "Заменена", "worse": "Не включена", "rulesOff": "Выключены" }
+    },
     "ml": {
       "title": "Сервис анализа звука",
       "state": "Состояние",
@@ -294,7 +494,24 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   "en": {
     "title": "Recommendations",
     "model": "Model {v}",
+    "who": "Listener",
+    "me": "{name} (you)",
     "failed": "Didn't work — try again",
+    "user": {
+      "eyebrow": "Listener's taste",
+      "hint": "Facets, impressions, sessions, pools and mixes of this listener only"
+    },
+    "ustats": {
+      "likes": "likes",
+      "plays": "plays",
+      "facets": "taste facets",
+      "pools": "pool tracks on the server"
+    },
+    "shared": {
+      "eyebrow": "Shared by everyone",
+      "title": "Shared catalog index",
+      "hint": "What is analysed by sound and what the scout is looking for — one index for all listeners"
+    },
     "stats": {
       "index": "in the catalog index",
       "of": "of {n}",
@@ -331,13 +548,33 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
       "scout": "Scout now",
       "analysis": "Analyse downloads",
       "taste": "Rebuild taste",
+      "model": "Train",
       "queued": "Jobs queued: {n}",
       "nothing": "Everything is already queued"
     },
     "facets": { "title": "Taste facets", "hint": "From likes and full listens; rebuilt at night", "empty": "No facets yet: more likes and plays needed" },
     "shown": { "title": "Recent impressions", "hint": "What the wave suggested, why, and how it ended", "empty": "Nothing shown yet" },
-    "surface": { "wave": "wave", "radio": "radio", "similar": "similar", "mix": "mix", "discovery": "discovery" },
+    "sessions": { "title": "Wave sessions", "hint": "Last ten: how much was served and how it went", "empty": "The wave hasn't been started yet", "outcomes": "likes: {l} · finished: {c} · skips: {s}" },
+    "pools": { "title": "Wave pools", "hint": "For frequent settings: ready on the server out of picked", "empty": "No pools yet — rebuilt hourly", "ready": "{r} of {n} ready" },
+    "mixes": { "title": "Mixes", "hint": "Built when taste is rebuilt", "empty": "No mixes yet", "kind": { "daily_mix": "Daily mix", "discover_weekly": "Discover weekly" } },
+    "surface": { "wave": "wave", "radio": "radio", "similar": "similar", "mix": "mix", "discovery": "discovery", "autoplay": "autoplay" },
     "outcome": { "like": "Like", "dislike": "Dislike", "skip": "Skip", "not_now": "Not now", "more_like_this": "More like this", "completed": "Finished" },
+    "nn": {
+      "title": "Taste network",
+      "hint": "Trains nightly on plays and switches itself on only when it beats the rules on held-out data",
+      "data": "Data",
+      "of": "{n} of {m} plays",
+      "enough": "{n} plays",
+      "never": "Not trained yet",
+      "training": "Training…",
+      "version": "Version",
+      "auc": "AUC",
+      "logloss": "Logloss",
+      "vs": "rules {v}",
+      "rules": "Rules: until the network is better",
+      "outcome": { "trained": "Trained", "too_little_data": "Too little data", "failed": "Failed", "none": "—" },
+      "state": { "title": "State", "active": "Active", "replaced": "Replaced", "worse": "Not enabled", "rulesOff": "Off" }
+    },
     "ml": {
       "title": "Audio analysis service",
       "state": "State",

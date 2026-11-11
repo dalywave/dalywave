@@ -9,9 +9,9 @@ import { resamplePeaks } from '~/utils/peaks'
 const props = withDefaults(defineProps<{ variant?: 'stage' | 'phone' }>(), { variant: 'stage' })
 
 const player = usePlayerStore()
+const connect = useConnectStore()
 const library = useLibraryStore()
 const ui = useUiStore()
-const bridge = useBridge()
 const { menuFor } = useTrackActions()
 const { t } = useI18n()
 
@@ -230,6 +230,7 @@ onBeforeUnmount(() => {
             <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`" @click="close">{{ a.name }}</NuxtLink></template>
           </div>
           <div v-if="entry?.reason" class="fp__reason"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
+          <MusicConnectChip class="fp__connect" />
           <div class="fp__chips">
             <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
             <UiBadge v-if="bpm" variant="meta">{{ bpm }}</UiBadge>
@@ -330,9 +331,10 @@ onBeforeUnmount(() => {
               <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="xl" :tone="liked ? 'liked' : 'solid'" :tooltip="false" @click="player.toggleLike()" />
             </div>
 
+            <MusicConnectChip class="pp__connect" />
             <div class="pp__secondary">
               <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
-              <MusicTransitionModePicker v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" icon :web="bridge.kind === 'web'" :next-at="nextAt" />
+              <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
               <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" @click="ui.openPanel('lyrics')" />
               <UiIconButton icon="ph:queue" :label="t('player.queue')" size="lg" :tooltip="false" @click="ui.openPanel('queue')" />
             </div>
@@ -412,6 +414,7 @@ onBeforeUnmount(() => {
 .fp__artist a:hover { color: var(--text-1); }
 .fp__reason { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: var(--fs-small); color: var(--accent); }
 .fp__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
+.fp__connect { margin-top: 10px; max-width: 100%; }
 .fp__reactions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .stage-enter-active, .stage-leave-active { transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
 .stage-enter-from, .stage-leave-to { opacity: 0; transform: translateY(24px); }
@@ -484,6 +487,7 @@ onBeforeUnmount(() => {
 .pp__scrub { margin-top: clamp(14px, 2.4vh, 20px); flex: none; }
 .pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: clamp(8px, 2.1vh, 18px); padding: 0 4px; flex: none; }
 .pp__controls :deep(.ib__icon) { font-size: 28px; }
+.pp__connect { justify-content: center; margin-top: clamp(8px, 1.6vh, 14px); flex: none; }
 .pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 10px; flex: none; }
 @media (prefers-reduced-motion: reduce) {
   .pp__frame, .pp-scrim { animation: none; }

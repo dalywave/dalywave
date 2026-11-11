@@ -34,6 +34,8 @@ pub const SETTINGS_CHANGED: &str = "settings.changed";
 pub const RECORDING_REACQUIRE: &str = "recording.reacquire";
 /// «Проверить скачивание» в «Источниках»
 pub const SOURCE_CHECK: &str = "source.check";
+/// Слушатель сбросил свой вкус («Мой вкус» → «Сбросить вкус»)
+pub const TASTE_RESET: &str = "taste.reset";
 
 pub async fn record(
     db: impl PgExecutor<'_>,

@@ -6,6 +6,7 @@ import { colorsFromPalette } from '~/utils/cover-colors'
 const route = useRoute()
 const bridge = useBridge()
 const library = useLibraryStore()
+const offline = useOfflineStore()
 const toast = useToast()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
@@ -44,6 +45,12 @@ const moreItems = computed<MenuEntry[]>(() => {
   return [
     { label: t('shuffle'), icon: 'ph:shuffle', onSelect: () => playAlbum(a.id, { shuffle: true }) },
     { label: tg('track.radio'), icon: 'ph:waveform', onSelect: () => toast.show({ text: t('radioSoon'), icon: 'ph:waveform' }) },
+    // Приложение: скачать альбом на устройство
+    ...(offline.available
+      ? [offline.isPinned('album', a.id)
+          ? { label: tg('offline.remove'), icon: 'ph:x-circle', onSelect: () => offline.unpin('album', a.id, a.title) }
+          : { label: tg('offline.downloadAll'), icon: 'ph:arrow-circle-down', onSelect: () => offline.pin('album', a.id, a.title) }]
+      : []),
     { kind: 'separator' },
     { label: t('toArtist'), icon: 'ph:user', onSelect: () => navigateTo(`/artist/${a.artist.id}`) },
     { label: t('copyLink'), icon: 'ph:link', onSelect: () => copyLink() },
@@ -96,6 +103,7 @@ async function copyLink() {
             size="lg"
             @click="library.setSaved(album, !saved)"
           />
+          <MusicDownloadButton kind="album" :ref-id="album.id" :title="album.title" />
           <UiMenu :items="moreItems" align="start">
             <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />
           </UiMenu>

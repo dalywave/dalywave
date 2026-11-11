@@ -40,6 +40,8 @@ export interface HttpOptions {
   token?: () => Promise<string | null>
   /** Сервер ответил 401 там, где вход должен быть: сессия кончилась */
   onUnauthorized?: () => void
+  /** Приложение в режиме «Без сети»: запросы не уходят, сразу — ошибка сети */
+  blocked?: () => boolean
 }
 
 // Эти пути отвечают 401 штатно — это не «сессия кончилась»
@@ -63,6 +65,14 @@ export function createHttp(opts: HttpOptions = {}) {
     if (!AUTH_PATHS.includes(path)) opts.onUnauthorized()
   }
 
+  if (opts.blocked) {
+    const blocked = opts.blocked
+    api.use({
+      onRequest() {
+        if (blocked()) throw new Error('offline')
+      },
+    })
+  }
   if (opts.token) {
     const token = opts.token
     api.use({
@@ -82,6 +92,7 @@ export function createHttp(opts: HttpOptions = {}) {
 
   /** Сырой запрос к пути, которого ещё нет в схеме (договор следующего этапа сервера) */
   async function raw(method: string, path: string, init: RequestInit = {}): Promise<Response> {
+    if (opts.blocked?.()) throw toApiError(0, null)
     const headers = new Headers(init.headers)
     headers.set('Accept', 'application/json')
     if (opts.token) {

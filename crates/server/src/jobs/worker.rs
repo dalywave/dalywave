@@ -567,6 +567,7 @@ impl Worker {
                             scout = r.scout,
                             analysis = r.analysis,
                             taste = r.taste,
+                            model = r.model,
                             sessions_deleted = r.sessions_deleted,
                             impressions_deleted = r.impressions_deleted,
                             "recommendations scheduled"

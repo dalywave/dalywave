@@ -27,8 +27,8 @@ use super::{
     nearest_semantic, nearest_sound,
     rank::{
         self, Entry, Fit, Origin, RankContext, Scored, SessionState, WIDEST, admissible,
-        constraints, effect, fit, merge, score, sequence, similar_threshold, violation,
-        within_bounds,
+        constraints, effect, fit, merge, novelty_floor, score, sequence, similar_threshold,
+        violation, within_bounds,
     },
     taste, track_sound,
     vectors::{Rng, blend, weighted_mean},
@@ -486,6 +486,7 @@ pub async fn forgotten(db: &PgPool, user_id: Uuid, limit: i64) -> Result<Vec<Uui
 async fn pool(
     db: &PgPool,
     session: &Session,
+    facets: &[taste::Facet],
     part: DayPart,
     platform: Option<&str>,
 ) -> AppResult<Vec<Raw>> {
@@ -499,7 +500,6 @@ async fn pool(
     };
     let seeded = session.settings.seed.is_some();
     let mut raw: Vec<Raw> = Vec::new();
-    let facets = taste::facets(db, user).await?;
     let mut tx = db.begin().await?;
     widen_search(&mut tx, 300).await?;
     if let Some(v) = &session.seed_sound {
@@ -555,7 +555,7 @@ async fn pool(
         .iter()
         .map(|f| f.weight * f.lift(part, platform))
         .sum();
-    for f in &facets {
+    for f in facets {
         let share = f.weight * f.lift(part, platform) / total.max(1e-6);
         let limit = (budget * share).round().clamp(30.0, 220.0) as i64;
         let origin = Origin::Facet {
@@ -658,8 +658,9 @@ pub struct Options<'a> {
 /// Выбранный трек и подпись «почему он здесь».
 pub type Pick = (Scored, Reason);
 
-/// Подбор: кандидаты, отсев, границы настроек с ослаблением ступенями, оценка, расстановка. Сначала —
-/// подходящее под настройки из всего индекса; то, что файл уже на сервере, важно лишь при равенстве.
+/// Подбор: кандидаты, отсев (и порог близости ко вкусу у незнакомого), границы настроек с ослаблением
+/// ступенями, оценка, расстановка. Сначала — подходящее под настройки из всего индекса; то, что файл уже
+/// на сервере, важно лишь при равенстве.
 /// Отдаёт `want` треков с запасом (часть может не скачаться).
 pub async fn select(
     env: &Env<'_>,
@@ -674,7 +675,8 @@ pub async fn select(
     let now = Utc::now();
     let part = DayPart::of_hour(settings.local_hour(now));
 
-    let raw = pool(db, session, part, platform).await?;
+    let facets = taste::facets(db, user).await?;
+    let raw = pool(db, session, &facets, part, platform).await?;
     let mut ids: Vec<Uuid> = Vec::with_capacity(raw.len());
     let mut seen = HashSet::new();
     for (track, _, _) in &raw {
@@ -710,6 +712,7 @@ pub async fn select(
         state: &session.state,
         now,
         similar_threshold: similar_threshold(&entries),
+        soundtrack_ok: facets.iter().any(taste::Facet::likes_soundtracks),
     };
     let exclude = session.state.served_set();
     let bounds = constraints(&session.settings);
@@ -719,6 +722,22 @@ pub async fn select(
         .filter(|e| admissible(e, &ctx, &exclude))
         .filter(|e| !opts.skip_heard || e.cand.plays_30d == 0)
         .collect();
+    // Незнакомое от незнакомых артистов — только рядом со вкусом
+    let mut admitted = novelty_floor(admitted, want);
+    // Сеть вкуса, если включена: своя оценка каждому кандидату с анализом
+    super::model::annotate(
+        db,
+        &mut admitted,
+        &super::model::Live {
+            at: now,
+            utc_offset_min: settings.utc_offset_min,
+            platform,
+            step: session.state.step,
+            skip_streak: session.state.skip_streak,
+            facets: &facets,
+        },
+    )
+    .await;
     let ready_only = opts.only_ready && admitted.iter().any(|e| e.cand.ready());
     let scored: Vec<Scored> = admitted
         .into_iter()
@@ -837,7 +856,7 @@ pub async fn persist(
         session.user_id,
         session.surface(),
         session.id,
-        MODEL_VERSION,
+        super::model::version_of(&out.iter().map(|(s, _)| &s.entry.cand).collect::<Vec<_>>()),
         &track_ids,
         &scores,
         &reasons,

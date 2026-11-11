@@ -289,8 +289,11 @@ pub async fn mark_track(
 /// Ставит на анализ превью самые близкие к вкусу неразобранные находки — в пределах суточного бюджета.
 /// Индекс полон — только те, что ближе самых дальних в нём (их потом вытеснит [`evict`]).
 ///
-/// Близость находки к вкусу — base × вес артиста в окрестности, у чартов и подборок жанров — только base;
-/// тот же расчёт — в вытеснении. Артист выпал из окрестности — его находки не ставятся и уходят первыми.
+/// Близость находки к вкусу — base × вес артиста в окрестности. У чартов и подборок жанров артист находки
+/// не задан: вес — у исполнителя трека, если он в окрестности, иначе четверть. Раньше там стояла единица,
+/// и чарт любимого жанра обгонял популярное похожих артистов — в индекс шли саундтреки и чужое из
+/// чартов. Тот же расчёт — в вытеснении. Артист выпал из окрестности — его находки не ставятся и уходят
+/// первыми.
 pub async fn enqueue_previews(db: &PgPool, settings: &Settings) -> Result<usize, sqlx::Error> {
     let used = sqlx::query_scalar!(
         r#"SELECT count(*) AS "n!" FROM jobs
@@ -307,7 +310,9 @@ pub async fn enqueue_previews(db: &PgPool, settings: &Settings) -> Result<usize,
     let floor = if size >= i64::from(settings.max_index) {
         sqlx::query_scalar!(
             r#"SELECT COALESCE(percentile_cont(0.1) WITHIN GROUP (
-                   ORDER BY st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN 1 ELSE 0 END)
+                   ORDER BY st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN COALESCE(
+                       (SELECT max(sm.weight) FROM track_artists ta JOIN scout_artists sm ON sm.artist_id = ta.artist_id
+                        WHERE ta.track_id = st.track_id AND ta.role = 'main'), 0.25) ELSE 0 END)
                ), 0)::real AS "floor!"
                FROM scout_tracks st LEFT JOIN scout_artists sa ON sa.artist_id = st.artist_id
                WHERE st.analyzed_at IS NOT NULL"#
@@ -319,7 +324,9 @@ pub async fn enqueue_previews(db: &PgPool, settings: &Settings) -> Result<usize,
     };
     let picks = sqlx::query!(
         r#"SELECT st.track_id AS "track_id!",
-                  (st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN 1 ELSE 0 END))::real
+                  (st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN COALESCE(
+                       (SELECT max(sm.weight) FROM track_artists ta JOIN scout_artists sm ON sm.artist_id = ta.artist_id
+                        WHERE ta.track_id = st.track_id AND ta.role = 'main'), 0.25) ELSE 0 END))::real
                       AS "closeness!"
            FROM scout_tracks st
            LEFT JOIN scout_artists sa ON sa.artist_id = st.artist_id
@@ -404,7 +411,9 @@ pub async fn evict(db: &PgPool, max_index: i32) -> Result<u64, sqlx::Error> {
                SELECT a.recording_id
                FROM track_analysis a
                LEFT JOIN LATERAL (
-                   SELECT max(st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN 1 ELSE 0 END))
+                   SELECT max(st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN COALESCE(
+                       (SELECT max(sm.weight) FROM track_artists ta JOIN scout_artists sm ON sm.artist_id = ta.artist_id
+                        WHERE ta.track_id = st.track_id AND ta.role = 'main'), 0.25) ELSE 0 END))
                           AS closeness
                    FROM tracks t JOIN scout_tracks st ON st.track_id = t.id
                    LEFT JOIN scout_artists sa ON sa.artist_id = st.artist_id

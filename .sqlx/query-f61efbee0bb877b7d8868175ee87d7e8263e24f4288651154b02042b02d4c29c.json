@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM connect_devices\n         WHERE user_id = $1 AND kind = 'web' AND connection IS NULL AND last_seen_at < now() - interval '1 day'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f61efbee0bb877b7d8868175ee87d7e8263e24f4288651154b02042b02d4c29c"
+}

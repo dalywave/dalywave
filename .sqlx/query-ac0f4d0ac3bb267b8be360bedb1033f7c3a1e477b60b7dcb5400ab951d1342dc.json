@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(percentile_cont(0.1) WITHIN GROUP (\n                   ORDER BY st.base * COALESCE(sa.weight, CASE WHEN st.source IN ('chart', 'editorial') THEN COALESCE(\n                       (SELECT max(sm.weight) FROM track_artists ta JOIN scout_artists sm ON sm.artist_id = ta.artist_id\n                        WHERE ta.track_id = st.track_id AND ta.role = 'main'), 0.25) ELSE 0 END)\n               ), 0)::real AS \"floor!\"\n               FROM scout_tracks st LEFT JOIN scout_artists sa ON sa.artist_id = st.artist_id\n               WHERE st.analyzed_at IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "floor!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ac0f4d0ac3bb267b8be360bedb1033f7c3a1e477b60b7dcb5400ab951d1342dc"
+}

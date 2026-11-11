@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO import_items (id, import_id, kind, position, priority, artist, title, album, duration_ms,\n                                       isrc, source_ref, liked, saved, followed, plays)\n             SELECT x.id, $1, x.kind, x.position, x.priority, x.artist, x.title, x.album, x.duration_ms, x.isrc,\n                    x.source_ref, x.liked, x.saved, x.followed, x.plays\n             FROM unnest($2::uuid[], $3::text[], $4::int4[], $5::int4[], $6::text[], $7::text[], $8::text[],\n                         $9::int4[], $10::text[], $11::text[], $12::bool[], $13::bool[], $14::bool[], $15::int4[])\n                  AS x(id, kind, position, priority, artist, title, album, duration_ms, isrc, source_ref, liked,\n                       saved, followed, plays)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "BoolArray",
+        "BoolArray",
+        "BoolArray",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "861c1ac607cfae670547c9916e6d79429271a4b6cf57986dbf1894cc8e127cb3"
+}

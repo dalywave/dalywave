@@ -1,0 +1,181 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT i.id, i.kind, i.title, i.status, i.phase, i.total, i.processed, i.matched,\n                  (SELECT count(*) FROM import_items x WHERE x.import_id = i.id AND x.status = 'unmatched') AS \"unmatched!\",\n                  i.stats, i.error, i.playlists, i.created_at, i.finished_at\n           FROM imports i\n           WHERE ($1::uuid IS NULL OR i.user_id = $1) AND ($2::uuid IS NULL OR i.id = $2)\n           ORDER BY i.created_at DESC\n           LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "phase",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "phase"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "total",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "total"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "processed",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "processed"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "matched",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "matched"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "unmatched!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "stats",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "stats"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "error"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "playlists",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "playlists"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "imports",
+            "name": "finished_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "414e174861f8c0992211d553bab4074ca79c8f8f28f3de28d6538253c2f91954"
+}

@@ -71,6 +71,20 @@ app: sidecar ## приложение macOS с загрузчиком: DalyWave.a
 	echo "Подпись: $${id:-ad-hoc}"; \
 	CI=true APPLE_SIGNING_IDENTITY="$${id:--}" cargo tauri build "$${extra[@]}" $(TAURI_ARGS)
 
+# Выпуск приложения (apps/shell/README.md, «Выпуск»): версия — одна, в apps/shell/Cargo.toml.
+# release-mac собирает с подписью обновлений, кладёт архив в R2 по ссылке от сервера и регистрирует
+# выпуск. Токен выпусков — DALYWAVE_RELEASE_TOKEN или связка ключей (запись dalywave-release-token)
+bump-version: ## новая версия приложения: make bump-version VERSION=0.2.0
+	@bash apps/shell/scripts/bump-version.sh "$(VERSION)"
+
+release-mac: ## собрать и выпустить приложение macOS на сервер обновлений: make release-mac [NOTES="…"]
+	@[ -f "$(UPDATER_KEY)" ] || { echo "Нет $(UPDATER_KEY): без ключа подписи обновлений выпуск невозможен"; exit 1; }
+	@[ -n "$${DALYWAVE_RELEASE_TOKEN:-}" ] || security find-generic-password -s dalywave-release-token -a "$$USER" >/dev/null 2>&1 || \
+	  { echo "Нет токена выпусков: DALYWAVE_RELEASE_TOKEN или запись dalywave-release-token в связке ключей"; exit 1; }
+	@$(MAKE) --no-print-directory app
+	@DALYWAVE_RELEASE_TOKEN="$${DALYWAVE_RELEASE_TOKEN:-$$(security find-generic-password -s dalywave-release-token -a "$$USER" -w)}" \
+	  RELEASE_NOTES="$(NOTES)" bun apps/shell/scripts/release.ts --server "$(SERVER)"
+
 # iPhone и iPad: Xcode-проект apps/shell/gen/apple (xcodegen), Rust собирает его фаза «Build Rust Code».
 # Установка на телефон — Run в Xcode (apps/shell/IOS.md). Проверка звука без входа и без звука:
 #   make ios-sim IOS_SIM='iPhone 16 (iOS 27)' — играет тестовый сервер tools/serve.py на :8420
@@ -134,4 +148,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker ml downloader ui sidecar app ios ios-build ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release-mac ios ios-build ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO device_set_builds (device_id, favorites, fresh, built_at) VALUES ($1, $2, $3, $4)\n         ON CONFLICT (device_id) DO UPDATE SET favorites = $2, fresh = $3, built_at = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a25b7f0160e5895eb54659ab9743973d72d2567f25b91653113fc59db09194b2"
+}

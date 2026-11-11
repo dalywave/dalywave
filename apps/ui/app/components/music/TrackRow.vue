@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ play: [] }>()
 const player = usePlayerStore()
 const library = useLibraryStore()
+const offline = useOfflineStore()
 const { menuFor } = useTrackActions()
 const { t } = useI18n()
 
@@ -35,6 +36,10 @@ const version = computed(() => {
   if (!v) return ''
   return v.startsWith('(') || v.startsWith('[') ? v : `(${v})`
 })
+// Приложение: трек на устройстве — стрелка, качается — кольцо (как в Spotify, слева от артиста)
+const dl = computed(() => (offline.available ? offline.trackState(props.track.id) : undefined))
+const dlShare = computed(() => (dl.value?.total ? dl.value.received / dl.value.total : 0))
+const dlLabel = computed(() => (dl.value ? t(`offline.track.${dl.value.state}`, { p: Math.round(dlShare.value * 100) }) : ''))
 const menuOpen = ref(false)
 const items = computed(() => (menuOpen.value ? menuFor(props.track, { inQueue: props.queueUid }) : []))
 
@@ -75,6 +80,10 @@ function onKey(e: KeyboardEvent) {
         <UiBadge v-if="track.explicit" variant="explicit" />
       </div>
       <div class="tr__sub ellipsis">
+        <span v-if="dl" class="tr__dl" :class="`tr__dl--${dl.state}`" role="img" :aria-label="dlLabel" :title="dlLabel">
+          <UiProgressRing v-if="dl.state === 'downloading'" :value="dlShare" :size="13" :label="dlLabel" />
+          <Icon v-else :name="dl.state === 'failed' ? 'ph:warning-circle-fill' : 'ph:arrow-circle-down-fill'" />
+        </span>
         <NuxtLink v-if="track.artists[0]" :to="`/artist/${track.artists[0].id}`" class="tr__artist" @click.stop>{{ artists }}</NuxtLink>
         <template v-if="unavailable"><span class="tr__sep">·</span><span class="tr__note">{{ t('track.status.unavailable') }}</span></template>
         <template v-else-if="reason"><span class="tr__sep">·</span><span class="tr__reason">{{ typographRu(reason) }}</span></template>
@@ -163,6 +172,9 @@ function onKey(e: KeyboardEvent) {
 .tr__sub { font-size: var(--fs-small); color: var(--text-2); }
 .tr__artist:hover { color: var(--text-1); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
 .tr__sep { margin: 0 5px; color: var(--text-4); }
+.tr__dl { display: inline-grid; place-items: center; width: 13px; height: 13px; margin-right: 6px; vertical-align: -2px; color: var(--accent); font-size: 13px; }
+.tr__dl--queued { color: var(--text-4); }
+.tr__dl--failed { color: var(--warning); }
 .tr__reason, .tr__note { color: var(--text-3); }
 .tr__album { font-size: var(--fs-small); color: var(--text-2); }
 .tr__album a:hover { color: var(--text-1); }

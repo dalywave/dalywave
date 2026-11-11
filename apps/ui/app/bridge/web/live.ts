@@ -1,6 +1,7 @@
-// Живые события сервера по WebSocket /api/ws: загрузки, изменения медиатеки, задачи.
+// Живые события сервера по WebSocket /api/ws: загрузки, изменения медиатеки, задачи, управление
+// между устройствами (в обе стороны — `send`).
 // Переподключается сам с нарастающей паузой; после обрыва сообщает «данные могли устареть».
-import type { ServerEvent, ServerEventType } from '~/api/types'
+import type { ClientMessage, ServerEvent, ServerEventType } from '~/api/types'
 import type { Bridge, LiveState, ServerEventOf } from '../types'
 
 export interface LiveOptions {
@@ -124,6 +125,16 @@ export function createLive(opts: LiveOptions): Bridge['live'] {
     onReconnect(cb: () => void) {
       reconnectListeners.add(cb)
       return () => reconnectListeners.delete(cb)
+    },
+    send(msg: ClientMessage) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false
+      try {
+        ws.send(JSON.stringify(msg))
+        return true
+      }
+      catch {
+        return false
+      }
     },
   }
 }

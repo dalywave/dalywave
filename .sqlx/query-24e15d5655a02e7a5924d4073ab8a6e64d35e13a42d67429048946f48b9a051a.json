@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO import_plays (import_id, item_id, ended_at, played_ms, end_reason, shuffle, platform)\n             SELECT $1, x.item, x.ended, x.played, x.reason, x.shuffle, x.platform\n             FROM unnest($2::uuid[], $3::timestamptz[], $4::int4[], $5::text[], $6::bool[], $7::text[])\n                  AS x(item, ended, played, reason, shuffle, platform)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TimestamptzArray",
+        "Int4Array",
+        "TextArray",
+        "BoolArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "24e15d5655a02e7a5924d4073ab8a6e64d35e13a42d67429048946f48b9a051a"
+}

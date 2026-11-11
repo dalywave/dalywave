@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE imports SET status = 'cancelled', finished_at = now(), updated_at = now() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "93aeb3ba09c4c1c1df036bc41a54986993ed8b5e0b163c9d77bb72e90b83c523"
+}

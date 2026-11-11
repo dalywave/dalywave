@@ -80,6 +80,8 @@ const moreItems = computed<MenuEntry[]>(() => {
           <UiButton size="lg" :icon="followed ? 'ph:bell-ringing-fill' : 'ph:bell-simple'" :class="{ 'is-following': followed }" @click="toggleFollow">
             {{ followed ? t('following') : t('follow') }}
           </UiButton>
+          <!-- Артиста из подписок можно держать на устройстве целиком -->
+          <MusicDownloadButton v-if="followed" kind="artist" :ref-id="artist.id" :title="artist.name" />
           <UiMenu :items="moreItems" align="start">
             <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />
           </UiMenu>

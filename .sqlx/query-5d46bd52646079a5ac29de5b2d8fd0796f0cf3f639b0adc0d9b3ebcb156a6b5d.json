@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO taste_dampers (user_id, label, centroid, strength, examples)\n                 SELECT $1, $2, f.centroid, $3, $4 FROM taste_facets f WHERE f.id = $5\n                 RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_dampers",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Float4",
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5d46bd52646079a5ac29de5b2d8fd0796f0cf3f639b0adc0d9b3ebcb156a6b5d"
+}

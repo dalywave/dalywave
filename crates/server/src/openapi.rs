@@ -7,8 +7,9 @@ use utoipa::{
 };
 
 use crate::routes::{
-    acquisitions, admin, admin_catalog, auth, catalog, events, fetcher, home, images, library,
-    playlists, queue, reco, sources, stream, sync, system, updates, wave, ws,
+    acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, events, fetcher, home,
+    images, imports, library, offline, playlists, queue, reco, sources, stream, sync, system,
+    taste, updates, wave, ws,
 };
 
 #[derive(OpenApi)]
@@ -18,6 +19,8 @@ use crate::routes::{
         system::healthz,
         system::openapi,
         updates::check,
+        updates::upload,
+        updates::register,
         auth::providers,
         auth::oidc_start,
         auth::oidc_callback,
@@ -69,6 +72,16 @@ use crate::routes::{
         wave::feedback,
         images::image,
         library::overview,
+        imports::list,
+        imports::one,
+        imports::upload_spotify,
+        imports::import_list,
+        imports::start_files,
+        imports::upload_file,
+        imports::finish_files,
+        imports::items,
+        imports::fix_item,
+        imports::remove,
         library::liked_tracks,
         library::like,
         library::unlike,
@@ -92,21 +105,36 @@ use crate::routes::{
         playlists::remove_item,
         playlists::move_item,
         home::home,
+        taste::overview,
+        taste::less,
+        taste::remove_damper,
+        taste::reset,
         sync::sync,
         events::ingest,
         events::history,
         stream::stream,
         stream::acquisition,
+        offline::list_downloads,
+        offline::add_download,
+        offline::remove_download,
+        offline::rebuild_set,
+        offline::files,
+        analysis::track_analysis,
         fetcher::claim,
         fetcher::renew_lease,
         fetcher::report,
         fetcher::release,
         ws::ws,
+        connect::devices,
     ),
     components(schemas(
+        dalywave_protocol::imports::ImportJobPayload,
+        dalywave_protocol::imports::ImportFilePayload,
         dalywave_protocol::ErrorBody,
         dalywave_protocol::realtime::ServerEvent,
         dalywave_protocol::realtime::ClientMessage,
+        dalywave_protocol::connect::RemoteCommand,
+        dalywave_protocol::connect::PlaybackState,
         dalywave_protocol::jobs::AcquirePayload,
         dalywave_protocol::jobs::MirrorImagePayload,
         dalywave_protocol::jobs::RefreshArtistPayload,
@@ -126,10 +154,12 @@ use crate::routes::{
         (name = "library", description = "Медиатека, плейлисты, главная и синхронизация приложений"),
         (name = "events", description = "События прослушивания и история"),
         (name = "playback", description = "Воспроизведение: ссылка на аудио трека и состояние его скачивания"),
+        (name = "offline", description = "Умный офлайн: закреплённое на устройстве, набор волны, файлы для загрузки"),
         (name = "wave", description = "«Моя волна» и радио: сессии, выдача с причинами, реакции"),
         (name = "fetcher", description = "Домашний загрузчик: задания, аренда, отчёты (токен `dwk_…`)"),
         (name = "realtime", description = "WebSocket: события в реальном времени"),
         (name = "admin", description = "Админка: доступ, журнал, очередь задач"),
+        (name = "releases", description = "Выпуски приложений: загрузка сборки и регистрация (токен выпусков)"),
         (name = "system", description = "Служебное"),
     ),
 )]
@@ -165,6 +195,17 @@ impl Modify for Security {
                     .scheme(HttpAuthScheme::Bearer)
                     .description(Some(
                         "Токен домашнего загрузчика `dwk_…`: только `/api/fetcher/*`",
+                    ))
+                    .build(),
+            ),
+        );
+        components.add_security_scheme(
+            "release",
+            SecurityScheme::Http(
+                HttpBuilder::new()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .description(Some(
+                        "Токен конвейера выпусков `DALYWAVE_RELEASE_TOKEN`: только `/api/releases*`",
                     ))
                     .build(),
             ),
