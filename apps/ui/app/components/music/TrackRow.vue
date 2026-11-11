@@ -191,6 +191,14 @@ function onKey(e: KeyboardEvent) {
   .tr__note { display: none; }
 }
 
+/* Узкая колонка (открыта правая панель): без колонки альбома — названию нужнее место */
+@media (min-width: 700px) {
+  @container main (max-width: 760px) {
+    .tr--wide { grid-template-columns: 28px var(--cover) minmax(0, 1fr) auto; }
+    .tr--wide .tr__album { display: none; }
+  }
+}
+
 @media (max-width: 699px) {
   .tr { min-height: 60px; }
   .tr--wide { grid-template-columns: var(--cover) minmax(0, 1fr) auto; }

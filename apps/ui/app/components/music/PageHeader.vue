@@ -57,6 +57,15 @@ withDefaults(defineProps<{
   .ph { gap: 24px; }
   .ph__art { width: 184px; }
 }
+/* Колонку сужает и правая панель, не только окно: шапка подстраивается под ширину колонки */
+@media (min-width: 700px) {
+  @container main (max-width: 820px) {
+    .ph { gap: 24px; }
+    .ph__art { width: 168px; }
+    .ph__title { font-size: clamp(32px, 7cqi, 56px); }
+    .ph__actions { flex-wrap: nowrap; }
+  }
+}
 @media (max-width: 699px) {
   .ph { flex-direction: column; align-items: center; gap: 18px; padding: 12px 16px 0; text-align: center; }
   .ph::before { inset: calc(var(--safe-top) * -1 - 8px) 0 -40px; background: radial-gradient(90% 70% at 50% 0%, color-mix(in oklab, var(--glow, var(--amb-1)) 36%, transparent), transparent 75%); }
