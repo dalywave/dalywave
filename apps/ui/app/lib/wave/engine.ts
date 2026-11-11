@@ -41,6 +41,9 @@ export interface WaveState {
   mood: WaveMood
   energy: number
   beat: number
+  /** Пульс от настоящего звука: огибающая с быстрой атакой и медленным спадом по всплескам
+   * громкости и найденным долям. Без звука (пауза, тишина, нет анализатора) — 0, по часам не бьётся */
+  pulse: number
   bands: Vec3
   bpm: number
   playing: boolean
@@ -133,6 +136,8 @@ export class WaveEngine {
   private onset = 0
   private lastLevels: TapLevels | null = null
   private prevBands: Vec3 = [0, 0, 0]
+  private envFast = 0
+  private envSlow = 0
   readonly spectrumLin = SPECTRUM.map(hexToLin) as [Vec3, Vec3, Vec3, Vec3]
   glError: string | null = null
 
@@ -152,7 +157,7 @@ export class WaveEngine {
   private ripple: Vec3 = [0, 9, 0]
   private time = 17.3
 
-  readonly state: WaveState = { mood: 'any', energy: 0.3, beat: 0, bands: [0, 0, 0], bpm: 120, playing: false, source: 'idle', fps: 0 }
+  readonly state: WaveState = { mood: 'any', energy: 0.3, beat: 0, pulse: 0, bands: [0, 0, 0], bpm: 120, playing: false, source: 'idle', fps: 0 }
 
   constructor() {
     this.canvas = document.createElement('canvas')
@@ -304,6 +309,7 @@ export class WaveEngine {
       cancelAnimationFrame(this.raf)
       this.raf = 0
       this.state.beat = 0
+      this.state.pulse = 0
       this.expand = 1
       this.flash = 0
       this.ripple = [0, 9, 0]
@@ -362,6 +368,8 @@ export class WaveEngine {
     else {
       s.source = s.playing ? 'clock' : 'idle'
       s.bands = s.bands.map(v => v * Math.exp(-dt * 3)) as Vec3
+      // Пульс кнопок и обложки — только от звука: по угаданному темпу он расходится с музыкой
+      s.pulse *= Math.exp(-dt * 6)
       if (s.playing) s.beat = pulse(((now - this.beatOrigin) / 1000) * (s.bpm / 60))
       else s.beat = 0.12 * (0.5 + 0.5 * Math.sin((now / 1000) * 0.9))
       const target = this.manualEnergy ?? (s.playing ? this.energyTarget : 0.16)
@@ -391,6 +399,20 @@ export class WaveEngine {
     this.peak = Math.max(this.peak * Math.exp(-dt * 0.15), rms, 0.02)
     const target = clamp(Math.pow(rms / this.peak, 1.4) * 0.95 + bass * 0.25, 0, 1)
     s.energy = lerp(s.energy, this.manualEnergy ?? target, 1 - Math.exp(-dt * 4))
+    this.followPulse(rms, dt)
+  }
+
+  /** Пульс: всплеск громкости над её медленным средним и найденные удары; сетка долей —
+   * только если её знает анализ трека, и только пока есть звук */
+  private followPulse(rms: number, dt: number) {
+    const s = this.state
+    this.envFast = lerp(this.envFast, rms, 1 - Math.exp(-dt * (rms > this.envFast ? 40 : 10)))
+    this.envSlow = lerp(this.envSlow, rms, 1 - Math.exp(-dt * 1.5))
+    const loud = clamp(rms / this.peak, 0, 1)
+    const audible = rms > 0.004 ? 1 : 0
+    const swell = clamp((this.envFast - this.envSlow) / (this.peak * 0.3), 0, 1)
+    const target = audible * Math.max(swell, this.onset * 0.9 * loud, this.grid() * 0.6 * loud)
+    s.pulse = lerp(s.pulse, target, 1 - Math.exp(-dt * (target > s.pulse ? 35 : 5)))
   }
 
   /** Приложение: уровень от движка вместо спектра — те же полосы, рывки и энергия */
@@ -555,6 +577,8 @@ export class WaveEngine {
   /** Звук, который слушает волна. null — пульс по часам */
   setAudioTap(tap: AudioTap | null) {
     this.tap = tap
+    this.envFast = 0
+    this.envSlow = 0
     this.peak = 0.05
     this.lastLevels = null
   }

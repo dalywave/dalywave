@@ -10,6 +10,10 @@ defineProps<{ keys: string[] }>()
 
 <style scoped>
 .kbd { display: inline-flex; gap: 3px; align-items: center; }
+/* Под пальцем и на телефоне клавиатурные подсказки не нужны */
+@media (pointer: coarse), (max-width: 699px) {
+  .kbd { display: none; }
+}
 kbd {
   min-width: 20px;
   height: 20px;

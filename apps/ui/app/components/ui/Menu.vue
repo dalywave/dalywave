@@ -2,6 +2,7 @@
 import { DropdownMenuContent, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import type { MenuEntry } from '~/types/ui'
 
+// Меню по кнопке. Телефон или палец — лист снизу (UiActionSheet), мышь — выпадающее меню
 withDefaults(defineProps<{
   items: MenuEntry[]
   side?: 'top' | 'bottom' | 'left' | 'right'
@@ -9,10 +10,14 @@ withDefaults(defineProps<{
 }>(), { side: 'bottom', align: 'end' })
 
 const open = defineModel<boolean>('open', { default: false })
+const sheet = useMenuSheet()
 </script>
 
 <template>
-  <DropdownMenuRoot v-model:open="open" :modal="false">
+  <UiActionSheet v-if="sheet" v-model:open="open" :items="items">
+    <slot />
+  </UiActionSheet>
+  <DropdownMenuRoot v-else v-model:open="open" :modal="false">
     <DropdownMenuTrigger as-child>
       <slot />
     </DropdownMenuTrigger>

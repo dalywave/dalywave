@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DialogContent, DialogDescription, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
+import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import type { WaveMood } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { resamplePeaks } from '~/utils/peaks'
@@ -19,7 +19,8 @@ const entry = computed(() => player.current)
 const track = computed(() => entry.value?.track ?? null)
 const liked = computed(() => (track.value ? library.isLiked(track.value) : false))
 const art = ref<HTMLElement | null>(null)
-const nextAt = computed(() => (player.nextEntry && !player.pending && player.effectiveMode !== 'gapless' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
+// Переход запланирован, если есть следующий трек — или играет волна: она продолжится сама
+const nextAt = computed(() => ((player.nextEntry || player.waveActive) && !player.pending && player.effectiveMode !== 'gapless' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
 const phonePeaks = computed(() => (player.peaks.length ? resamplePeaks(player.peaks, 56) : Array.from({ length: 56 }, () => 0.18)))
 const menuOpen = ref(false)
 const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value) : []))
@@ -62,16 +63,129 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.variant === 'stage' && ui.playerOpen) close()
 }
 
-// Обложка чуть дышит в долю
+// Обложка чуть дышит со звуком: пульс от настоящего сигнала, без звука — неподвижна
 const beatEl = ref<HTMLElement | null>(null)
 let offBeat: (() => void) | null = null
+const audible = computed(() => player.playing && !player.pending && !player.muted && player.volume > 0)
 
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   offBeat = getWaveEngine().onFrame((s) => {
-    beatEl.value?.style.setProperty('--beat', s.beat.toFixed(3))
+    const v = audible.value ? s.pulse.toFixed(3) : '0'
+    beatEl.value?.style.setProperty('--beat', v)
+    sheet.value?.style.setProperty('--beat', v)
   })
 })
+
+// ---------- Телефон: смахнуть вниз, чтобы свернуть ----------
+// Слой едет за пальцем, фон за ним светлеет. Отпустили дальше четверти высоты или резким
+// движением вниз — плеер уезжает в мини-плеер, иначе пружиной возвращается. Горизонтальные
+// жесты (полоса прокрутки, обложка) и прокрутка внутри не перехватываются
+const sheet = ref<HTMLElement | null>(null)
+const dragY = ref(0)
+const dragging = ref(false)
+const settling = ref(false)
+let gesture: { id: number, x: number, y: number, t: number, lastY: number, lastT: number, v: number, axis: 'y' | 'x' | null } | null = null
+let swallowClick = false
+
+const sheetStyle = computed(() => (dragY.value || dragging.value || settling.value ? { transform: `translate3d(0, ${dragY.value}px, 0)` } : undefined))
+const scrimStyle = computed(() => {
+  const h = sheet.value?.clientHeight || 800
+  return { opacity: String(Math.max(0, 1 - Math.max(0, dragY.value) / h)) }
+})
+
+function scrollableAbove(el: HTMLElement | null): boolean {
+  for (let n = el; n && n !== sheet.value; n = n.parentElement) {
+    if (n.scrollTop > 0 && n.scrollHeight > n.clientHeight) return true
+  }
+  return false
+}
+
+function onSheetDown(e: PointerEvent) {
+  if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || settling.value) return
+  const target = e.target as HTMLElement
+  // Свой жест у полосы прокрутки и полей; прокрученный список ниже начала — тоже прокрутка
+  if (target.closest('[data-scrub], input, textarea, [data-no-dismiss]') || scrollableAbove(target)) return
+  gesture = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, lastY: e.clientY, lastT: e.timeStamp, v: 0, axis: null }
+}
+
+function onSheetMove(e: PointerEvent) {
+  const g = gesture
+  if (!g || e.pointerId !== g.id) return
+  const dx = e.clientX - g.x
+  const dy = e.clientY - g.y
+  if (!g.axis) {
+    if (Math.hypot(dx, dy) < 8) return
+    g.axis = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'y' : 'x'
+    if (g.axis === 'x') {
+      gesture = null
+      return
+    }
+    dragging.value = true
+    try {
+      sheet.value?.setPointerCapture(e.pointerId)
+    }
+    catch { /* касание уже кончилось */ }
+  }
+  const dt = Math.max(1, e.timeStamp - g.lastT)
+  g.v = 0.7 * ((e.clientY - g.lastY) / dt) + 0.3 * g.v
+  g.lastY = e.clientY
+  g.lastT = e.timeStamp
+  // Вверх — резиновое сопротивление
+  dragY.value = dy >= 0 ? dy : -Math.min(40, Math.sqrt(-dy) * 3)
+}
+
+function settle(to: number, then?: () => void) {
+  if (ui.reducedMotion) {
+    dragY.value = 0
+    then?.()
+    return
+  }
+  settling.value = true
+  dragY.value = to
+  const el = sheet.value
+  const done = () => {
+    settling.value = false
+    if (to !== 0) then?.()
+    dragY.value = 0
+  }
+  if (!el) return done()
+  let fired = false
+  const finish = () => {
+    if (fired) return
+    fired = true
+    el.removeEventListener('transitionend', finish)
+    done()
+  }
+  el.addEventListener('transitionend', finish)
+  setTimeout(finish, 420)
+}
+
+function onSheetUp(e: PointerEvent) {
+  const g = gesture
+  if (!g || e.pointerId !== g.id) return
+  gesture = null
+  if (!dragging.value) return
+  dragging.value = false
+  swallowClick = true
+  setTimeout(() => (swallowClick = false), 0)
+  const h = sheet.value?.clientHeight || 800
+  const flick = g.v > 0.6 && dragY.value > 24
+  if (dragY.value > h * 0.25 || flick) settle(h, close)
+  else settle(0)
+}
+
+function onSheetCancel() {
+  if (dragging.value) settle(0)
+  dragging.value = false
+  gesture = null
+}
+
+function onSheetClick(e: MouseEvent) {
+  if (!swallowClick) return
+  e.stopPropagation()
+  e.preventDefault()
+}
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
   offBeat?.()
@@ -128,67 +242,90 @@ onBeforeUnmount(() => {
   <!-- Телефон: отдельный слой -->
   <DialogRoot v-else v-model:open="open">
     <DialogPortal>
-      <DialogContent v-if="track" class="pp" :aria-describedby="undefined" @open-auto-focus.prevent>
-        <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
-        <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
-        <div class="pp__wave"><MusicWaveCanvas layout="full-phone" /></div>
-        <div class="pp__body">
-          <header class="pp__head">
-            <UiIconButton icon="ph:caret-down" :label="t('player.collapse')" size="lg" tone="solid" :tooltip="false" @click="close" />
-            <div class="pp__ctx">
-              <div class="pp__kicker">{{ kicker }}</div>
-              <div class="pp__ctx-title ellipsis">{{ phoneTitle }}</div>
-            </div>
-            <UiMenu v-model:open="menuOpen" :items="menuItems">
-              <UiIconButton icon="ph:dots-three" :label="t('common.more')" size="lg" tone="solid" :tooltip="false" />
-            </UiMenu>
-          </header>
-
-          <div class="pp__art">
-            <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-            <div v-if="player.pending" class="fp__pending">
-              <MusicPendingNote :pending="player.pending" long />
-              <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
-            </div>
-          </div>
-
-          <div class="pp__info">
-            <div class="pp__titlerow">
-              <div class="pp__titles">
-                <div class="pp__title ellipsis">{{ track.title }}</div>
-                <div class="pp__artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</div>
+      <DialogOverlay class="pp-scrim" :style="scrimStyle" />
+      <DialogContent
+        v-if="track"
+        class="pp"
+        :class="{ 'is-dragging': dragging, 'is-settling': settling }"
+        :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
+        :aria-describedby="undefined"
+        @open-auto-focus.prevent
+        @pointerdown="onSheetDown"
+        @pointermove="onSheetMove"
+        @pointerup="onSheetUp"
+        @pointercancel="onSheetCancel"
+        @click.capture="onSheetClick"
+      >
+        <div ref="sheet" class="pp__frame" :style="sheetStyle">
+          <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
+          <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
+          <div class="pp__ambient" aria-hidden="true" />
+          <div class="pp__wave"><MusicWaveCanvas layout="stage-phone" :box="art" /></div>
+          <div class="pp__body">
+            <header class="pp__head">
+              <UiIconButton icon="ph:caret-down" :label="t('player.collapse')" size="lg" tone="solid" :tooltip="false" @click="close" />
+              <div class="pp__ctx">
+                <div class="pp__kicker">{{ kicker }}</div>
+                <div class="pp__ctx-title ellipsis">{{ phoneTitle }}</div>
               </div>
-              <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
+              <UiMenu v-model:open="menuOpen" :items="menuItems">
+                <UiIconButton icon="ph:dots-three" :label="t('common.more')" size="lg" tone="solid" :tooltip="false" />
+              </UiMenu>
+            </header>
+
+            <div ref="art" class="pp__art">
+              <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
+              <div v-if="player.pending" class="fp__pending">
+                <MusicPendingNote :pending="player.pending" long />
+                <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
+              </div>
             </div>
-            <div v-if="entry?.reason" class="pp__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
-          </div>
 
-          <MusicScrubber
-            class="pp__scrub"
-            :peaks="phonePeaks"
-            :position-ms="player.positionMs"
-            :duration-ms="player.durationMs || track.durationMs"
-            :transition-ms="nextAt ? player.transitionAtMs : null"
-            size="lg"
-            times="below"
-            :label="t('player.seek')"
-            @seek="player.seek"
-          />
+            <div class="pp__info">
+              <div class="pp__titlerow">
+                <div class="pp__titles">
+                  <div class="pp__title ellipsis">{{ track.title }}</div>
+                  <div class="pp__artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</div>
+                </div>
+                <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
+              </div>
+              <div v-if="entry?.reason" class="pp__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
+            </div>
 
-          <div class="pp__controls">
-            <UiIconButton icon="ph:thumbs-down" :label="t('player.dislike')" size="xl" tone="solid" :tooltip="false" @click="player.dislike()" />
-            <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
-            <MusicWavePlayButton v-if="player.waveActive" :playing="player.playing" :loading="!!player.pending" :size="80" @click="player.toggle()" />
-            <MusicPlayButton v-else :playing="player.playing" :loading="!!player.pending" :size="72" @click="player.toggle()" />
-            <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
-            <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="xl" :tone="liked ? 'liked' : 'solid'" :tooltip="false" @click="player.toggleLike()" />
-          </div>
+            <MusicScrubber
+              class="pp__scrub"
+              :peaks="phonePeaks"
+              :position-ms="player.positionMs"
+              :duration-ms="player.durationMs || track.durationMs"
+              :transition-ms="nextAt ? player.transitionAtMs : null"
+              size="lg"
+              times="below"
+              :label="t('player.seek')"
+              @seek="player.seek"
+            />
 
-          <div class="pp__secondary">
-            <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
-            <MusicTransitionModePicker v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" :web="bridge.kind === 'web'" :next-at="nextAt" />
-            <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" @click="ui.openPanel('lyrics')" />
-            <UiIconButton icon="ph:queue" :label="t('player.queue')" size="lg" :tooltip="false" @click="ui.openPanel('queue')" />
+            <div class="pp__controls">
+              <UiIconButton icon="ph:thumbs-down" :label="t('player.dislike')" size="xl" tone="solid" :tooltip="false" @click="player.dislike()" />
+              <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
+              <MusicWavePlayButton
+                variant="soft"
+                :playing="player.playing"
+                :loading="!!player.pending"
+                :beat="audible"
+                :size="80"
+                :label="player.playing ? t('common.pause') : t('common.play')"
+                @click="player.toggle()"
+              />
+              <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
+              <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="xl" :tone="liked ? 'liked' : 'solid'" :tooltip="false" @click="player.toggleLike()" />
+            </div>
+
+            <div class="pp__secondary">
+              <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
+              <MusicTransitionModePicker v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" icon :web="bridge.kind === 'web'" :next-at="nextAt" />
+              <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" @click="ui.openPanel('lyrics')" />
+              <UiIconButton icon="ph:queue" :label="t('player.queue')" size="lg" :tooltip="false" @click="ui.openPanel('queue')" />
+            </div>
           </div>
         </div>
       </DialogContent>
@@ -283,26 +420,63 @@ onBeforeUnmount(() => {
 }
 
 /* ---------- Телефон ---------- */
-.pp { position: fixed; inset: 0; z-index: 90; overflow: hidden; background: #020509; animation: sheet-in var(--dur-4) var(--ease-out); outline: none; }
-.pp__wave { position: absolute; top: 0; left: 0; right: 0; height: 62%; }
-.pp__wave::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, #020509 0%, rgba(2, 5, 9, 0) 34%), linear-gradient(180deg, rgba(2, 5, 9, 0.6) 0%, rgba(2, 5, 9, 0) 22%); }
-.pp__body { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; padding: calc(var(--safe-top) + 6px) 24px calc(var(--safe-bottom) + 12px); overflow-y: auto; }
+.pp-scrim { position: fixed; inset: 0; z-index: 89; background: rgba(0, 0, 0, 0.55); animation: fade-in var(--dur-4) var(--ease-out); }
+.pp { position: fixed; inset: 0; z-index: 90; outline: none; touch-action: none; }
+.pp__frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #020509;
+  animation: sheet-in var(--dur-4) var(--ease-out);
+  will-change: transform;
+}
+.pp.is-dragging .pp__frame { border-radius: 24px 24px 0 0; }
+.pp.is-settling .pp__frame { border-radius: 24px 24px 0 0; transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* Мягкое свечение цветов обложки сверху: без ярких полос под строкой состояния */
+.pp__ambient {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 78%;
+  pointer-events: none;
+  background:
+    radial-gradient(90% 46% at 50% 30%, color-mix(in oklab, var(--amb-1) 34%, transparent), transparent 72%),
+    radial-gradient(70% 40% at 12% 8%, color-mix(in oklab, var(--amb-2) 26%, transparent), transparent 70%),
+    radial-gradient(70% 40% at 92% 14%, color-mix(in oklab, var(--amb-3) 30%, transparent), transparent 70%);
+  transition: opacity var(--dur-mood);
+}
+/* Волна — тихо, за обложкой: сверху и снизу растворяется */
+.pp__wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  opacity: 0.5;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent calc(var(--safe-top) + 64px), #000 32%, #000 62%, transparent 92%);
+  mask-image: linear-gradient(180deg, transparent calc(var(--safe-top) + 64px), #000 32%, #000 62%, transparent 92%);
+}
+.pp__body { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; padding: var(--safe-top) 24px calc(var(--safe-bottom) + 10px); overflow-y: auto; scrollbar-width: none; }
+.pp__body::-webkit-scrollbar { display: none; }
 .pp__head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; height: 52px; margin: 0 -10px; flex: none; }
 .pp__ctx { min-width: 0; text-align: center; }
 .pp__kicker { font-size: 10.5px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .pp__ctx-title { font-size: 15px; font-weight: 650; }
-.pp__art { position: relative; width: min(100%, 44vh); margin: clamp(16px, 3.5vh, 40px) auto 0; flex: none; }
-.pp__art :deep(.art) { width: 100%; border-radius: 14px; box-shadow: var(--shadow-cover); }
-.pp__info { margin-top: clamp(22px, 4.5vh, 48px); flex: none; }
+.pp__art { position: relative; width: clamp(180px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 400px), 100%); margin: clamp(10px, 2.2vh, 18px) auto 0; flex: none; border-radius: 14px; }
+.pp__art :deep(.art) { width: 100%; border-radius: 14px; box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06); transform: scale(calc(1 + var(--beat, 0) * 0.008)); }
+.pp__info { margin-top: clamp(16px, 3.4vh, 28px); flex: none; }
 .pp__titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .pp__titlerow :deep(.badge) { margin-top: 6px; flex: none; }
 .pp__titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pp__title { font-size: 24px; font-weight: 750; letter-spacing: -0.025em; line-height: 1.2; }
 .pp__artist { font-size: 17px; color: var(--text-2); }
 .pp__reason { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: var(--fs-small); color: var(--accent); }
-.pp__scrub { margin-top: 20px; flex: none; }
-.pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: clamp(16px, 3.5vh, 40px); padding: 0 4px; flex: none; }
+.pp__scrub { margin-top: clamp(14px, 2.4vh, 20px); flex: none; }
+.pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: clamp(8px, 2.1vh, 18px); padding: 0 4px; flex: none; }
 .pp__controls :deep(.ib__icon) { font-size: 28px; }
-.pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; flex: none; }
-.pp__secondary :deep(.mode-chip) { height: 32px; }
+.pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 10px; flex: none; }
+@media (prefers-reduced-motion: reduce) {
+  .pp__frame, .pp-scrim { animation: none; }
+  .pp.is-settling .pp__frame { transition: none; }
+}
 </style>

@@ -1,4 +1,5 @@
 // Общие типы компонентов интерфейса
+import type { ImageSet } from '~/api/types'
 
 export interface MenuAction {
   kind?: 'item'
@@ -22,6 +23,10 @@ export interface MenuHeading {
   kind: 'heading'
   label: string
   hint?: string
+  /** Обложка в шапке листа на телефоне; null — заглушка, без поля — без картинки */
+  image?: ImageSet | null
+  /** Круглая картинка (артист, профиль) */
+  round?: boolean
 }
 
 export type MenuEntry = MenuAction | MenuSeparator | MenuHeading

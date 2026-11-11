@@ -3,17 +3,38 @@ import { ContextMenuContent, ContextMenuPortal, ContextMenuRoot, ContextMenuTrig
 import type { MenuEntry } from '~/types/ui'
 
 // Правый клик (или долгое нажатие) по области. Пункты могут зависеть от того, по чему кликнули:
-// items вычисляются в момент открытия
+// items вычисляются в момент открытия. На телефоне и под пальцем — лист снизу
 defineProps<{ items: MenuEntry[] }>()
 const emit = defineEmits<{ open: [target: EventTarget | null] }>()
+
+const sheet = useMenuSheet()
+const sheetOpen = ref(false)
+let pressed: EventTarget | null = null
 
 function onContext(e: MouseEvent) {
   emit('open', e.target)
 }
+
+// Долгое нажатие на iOS не присылает contextmenu: цель берём из последнего касания
+function onPress(e: PointerEvent) {
+  pressed = e.target
+}
+
+async function onOpenRequest(v: boolean) {
+  if (!v) return
+  emit('open', pressed)
+  await nextTick()
+  sheetOpen.value = true
+}
 </script>
 
 <template>
-  <ContextMenuRoot :modal="false">
+  <ContextMenuRoot v-if="sheet" :open="false" :modal="false" @update:open="onOpenRequest">
+    <ContextMenuTrigger as-child @pointerdown.capture="onPress" @contextmenu.capture="onPress">
+      <slot />
+    </ContextMenuTrigger>
+  </ContextMenuRoot>
+  <ContextMenuRoot v-else :modal="false">
     <ContextMenuTrigger as-child @contextmenu.capture="onContext">
       <slot />
     </ContextMenuTrigger>
@@ -23,4 +44,5 @@ function onContext(e: MouseEvent) {
       </ContextMenuContent>
     </ContextMenuPortal>
   </ContextMenuRoot>
+  <UiActionSheet v-if="sheet && items.length" v-model:open="sheetOpen" :items="items" detached />
 </template>

@@ -58,7 +58,10 @@ function playLiked(list: Track[], i: number) {
         <div class="phead__date">{{ today.charAt(0).toUpperCase() + today.slice(1) }}</div>
         <h1 class="phead__hello">{{ greeting }}</h1>
       </div>
-      <NuxtLink to="/settings" class="phead__avatar" :aria-label="t('settings')">{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</NuxtLink>
+      <NuxtLink to="/settings" class="phead__avatar" :aria-label="t('settings')">
+        <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="" class="phead__avatar-img">
+        <template v-else>{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</template>
+      </NuxtLink>
     </header>
 
     <MusicWaveHero :greeting="ui.isPhone ? undefined : greeting" />
@@ -114,7 +117,8 @@ function playLiked(list: Track[], i: number) {
 .phead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px 0; }
 .phead__date { font-size: var(--fs-small); font-weight: 550; color: var(--text-3); }
 .phead__hello { margin: 0; font-size: 28px; font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }
-.phead__avatar { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); font-weight: 700; }
+.phead__avatar { display: grid; place-items: center; width: 44px; height: 44px; flex: none; overflow: hidden; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); font-weight: 700; }
+.phead__avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .likes { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .likes__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .likes__title { margin: 0; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); line-height: 1.2; }

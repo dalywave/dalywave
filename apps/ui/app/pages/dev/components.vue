@@ -84,7 +84,6 @@ const demoMenu: MenuEntry[] = [
   { label: 'В очередь', icon: 'ph:list-plus' },
   { label: 'В плейлист', icon: 'ph:playlist', children: [{ label: 'Ночной фонк' }, { label: 'Тихо, работаю', checked: true }] },
   { kind: 'separator' },
-  { label: 'Скачать на это устройство', icon: 'ph:download-simple', disabled: true, hint: 'В приложении' },
   { label: 'Не рекомендовать', icon: 'ph:prohibit', danger: true },
 ]
 

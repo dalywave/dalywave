@@ -10,6 +10,8 @@ withDefaults(defineProps<{
   web?: boolean
   /** Только значок (узкая панель) */
   compact?: boolean
+  /** Круглая кнопка-значок, как соседние в нижнем ряду плеера на телефоне; режим — значком и точкой */
+  icon?: boolean
   /** Галерея: панель раскрыта без всплытия */
   inline?: boolean
   side?: 'top' | 'bottom'
@@ -38,7 +40,11 @@ const ICONS: Record<TransitionMode, string> = {
   </div>
   <UiPopover v-else v-model:open="open" :side="side" align="end" :title="t('transition.title')" :hint="t('transition.hint')" :width="340">
     <template #trigger>
-      <button type="button" class="mode-chip" :class="{ 'mode-chip--compact': compact }" :aria-label="`${t('transition.title')}: ${t(`transition.${mode}`)}`">
+      <button v-if="icon" type="button" class="mode-ib" :aria-label="`${t('transition.title')}: ${t(`transition.${mode}`)}`">
+        <Icon :name="ICONS[mode]" class="mode-ib__icon" />
+        <span v-if="mode !== 'gapless'" class="mode-ib__dot" aria-hidden="true" />
+      </button>
+      <button v-else type="button" class="mode-chip" :class="{ 'mode-chip--compact': compact }" :aria-label="`${t('transition.title')}: ${t(`transition.${mode}`)}`">
         <Icon :name="ICONS[mode]" class="mode-chip__icon" />
         <span v-if="!compact" class="mode-chip__label">{{ t(`transition.${mode}`) }}</span>
       </button>
@@ -67,5 +73,23 @@ const ICONS: Record<TransitionMode, string> = {
 }
 .mode-chip--compact { width: 32px; height: 32px; padding: 0; justify-content: center; }
 .mode-chip__icon { font-size: 16px; color: var(--accent); }
+.mode-ib {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  transition: color var(--dur-1), background-color var(--dur-1), transform var(--dur-1) var(--ease-out);
+}
+.mode-ib__icon { font-size: 24px; }
+.mode-ib__dot { position: absolute; top: 9px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--ink-0); }
+.mode-ib:hover, .mode-ib[data-state='open'] { color: var(--text-1); background: var(--fill-2); }
+.mode-ib:active { transform: scale(0.92); background: var(--fill-3); }
+.mode-ib:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .mode-chip:hover, .mode-chip[data-state='open'] { color: var(--text-1); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line-strong); }
 </style>
