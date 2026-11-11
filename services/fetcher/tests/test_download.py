@@ -137,7 +137,7 @@ def test_unknown_codec_is_not_remuxed(tmp_path: Path) -> None:
 
 
 def test_mime_types_name_the_codec() -> None:
-    assert mime_type("mp4", "opus") == 'audio/mp4; codecs="opus"'
+    assert mime_type("mp4", "opus") == 'audio/mp4; codecs="Opus"'
     assert mime_type("mp4", "aac") == 'audio/mp4; codecs="mp4a.40.2"'
     assert mime_type("ogg", "opus") == 'audio/ogg; codecs="opus"'
     assert mime_type("mp3", "mp3") == "audio/mpeg"

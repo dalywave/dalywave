@@ -78,7 +78,7 @@ pub async fn upload(storage: &Storage, url: &str, bytes: &[u8]) {
         .put(
             &upload_key(url),
             bytes.to_vec(),
-            "audio/mp4; codecs=\"opus\"",
+            "audio/mp4; codecs=\"Opus\"",
             None,
         )
         .await
@@ -96,12 +96,12 @@ pub fn verified(deezer_track_id: &Value, size: usize, video: &str) -> Value {
             "candidate": { "videoId": video, "title": "Light Me Up", "artists": ["Lowborn"], "source": "album",
                            "kind": "atv", "score": 0.97, "breakdown": { "duration": { "score": 1.0 } } },
             "download": { "videoId": video, "itag": "251", "codec": "opus", "container": "mp4",
-                          "mimeType": "audio/mp4; codecs=\"opus\"", "abrKbps": 136.1, "sampleRate": 48000,
+                          "mimeType": "audio/mp4; codecs=\"Opus\"", "abrKbps": 136.1, "sampleRate": 48000,
                           "channels": 2, "sizeBytes": size, "durationMs": 180500, "title": "Light Me Up" },
             "verify": { "verified": true, "similarity": 0.9761, "offsetS": 57.03, "threshold": 0.8 }
         },
         "file": { "sha256": "ab".repeat(32), "sizeBytes": size, "container": "mp4",
-                  "mimeType": "audio/mp4; codecs=\"opus\"", "codec": "opus", "durationMs": 180500,
+                  "mimeType": "audio/mp4; codecs=\"Opus\"", "codec": "opus", "durationMs": 180500,
                   "loudnessLufs": -9.1, "truePeakDb": 0.4, "waveform": waveform },
         "upload": { "ok": true, "status": 200, "etag": "\"e\"" },
         "attempts": [{ "videoId": video, "score": 0.97, "source": "album", "download": { "videoId": video },
@@ -238,7 +238,7 @@ async fn downloader_takes_a_job_uploads_and_reports(db: PgPool) {
     assert_eq!(s["status"], "ready");
     assert_eq!(s["codec"], "opus");
     assert_eq!(s["container"], "mp4");
-    assert_eq!(s["mimeType"], "audio/mp4; codecs=\"opus\"");
+    assert_eq!(s["mimeType"], "audio/mp4; codecs=\"Opus\"");
     assert_eq!(s["bitrateKbps"], 136);
     assert_eq!(s["durationMs"], 180500);
     assert_eq!(s["loudnessLufs"].as_f64().unwrap() as f32, -9.1f32);

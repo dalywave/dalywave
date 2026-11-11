@@ -187,10 +187,12 @@ _TARGETS: dict[str, tuple[str, str, str, list[str]]] = {
 
 # Кодек для параметра codecs в MIME: по нему браузер решает, сможет ли сыграть файл.
 _MIME_CODECS = {"opus": "opus", "aac": "mp4a.40.2", "vorbis": "vorbis", "flac": "flac"}
+# В MP4 кодек называется кодом своей записи (RFC 6381): Safari понимает «Opus», а на «opus» отвечает «не умею»
+_MP4_CODECS = {"opus": "Opus", "flac": "fLaC"}
 
 
 def mime_type(container: str, codec: str) -> str:
-    """`audio/mp4; codecs="opus"` — для Content-Type в хранилище и плеера."""
+    """`audio/mp4; codecs="Opus"` — для Content-Type в хранилище и плеера."""
     base = {
         "mp4": "audio/mp4",
         "ogg": "audio/ogg",
@@ -198,7 +200,7 @@ def mime_type(container: str, codec: str) -> str:
         "mp3": "audio/mpeg",
         "flac": "audio/flac",
     }.get(container, "application/octet-stream")
-    codecs = _MIME_CODECS.get(codec)
+    codecs = (_MP4_CODECS.get(codec) if container == "mp4" else None) or _MIME_CODECS.get(codec)
     if codecs and container in ("mp4", "ogg", "webm"):
         return f'{base}; codecs="{codecs}"'
     return base

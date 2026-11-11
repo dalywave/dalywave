@@ -54,15 +54,18 @@ names!(AudioContainer {
 });
 
 impl AudioContainer {
-    /// MIME-тип для плеера, с кодеком: `audio/mp4; codecs="opus"`.
+    /// MIME-тип для плеера, с кодеком: `audio/mp4; codecs="Opus"`.
     pub fn mime(self, codec: AudioCodec) -> String {
-        let codecs = match codec {
-            AudioCodec::Opus => Some("opus"),
-            AudioCodec::Vorbis => Some("vorbis"),
-            AudioCodec::Aac => Some("mp4a.40.2"),
-            AudioCodec::Flac => Some("flac"),
-            AudioCodec::Alac => Some("alac"),
-            AudioCodec::Mp3 | AudioCodec::Pcm => None,
+        // В MP4 кодек называется кодом своей записи (RFC 6381): Safari понимает «Opus», а на «opus» отвечает «не умею»
+        let codecs = match (self, codec) {
+            (Self::Mp4, AudioCodec::Opus) => Some("Opus"),
+            (Self::Mp4, AudioCodec::Flac) => Some("fLaC"),
+            (_, AudioCodec::Opus) => Some("opus"),
+            (_, AudioCodec::Vorbis) => Some("vorbis"),
+            (_, AudioCodec::Aac) => Some("mp4a.40.2"),
+            (_, AudioCodec::Flac) => Some("flac"),
+            (_, AudioCodec::Alac) => Some("alac"),
+            (_, AudioCodec::Mp3 | AudioCodec::Pcm) => None,
         };
         let base = match self {
             Self::Ogg => "audio/ogg",
@@ -137,7 +140,11 @@ mod tests {
     fn mime_types() {
         assert_eq!(
             AudioContainer::Mp4.mime(AudioCodec::Opus),
-            "audio/mp4; codecs=\"opus\""
+            "audio/mp4; codecs=\"Opus\""
+        );
+        assert_eq!(
+            AudioContainer::Mp4.mime(AudioCodec::Flac),
+            "audio/mp4; codecs=\"fLaC\""
         );
         assert_eq!(
             AudioContainer::Mp4.mime(AudioCodec::Aac),

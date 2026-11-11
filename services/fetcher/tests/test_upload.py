@@ -73,7 +73,7 @@ def test_upload_puts_file_with_content_type(server: str, tmp_path: Path) -> None
     status = fetcher._upload(result_with_file(path), target)
     assert status == {"ok": True, "status": 200, "etag": '"abc123"', "error": None}
     assert received["body"] == path.read_bytes()
-    assert received["headers"]["Content-Type"] == 'audio/mp4; codecs="opus"'
+    assert received["headers"]["Content-Type"] == 'audio/mp4; codecs="Opus"'
     assert received["headers"]["x-a"] == "1"
     assert received["path"] == "/dalywave/audio/x?X-Amz-Signature=s"
 
