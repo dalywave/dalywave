@@ -1,18 +1,23 @@
-//! Оболочка DalyWave для macOS и Windows. Интерфейс — apps/ui (Nuxt, SPA); здесь окно без
-//! стандартной рамки, вход через системный браузер с токеном в связке ключей, трей,
-//! медиаклавиши и системная плашка «Сейчас играет», ссылки dalywave:// и автообновление.
-//! Договор с интерфейсом — BRIDGE.md.
+//! Оболочка DalyWave для macOS, Windows, iPhone и iPad. Интерфейс — apps/ui (Nuxt, SPA); здесь
+//! окно (на компьютерах — без стандартной рамки), звук через свой движок на Rust, вход через
+//! системный браузер с токеном в связке ключей, «Сейчас играет» и пульт системы, трей, ссылки
+//! dalywave:// и автообновление. Договор с интерфейсом — BRIDGE.md.
 
 mod auth;
 mod error;
+#[cfg(target_os = "ios")]
+mod ios;
 #[cfg(target_os = "macos")]
 mod macos;
 mod media;
 mod platform;
+mod player;
 mod settings;
 #[cfg(windows)]
 mod snap;
+#[cfg(desktop)]
 mod tray;
+#[cfg(desktop)]
 mod updates;
 mod window;
 
@@ -31,12 +36,15 @@ pub const MAIN: &str = "main";
 
 pub const EVENT_SERVER: &str = "server:changed";
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
-        // Первым: второй запуск передаёт ссылку dalywave:// первому и показывает его окно
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            window::show_main(app);
-        }))
+    let builder = tauri::Builder::default();
+    // Первым: второй запуск передаёт ссылку dalywave:// первому и показывает его окно
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        window::show_main(app);
+    }));
+    let builder = builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -49,28 +57,45 @@ pub fn run() {
                 .level_for("keyring_core", log::LevelFilter::Warn)
                 .level_for("reqwest", log::LevelFilter::Warn)
                 .level_for("hyper_util", log::LevelFilter::Warn)
+                // «skipped 4 bytes of junk» на каждом MP4 — норма разбора, не предупреждение
+                .level_for("symphonia_core", log::LevelFilter::Error)
+                .level_for("symphonia_format_isomp4", log::LevelFilter::Warn)
+                .level_for("ureq", log::LevelFilter::Warn)
+                .level_for("rustls", log::LevelFilter::Warn)
                 .max_file_size(2_000_000)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                 .build(),
         )
-        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_opener::init());
+    #[cfg(desktop)]
+    let builder = builder
         .plugin(
             tauri_plugin_window_state::Builder::new()
                 .with_state_flags(window::SAVED_STATE)
                 .build(),
         )
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    let app = builder
         .setup(|app| {
             let handle = app.handle();
+            #[cfg(target_os = "ios")]
+            platform::init_device();
             app.manage(Settings::load(handle));
             app.manage(auth::Auth::new(&app.package_info().version.to_string()));
             app.manage(media::Media::default());
+            #[cfg(desktop)]
             app.manage(updates::Updates::default());
+            // Звук — сразу, в фоновом потоке: к первой команде интерфейса движок готов
+            player::init(handle);
 
             let main = window::create_main(handle)?;
+            #[cfg(desktop)]
             tray::create(handle)?;
-            media::init(handle, &main);
+            #[cfg(windows)]
+            media::init_window(handle, &main);
+            #[cfg(not(windows))]
+            let _ = main;
 
             let links = handle.clone();
             app.deep_link()
@@ -87,10 +112,12 @@ pub fn run() {
                 log::warn!("could not register dalywave:// links: {e}");
             }
 
+            #[cfg(desktop)]
             updates::schedule(handle);
             log::info!(
-                "DalyWave {} started, server {}",
+                "DalyWave {} started on {}, server {}",
                 app.package_info().version,
+                platform::os(),
                 app.state::<Settings>().server_url()
             );
             Ok(())
@@ -98,24 +125,46 @@ pub fn run() {
         .on_window_event(window::on_event)
         .invoke_handler(tauri::generate_handler![
             platform::platform_info,
+            #[cfg(desktop)]
             window::window_minimize,
+            #[cfg(desktop)]
             window::window_toggle_maximize,
+            #[cfg(desktop)]
             window::window_close,
+            #[cfg(desktop)]
             window::window_start_dragging,
+            #[cfg(desktop)]
             window::window_is_maximized,
+            #[cfg(desktop)]
             window::window_set_theme,
+            #[cfg(desktop)]
             window::window_set_snap_area,
             auth::auth_login,
             auth::auth_cancel,
             auth::auth_logout,
             auth::auth_token,
             auth::auth_session,
-            media::now_playing_update,
+            player::player_load,
+            player::player_set_upcoming,
+            player::player_play,
+            player::player_pause,
+            player::player_toggle,
+            player::player_seek,
+            player::player_next,
+            player::player_previous,
+            player::player_stop,
+            player::player_set_volume,
+            player::player_set_transition,
+            player::player_set_normalize,
+            player::player_set_levels,
+            player::player_state,
             open_external,
             server_url_get,
             server_url_set,
             shell_set_locale,
+            #[cfg(desktop)]
             updates::update_check,
+            #[cfg(desktop)]
             updates::update_install,
         ])
         .build(tauri::generate_context!())
@@ -167,6 +216,7 @@ fn server_url_get(app: AppHandle) -> String {
 #[tauri::command]
 fn server_url_set(app: AppHandle, url: Option<String>) -> ShellResult<String> {
     let server_url = app.state::<Settings>().set_server_url(url.as_deref())?;
+    app.state::<player::Player>().forget_token();
     let _ = app.emit_to(
         MAIN,
         EVENT_SERVER,
@@ -181,6 +231,7 @@ fn server_url_set(app: AppHandle, url: Option<String>) -> ShellResult<String> {
 #[tauri::command]
 fn shell_set_locale(app: AppHandle, locale: Locale) -> ShellResult<()> {
     app.state::<Settings>().set_locale(locale)?;
+    #[cfg(desktop)]
     tray::refresh(&app);
     Ok(())
 }

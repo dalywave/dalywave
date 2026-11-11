@@ -49,6 +49,41 @@ app: ## приложение macOS: DalyWave.app и .dmg в apps/shell/target/re
 	echo "Подпись: $${id:-ad-hoc}"; \
 	CI=true APPLE_SIGNING_IDENTITY="$${id:--}" cargo tauri build "$${extra[@]}" $(TAURI_ARGS)
 
+# iPhone и iPad: Xcode-проект apps/shell/gen/apple (xcodegen), Rust собирает его фаза «Build Rust Code».
+# Установка на телефон — Run в Xcode (apps/shell/IOS.md). Проверка звука без входа и без звука:
+#   make ios-sim IOS_SIM='iPhone 16 (iOS 27)' — играет тестовый сервер tools/serve.py на :8420
+IOS_PROJECT := apps/shell/gen/apple/dalywave-shell.xcodeproj
+IOS_SIM ?= iPhone 16 (iOS 27)
+ios: ## iPhone и iPad: пересобрать Xcode-проект и открыть его в Xcode
+	@bash apps/shell/scripts/xcodegen.sh
+	open $(IOS_PROJECT)
+
+ios-build: ## iPhone: собрать release для устройства (подпись Apple Development, команда Y5KR5JPCRG)
+	@bash apps/shell/scripts/xcodegen.sh
+	set -o pipefail; xcodebuild -project $(IOS_PROJECT) -scheme dalywave-shell_iOS -configuration release \
+	  -destination generic/platform=iOS -allowProvisioningUpdates build | tail -n 5
+
+ios-sim: ## симулятор: собрать, поставить и запустить с тестовым звуком на громкости 0
+	@bash apps/shell/scripts/xcodegen.sh
+	set -o pipefail; xcodebuild -project $(IOS_PROJECT) -scheme dalywave-shell_iOS -configuration release \
+	  -destination 'platform=iOS Simulator,name=$(IOS_SIM)' -derivedDataPath apps/shell/target/xcode build | tail -n 3
+	xcrun simctl boot '$(IOS_SIM)' 2>/dev/null || true
+	xcrun simctl install '$(IOS_SIM)' apps/shell/target/xcode/Build/Products/release-iphonesimulator/DalyWave.app
+	SIMCTL_CHILD_DW_VOLUME=0 SIMCTL_CHILD_DALYWAVE_SMOKE=http://127.0.0.1:8420 xcrun simctl launch '$(IOS_SIM)' rest.daly.wave
+	@echo "Журнал: $$(xcrun simctl get_app_container '$(IOS_SIM)' rest.daly.wave data)/Library/Application Support/rest.daly.wave/logs/DalyWave.log"
+
+ios-test: ## симулятор: проверка окна входа, снимки — в design/shots/ios
+	@bash apps/shell/scripts/xcodegen.sh
+	set -o pipefail; xcodebuild -project $(IOS_PROJECT) -scheme dalywave-shell_iOS -configuration release \
+	  -destination 'platform=iOS Simulator,name=$(IOS_SIM)' -derivedDataPath apps/shell/target/xcode test | tail -n 5
+
+audio-test: ## аудиодвижок (crates/client): fmt, clippy, тесты в release
+	cd crates/client && cargo fmt --all --check && cargo clippy --all-targets -- -D warnings && cargo test --release
+
+test-audio-server: ## тестовое аудио по HTTP с Range на :8420 (для ios-sim и стенда оболочки)
+	@[ -f crates/client/audio/testdata/manifest.json ] || python3 crates/client/audio/tools/gen_audio.py
+	python3 crates/client/audio/tools/serve.py --port 8420
+
 design: ## статика макетов на :4400
 	bun tools/serve.ts design 4400
 
@@ -77,4 +112,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker downloader ui app design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker downloader ui app ios ios-build ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt

@@ -1,23 +1,28 @@
 # Оболочка приложения DalyWave (Tauri 2.12)
 
-Окно приложения для macOS и Windows вокруг интерфейса `apps/ui`. Договор с интерфейсом —
-[BRIDGE.md](BRIDGE.md), типизированные обёртки — `bridge/shell.ts`.
+Приложение для macOS, Windows, iPhone и iPad вокруг интерфейса `apps/ui`. Звук — свой движок на
+Rust (`crates/client/audio`). Договор с интерфейсом — [BRIDGE.md](BRIDGE.md), типизированные
+обёртки — `bridge/shell.ts`. iPhone и iPad — [IOS.md](IOS.md).
 
 ```
 src/lib.rs        плагины, окно, трей, команды
+src/player.rs     звук: движок dalywave-audio, команды и события player:*, ссылки на файлы с сервера
+src/media.rs      «Сейчас играет» и пульт системы по событиям движка (MediaPlayer, Windows — SMTC)
 src/window.rs     окно без рамки, закрытие в трей, события окна
 src/snap.rs       Windows 11: меню привязки окон над своей кнопкой «развернуть»
 src/macos.rs      замер «светофора»
+src/ios.rs        iPhone и iPad: окно входа поверх приложения (ASWebAuthenticationSession)
 src/auth.rs       вход через браузер, dalywave://auth, токен в связке ключей
-src/media.rs      «Сейчас играет» и медиаклавиши (souvlaki: MPNowPlayingInfoCenter, SMTC)
 src/tray.rs       значок в строке меню и трее
 src/updates.rs    автообновление
 src/settings.rs   адрес сервера и язык меню (settings.json в папке настроек)
+gen/apple/        Xcode-проект iPhone и iPad (xcodegen, project.yml)
+scripts/          значки, сборка Rust для Xcode (build-ios.sh), пересборка Xcode-проекта
 harness/          стенд: страница со всеми командами моста и заглушка сервера для входа
 ```
 
 Отдельный cargo workspace: тяжёлые зависимости Tauri не попадают в `cargo test --workspace`
-и в CI сервера.
+и в CI сервера. Движок подключён путём из своего workspace `crates/client`.
 
 ## Разработка
 
@@ -33,10 +38,16 @@ cd apps/shell && cargo tauri dev
 
 Переменные окружения: `DALYWAVE_SERVER_URL` — адрес сервера по умолчанию;
 `DALYWAVE_AUTH_REDIRECT=loopback|deeplink` — способ возврата входа; в отладочной сборке
-`DALYWAVE_AUTH_OPEN=print` — не открывать браузер, а записать адрес входа в журнал.
-Журнал: `~/Library/Logs/rest.daly.wave/DalyWave.log` (Windows — `%LOCALAPPDATA%\rest.daly.wave\logs`).
+`DALYWAVE_AUTH_OPEN=print` — не открывать браузер, а записать адрес входа в журнал;
+`DW_VOLUME=0` — громкость движка умножается на это число (проверки без звука);
+`DALYWAVE_SMOKE=http://127.0.0.1:8420` — сразу после запуска играть очередь тестового сервера
+(`make test-audio-server`), `DALYWAVE_SMOKE_ALBUM` — один набор из его `manifest.json`.
+Журнал: `~/Library/Logs/rest.daly.wave/DalyWave.log` (Windows — `%LOCALAPPDATA%\rest.daly.wave\logs`,
+iOS — `Library/Application Support/rest.daly.wave/logs` в контейнере приложения).
 
-Проверки: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`.
+Проверки: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`; для iOS —
+`cargo clippy --lib --target aarch64-apple-ios-sim --features tauri/custom-protocol -- -D warnings`
+(с переменными SDK из `scripts/build-ios.sh`). Движок — `make audio-test`.
 
 ## Стенд
 
@@ -52,6 +63,11 @@ curl -d login localhost:3499/command   # команда странице из т
 
 Отчёты страницы — `$TMPDIR/dalywave-harness/reports.jsonl`. На Windows так же проверяются
 Mica и меню привязки окон.
+
+Звук на стенде — без звука и без входа: тестовое аудио `make test-audio-server` (:8420), оболочка с
+`DW_VOLUME=0`, затем `curl -d player-demo localhost:3499/command` (ещё `player-gapless`,
+`player-deferred` — без ссылок, их выдаёт заглушка `/api/tracks/{id}/stream`, `player-next`,
+`player-seek`, `player-xfade`, `player-levels-on`, `player-state`). События `player:*` — в отчётах.
 
 ## Сборка macOS
 
@@ -80,15 +96,21 @@ make app
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Потеря ключа — конец автообновлений у установленных
 копий: держите резервную копию в менеджере паролей.
 
+## iPhone и iPad
+
+`make ios` — Xcode-проект `gen/apple/dalywave-shell.xcodeproj`, дальше Run в Xcode. Подробно — [IOS.md](IOS.md).
+
 ## Значки
 
 `scripts/icons.sh` пересобирает всё из `design/brand` (после `bun tools/brand.mjs`):
 
 - PNG, `icon.ico` и плитки Microsoft Store — `cargo tauri icon design/brand/icon-1024.png`;
 - `icon.icns` — из `icon-macos-1024.png` (сетка Apple с полями и тенью) — для macOS до 26;
-- `DalyWave.icon` — документ Icon Composer: фон `layers/background.svg` и знак (стекло);
-  в тёмной теме — знак в градиенте на тёмном (`icon-ios-dark.svg`), в тонированной и
-  прозрачной фон скрыт и знак красит система. При сборке Tauri компилирует его `actool`
+- `DalyWave.icon` — документ Icon Composer, общий для macOS и iOS: фон `layers/background.svg` и
+  знак (стекло); в тёмной теме — знак в градиенте на тёмном (`icon-ios-dark.svg`), в тонированной
+  и прозрачной фон скрыт и знак красит система. Для iOS до 26 — каталог
+  `gen/apple/Assets.xcassets/DalyWave.appiconset` (светлая, тёмная и тонированная 1024 из
+  `design/brand`). При сборке Tauri компилирует его `actool`
   (нужен Xcode 26+) в `Contents/Resources/Assets.car` и прописывает `CFBundleIconName`;
   `icon.icns` остаётся запасным `CFBundleIconFile`. Документ открывается в Icon Composer.app,
   превью тем: `ictool DalyWave.icon --export-preview macOS Dark 512 512 1 out.png`

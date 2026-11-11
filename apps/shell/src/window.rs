@@ -1,33 +1,42 @@
 //! Главное окно: создание, свои кнопки окна для Windows, события для интерфейса,
 //! закрытие в трей и запрет уходить со своих страниц внутри WebView.
+//! На iPhone и iPad окно одно и во весь экран: из этого модуля там нужно только создание.
 
+#[cfg(desktop)]
 use std::sync::Mutex;
 
+#[cfg(desktop)]
 use serde::Serialize;
-use tauri::{
-    AppHandle, Emitter, Manager, Theme, WebviewWindow, WebviewWindowBuilder, Window, WindowEvent,
-};
+use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder, Window, WindowEvent};
+#[cfg(desktop)]
+use tauri::{Emitter, Theme};
 use tauri_plugin_opener::OpenerExt;
+#[cfg(desktop)]
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 use url::Url;
 
-use crate::{
-    MAIN,
-    error::{ShellError, ShellResult},
-    platform::{self, Rect},
-};
+#[cfg(desktop)]
+use crate::error::{ShellError, ShellResult};
+#[cfg(desktop)]
+use crate::platform::Rect;
+use crate::{MAIN, platform};
 
 /// Что окно помнит между запусками. Видимость не храним: окно, закрытое в трей,
 /// при следующем запуске всё равно должно открыться.
+#[cfg(desktop)]
 pub const SAVED_STATE: StateFlags = StateFlags::SIZE
     .union(StateFlags::POSITION)
     .union(StateFlags::MAXIMIZED);
 
+#[cfg(desktop)]
 pub const EVENT_MAXIMIZED: &str = "window:maximized";
+#[cfg(desktop)]
 pub const EVENT_FULLSCREEN: &str = "window:fullscreen";
+#[cfg(desktop)]
 pub const EVENT_FOCUS: &str = "window:focus";
 
 /// Последнее отправленное интерфейсу состояние: события уходят только при изменении.
+#[cfg(desktop)]
 #[derive(Default)]
 pub struct WindowFlags {
     maximized: bool,
@@ -37,16 +46,19 @@ pub struct WindowFlags {
 /// Есть ли под окном системный фон.
 pub struct Backdrop(pub &'static str);
 
+#[cfg(desktop)]
 #[derive(Clone, Serialize)]
 struct Maximized {
     maximized: bool,
 }
 
+#[cfg(desktop)]
 #[derive(Clone, Serialize)]
 struct Fullscreen {
     fullscreen: bool,
 }
 
+#[cfg(desktop)]
 #[derive(Clone, Serialize)]
 struct Focus {
     focused: bool,
@@ -84,12 +96,15 @@ pub fn create_main(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 
     let backdrop = apply_backdrop(&window, backdrop);
     app.manage(Backdrop(backdrop));
-    app.manage(Mutex::new(WindowFlags {
-        maximized: window.is_maximized().unwrap_or(false),
-        fullscreen: window.is_fullscreen().unwrap_or(false),
-    }));
-    window.show()?;
-    window.set_focus()?;
+    #[cfg(desktop)]
+    {
+        app.manage(Mutex::new(WindowFlags {
+            maximized: window.is_maximized().unwrap_or(false),
+            fullscreen: window.is_fullscreen().unwrap_or(false),
+        }));
+        window.show()?;
+        window.set_focus()?;
+    }
     Ok(window)
 }
 
@@ -144,6 +159,7 @@ pub fn backdrop(window: &WebviewWindow) -> &'static str {
 }
 
 /// Показать главное окно и вывести вперёд: из трея, по ссылке dalywave://, при втором запуске.
+#[cfg(desktop)]
 pub fn show_main(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(MAIN) {
         if window.is_minimized().unwrap_or(false) {
@@ -154,6 +170,14 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
+/// iPhone и iPad: окно и так на экране.
+#[cfg(mobile)]
+pub fn show_main(_app: &AppHandle) {}
+
+#[cfg(mobile)]
+pub fn on_event(_window: &Window, _event: &WindowEvent) {}
+
+#[cfg(desktop)]
 pub fn on_event(window: &Window, event: &WindowEvent) {
     if window.label() != MAIN {
         return;
@@ -176,6 +200,7 @@ pub fn on_event(window: &Window, event: &WindowEvent) {
 
 /// Спрятать окно, сразу запомнив размер и место: из трея приложение часто закрывают
 /// не выходом, а выключением компьютера.
+#[cfg(desktop)]
 fn hide_to_tray(window: &Window) {
     if let Err(e) = window.app_handle().save_window_state(SAVED_STATE) {
         log::warn!("could not save the window state: {e}");
@@ -183,6 +208,7 @@ fn hide_to_tray(window: &Window) {
     let _ = window.hide();
 }
 
+#[cfg(desktop)]
 fn report_state(window: &Window) {
     let maximized = window.is_maximized().unwrap_or(false);
     let fullscreen = window.is_fullscreen().unwrap_or(false);
@@ -204,12 +230,14 @@ fn report_state(window: &Window) {
     }
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_minimize(window: Window) -> ShellResult<()> {
     Ok(window.minimize()?)
 }
 
 /// Возвращает новое состояние: `true` — окно развёрнуто.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_toggle_maximize(window: Window) -> ShellResult<bool> {
     if window.is_maximized()? {
@@ -222,16 +250,19 @@ pub fn window_toggle_maximize(window: Window) -> ShellResult<bool> {
 }
 
 /// Как системное закрытие: окно прячется в трей, музыка продолжает играть.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_close(window: Window) {
     hide_to_tray(&window);
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_start_dragging(window: Window) -> ShellResult<()> {
     Ok(window.start_dragging()?)
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_is_maximized(window: Window) -> ShellResult<bool> {
     Ok(window.is_maximized()?)
@@ -239,6 +270,7 @@ pub fn window_is_maximized(window: Window) -> ShellResult<bool> {
 
 /// Тема системных частей окна (Mica, «светофор», меню, полосы прокрутки):
 /// `dark`, `light` или `null` — как в системе.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_set_theme(window: Window, theme: Option<String>) -> ShellResult<()> {
     let theme = match theme.as_deref() {
@@ -257,6 +289,7 @@ pub fn window_set_theme(window: Window, theme: Option<String>) -> ShellResult<()
 /// Windows 11: где интерфейс нарисовал кнопку «развернуть» (CSS-пиксели от левого верхнего
 /// угла окна). Наведение на неё показывает меню привязки окон. `null` — убрать.
 /// На других системах ничего не делает.
+#[cfg(desktop)]
 #[tauri::command]
 pub fn window_set_snap_area(window: WebviewWindow, rect: Option<Rect>) -> ShellResult<()> {
     if let Some(r) = rect {

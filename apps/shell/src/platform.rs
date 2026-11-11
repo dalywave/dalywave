@@ -1,6 +1,9 @@
 //! Что интерфейсу нужно знать о платформе: ОС, версия, какие кнопки окна рисует он сам,
 //! где лежит «светофор» macOS и есть ли под окном системный фон (Mica).
 
+#[cfg(target_os = "ios")]
+use std::sync::OnceLock;
+
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, WebviewWindow};
 
@@ -28,6 +31,7 @@ pub struct TitleBar {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlatformInfo {
+    /// `macos`, `windows`, `linux`, `ios`, `ipados`
     pub os: &'static str,
     pub arch: &'static str,
     pub app_version: String,
@@ -47,6 +51,8 @@ pub const OS: &str = if cfg!(target_os = "macos") {
     "macos"
 } else if cfg!(windows) {
     "windows"
+} else if cfg!(target_os = "ios") {
+    "ios"
 } else {
     "linux"
 };
@@ -58,6 +64,50 @@ pub const WINDOW_CONTROLS: &str = if cfg!(target_os = "macos") {
 } else {
     "none"
 };
+
+/// iPhone или iPad: узнаётся у UIKit на главном потоке при запуске.
+#[cfg(target_os = "ios")]
+struct Device {
+    os: &'static str,
+    model: String,
+}
+
+#[cfg(target_os = "ios")]
+static DEVICE: OnceLock<Device> = OnceLock::new();
+
+/// Запомнить, iPhone это или iPad. Главный поток, до создания окна.
+#[cfg(target_os = "ios")]
+pub fn init_device() {
+    use objc2::MainThreadMarker;
+    use objc2_ui_kit::{UIDevice, UIUserInterfaceIdiom};
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let device = UIDevice::currentDevice(mtm);
+    let pad = device.userInterfaceIdiom() == UIUserInterfaceIdiom::Pad;
+    let _ = DEVICE.set(Device {
+        os: if pad { "ipados" } else { "ios" },
+        model: device.model().to_string(),
+    });
+}
+
+/// ОС для интерфейса и сервера: на iPad — `ipados`.
+pub fn os() -> &'static str {
+    #[cfg(target_os = "ios")]
+    if let Some(d) = DEVICE.get() {
+        return d.os;
+    }
+    OS
+}
+
+/// iOS: «iPhone» или «iPad» — имя устройства для списка сессий на сервере.
+#[cfg(target_os = "ios")]
+pub fn device_model() -> String {
+    DEVICE
+        .get()
+        .map(|d| d.model.clone())
+        .unwrap_or_else(|| "iPhone".into())
+}
 
 /// «Светофор» при trafficLightPosition {18, 26} из tauri.macos.conf.json, замерено на macOS 27:
 /// кнопки 14×14 через 23 пт, центр на 24 — середина строки заголовка 48 пт из макета.
@@ -81,13 +131,19 @@ pub fn initial(app: &AppHandle, backdrop: &'static str) -> PlatformInfo {
         height: (MAC_CONTROLS.y * 2.0 + MAC_CONTROLS.height).round(),
         controls: Some(MAC_CONTROLS),
     };
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(all(desktop, not(target_os = "macos")))]
     let title_bar = TitleBar {
         height: 32.0,
         controls: None,
     };
+    // Телефон и планшет: окна с заголовком нет, отступы — env(safe-area-inset-*)
+    #[cfg(mobile)]
+    let title_bar = TitleBar {
+        height: 0.0,
+        controls: None,
+    };
     PlatformInfo {
-        os: OS,
+        os: os(),
         arch: arch(),
         app_version: app.package_info().version.to_string(),
         window_controls: WINDOW_CONTROLS,

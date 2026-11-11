@@ -1,0 +1,663 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		088C57F76473BB1FEBFB7418 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D439E9BF9652190398434011 /* CoreAudio.framework */; };
+		0F4DB40E3DCDAC99EBCCC9D4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 338F139382A68AFE2AE173BF /* Security.framework */; };
+		1A43260E845B988075568FBC /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 375402116E2037E9999A79FF /* MediaPlayer.framework */; };
+		2BBE475EF6512BD0CBC946F5 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51D42D29EB38AED4AEBFFAAE /* libapp.a */; };
+		34680CA9D2759AE11324C23E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8939A14EB49E4F5DEA32F192 /* MetalKit.framework */; };
+		4BA81422555241885A6A61AA /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 759968486A44C6A199A816CF /* Metal.framework */; };
+		4DE8D75E722B36C791198AD0 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFA224F3B3C52421C49FE531 /* WebKit.framework */; };
+		60F6E6A692B23570D7F60AFD /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */; };
+		70F6F09D1150B49EA7E8E5B3 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06F48107150D751B1FEB95D3 /* AudioToolbox.framework */; };
+		A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */; };
+		A626211671509DDBDB62667F /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */; };
+		B2256499133D0A5B8A158A31 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3C12E0D418269F691759B755 /* main.mm */; };
+		B7FF745BD6654F557CAFDA64 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB852A5757460E97877E17EA /* CoreGraphics.framework */; };
+		BE6310FA185DEAF239FD69D3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9DD0496943717BF685CF20E /* Assets.xcassets */; };
+		C2800CEC082EC5AB9DFDE72E /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8680BC5BA77A8F5D01DAD70A /* UIKit.framework */; };
+		C9C09914F010D0BEAB60BF4C /* DalyWave.icon in Resources */ = {isa = PBXBuildFile; fileRef = CBA685D63A1B696AAA3F0582 /* DalyWave.icon */; };
+		CAC466375E0855EE31F6724B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */; };
+		EA4F0FAF5D753B9B1996A97B /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */; };
+		F2CC07E3B94A9E34A407D43F /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 91F4510007265E1FCAE25C74 /* assets */; };
+		FBC5869D9AF384C0022603F5 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		437F75467DF85481E32F49FE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C1E56E15F0F0C79AEFDCDD6E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6926EE097D68303541BAEF57;
+			remoteInfo = "dalywave-shell_iOS";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		00E8B93BF740C8186DB6361D /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
+		0144B38ADB9470106F94418D /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		062A5A2D7472DB44AB8873E5 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		06F48107150D751B1FEB95D3 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
+		15BF5CCB7F35C1D588A8384C /* tray.rs */ = {isa = PBXFileReference; path = tray.rs; sourceTree = "<group>"; };
+		17F5055370C371339A65AFD4 /* macos.rs */ = {isa = PBXFileReference; path = macos.rs; sourceTree = "<group>"; };
+		21915CE4038CA63D3585AB63 /* ios.rs */ = {isa = PBXFileReference; path = ios.rs; sourceTree = "<group>"; };
+		253DBBE975A202E6D5DF3810 /* error.rs */ = {isa = PBXFileReference; path = error.rs; sourceTree = "<group>"; };
+		338F139382A68AFE2AE173BF /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		3741B8EE0756D0F278CC21C7 /* snap.rs */ = {isa = PBXFileReference; path = snap.rs; sourceTree = "<group>"; };
+		375402116E2037E9999A79FF /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
+		39AE223214B55ED7B90ABF77 /* settings.rs */ = {isa = PBXFileReference; path = settings.rs; sourceTree = "<group>"; };
+		3C12E0D418269F691759B755 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		51D42D29EB38AED4AEBFFAAE /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		73A56A10B0D7E0D2A07AAD02 /* updates.rs */ = {isa = PBXFileReference; path = updates.rs; sourceTree = "<group>"; };
+		759968486A44C6A199A816CF /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		82E855B1FFBF5A66BB26A28E /* auth.rs */ = {isa = PBXFileReference; path = auth.rs; sourceTree = "<group>"; };
+		8680BC5BA77A8F5D01DAD70A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		88A58456576E3E031E1A9E3E /* player.rs */ = {isa = PBXFileReference; path = player.rs; sourceTree = "<group>"; };
+		8939A14EB49E4F5DEA32F192 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
+		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
+		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginSheetTests.swift; sourceTree = "<group>"; };
+		A1E6D8BAACB5F170BB90DD7A /* dalywave-shell_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "dalywave-shell_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5DB1F76A956B88840826EE6 /* window.rs */ = {isa = PBXFileReference; path = window.rs; sourceTree = "<group>"; };
+		A9DD0496943717BF685CF20E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B614F846A144CB791D297423 /* dalywave-shell_UITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "dalywave-shell_UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA1E5ED18E8D1DC9B521BA75 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C0FCC0DDA051C860490DC013 /* media.rs */ = {isa = PBXFileReference; path = media.rs; sourceTree = "<group>"; };
+		CBA685D63A1B696AAA3F0582 /* DalyWave.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = DalyWave.icon; sourceTree = "<group>"; };
+		CFA224F3B3C52421C49FE531 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		D439E9BF9652190398434011 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
+		EB852A5757460E97877E17EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4FA6E590BF577B7172C2CE34 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2BBE475EF6512BD0CBC946F5 /* libapp.a in Frameworks */,
+				B7FF745BD6654F557CAFDA64 /* CoreGraphics.framework in Frameworks */,
+				4BA81422555241885A6A61AA /* Metal.framework in Frameworks */,
+				34680CA9D2759AE11324C23E /* MetalKit.framework in Frameworks */,
+				FBC5869D9AF384C0022603F5 /* QuartzCore.framework in Frameworks */,
+				0F4DB40E3DCDAC99EBCCC9D4 /* Security.framework in Frameworks */,
+				C2800CEC082EC5AB9DFDE72E /* UIKit.framework in Frameworks */,
+				4DE8D75E722B36C791198AD0 /* WebKit.framework in Frameworks */,
+				EA4F0FAF5D753B9B1996A97B /* AVFAudio.framework in Frameworks */,
+				70F6F09D1150B49EA7E8E5B3 /* AudioToolbox.framework in Frameworks */,
+				088C57F76473BB1FEBFB7418 /* CoreAudio.framework in Frameworks */,
+				1A43260E845B988075568FBC /* MediaPlayer.framework in Frameworks */,
+				60F6E6A692B23570D7F60AFD /* AuthenticationServices.framework in Frameworks */,
+				A626211671509DDBDB62667F /* SystemConfiguration.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		013162E86AEFA102492FAC2D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				06F48107150D751B1FEB95D3 /* AudioToolbox.framework */,
+				E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */,
+				0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */,
+				D439E9BF9652190398434011 /* CoreAudio.framework */,
+				EB852A5757460E97877E17EA /* CoreGraphics.framework */,
+				51D42D29EB38AED4AEBFFAAE /* libapp.a */,
+				375402116E2037E9999A79FF /* MediaPlayer.framework */,
+				759968486A44C6A199A816CF /* Metal.framework */,
+				8939A14EB49E4F5DEA32F192 /* MetalKit.framework */,
+				A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */,
+				338F139382A68AFE2AE173BF /* Security.framework */,
+				81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */,
+				8680BC5BA77A8F5D01DAD70A /* UIKit.framework */,
+				CFA224F3B3C52421C49FE531 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		0596AD3D968A08669B07BC40 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B9E6CD70F72AC3C28A0DD160 /* dalywave-shell */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		0D971B9401EC3B8438183AB2 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				82E855B1FFBF5A66BB26A28E /* auth.rs */,
+				253DBBE975A202E6D5DF3810 /* error.rs */,
+				21915CE4038CA63D3585AB63 /* ios.rs */,
+				0144B38ADB9470106F94418D /* lib.rs */,
+				17F5055370C371339A65AFD4 /* macos.rs */,
+				062A5A2D7472DB44AB8873E5 /* main.rs */,
+				C0FCC0DDA051C860490DC013 /* media.rs */,
+				912A4D203E5A5DB0B2FF559B /* platform.rs */,
+				88A58456576E3E031E1A9E3E /* player.rs */,
+				39AE223214B55ED7B90ABF77 /* settings.rs */,
+				3741B8EE0756D0F278CC21C7 /* snap.rs */,
+				15BF5CCB7F35C1D588A8384C /* tray.rs */,
+				73A56A10B0D7E0D2A07AAD02 /* updates.rs */,
+				A5DB1F76A956B88840826EE6 /* window.rs */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+		1208209C3A8A10399398F374 /* dalywave-shell_iOS */ = {
+			isa = PBXGroup;
+			children = (
+				9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */,
+				BA1E5ED18E8D1DC9B521BA75 /* Info.plist */,
+			);
+			path = "dalywave-shell_iOS";
+			sourceTree = "<group>";
+		};
+		2F21CE4734BD0F007756A913 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1E6D8BAACB5F170BB90DD7A /* dalywave-shell_iOS.app */,
+				B614F846A144CB791D297423 /* dalywave-shell_UITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		90A6E48F818045C851CE4E7C /* icons */ = {
+			isa = PBXGroup;
+			children = (
+				CBA685D63A1B696AAA3F0582 /* DalyWave.icon */,
+			);
+			name = icons;
+			path = ../../icons;
+			sourceTree = "<group>";
+		};
+		B9E6CD70F72AC3C28A0DD160 /* dalywave-shell */ = {
+			isa = PBXGroup;
+			children = (
+				3C12E0D418269F691759B755 /* main.mm */,
+				DED358B6B88BF8B301EF74AC /* bindings */,
+			);
+			path = "dalywave-shell";
+			sourceTree = "<group>";
+		};
+		D78C09200EAD515069920099 /* Externals */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Externals;
+			sourceTree = "<group>";
+		};
+		DED358B6B88BF8B301EF74AC /* bindings */ = {
+			isa = PBXGroup;
+			children = (
+				00E8B93BF740C8186DB6361D /* bindings.h */,
+			);
+			path = bindings;
+			sourceTree = "<group>";
+		};
+		F3DD767A9649E2491C831A50 = {
+			isa = PBXGroup;
+			children = (
+				91F4510007265E1FCAE25C74 /* assets */,
+				A9DD0496943717BF685CF20E /* Assets.xcassets */,
+				6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */,
+				1208209C3A8A10399398F374 /* dalywave-shell_iOS */,
+				D78C09200EAD515069920099 /* Externals */,
+				90A6E48F818045C851CE4E7C /* icons */,
+				0596AD3D968A08669B07BC40 /* Sources */,
+				0D971B9401EC3B8438183AB2 /* src */,
+				F4A32B8C22E604101EBA527B /* UITests */,
+				013162E86AEFA102492FAC2D /* Frameworks */,
+				2F21CE4734BD0F007756A913 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F4A32B8C22E604101EBA527B /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		"TEMP_BFB9FA0E-3BD1-4980-B12C-985A12B631C4" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
+		"TEMP_EA758224-A6DA-475D-BFAB-4AF23858D10B" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6926EE097D68303541BAEF57 /* dalywave-shell_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2C058724F7E5D7AA8FDB7C86 /* Build configuration list for PBXNativeTarget "dalywave-shell_iOS" */;
+			buildPhases = (
+				FA46A53D2B58F41B1DE5B329 /* Build Rust Code */,
+				1CB65FC8099B4711AF35AC4B /* Sources */,
+				082E43B98E808F45AD96E6CA /* Resources */,
+				4FA6E590BF577B7172C2CE34 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "dalywave-shell_iOS";
+			packageProductDependencies = (
+			);
+			productName = "dalywave-shell_iOS";
+			productReference = A1E6D8BAACB5F170BB90DD7A /* dalywave-shell_iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		77D1F6F2ABB8FFDE2F65F7F3 /* dalywave-shell_UITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EF65ADA0CD97D457C91397FE /* Build configuration list for PBXNativeTarget "dalywave-shell_UITests" */;
+			buildPhases = (
+				D0F686CD859DCD53DE24F8AD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70E2942E1449396B72A5F0DF /* PBXTargetDependency */,
+			);
+			name = "dalywave-shell_UITests";
+			packageProductDependencies = (
+			);
+			productName = "dalywave-shell_UITests";
+			productReference = B614F846A144CB791D297423 /* dalywave-shell_UITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C1E56E15F0F0C79AEFDCDD6E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					6926EE097D68303541BAEF57 = {
+						DevelopmentTeam = Y5KR5JPCRG;
+						ProvisioningStyle = Automatic;
+					};
+					77D1F6F2ABB8FFDE2F65F7F3 = {
+						DevelopmentTeam = Y5KR5JPCRG;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 6926EE097D68303541BAEF57;
+					};
+				};
+			};
+			buildConfigurationList = 1BF98670E6144350D0D3BE65 /* Build configuration list for PBXProject "dalywave-shell" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F3DD767A9649E2491C831A50;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2F21CE4734BD0F007756A913 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6926EE097D68303541BAEF57 /* dalywave-shell_iOS */,
+				77D1F6F2ABB8FFDE2F65F7F3 /* dalywave-shell_UITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		082E43B98E808F45AD96E6CA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BE6310FA185DEAF239FD69D3 /* Assets.xcassets in Resources */,
+				C9C09914F010D0BEAB60BF4C /* DalyWave.icon in Resources */,
+				CAC466375E0855EE31F6724B /* LaunchScreen.storyboard in Resources */,
+				F2CC07E3B94A9E34A407D43F /* assets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FA46A53D2B58F41B1DE5B329 /* Build Rust Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Rust Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a",
+				"$(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../../scripts/build-ios.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1CB65FC8099B4711AF35AC4B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2256499133D0A5B8A158A31 /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0F686CD859DCD53DE24F8AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		70E2942E1449396B72A5F0DF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6926EE097D68303541BAEF57 /* dalywave-shell_iOS */;
+			targetProxy = 437F75467DF85481E32F49FE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		77B128F8D08E5701BC8D3E94 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = debug;
+		};
+		9FF2112B3310809BBE2EA740 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+				);
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Y5KR5JPCRG;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "dalywave-shell_iOS";
+			};
+			name = release;
+		};
+		A3ADD50E3EBF8136794D9692 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = release;
+		};
+		C9546D3D07C8C5980F8A5D05 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+				);
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Y5KR5JPCRG;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "dalywave-shell_iOS";
+			};
+			name = debug;
+		};
+		D0890FC434FF781BCC49F42B /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = (
+					arm64,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = DalyWave;
+				CODE_SIGN_ENTITLEMENTS = "dalywave-shell_iOS/dalywave-shell_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y5KR5JPCRG;
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "dalywave-shell_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave;
+				PRODUCT_NAME = DalyWave;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = debug;
+		};
+		E6114D004EB2D6CFBBFDBE47 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = (
+					arm64,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = DalyWave;
+				CODE_SIGN_ENTITLEMENTS = "dalywave-shell_iOS/dalywave-shell_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y5KR5JPCRG;
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "dalywave-shell_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave;
+				PRODUCT_NAME = DalyWave;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1BF98670E6144350D0D3BE65 /* Build configuration list for PBXProject "dalywave-shell" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				77B128F8D08E5701BC8D3E94 /* debug */,
+				A3ADD50E3EBF8136794D9692 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		2C058724F7E5D7AA8FDB7C86 /* Build configuration list for PBXNativeTarget "dalywave-shell_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0890FC434FF781BCC49F42B /* debug */,
+				E6114D004EB2D6CFBBFDBE47 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		EF65ADA0CD97D457C91397FE /* Build configuration list for PBXNativeTarget "dalywave-shell_UITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C9546D3D07C8C5980F8A5D05 /* debug */,
+				9FF2112B3310809BBE2EA740 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C1E56E15F0F0C79AEFDCDD6E /* Project object */;
+}

@@ -1,5 +1,6 @@
 //! Значок в строке меню macOS и в трее Windows: что играет, пауза, следующий и предыдущий
-//! трек, «Показать DalyWave», выход. Команды плеера уходят интерфейсу как `media:command`.
+//! трек, «Показать DalyWave», выход. Команды плеера выполняет движок (player.rs); что он не
+//! может сам (например, «играть» без очереди), уходит интерфейсу как `media:command`.
 
 use tauri::{
     AppHandle, Manager, Wry,
@@ -9,7 +10,8 @@ use tauri::{
 };
 
 use crate::{
-    media::{self, Command, Media, NowPlaying, Source},
+    media::{Command, Media, NowPlaying, Source},
+    player,
     settings::{Locale, Settings},
     window,
 };
@@ -120,9 +122,9 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
 
 fn on_menu(app: &AppHandle, event: MenuEvent) {
     match event.id().as_ref() {
-        "toggle" => media::send(app, Command::Toggle, Source::Tray),
-        "next" => media::send(app, Command::Next, Source::Tray),
-        "previous" => media::send(app, Command::Previous, Source::Tray),
+        "toggle" => player::remote(app, Command::Toggle, Source::Tray),
+        "next" => player::remote(app, Command::Next, Source::Tray),
+        "previous" => player::remote(app, Command::Previous, Source::Tray),
         "show" => window::show_main(app),
         "quit" => app.exit(0),
         _ => {}
@@ -176,7 +178,7 @@ mod tests {
             album: None,
             artwork_url: None,
             duration_ms: None,
-            position_ms: None,
+            position_ms: 0,
             playing: true,
         };
         let line = now_line(&now);

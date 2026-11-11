@@ -1,0 +1,37 @@
+[package]
+name = "dalywave-audio"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Аудиодвижок DalyWave: декодирование, ресемплинг, N дек, без пауз и кроссфейд, вывод через cpal"
+
+[lib]
+name = "dalywave_audio"
+
+[dependencies]
+symphonia = { version = "0.6.1", default-features = false, features = ["opt-simd", "id3v2", "ogg", "isomp4", "mkv", "flac", "mp3", "aac", "vorbis", "pcm", "wav"] }
+symphonia-adapter-libopus = "0.3.0"
+cpal = "0.18.2"
+rubato = "5.0.1"
+audioadapter-buffers = "5.2.0"
+rtrb = "0.4.1"
+crossbeam-channel = "0.5.17"
+ureq = { version = "3.5.1", default-features = false, features = ["rustls"] }
+log = "0.4"
+thiserror = "2"
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
+objc2 = "0.6.5"
+block2 = "0.6"
+objc2-foundation = { version = "0.3.2", features = ["NSString", "NSDictionary", "NSValue", "NSNotification", "NSOperation", "NSData", "NSObject", "NSArray", "NSError", "block2"] }
+objc2-media-player = { version = "0.3.2", default-features = false, features = ["std", "block2", "objc2-core-foundation", "MPNowPlayingInfoCenter", "MPRemoteCommandCenter", "MPRemoteCommand", "MPRemoteCommandEvent", "MPMediaItem"] }
+objc2-core-foundation = { version = "0.3.2", features = ["CFCGTypes"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2-avf-audio = { version = "0.3.2", features = ["AVAudioSession", "AVAudioSessionTypes", "AVAudioSessionRoute"] }
+objc2-ui-kit = { version = "0.3.2", default-features = false, features = ["std", "UIImage"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSImage"] }
+objc2-media-player = { version = "0.3.2", default-features = false, features = ["objc2-app-kit"] }

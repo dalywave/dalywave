@@ -1,0 +1,158 @@
+# Xcode-проект DalyWave для iPhone и iPad. Создан `cargo tauri ios init` и доработан руками:
+#   - своя фаза «Build Rust Code» (scripts/build-ios.sh) — Run в Xcode работает без Tauri CLI;
+#   - фреймворки аудиодвижка и входа — статическая библиотека Rust не передаёт их линковщику;
+#   - фоновый звук, ссылки dalywave://, тёмная тема системных окон, значок с темами.
+# Пересобрать проект: `make ios` (или `xcodegen generate` здесь). `cargo tauri ios init` заново
+# не запускать: он перезапишет файл и вернёт штатную фазу, которой нужен запущенный CLI.
+name: dalywave-shell
+options:
+  bundleIdPrefix: rest.daly.wave
+  deploymentTarget:
+    iOS: 15.0
+fileGroups: [../../src]
+configs:
+  debug: debug
+  release: release
+settingGroups:
+  app:
+    base:
+      PRODUCT_NAME: DalyWave
+      PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave
+      DEVELOPMENT_TEAM: Y5KR5JPCRG
+      CODE_SIGN_STYLE: Automatic
+      # Значок: Icon Composer (iOS 26+, «жидкое стекло») и каталог с тёмной и тонированной темами
+      # для iOS 18–25 — оба называются DalyWave
+      ASSETCATALOG_COMPILER_APPICON_NAME: DalyWave
+      TARGETED_DEVICE_FAMILY: "1,2"
+      MARKETING_VERSION: 0.1.0
+      CURRENT_PROJECT_VERSION: 1
+targets:
+  dalywave-shell_iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Assets.xcassets
+      # Тот же документ Icon Composer, что у macOS (apps/shell/icons)
+      - path: ../../icons/DalyWave.icon
+        type: file
+        buildPhase: resources
+      # Exclude built static libs: regenerating with xcodegen after a build
+      # otherwise turns the per-configuration libapp.a copies into colliding
+      # resources ("Multiple commands produce …/libapp.a"). They are linked
+      # via LIBRARY_SEARCH_PATHS, never bundled as resources.
+      - path: Externals
+        excludes: ["**/*.a"]
+      - path: dalywave-shell_iOS
+      - path: assets
+        buildPhase: resources
+        type: folder
+      - path: LaunchScreen.storyboard
+    info:
+      path: dalywave-shell_iOS/Info.plist
+      properties:
+        CFBundleDisplayName: DalyWave
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UILaunchStoryboardName: LaunchScreen
+        UIRequiredDeviceCapabilities: [arm64, metal]
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # Музыка играет в фоне и на заблокированном экране
+        UIBackgroundModes: [audio]
+        # Возврат входа: dalywave://auth (окно входа ловит его само, Safari — по этой схеме)
+        CFBundleURLTypes:
+          - CFBundleURLName: rest.daly.wave
+            CFBundleURLSchemes: [dalywave]
+        # Интерфейс тёмный: системные окна (вход, меню) — тоже, строка состояния — светлая
+        UIUserInterfaceStyle: Dark
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UIViewControllerBasedStatusBarAppearance: false
+        # Разработка: свой сервер на Mac в локальной сети (http)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: dalywave-shell_iOS/dalywave-shell_iOS.entitlements
+    settings:
+      base:
+        ENABLE_BITCODE: false
+        ARCHS: [arm64]
+        VALID_ARCHS: arm64
+        LIBRARY_SEARCH_PATHS[arch=x86_64]: $(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
+        LIBRARY_SEARCH_PATHS[arch=arm64]: $(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true
+        EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+      groups: [app]
+    dependencies:
+      - framework: libapp.a
+        embed: false
+      - sdk: CoreGraphics.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: QuartzCore.framework
+      - sdk: Security.framework
+      - sdk: UIKit.framework
+      - sdk: WebKit.framework
+      # Статическая библиотека Rust не передаёт свои #[link(framework)] линковщику Xcode:
+      # фреймворки аудиодвижка (cpal, MediaPlayer), окна входа и прокси системы — здесь
+      - sdk: AVFAudio.framework
+      - sdk: AudioToolbox.framework
+      - sdk: CoreAudio.framework
+      - sdk: MediaPlayer.framework
+      - sdk: AuthenticationServices.framework
+      - sdk: SystemConfiguration.framework
+    preBuildScripts:
+      # Своя фаза вместо `cargo tauri ios xcode-script`: работает из Xcode без запущенного CLI
+      - script: |
+          "${SRCROOT}/../../scripts/build-ios.sh"
+        name: Build Rust Code
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a
+          - $(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a
+  # Проверки на симуляторе: окно входа и снимки экрана (make ios-test)
+  dalywave-shell_UITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: dalywave-shell_iOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: dalywave-shell_iOS
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.uitests
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        ARCHS: [arm64]
+# Run в Xcode собирает release: отладочная сборка Rust на телефоне медленная для тяжёлых
+# форматов (FLAC 24/96 с ресемплингом)
+schemes:
+  dalywave-shell_iOS:
+    build:
+      targets:
+        dalywave-shell_iOS: all
+        dalywave-shell_UITests: [test]
+    run:
+      config: release
+      environmentVariables:
+        RUST_BACKTRACE: full
+        RUST_LOG: info
+    test:
+      config: release
+      targets:
+        - dalywave-shell_UITests
+    profile:
+      config: release
+    analyze:
+      config: debug
+    archive:
+      config: release

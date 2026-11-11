@@ -1,7 +1,9 @@
 # Мост интерфейса к оболочке приложения
 
-Договор между `apps/ui` и оболочкой Tauri (`apps/shell`) для macOS и Windows. Звук пока играет
-в WebView; данные интерфейс берёт с сервера сам, с токеном устройства из оболочки.
+Договор между `apps/ui` и оболочкой Tauri (`apps/shell`) для macOS, Windows, iPhone и iPad. Звук
+играет аудиодвижок на Rust (`crates/client/audio`) — не WebView; «Сейчас играет», медиаклавиши,
+экран блокировки и трей ведёт он же. Данные интерфейс берёт с сервера сам, с токеном устройства
+из оболочки.
 
 ## Как подключить
 
@@ -19,7 +21,8 @@ const shell = createShell({ invoke, listen })
 ```
 
 Признак приложения — `shellInfo() !== null` (то же, что `'__TAURI_INTERNALS__' in window`).
-В `Bridge` из `app/bridge/types.ts`: `kind: 'tauri'`, `platform: info.os`, `isDesktopApp: true`.
+В `Bridge` из `app/bridge/types.ts`: `kind: 'tauri'`, `platform: info.os`; `isDesktopApp` —
+`true` на macOS и Windows, `false` на iPhone и iPad (там нет окна с заголовком).
 
 Каждая команда — промис. Ошибка приходит объектом `{ code, message }` (`isShellError(e)`):
 по `code` интерфейс выбирает текст из i18n, `message` — для журнала.
@@ -47,9 +50,20 @@ const shell = createShell({ invoke, listen })
 }
 ```
 
+```jsonc
+// iPhone (на iPad — "os": "ipados")
+{
+  "os": "ios", "arch": "aarch64", "appVersion": "0.1.0",
+  "windowControls": "none",
+  "titleBar": { "height": 0, "controls": null },
+  "backdrop": "none", "dev": false, "serverUrl": "https://wave.daly.rest", "locale": "ru"
+}
+```
+
 | Поле | Что значит |
 |---|---|
-| `windowControls` | `mac-inset` — кнопки окна рисует macOS поверх интерфейса; `windows` — интерфейс рисует свои; `none` — обычная рамка |
+| `os` | `macos`, `windows`, `linux`, `ios`, `ipados` |
+| `windowControls` | `mac-inset` — кнопки окна рисует macOS поверх интерфейса; `windows` — интерфейс рисует свои; `none` — обычная рамка или окна нет (iPhone, iPad) |
 | `titleBar.height` | рекомендуемая высота своей строки заголовка, CSS-пиксели |
 | `titleBar.controls` | где лежит «светофор» (от левого верхнего угла окна); на Windows — `null` |
 | `backdrop` | `mica` — под прозрачными местами интерфейса системный фон Windows 11; иначе `none` |
@@ -60,6 +74,11 @@ const shell = createShell({ invoke, listen })
 ## Заголовок окна
 
 Системной рамки у окна нет: интерфейс рисует свою строку заголовка (`--titlebar-h`).
+
+**iPhone и iPad.** Окна нет: WebView во весь экран, под вырезом и полоской «домой». Отступы —
+`env(safe-area-inset-*)` (в интерфейсе `--safe-top`, `--safe-bottom`; в `<meta name="viewport">`
+нужен `viewport-fit=cover`). Строка состояния светлая, системные окна — в тёмной теме.
+Команды `window_*` и `update_*` там не существуют.
 
 **macOS (`mac-inset`).** Кнопки 14×14 с шагом 23: x 18–78, по центру строки высотой 48
 (как `.sidebar__chrome` в макете «Полночь»). Левее x = 90 ничего интерактивного не ставить.
@@ -115,12 +134,21 @@ const shell = createShell({ invoke, listen })
 | `auth.logout()` | `auth_logout` | — |
 | `auth.getToken()` | `auth_token` | `string \| null` — токен устройства `dwd_…` |
 | `auth.session()` | `auth_session` | `Session \| null` — без сети |
-| `nowPlaying.update(state)` | `now_playing_update { state }` | — |
 | `openExternal(url)` | `open_external { url }` | — http, https, mailto |
 | `server.get()` / `server.set(url)` | `server_url_get` / `server_url_set { url }` | адрес сервера |
 | `setLocale(locale)` | `shell_set_locale { locale }` | — |
 | `updates.check()` | `update_check` | `UpdateInfo \| null` |
 | `updates.install()` | `update_install` | — скачивает, ставит, перезапускает |
+| `player.load(items, { start, startMs, autoplay })` | `player_load { items, start, startMs, autoplay }` | — новая очередь движка |
+| `player.setUpcoming(items)` | `player_set_upcoming { items }` | — всё после текущего трека |
+| `player.play()` / `pause()` / `toggle()` | `player_play` / `player_pause` / `player_toggle` | — |
+| `player.seek(positionMs)` | `player_seek { positionMs }` | — |
+| `player.next()` / `previous()` / `stop()` | `player_next` / `player_previous` / `player_stop` | — по очереди движка |
+| `player.setVolume(volume)` | `player_set_volume { volume }` | — 0…1 |
+| `player.setTransition(t)` | `player_set_transition { transition }` | — `{ mode: 'gapless' }` \| `{ mode: 'crossfade', ms }` |
+| `player.setNormalize(enabled)` | `player_set_normalize { enabled }` | — выравнивание по LUFS |
+| `player.setLevels(enabled)` | `player_set_levels { enabled }` | — события `player:level` |
+| `player.state()` | `player_state` | `PlayerSnapshot` |
 
 ## События (`shell.on(name, handler)`)
 
@@ -131,7 +159,14 @@ const shell = createShell({ invoke, listen })
 | `window:focus` | `{ focused }` | окно получило или потеряло фокус |
 | `window:caption` | `{ button: 'maximize', state: 'enter' \| 'leave' \| 'down' \| 'up' }` | Windows: мышь над кнопкой «развернуть» |
 | `auth:changed` | `{ session: Session \| null }` | вход или выход |
-| `media:command` | `MediaCommand` | медиаклавиши, наушники, Пункт управления, плашка Windows, трей |
+| `media:command` | `MediaCommand` | команда пульта, которую движок не выполнил сам (см. «Звук») |
+| `player:state` | `{ state: 'idle' \| 'loading' \| 'playing' \| 'paused' \| 'ended', buffering }` | состояние движка |
+| `player:position` | `{ id, positionMs, durationMs }` | раз в 250 мс во время игры, после перемотки и паузы |
+| `player:track` | `{ id, index, reason: 'auto' \| 'user', durationMs }` | играет другой элемент очереди |
+| `player:buffering` | `{ buffering }` | ждём данных из сети |
+| `player:error` | `{ id \| null, message }` | трек не открылся или оборвался |
+| `player:ended` | `null` | очередь движка доиграла |
+| `player:level` | `{ rms, peak, bands: [low, mid, high] }` | ~20 раз в секунду, пока включено `setLevels(true)` |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |
 | `update:available` | `UpdateInfo` | фоновая проверка нашла обновление (раз в 6 часов) |
 | `update:progress` | `{ downloadedBytes, totalBytes }` | идёт `updates.install()` |
@@ -154,6 +189,10 @@ const shell = createShell({ invoke, listen })
    ```
 4. «Выйти» → `auth.logout()`: сессия отзывается на сервере (если он доступен), токен стирается.
 5. Аварийный вход паролем — только на сайте: он открывает cookie-сессию.
+6. iPhone и iPad: страница входа открывается не в Safari, а в системном окне поверх приложения
+   (ASWebAuthenticationSession; сначала iOS спрашивает «DalyWave хочет войти через
+   wave.daly.rest»). Возврат `dalywave://auth` окно ловит само; если оно не открылось — Safari и
+   та же ссылка (схема зарегистрирована в Info.plist). Токен — в защищённой связке ключей iOS.
 
 Вход на каждом сервере свой: токен и профиль хранятся по адресу сервера.
 
@@ -168,45 +207,76 @@ const shell = createShell({ invoke, listen })
 
 **Адрес сервера.** В `cargo tauri dev` — `http://localhost:3400`: страница открыта с того же
 адреса, Nuxt проксирует `/api` на :8400, относительные `/api/…` работают. В собранном
-приложении страница живёт на `tauri://localhost` (macOS) или `https://tauri.localhost`
-(Windows), поэтому адреса API — абсолютные: `https://wave.daly.rest/api/…`. Для этого серверу
-нужен CORS для этих двух адресов (заголовок `Authorization`, предварительные запросы) —
-**пока его нет, запросы из собранного приложения не пройдут.** Аудио из R2 по подписанным
-ссылкам CORS уже разрешает.
+приложении страница живёт на `tauri://localhost` (macOS, iOS) или `https://tauri.localhost`
+(Windows), поэтому адреса API — абсолютные: `https://wave.daly.rest/api/…`. Сервер разрешает
+эти адреса в CORS (с заголовком `Authorization`). Байты аудио движок качает сам (не WebView) —
+CORS им не нужен.
 
 **CSP собранного приложения:** скрипты — только свои (`'self'`, WASM разрешён, inline-скрипты
 сборки Nuxt оболочка хеширует сама); стили — свои и inline; картинки, звук и запросы — `https:`,
 `http://localhost:*`, `data:`, `blob:`; фреймов нет. Шрифты — только из сборки.
 
-## «Сейчас играет» и медиаклавиши
+## Звук
 
-`nowPlaying.update(state)` — при смене трека, запуске, паузе и перемотке (не каждую секунду:
-позицию система досчитывает сама); `null` — ничего не играет.
+Играет движок на Rust: декодирование (Opus, AAC, FLAC, MP3, Vorbis), склейка без пауз до сэмпла,
+кроссфейд по равномощной кривой, выравнивание громкости к −14 LUFS. Звук идёт и с закрытым окном,
+и в фоне на iPhone, когда WebView усыплён.
+
+**Очередь.** `player.load(items)` — текущий трек (обычно один элемент), `player.setUpcoming(items)` —
+что дальше: вручную добавленное, остаток альбома или плейлиста, волна. Движок готовит следующий
+трек за 30 с до конца и переходит сам — без пауз или наложением (`setTransition`), — сообщая
+`player:track` с `reason: 'auto'`. Плеер интерфейса двигает по нему свою очередь и историю.
+Очередь движка кончилась — `player:ended`: следующий трек решает интерфейс (докачка волны,
+трек, который ещё скачивается на сервер).
 
 ```ts
-interface NowPlaying {
-  title: string; artist: string; album?: string | null
-  artworkUrl?: string | null      // http(s) или file://
-  durationMs?: number | null; positionMs?: number | null
-  playing: boolean
+interface PlayerItem {
+  id: string            // uid элемента очереди интерфейса — вернётся в событиях
+  trackId: string       // id трека на сервере
+  url?: string | null   // подписанная ссылка; null — движок спросит сервер сам
+  loudnessLufs?: number | null; truePeakDb?: number | null; durationMs?: number | null
+  title: string; artist: string; album?: string | null; artworkUrl?: string | null
 }
 ```
 
-Плашка — macOS (Пункт управления, экран блокировки) и Windows (SMTC); меню в трее
-показывает «Исполнитель — Трек» и «Пауза» / «Играть». Команды приходят событием
-`media:command` и выполняются плеером интерфейса:
+**Ссылки.** Если ссылки нет или она истекла посреди трека (подписанная ссылка R2 живёт 6 часов;
+хранилище отвечает 400/401/403/404/410), движок сам запрашивает `GET /api/tracks/{trackId}/stream`
+с токеном устройства и продолжает с той же позиции — уже скачанное не качается заново. Ответ 202
+(трек ещё скачивается) — `player:error` и следующий трек.
+
+**Пульт системы.** Медиаклавиши, наушники, Пункт управления и экран блокировки (macOS, iOS —
+MediaPlayer; Windows — SMTC), трей: движок выполняет команду сам — в том числе «следующий» и
+«предыдущий» по своей очереди. Интерфейсу уходит `media:command` только то, что движок не может:
+«играть» без очереди (запустить волну), «следующий» в конце очереди движка, «предыдущий» в первые
+3 с первого трека (история — в интерфейсе).
 
 ```ts
 type MediaCommand =
   | { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop', source: 'system' | 'tray' }
   | { action: 'seek', positionMs: number, source: 'system' }     // ползунок в Пункте управления
-  | { action: 'seekBy', offsetMs: number, source: 'system' }     // ±10 000, если система не сказала
+  | { action: 'seekBy', offsetMs: number, source: 'system' }     // плашка Windows
 ```
 
-Проверено на macOS 27: WebKit сам публикует плашку для `<audio>` в окне (заголовок страницы и
-кнопки ±15 с), но после `nowPlaying.update` система показывает нашу, а медиаклавиши всегда
-приходят в `media:command` — WebKit сам `<audio>` не останавливает. Поэтому `update` отправлять
-сразу при запуске звука, а `navigator.mediaSession` в приложении не задавать.
+«Сейчас играет» (название, исполнитель, альбом, обложка, длительность, позиция, пауза) движок
+публикует сам по своим событиям; `navigator.mediaSession` в приложении не задавать.
+
+**Волна.** Анализатора WebAudio в приложении нет: `player.setLevels(true)` включает
+`player:level` ~20 раз в секунду — RMS, пик и три полосы (до 150 Гц, 150–2000 Гц, выше 2 кГц)
+до общей громкости. Включать, только пока волна на экране.
+
+**iPhone.** Аудиосессия `.playback` (звук и при беззвучном режиме), фон — `UIBackgroundModes:
+audio`. Звонок, Siri, будильник — пауза и продолжение, если iOS разрешит; наушники отключили —
+пауза. В фоне `player:position` и `player:level` в WebView не уходят; при возвращении приложения
+приходят свежие `player:state` и `player:position`.
+
+**Смена устройства вывода.** macOS сама переводит поток на новое устройство по умолчанию;
+устройство пропало — пауза; поток стал непригоден (другая частота, сброс медиасервисов iOS) —
+вывод открывается заново, трек продолжается с той же позиции.
+
+**Проверки без звука.** `DW_VOLUME=0` — громкость движка умножается на 0: всё работает, звука
+нет. `DALYWAVE_SMOKE=http://127.0.0.1:8420` — очередь из тестового сервера
+(`crates/client/audio/tools/serve.py`) играет сразу после запуска, в журнал — треки, позиция,
+уровень, «Сейчас играет» и нагрузка.
 
 ## Окно и приложение
 

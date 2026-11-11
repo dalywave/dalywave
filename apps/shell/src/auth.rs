@@ -6,6 +6,9 @@
 //! а не в `cargo tauri dev`). Оболочка сверяет `state`, меняет код на токен устройства
 //! (`POST /api/auth/app/token`, PKCE S256) и кладёт токен в связку ключей ОС.
 //! Verifier PKCE не покидает Rust; интерфейс получает пользователя и устройство.
+//!
+//! На iPhone и iPad страница входа открывается поверх приложения (ASWebAuthenticationSession,
+//! ios.rs) и возвращает ссылку сама; если окно не открылось — Safari и ссылка dalywave://.
 
 use std::{
     collections::BTreeMap,
@@ -142,14 +145,14 @@ impl Auth {
         }
     }
 
-    fn cancel(&self) -> bool {
+    pub(crate) fn cancel(&self) -> bool {
         let pending = self.lock().take();
         pending.map(Pending::close).is_some()
     }
 
     /// Возврат из браузера: `?code=…&state=…` или `?error=…&state=…`. Чужой или лишний
     /// возврат пропускается: незаконченный вход продолжает ждать свой.
-    fn deliver(&self, url: &Url) {
+    pub(crate) fn deliver(&self, url: &Url) {
         let params: BTreeMap<String, String> = url.query_pairs().into_owned().collect();
         let Some(state) = params.get("state") else {
             log::warn!("sign-in callback without state ignored");
@@ -235,6 +238,10 @@ fn use_loopback() -> bool {
 
 /// Имя устройства для списка сессий на сервере, например «MacBook Pro — Захар».
 fn device_name() -> String {
+    #[cfg(target_os = "ios")]
+    {
+        platform::device_model()
+    }
     #[cfg(target_os = "macos")]
     {
         let name = std::process::Command::new("/usr/sbin/scutil")
@@ -253,7 +260,7 @@ fn device_name() -> String {
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| "Windows".into())
     }
-    #[cfg(not(any(target_os = "macos", windows)))]
+    #[cfg(not(any(target_os = "macos", windows, target_os = "ios")))]
     {
         "Linux".into()
     }
@@ -274,7 +281,7 @@ fn start_url(
         .append_pair("code_challenge_method", "S256")
         .append_pair("state", state)
         .append_pair("device_name", device_name)
-        .append_pair("platform", platform::OS);
+        .append_pair("platform", platform::os());
     Ok(url)
 }
 
@@ -343,8 +350,25 @@ mod keychain {
     use super::KEYCHAIN_SERVICE;
     use crate::error::{ShellError, ShellResult};
 
-    fn entry(server: &str) -> ShellResult<keyring::Entry> {
-        Ok(keyring::Entry::new(
+    #[cfg(not(target_os = "ios"))]
+    fn entry(server: &str) -> ShellResult<keyring_core::Entry> {
+        Ok(keyring::Entry::new(KEYCHAIN_SERVICE, &format!("device-token {server}"))?.inner)
+    }
+
+    /// iOS: защищённая связка ключей (keyring из коробки iOS не поддерживает)
+    #[cfg(target_os = "ios")]
+    fn entry(server: &str) -> ShellResult<keyring_core::Entry> {
+        static STORE: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
+        STORE
+            .get_or_init(|| {
+                let store = apple_native_keyring_store::protected::Store::new()
+                    .map_err(|e| e.to_string())?;
+                keyring_core::set_default_store(store);
+                Ok(())
+            })
+            .clone()
+            .map_err(ShellError::Keychain)?;
+        Ok(keyring_core::Entry::new(
             KEYCHAIN_SERVICE,
             &format!("device-token {server}"),
         )?)
@@ -366,17 +390,22 @@ mod keychain {
     pub fn load(server: &str) -> ShellResult<Option<String>> {
         match entry(server)?.get_password() {
             Ok(token) => Ok(Some(token)),
-            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(keyring_core::Error::NoEntry) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
 
     pub fn delete(server: &str) -> ShellResult<()> {
         match entry(server)?.delete_credential() {
-            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
             Err(e) => Err(e.into()),
         }
     }
+}
+
+/// Токен устройства для запросов из Rust (ссылки на аудио). Блокирует — не главный поток.
+pub fn load_token(server: &str) -> ShellResult<Option<String>> {
+    keychain::load(server)
 }
 
 /// Пользователь и устройство — без секретов, чтобы интерфейс открывался без сети.
@@ -515,6 +544,22 @@ font:16px/1.5 system-ui,sans-serif\"><p>Можно вернуться в DalyWav
     }
 }
 
+/// iOS: страница входа поверх приложения. `false` — не открылась, тогда — Safari.
+#[cfg(target_os = "ios")]
+async fn open_sheet(app: &AppHandle, start: &Url) -> bool {
+    let (tx, rx) = oneshot::channel();
+    let (handle, url) = (app.clone(), start.clone());
+    let sent = app.run_on_main_thread(move || {
+        let _ = tx.send(crate::ios::start_web_auth(&handle, &url));
+    });
+    sent.is_ok() && rx.await.unwrap_or(false)
+}
+
+#[cfg(not(target_os = "ios"))]
+async fn open_sheet(_app: &AppHandle, _start: &Url) -> bool {
+    false
+}
+
 /// Войти: открыть браузер, дождаться возврата, получить токен устройства.
 #[tauri::command]
 pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
@@ -549,7 +594,9 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
     // изображает сценарий проверки
     if cfg!(debug_assertions) && std::env::var("DALYWAVE_AUTH_OPEN").as_deref() == Ok("print") {
         log::info!("sign-in start URL (not opened): {start}");
-    } else if let Err(e) = app.opener().open_url(start.as_str(), None::<&str>) {
+    } else if !open_sheet(&app, &start).await
+        && let Err(e) = app.opener().open_url(start.as_str(), None::<&str>)
+    {
         auth.finish(id);
         return Err(ShellError::internal(format!("не открылся браузер: {e}")));
     }
@@ -579,6 +626,7 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
     let token = exchange(&auth.http, &server, &code, &verifier, &version).await?;
     let (key_server, key_token) = (server.clone(), token.token);
     keychain::run(move || keychain::store(&key_server, &key_token)).await?;
+    app.state::<crate::player::Player>().forget_token();
 
     let session = Session {
         server_url: server,
@@ -600,6 +648,8 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
 /// Прервать незаконченный вход: `auth_login` завершится с `cancelled`.
 #[tauri::command]
 pub fn auth_cancel(app: AppHandle) -> bool {
+    #[cfg(target_os = "ios")]
+    let _ = app.run_on_main_thread(crate::ios::cancel_web_auth);
     app.state::<Auth>().cancel()
 }
 
@@ -648,6 +698,7 @@ pub async fn auth_logout(app: AppHandle) -> ShellResult<()> {
     }
     let key_server = server.clone();
     keychain::run(move || keychain::delete(&key_server)).await?;
+    app.state::<crate::player::Player>().forget_token();
     sessions::remove(&app, &server);
     let _ = app.emit_to(MAIN, EVENT_CHANGED, Changed { session: None });
     log::info!("signed out, device token removed from the keychain");
@@ -695,7 +746,7 @@ mod tests {
         assert_eq!(q["code_challenge_method"], "S256");
         assert_eq!(q["state"], "st");
         assert_eq!(q["device_name"], "MacBook Захара");
-        assert_eq!(q["platform"], platform::OS);
+        assert_eq!(q["platform"], platform::os());
     }
 
     #[test]

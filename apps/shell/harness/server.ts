@@ -46,6 +46,9 @@ Bun.serve({
   },
 })
 
+// Тестовое аудио (crates/client/audio/tools/serve.py): ссылки на него отдаёт заглушка потока
+const audio = process.env.DALYWAVE_TEST_AUDIO ?? 'http://127.0.0.1:8420'
+
 // Заглушка входа приложения: те же адреса и ответы, что у сервера (crates/server/src/routes/auth.rs)
 type Grant = { challenge: string, device: string, platform: string, used: boolean }
 const grants = new Map<string, Grant>()
@@ -86,6 +89,18 @@ Bun.serve({
         token,
         device: { id: '0193b0c4-0000-7000-8000-000000000001', name: grant.device, platform: grant.platform, appVersion: body.appVersion ?? null, createdAt: new Date().toISOString(), lastSeenAt: null },
         user: { id: '0193b0c4-0000-7000-8000-0000000000aa', name: 'Проверка оболочки', email: null, avatarUrl: null },
+      })
+    }
+    // Ссылка на файл трека, как `GET /api/tracks/{id}/stream`: id — путь файла у тестового сервера
+    const stream = url.pathname.match(/^\/api\/tracks\/([^/]+)\/stream$/)
+    if (stream) {
+      const file = decodeURIComponent(stream[1]!)
+      log(`GET stream ${file} auth=${req.headers.has('authorization')}`)
+      const head = await fetch(`${audio}/${file}`, { method: 'HEAD' }).catch(() => null)
+      if (!head?.ok) return Response.json({ error: { code: 'not_found', message: 'нет такого трека' } }, { status: 404 })
+      return Response.json({
+        status: 'ready', url: `${audio}/${file}?sig=${Date.now()}`, expiresAt: new Date(Date.now() + 6 * 3600_000).toISOString(),
+        mimeType: 'audio/ogg', loudnessLufs: -20, truePeakDb: -6, durationMs: null, waveform: null,
       })
     }
     if (url.pathname === '/api/auth/logout' && req.method === 'POST') {

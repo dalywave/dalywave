@@ -21,7 +21,11 @@ pub enum ShellError {
     #[error("{0}")]
     Invalid(String),
     #[error("обновление: {0}")]
+    #[cfg_attr(mobile, allow(dead_code))]
     Update(String),
+    /// Аудиодвижок не запустился (нет устройства вывода)
+    #[error("звук: {0}")]
+    Audio(String),
     #[error("{0}")]
     Internal(String),
 }
@@ -37,6 +41,7 @@ impl ShellError {
             Self::Keychain(_) => "keychain",
             Self::Invalid(_) => "invalid",
             Self::Update(_) => "update",
+            Self::Audio(_) => "audio",
             Self::Internal(_) => "internal",
         }
     }
@@ -67,8 +72,8 @@ impl From<reqwest::Error> for ShellError {
     }
 }
 
-impl From<keyring::Error> for ShellError {
-    fn from(e: keyring::Error) -> Self {
+impl From<keyring_core::Error> for ShellError {
+    fn from(e: keyring_core::Error) -> Self {
         Self::Keychain(e.to_string())
     }
 }

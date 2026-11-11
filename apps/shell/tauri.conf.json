@@ -59,13 +59,18 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "iOS": {
+      "developmentTeam": "Y5KR5JPCRG",
+      "minimumSystemVersion": "15.0"
+    }
   },
   "plugins": {
     "deep-link": {
       "desktop": {
         "schemes": ["dalywave"]
-      }
+      },
+      "mobile": [{ "scheme": ["dalywave"], "appLink": false }]
     },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc4NTVGNkQ2QUQwQ0U3ODcKUldTSDV3eXQxdlpWZUh1OGlQcHlhdkFraWMvb2Q3MHg2d2hJenQ0cnZ5c2M3QVFHT0tFOVdaSi8K",

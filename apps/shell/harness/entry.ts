@@ -1,13 +1,15 @@
 // Стенд проверки оболочки: вызывает команды моста и пишет результаты в /report.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { createShell, isShellError, trackSnapArea, type ShellEvents } from '../bridge/shell'
+import { createShell, isShellError, trackSnapArea, type PlayerItem, type ShellEvents } from '../bridge/shell'
 
 const shell = createShell({ invoke, listen })
 const log = document.getElementById('log')!
 const params = new URLSearchParams(location.search)
 // Отчёты и команды — на сервер стенда: страница бывает и в собранном приложении (tauri://)
 const BASE = 'http://localhost:3499'
+// Тестовое аудио: python3 crates/client/audio/tools/serve.py --port 8420
+const AUDIO = params.get('audio') ?? 'http://127.0.0.1:8420'
 
 function report(kind: string, data: unknown) {
   const line = `${new Date().toISOString().slice(11, 23)} ${kind} ${JSON.stringify(data)}`
@@ -31,9 +33,46 @@ async function step<T>(name: string, run: () => Promise<T>): Promise<T | undefin
 const events: (keyof ShellEvents)[] = [
   'window:maximized', 'window:fullscreen', 'window:focus', 'window:caption', 'auth:changed',
   'media:command', 'server:changed', 'update:available', 'update:progress', 'deep-link:open',
+  'player:state', 'player:track', 'player:buffering', 'player:error', 'player:ended',
 ]
 for (const name of events) {
   void shell.on(name, payload => report(`event ${name}`, payload))
+}
+// Позиция и уровень приходят часто — в отчёт раз в секунду
+let lastPosition = 0
+void shell.on('player:position', (p) => {
+  if (Date.now() - lastPosition < 1000) return
+  lastPosition = Date.now()
+  report('event player:position', p)
+})
+let lastLevel = 0
+let levels = 0
+void shell.on('player:level', (l) => {
+  levels++
+  if (Date.now() - lastLevel < 1000) return
+  lastLevel = Date.now()
+  report('event player:level', { ...l, perSecond: levels })
+  levels = 0
+})
+
+interface Manifest { albums: { id: string, title: string, artist: string, format?: string, cover?: string, tracks: { file: string, title: string, durationMs?: number, lufs?: number, peakDb?: number }[] }[] }
+/** Очередь из набора тестового сервера; `deferred` — без ссылок: их даст сервер (заглушка :3498) */
+async function testQueue(albumId: string, deferred = false): Promise<PlayerItem[]> {
+  const manifest = await (await fetch(`${AUDIO}/manifest.json`)).json() as Manifest
+  const album = manifest.albums.find(a => a.id === albumId)
+  if (!album) throw new Error(`нет набора ${albumId}`)
+  return album.tracks.map((t, i) => ({
+    id: `${albumId}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    trackId: encodeURIComponent(t.file),
+    url: deferred ? null : `${AUDIO}/${t.file}`,
+    loudnessLufs: deferred ? null : t.lufs ?? null,
+    truePeakDb: deferred ? null : t.peakDb ?? null,
+    durationMs: t.durationMs ?? null,
+    title: `${t.title} · ${album.format ?? 'demo'}`,
+    artist: album.artist,
+    album: album.title,
+    artworkUrl: album.cover ? `${AUDIO}/${album.cover}` : null,
+  }))
 }
 
 // Заголовок: высота и отступ от «светофора» из сведений оболочки
@@ -97,15 +136,40 @@ const actions: Record<string, () => Promise<unknown>> = {
     return token ? `${token.slice(0, 8)}… (${token.length})` : null
   },
   'session': () => shell.auth.session(),
-  'np-play': () => shell.nowPlaying.update({
-    title: 'Float', artist: 'Call Me Karizma', album: 'Float',
-    artworkUrl: 'https://e-cdns-images.dzcdn.net/images/cover/2e018122cb56986277102d2041a592c8/500x500-000000-80-0-0.jpg',
-    durationMs: 169_000, positionMs: 75_000, playing: true,
-  }),
-  'np-pause': () => shell.nowPlaying.update({
-    title: 'Float', artist: 'Call Me Karizma', album: 'Float', durationMs: 169_000, positionMs: 80_000, playing: false,
-  }),
-  'np-clear': () => shell.nowPlaying.update(null),
+  // Звук приложения: движок на Rust. Громкость проверок — DW_VOLUME=0 у оболочки
+  'player-demo': async () => {
+    const items = await testQueue('demo')
+    await shell.player.load(items)
+    return items.map(i => i.id)
+  },
+  'player-gapless': async () => {
+    const items = await testQueue('gapless-opus_mp4')
+    await shell.player.load(items)
+    return items.map(i => i.id)
+  },
+  'player-deferred': async () => {
+    const items = await testQueue('demo', true)
+    await shell.player.load(items)
+    return items.map(i => `${i.id} → ${i.trackId}`)
+  },
+  'player-upcoming': async () => {
+    const items = await testQueue('gapless-flac16_44')
+    await shell.player.setUpcoming(items)
+    return items.map(i => i.id)
+  },
+  'player-play': () => shell.player.play(),
+  'player-pause': () => shell.player.pause(),
+  'player-toggle': () => shell.player.toggle(),
+  'player-next': () => shell.player.next(),
+  'player-prev': () => shell.player.previous(),
+  'player-seek': () => shell.player.seek(20_000),
+  'player-vol': () => shell.player.setVolume(0.5),
+  'player-xfade': () => shell.player.setTransition({ mode: 'crossfade', ms: 4000 }),
+  'player-gapless-mode': () => shell.player.setTransition({ mode: 'gapless' }),
+  'player-levels-on': () => shell.player.setLevels(true),
+  'player-levels-off': () => shell.player.setLevels(false),
+  'player-state': () => shell.player.state(),
+  'player-stop': () => shell.player.stop(),
   'external': () => shell.openExternal('https://wave.daly.rest'),
   'external-bad': () => shell.openExternal('file:///etc/passwd'),
   // Звук в самом WebView: публикует ли WebKit свою плашку «Сейчас играет» рядом с нашей
