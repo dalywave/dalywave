@@ -1,0 +1,55 @@
+[project]
+name = "dalywave-ml"
+version = "0.1.0"
+description = "DalyWave: анализ звучания на CPU — векторы, настроение, темп, тональность, сетка долей и участки вокала"
+readme = "README.md"
+authors = [
+    { name = "Zakhar Stupak", email = "92329662+Dalynkaa@users.noreply.github.com" }
+]
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.162",
+    "httpx>=0.28.1",
+    "numpy>=2.3",
+    "onnxruntime>=1.31",
+    "pydantic>=2.14",
+    "soxr>=1.1",
+    "tokenizers>=0.23",
+    "uvicorn>=0.54",
+]
+
+[project.scripts]
+ml = "dalywave_ml.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2",
+    "ruff>=0.17",
+]
+# Только для подготовки моделей при сборке образа: перепаковка весов CLAP в float16.
+convert = [
+    "onnx>=1.23",
+]
+
+[tool.uv]
+default-groups = ["dev", "convert"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "models: нужны файлы моделей (ml models download); запуск: pytest -m models",
+]
+addopts = "-m 'not models'"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
