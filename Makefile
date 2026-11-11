@@ -19,8 +19,15 @@ db-reset: ## пересоздать локальную базу (данные п
 api: ## запустить API на :8400
 	cargo run -p dalywave-server --bin dalywave-api
 
-worker: ## исполнитель очереди задач (скачивание, обложки, подписки)
+worker: ## исполнитель очереди задач (скачивание, обложки, подписки, анализ звука, разведчик)
 	cargo run -p dalywave-server --bin dalywave-worker
+
+# Сервис анализа звука в docker. Образ: docker build -t dalywave-ml:0.1.0 services/ml (~10 минут в первый раз).
+# Файлы скачанного он берёт из SeaweedFS на этом Mac: DALYWAVE_S3_ML_ENDPOINT=http://host.docker.internal:8401 в .env
+ML_IMAGE ?= dalywave-ml:0.1.0
+ml: ## сервис анализа звука на 127.0.0.1:8403 (docker)
+	@docker rm -f dalywave-ml-dev >/dev/null 2>&1 || true
+	docker run -d --name dalywave-ml-dev --cpus 6 -p 127.0.0.1:8403:8403 $(ML_IMAGE)
 
 # Аудио качает этот Mac: YouTube не отдаёт его серверу. Токен dwk_… — из админки («Источники»):
 # TOKEN=… или файл ~/.config/dalywave/downloader-token. В автозапуск: services/fetcher/launchd/install.sh
@@ -31,11 +38,26 @@ downloader: ## загрузчик на этом Mac: make downloader [SERVER=htt
 ui: ## интерфейс на :3400 (проксирует /api на :8400)
 	cd apps/ui && bun run dev
 
+# Загрузчик внутри приложения (services/fetcher/SIDECAR.md) → services/fetcher/dist/sidecar.
+# Собирается, если его нет или исходники fetcher новее сборки (MANIFEST.json пишется последним);
+# CLEAN=1 — всё заново. Сборка для Windows — sidecar/build-windows.ps1 на Windows (CI desktop.yml)
+SIDECAR_STAMP := services/fetcher/dist/sidecar/MANIFEST.json
+sidecar: ## загрузчик для приложения: собрать, если его нет или он старше исходников fetcher
+	@if [ "$${CLEAN:-}" = 1 ] || [ ! -f $(SIDECAR_STAMP) ] || [ -n "$$(find services/fetcher/src \
+	    services/fetcher/sidecar services/fetcher/pyproject.toml services/fetcher/uv.lock -type f \
+	    -newer $(SIDECAR_STAMP) -not -path '*/__pycache__/*' -not -name '.DS_Store' -not -name '*.ps1' \
+	    -print -quit)" ]; then \
+	  bash services/fetcher/sidecar/build.sh; \
+	else \
+	  echo "Загрузчик свежий: services/fetcher/dist/sidecar"; \
+	fi
+
 # Подпись: Developer ID из связки ключей (иначе ad-hoc), ключ обновлений — вне репозитория,
-# пароль к нему — в связке ключей (apps/shell/README.md). CI=true: DMG без AppleScript к Finder.
-# Свои ключи сборки: make app TAURI_ARGS='--debug --bundles app'
+# пароль к нему — в связке ключей (apps/shell/README.md). Программы загрузчика в Contents/MacOS
+# Tauri подписывает тем же ключом с apps/shell/entitlements.plist. CI=true: DMG без AppleScript
+# к Finder. Свои ключи сборки: make app TAURI_ARGS='--debug --bundles app'
 UPDATER_KEY ?= $(HOME)/.tauri/dalywave-updater.key
-app: ## приложение macOS: DalyWave.app и .dmg в apps/shell/target/release/bundle
+app: sidecar ## приложение macOS с загрузчиком: DalyWave.app и .dmg в apps/shell/target/release/bundle
 	@cd apps/shell && \
 	id="$${APPLE_SIGNING_IDENTITY:-$$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n1)}"; \
 	extra=(); \
@@ -112,4 +134,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker downloader ui app ios ios-build ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ml downloader ui sidecar app ios ios-build ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt

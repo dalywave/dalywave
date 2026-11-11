@@ -1,6 +1,8 @@
 name: Приложения
 
-# Сборка DalyWave для Windows и macOS: вручную или по тегу v*. Секреты (Settings → Secrets):
+# Сборка DalyWave для Windows и macOS вместе с загрузчиком музыки (services/fetcher/SIDECAR.md):
+# вручную или по тегу v*. FFmpeg для Windows собирается накрест на Linux (ffmpeg-windows.sh),
+# остальной загрузчик — на своей системе (build.sh, build-windows.ps1). Секреты (Settings → Secrets):
 #   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD — подпись обновлений
 #     (содержимое ~/.tauri/dalywave-updater.key и пароль из связки ключей, см. apps/shell/README.md);
 #   APPLE_CERTIFICATE (p12 в base64), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY —
@@ -20,8 +22,35 @@ permissions:
   contents: write
 
 jobs:
+  # FFmpeg и ffprobe для Windows: только звук, LGPL, статически — те же флаги, что у macOS
+  ffmpeg-windows:
+    name: FFmpeg для Windows
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: ffmpeg-win
+          key: ffmpeg-windows-${{ hashFiles('services/fetcher/sidecar/ffmpeg-windows.sh') }}
+
+      - name: Сборка
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc mingw-w64 libz-mingw-w64-dev nasm make curl xz-utils
+          bash services/fetcher/sidecar/ffmpeg-windows.sh ffmpeg-win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-windows
+          if-no-files-found: error
+          path: ffmpeg-win
+
   build:
     name: ${{ matrix.name }}
+    needs: ffmpeg-windows
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +68,33 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v5
+
+      # ── Загрузчик (sidecar): services/fetcher/dist/sidecar, его берут externalBin и resources ──
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/cache@v4
+        with:
+          path: services/fetcher/dist/build/downloads
+          key: sidecar-downloads-${{ matrix.target }}-${{ hashFiles('services/fetcher/sidecar/*') }}
+
+      - uses: actions/download-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: ffmpeg-windows
+          path: ffmpeg-win
+
+      - name: Загрузчик для Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./services/fetcher/sidecar/build-windows.ps1 -Ffmpeg ffmpeg-win
+
+      - name: Загрузчик для macOS
+        if: runner.os == 'macOS'
+        run: bash services/fetcher/sidecar/build.sh
 
       - uses: oven-sh/setup-bun@v2
         with:

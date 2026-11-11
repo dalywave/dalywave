@@ -38,7 +38,7 @@ use crate::{
 
 pub const EVENT_CHANGED: &str = "auth:changed";
 pub const EVENT_DEEP_LINK: &str = "deep-link:open";
-const KEYCHAIN_SERVICE: &str = "rest.daly.wave";
+pub(crate) const KEYCHAIN_SERVICE: &str = "rest.daly.wave";
 const REDIRECT_DEEP_LINK: &str = "dalywave://auth";
 /// Сервер держит незаконченный вход 10 минут — дольше ждать бессмысленно
 const LOGIN_TIMEOUT: Duration = Duration::from_secs(600);
@@ -237,7 +237,7 @@ fn use_loopback() -> bool {
 }
 
 /// Имя устройства для списка сессий на сервере, например «MacBook Pro — Захар».
-fn device_name() -> String {
+pub(crate) fn device_name() -> String {
     #[cfg(target_os = "ios")]
     {
         platform::device_model()
@@ -642,6 +642,9 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
         },
     );
     log::info!("signed in, device token stored in the keychain");
+    // Загрузчик на компьютере работает, пока вход выполнен
+    #[cfg(desktop)]
+    crate::downloader::changed(&app);
     Ok(session)
 }
 
@@ -702,6 +705,8 @@ pub async fn auth_logout(app: AppHandle) -> ShellResult<()> {
     sessions::remove(&app, &server);
     let _ = app.emit_to(MAIN, EVENT_CHANGED, Changed { session: None });
     log::info!("signed out, device token removed from the keychain");
+    #[cfg(desktop)]
+    crate::downloader::changed(&app);
     Ok(())
 }
 

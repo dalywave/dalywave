@@ -1,9 +1,12 @@
 //! Оболочка DalyWave для macOS, Windows, iPhone и iPad. Интерфейс — apps/ui (Nuxt, SPA); здесь
 //! окно (на компьютерах — без стандартной рамки), звук через свой движок на Rust, вход через
 //! системный браузер с токеном в связке ключей, «Сейчас играет» и пульт системы, трей, ссылки
-//! dalywave:// и автообновление. Договор с интерфейсом — BRIDGE.md.
+//! dalywave://, автообновление и (на компьютерах) загрузчик музыки для сервера. Договор с интерфейсом —
+//! BRIDGE.md.
 
 mod auth;
+#[cfg(desktop)]
+mod downloader;
 mod error;
 #[cfg(target_os = "ios")]
 mod ios;
@@ -76,6 +79,9 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_updater::Builder::new().build());
+    // Загрузчик музыки — sidecar (downloader.rs); права в capabilities не нужны: запускает Rust
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_shell::init());
     let app = builder
         .setup(|app| {
             let handle = app.handle();
@@ -90,6 +96,9 @@ pub fn run() {
             player::init(handle);
 
             let main = window::create_main(handle)?;
+            // До трея: меню сразу показывает состояние загрузчика
+            #[cfg(desktop)]
+            downloader::init(handle);
             #[cfg(desktop)]
             tray::create(handle)?;
             #[cfg(windows)]
@@ -166,22 +175,41 @@ pub fn run() {
             updates::update_check,
             #[cfg(desktop)]
             updates::update_install,
+            #[cfg(desktop)]
+            downloader::downloader_state,
+            #[cfg(desktop)]
+            downloader::downloader_set_enabled,
+            #[cfg(desktop)]
+            downloader::downloader_set_paused,
+            #[cfg(desktop)]
+            downloader::downloader_recreate_token,
+            #[cfg(desktop)]
+            downloader::downloader_open_log,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build DalyWave");
 
     app.run(|app, event| {
-        // macOS: щелчок по значку в Dock, когда окно закрыто в трей
-        #[cfg(target_os = "macos")]
-        if let tauri::RunEvent::Reopen {
-            has_visible_windows: false,
-            ..
-        } = event
-        {
-            window::show_main(app);
+        match event {
+            // macOS: щелчок по значку в Dock, когда окно закрыто в трей
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen {
+                has_visible_windows: false,
+                ..
+            } => window::show_main(app),
+            // Выход — ⌘Q, «Выйти» в трее, перезапуск после обновления: загрузчик возвращает
+            // задание серверу и останавливается, окно тем временем уже не видно
+            #[cfg(desktop)]
+            tauri::RunEvent::Exit => {
+                if let Some(main) = app.get_webview_window(MAIN) {
+                    let _ = main.hide();
+                }
+                downloader::shutdown(app);
+            }
+            _ => {}
         }
-        #[cfg(not(target_os = "macos"))]
-        let _ = (app, event);
+        #[cfg(mobile)]
+        let _ = app;
     });
 }
 
@@ -217,6 +245,9 @@ fn server_url_get(app: AppHandle) -> String {
 fn server_url_set(app: AppHandle, url: Option<String>) -> ShellResult<String> {
     let server_url = app.state::<Settings>().set_server_url(url.as_deref())?;
     app.state::<player::Player>().forget_token();
+    // Загрузчик переходит на новый сервер со своим токеном
+    #[cfg(desktop)]
+    downloader::changed(&app);
     let _ = app.emit_to(
         MAIN,
         EVENT_SERVER,

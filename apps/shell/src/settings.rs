@@ -1,5 +1,6 @@
-//! Настройки оболочки: адрес сервера и язык системных меню. Лежат в `settings.json`
-//! в папке настроек приложения; секреты сюда не попадают — токен живёт в связке ключей.
+//! Настройки оболочки: адрес сервера, язык системных меню и загрузчик на Mac (включён ли, на
+//! паузе ли). Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают —
+//! токены живут в связке ключей.
 
 use std::{path::PathBuf, sync::Mutex};
 
@@ -34,6 +35,12 @@ impl Locale {
 struct Stored {
     server_url: Option<String>,
     locale: Option<Locale>,
+    /// Загрузчик на этом Mac; по умолчанию включён
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    downloader_enabled: Option<bool>,
+    /// Пауза загрузчика не запоминается им самим: приложение передаёт `--paused` при запуске
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    downloader_paused: Option<bool>,
 }
 
 pub struct Settings {
@@ -99,6 +106,30 @@ impl Settings {
     pub fn set_locale(&self, locale: Locale) -> ShellResult<()> {
         let mut stored = self.lock();
         stored.locale = Some(locale);
+        self.save(&stored)
+    }
+
+    #[cfg(desktop)]
+    pub fn downloader_enabled(&self) -> bool {
+        self.lock().downloader_enabled.unwrap_or(true)
+    }
+
+    #[cfg(desktop)]
+    pub fn set_downloader_enabled(&self, enabled: bool) -> ShellResult<()> {
+        let mut stored = self.lock();
+        stored.downloader_enabled = Some(enabled);
+        self.save(&stored)
+    }
+
+    #[cfg(desktop)]
+    pub fn downloader_paused(&self) -> bool {
+        self.lock().downloader_paused.unwrap_or(false)
+    }
+
+    #[cfg(desktop)]
+    pub fn set_downloader_paused(&self, paused: bool) -> ShellResult<()> {
+        let mut stored = self.lock();
+        stored.downloader_paused = Some(paused);
         self.save(&stored)
     }
 

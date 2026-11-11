@@ -149,6 +149,11 @@ const shell = createShell({ invoke, listen })
 | `player.setNormalize(enabled)` | `player_set_normalize { enabled }` | — выравнивание по LUFS |
 | `player.setLevels(enabled)` | `player_set_levels { enabled }` | — события `player:level` |
 | `player.state()` | `player_state` | `PlayerSnapshot` |
+| `downloader.state()` | `downloader_state` | `DownloaderSnapshot` — macOS и Windows |
+| `downloader.setEnabled(enabled)` | `downloader_set_enabled { enabled }` | `DownloaderSnapshot` |
+| `downloader.setPaused(paused)` | `downloader_set_paused { paused }` | `DownloaderSnapshot` |
+| `downloader.recreateToken()` | `downloader_recreate_token` | `DownloaderSnapshot` — только в `token-rejected` |
+| `downloader.openLog()` | `downloader_open_log` | — журнал в «Консоли» (Windows — в Блокноте) |
 
 ## События (`shell.on(name, handler)`)
 
@@ -171,6 +176,7 @@ const shell = createShell({ invoke, listen })
 | `update:available` | `UpdateInfo` | фоновая проверка нашла обновление (раз в 6 часов) |
 | `update:progress` | `{ downloadedBytes, totalBytes }` | идёт `updates.install()` |
 | `deep-link:open` | `{ url }` | ссылка `dalywave://…`, кроме возврата входа (на будущее) |
+| `downloader:state` | `DownloaderSnapshot` | загрузчик на компьютере: каждая перемена, ход задания — до 4 раз в секунду |
 
 ## Вход и запросы к серверу
 
@@ -288,6 +294,31 @@ audio`. Звонок, Siri, будильник — пауза и продолж�
 - В фоне WebView на macOS не притормаживается (таймеры и отчёты о прослушивании идут).
 - Ссылки на чужие сайты, по которым перешли внутри окна, открываются в браузере;
   явно — `openExternal(url)`.
+
+## Загрузчик
+
+Только macOS и Windows: приложение запускает загрузчик музыки (sidecar `dalywave-fetcher`,
+`src/downloader.rs`) и показывает его. В интерфейсе — `bridge.downloader` (`null` на сайте и
+телефонах), состояние — `useDownloader()`.
+
+```ts
+interface DownloaderSnapshot {
+  enabled: boolean          // «Скачивать на этом Mac», по умолчанию true
+  paused: boolean           // пауза пользователя, запоминается
+  phase: 'disabled' | 'signed-out' | 'forbidden' | 'provisioning' | 'starting' | 'running'
+       | 'stopping' | 'restarting' | 'token-rejected' | 'broken'
+  status: DownloaderStatus | null   // последний `status` загрузчика (SIDECAR.md), пока работает
+  server: string; workerName: string; logFile: string
+  version: string | null; ytDlp: string | null
+  error: { code: string, message: string } | null   // почему не работает
+  retryAtMs: number | null  // restarting: следующая попытка
+}
+```
+
+`running` — подробности в `status.state` (`idle`, `working` с `job`, `paused`, `offline`, `error`
+с отдыхом до `retryAt`). Ход всего задания в процентах интерфейс и трей считают одинаково: поиск —
+до 10 %, скачивание — до 65 %, проверка — до 80 %, отправка — до 100 %. Токен загрузчика приложение
+заводит само (только администратору), хранит в связке ключей и интерфейсу не отдаёт.
 
 ## Обновления
 

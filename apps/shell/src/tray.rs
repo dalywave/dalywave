@@ -1,7 +1,12 @@
 //! Значок в строке меню macOS и в трее Windows: что играет, пауза, следующий и предыдущий
 //! трек, «Показать DalyWave», выход. Команды плеера выполняет движок (player.rs); что он не
 //! может сам (например, «играть» без очереди), уходит интерфейсу как `media:command`.
+//! И загрузчик музыки (downloader.rs): строка состояния, пауза и «Скачивать на этом Mac» (на
+//! Windows — «на этом ПК»).
 
+use std::sync::Mutex;
+
+use tauri::menu::{CheckMenuItem, Submenu};
 use tauri::{
     AppHandle, Manager, Wry,
     image::Image,
@@ -9,6 +14,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
 };
 
+use crate::downloader::{self, Summary, TrayState};
 use crate::{
     media::{Command, Media, NowPlaying, Source},
     player,
@@ -17,6 +23,10 @@ use crate::{
 };
 
 const TRAY: &str = "main";
+/// Строки меню длиннее обрезаются, чтобы меню не растягивалось на пол-экрана
+const LINE_MAX: usize = 48;
+/// Строка загрузчика вмещает «качает «Трек» — Артист · 45 %» целиком
+const DL_LINE_MAX: usize = 64;
 
 struct Texts {
     nothing: &'static str,
@@ -55,6 +65,89 @@ fn texts(locale: Locale) -> &'static Texts {
     }
 }
 
+/// Загрузчик: строка состояния (заголовок подменю) и его пункты.
+struct DlTexts {
+    prefix: &'static str,
+    /// `{track}`, `{artist}`, `{percent}`
+    working: &'static str,
+    working_unknown: &'static str,
+    finishing: &'static str,
+    idle: &'static str,
+    paused: &'static str,
+    offline: &'static str,
+    starting: &'static str,
+    resting: &'static str,
+    stopping: &'static str,
+    restarting: &'static str,
+    token: &'static str,
+    broken: &'static str,
+    disabled: &'static str,
+    signed_out: &'static str,
+    forbidden: &'static str,
+    pause: &'static str,
+    resume: &'static str,
+    enabled: &'static str,
+}
+
+const DL_RU: DlTexts = DlTexts {
+    prefix: "Загрузчик: ",
+    working: "качает «{track}» — {artist}",
+    working_unknown: "качает трек",
+    finishing: "доделывает «{track}», потом пауза",
+    idle: "ждёт заданий",
+    paused: "на паузе",
+    offline: "нет связи с сервером",
+    starting: "запускается…",
+    resting: "отдыхает после проверки YouTube",
+    stopping: "останавливается…",
+    restarting: "перезапускается…",
+    token: "сервер не принял токен",
+    broken: "установка повреждена",
+    disabled: "выключен",
+    signed_out: "нужен вход",
+    forbidden: "доступен администратору",
+    pause: "Пауза",
+    resume: "Продолжить",
+    enabled: if cfg!(target_os = "macos") {
+        "Скачивать на этом Mac"
+    } else {
+        "Скачивать на этом ПК"
+    },
+};
+
+const DL_EN: DlTexts = DlTexts {
+    prefix: "Downloader: ",
+    working: "downloading “{track}” — {artist}",
+    working_unknown: "downloading a track",
+    finishing: "finishing “{track}”, then pausing",
+    idle: "waiting for jobs",
+    paused: "paused",
+    offline: "can't reach the server",
+    starting: "starting…",
+    resting: "resting after a YouTube check",
+    stopping: "stopping…",
+    restarting: "restarting…",
+    token: "token rejected by the server",
+    broken: "installation is damaged",
+    disabled: "off",
+    signed_out: "sign-in required",
+    forbidden: "available to admins",
+    pause: "Pause",
+    resume: "Resume",
+    enabled: if cfg!(target_os = "macos") {
+        "Download on This Mac"
+    } else {
+        "Download on This PC"
+    },
+};
+
+fn dl_texts(locale: Locale) -> &'static DlTexts {
+    match locale {
+        Locale::Ru => &DL_RU,
+        Locale::En => &DL_EN,
+    }
+}
+
 /// Пункты меню, у которых меняется текст.
 pub struct TrayItems {
     now: MenuItem<Wry>,
@@ -63,6 +156,16 @@ pub struct TrayItems {
     previous: MenuItem<Wry>,
     show: MenuItem<Wry>,
     quit: MenuItem<Wry>,
+    downloader: DlItems,
+}
+
+struct DlItems {
+    /// Подменю, заголовок — строка состояния загрузчика
+    menu: Submenu<Wry>,
+    toggle: MenuItem<Wry>,
+    enabled: CheckMenuItem<Wry>,
+    /// Что уже показано: состояние приходит до 4 раз в секунду, меню трогаем только при перемене
+    shown: Mutex<Option<(String, String, bool)>>,
 }
 
 pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
@@ -75,22 +178,24 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
         previous: MenuItem::with_id(app, "previous", t.previous, true, none)?,
         show: MenuItem::with_id(app, "show", t.show, true, none)?,
         quit: MenuItem::with_id(app, "quit", t.quit, true, none)?,
+        downloader: dl_items(app)?,
     };
+    let separator = || PredefinedMenuItem::separator(app);
     let menu = Menu::with_items(
         app,
         &[
             &items.now,
-            &PredefinedMenuItem::separator(app)?,
+            &separator()?,
             &items.toggle,
             &items.next,
             &items.previous,
-            &PredefinedMenuItem::separator(app)?,
-            &items.show,
-            &PredefinedMenuItem::separator(app)?,
-            &items.quit,
+            &separator()?,
         ],
     )?;
+    menu.append_items(&[&items.downloader.menu, &separator()?])?;
+    menu.append_items(&[&items.show, &separator()?, &items.quit])?;
     app.manage(items);
+    refresh_downloader(app);
 
     // macOS: шаблон — система сама красит знак под светлую и тёмную строку меню
     #[cfg(target_os = "macos")]
@@ -120,27 +225,128 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
         .build(app)
 }
 
+fn dl_items(app: &AppHandle) -> tauri::Result<DlItems> {
+    let t = dl_texts(app.state::<Settings>().locale());
+    let toggle = MenuItem::with_id(app, "dl-toggle", t.pause, false, None::<&str>)?;
+    let enabled = CheckMenuItem::with_id(app, "dl-enabled", t.enabled, true, true, None::<&str>)?;
+    let menu = Submenu::with_id_and_items(
+        app,
+        "downloader",
+        format!("{}{}", t.prefix, t.starting),
+        true,
+        &[&toggle, &enabled],
+    )?;
+    Ok(DlItems {
+        menu,
+        toggle,
+        enabled,
+        shown: Mutex::new(None),
+    })
+}
+
 fn on_menu(app: &AppHandle, event: MenuEvent) {
     match event.id().as_ref() {
         "toggle" => player::remote(app, Command::Toggle, Source::Tray),
         "next" => player::remote(app, Command::Next, Source::Tray),
         "previous" => player::remote(app, Command::Previous, Source::Tray),
+        "dl-toggle" => downloader::toggle_paused(app),
+        "dl-enabled" => downloader::toggle_enabled(app),
         "show" => window::show_main(app),
         "quit" => app.exit(0),
         _ => {}
     }
 }
 
-/// Строка «что играет» в меню: обрезается, чтобы меню не растягивалось на пол-экрана.
-fn now_line(now: &NowPlaying) -> String {
-    const MAX: usize = 48;
-    let line = format!("{} — {}", now.artist, now.title);
-    if line.chars().count() <= MAX {
-        return line;
+/// `&` в меню — знак клавиши-ускорителя: в названиях треков его надо удвоить.
+fn menu_text(text: &str) -> String {
+    text.replace('&', "&&")
+}
+
+/// Обрезать строку до `max` символов многоточием.
+fn cut(line: &str, max: usize) -> String {
+    if line.chars().count() <= max {
+        return line.to_string();
     }
-    let mut cut: String = line.chars().take(MAX - 1).collect();
+    let mut cut: String = line.chars().take(max.saturating_sub(1)).collect();
+    cut = cut.trim_end().to_string();
     cut.push('…');
     cut
+}
+
+/// Строка «что играет» в меню: обрезается, чтобы меню не растягивалось на пол-экрана.
+fn now_line(now: &NowPlaying) -> String {
+    cut(&format!("{} — {}", now.artist, now.title), LINE_MAX)
+}
+
+/// Строка загрузчика: «Загрузчик: качает «Трек» — Артист · 45 %». Обрезается название, а не
+/// процент.
+fn downloader_line(t: &DlTexts, state: &TrayState) -> String {
+    let (body, suffix) = match &state.summary {
+        Summary::Working {
+            track,
+            artist,
+            percent,
+            finishing,
+        } => {
+            let suffix = format!(" · {percent}\u{a0}%");
+            match (track, artist, finishing) {
+                (Some(track), _, true) => (t.finishing.replace("{track}", track), String::new()),
+                (Some(track), Some(artist), false) => (
+                    t.working
+                        .replace("{track}", track)
+                        .replace("{artist}", artist),
+                    suffix,
+                ),
+                (Some(track), None, false) => (
+                    t.working
+                        .replace("{track}", track)
+                        .replace(" — {artist}", ""),
+                    suffix,
+                ),
+                (None, ..) => (t.working_unknown.to_string(), suffix),
+            }
+        }
+        Summary::Idle => (t.idle.into(), String::new()),
+        Summary::Paused => (t.paused.into(), String::new()),
+        Summary::Offline => (t.offline.into(), String::new()),
+        Summary::Starting => (t.starting.into(), String::new()),
+        Summary::Resting => (t.resting.into(), String::new()),
+        Summary::Stopping => (t.stopping.into(), String::new()),
+        Summary::Restarting => (t.restarting.into(), String::new()),
+        Summary::TokenRejected => (t.token.into(), String::new()),
+        Summary::Broken => (t.broken.into(), String::new()),
+        Summary::Disabled => (t.disabled.into(), String::new()),
+        Summary::SignedOut => (t.signed_out.into(), String::new()),
+        Summary::Forbidden => (t.forbidden.into(), String::new()),
+    };
+    let room = DL_LINE_MAX.saturating_sub(t.prefix.chars().count() + suffix.chars().count());
+    format!("{}{}{suffix}", t.prefix, cut(&body, room))
+}
+
+/// Обновить пункты загрузчика: после события загрузчика, команды или смены языка. Главный поток.
+pub fn refresh_downloader(app: &AppHandle) {
+    let (Some(items), Some(state)) = (app.try_state::<TrayItems>(), downloader::tray_state(app))
+    else {
+        return;
+    };
+    let t = dl_texts(app.state::<Settings>().locale());
+    let dl = &items.downloader;
+    let line = downloader_line(t, &state);
+    let toggle = if state.paused { t.resume } else { t.pause };
+    let can_pause = state.can_pause();
+    let next = (line, toggle.to_string(), can_pause);
+    {
+        let mut shown = dl.shown.lock().unwrap_or_else(|e| e.into_inner());
+        if shown.as_ref() != Some(&next) {
+            let _ = dl.menu.set_text(menu_text(&next.0));
+            let _ = dl.toggle.set_text(&next.1);
+            let _ = dl.toggle.set_enabled(next.2);
+            let _ = dl.enabled.set_text(t.enabled);
+            *shown = Some(next);
+        }
+    }
+    // Флажок muda переключает сам при щелчке — ставим настоящее значение всегда
+    let _ = dl.enabled.set_checked(state.enabled);
 }
 
 /// Обновить тексты: после смены трека, паузы или языка.
@@ -152,7 +358,10 @@ pub fn refresh(app: &AppHandle) {
     let now = app.state::<Media>().current();
     let playing = now.as_ref().is_some_and(|n| n.playing);
     let line = now.as_ref().map(now_line);
-    let _ = items.now.set_text(line.as_deref().unwrap_or(t.nothing));
+    let _ = items.now.set_text(
+        line.as_deref()
+            .map_or_else(|| t.nothing.to_string(), menu_text),
+    );
     let _ = items
         .toggle
         .set_text(if playing { t.pause } else { t.play });
@@ -164,6 +373,7 @@ pub fn refresh(app: &AppHandle) {
         let tooltip = line.map_or_else(|| "DalyWave".to_string(), |l| format!("DalyWave — {l}"));
         let _ = tray.set_tooltip(Some(tooltip));
     }
+    refresh_downloader(app);
 }
 
 #[cfg(test)]
@@ -182,7 +392,50 @@ mod tests {
             playing: true,
         };
         let line = now_line(&now);
-        assert_eq!(line.chars().count(), 48);
+        assert!(line.chars().count() <= LINE_MAX);
         assert!(line.ends_with('…'));
+    }
+
+    #[test]
+    fn ampersands_are_not_accelerators() {
+        assert_eq!(menu_text("Simon & Garfunkel"), "Simon && Garfunkel");
+    }
+
+    #[test]
+    fn downloader_lines() {
+        let state = |summary| TrayState {
+            summary,
+            enabled: true,
+            paused: false,
+        };
+        let working = state(Summary::Working {
+            track: Some("Another World".into()),
+            artist: Some("CONTROL Resonant".into()),
+            percent: 45,
+            finishing: false,
+        });
+        assert_eq!(
+            downloader_line(&DL_RU, &working),
+            "Загрузчик: качает «Another World» — CONTROL Resonant · 45\u{a0}%"
+        );
+        let long = state(Summary::Working {
+            track: Some("Очень длинное название трека, которое не помещается в меню".into()),
+            artist: Some("Parker the Bandit".into()),
+            percent: 7,
+            finishing: false,
+        });
+        let line = downloader_line(&DL_RU, &long);
+        assert!(line.ends_with("· 7\u{a0}%"), "{line}");
+        assert!(line.contains('…'));
+        assert_eq!(
+            downloader_line(&DL_RU, &state(Summary::Idle)),
+            "Загрузчик: ждёт заданий"
+        );
+        assert_eq!(
+            downloader_line(&DL_EN, &state(Summary::Offline)),
+            "Downloader: can't reach the server"
+        );
+        assert!(!state(Summary::Forbidden).can_pause());
+        assert!(state(Summary::Paused).can_pause());
     }
 }

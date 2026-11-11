@@ -30,9 +30,20 @@
       "icons/icon.icns",
       "icons/DalyWave.icon"
     ],
+    "externalBin": [
+      "../../services/fetcher/dist/sidecar/dalywave-fetcher",
+      "../../services/fetcher/dist/sidecar/deno",
+      "../../services/fetcher/dist/sidecar/ffmpeg",
+      "../../services/fetcher/dist/sidecar/ffprobe",
+      "../../services/fetcher/dist/sidecar/fpcalc"
+    ],
+    "resources": {
+      "../../services/fetcher/dist/sidecar/resources/bgutil-server/": "bgutil-server/"
+    },
     "macOS": {
       "minimumSystemVersion": "13.0",
-      "hardenedRuntime": true
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist"
     }
   }
 }
