@@ -1,0 +1,142 @@
+/* Токены дизайна «Полночь».
+   Общие (типографика, сетка, скругления, движение) — в :root; цвета — в теме.
+   Светлая тема добавляется блоком :root[data-theme='light'] с теми же именами цветов. */
+
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #ff7eb3; }
+@property --amb-1 { syntax: '<color>'; inherits: true; initial-value: #2a2350; }
+@property --amb-2 { syntax: '<color>'; inherits: true; initial-value: #3a1d3c; }
+@property --amb-3 { syntax: '<color>'; inherits: true; initial-value: #141a2c; }
+
+:root {
+  /* Типографика: одна гарнитура, табличные цифры в длительностях */
+  --font: 'Onest Variable', ui-sans-serif, system-ui, sans-serif;
+  --fs-display: 56px;
+  --fs-h1: 40px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --fs-h4: 17px;
+  --fs-body: 14px;
+  --fs-small: 13px;
+  --fs-caption: 12px;
+  --fs-micro: 11px;
+  --tr-display: -0.035em;
+  --tr-title: -0.02em;
+  --tr-caps: 0.09em;
+
+  /* Сетка 4/8 */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px;
+  --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+
+  /* Скругления */
+  --r-1: 6px; --r-2: 8px; --r-3: 12px; --r-4: 16px; --r-5: 24px; --r-6: 32px; --r-pill: 999px;
+
+  /* Движение */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 560ms;
+  --dur-mood: 1200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+
+  /* Раскладка */
+  --sidebar-w: 256px;
+  --panel-w: 380px;
+  --bar-h: 84px;
+  --topbar-h: 56px;
+  --tabbar-h: 56px;
+  --mini-h: 60px;
+  --titlebar-h: 0px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Бренд «Сумерки»: спектр настроений волны */
+  --brand-1: #4b21ff;
+  --brand-2: #b01cf0;
+  --brand-3: #ff3d7a;
+  --brand-4: #ff9a3c;
+  --brand-gradient: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 40%, var(--brand-3) 74%, var(--brand-4) 100%);
+  --brand-gradient-x: linear-gradient(90deg, var(--brand-1) 0%, var(--brand-2) 40%, var(--brand-3) 74%, var(--brand-4) 100%);
+
+  transition: --accent var(--dur-mood) var(--ease-in-out), --amb-1 var(--dur-mood), --amb-2 var(--dur-mood), --amb-3 var(--dur-mood);
+}
+
+/* Тёмная тема — по умолчанию */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ink-0: #040507;
+  --ink-1: #08090c;
+  --ink-2: #0e1015;
+  --ink-3: #14171d;
+  --ink-4: #1b1f27;
+  --glass: rgba(13, 15, 20, 0.7);
+  --glass-strong: rgba(24, 27, 35, 0.86);
+  --glass-bar: rgba(10, 11, 15, 0.82);
+  --hair: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --fill-1: rgba(255, 255, 255, 0.04);
+  --fill-2: rgba(255, 255, 255, 0.075);
+  --fill-3: rgba(255, 255, 255, 0.12);
+  --scrim: rgba(4, 5, 7, 0.72);
+
+  /* Текст: вторичный и третичный проходят 4,5:1 на основе */
+  --text-1: #f3f5f9;
+  --text-2: rgba(232, 236, 244, 0.68);
+  --text-3: rgba(232, 236, 244, 0.56);
+  --text-4: rgba(232, 236, 244, 0.32);
+  --on-light: #08090c;
+
+  --success: #7fdcae;
+  --warning: #f2c46d;
+  --danger: #ff8080;
+
+  --shadow-1: 0 10px 30px -14px rgba(0, 0, 0, 0.75);
+  --shadow-cover: 0 28px 70px -24px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 28px 64px -16px rgba(0, 0, 0, 0.8), 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+  --inner-hi: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Цвета настроений: глубина, тело, свет — те же, что в шейдере волны */
+  --mood-energetic-1: #7a2208; --mood-energetic-2: #ff6a1a; --mood-energetic-3: #ffd27a;
+  --mood-happy-1: #5c0f5e; --mood-happy-2: #ff4fa8; --mood-happy-3: #ffe9a8;
+  --mood-calm-1: #0a2a52; --mood-calm-2: #1d8cbc; --mood-calm-3: #aef0ff;
+  --mood-sad-1: #1c1946; --mood-sad-2: #5b50c4; --mood-sad-3: #d3ccff;
+}
+
+/* Акцент — от настроения волны. «Любое настроение» — весь спектр «Сумерек» */
+:root[data-mood='any'] {
+  --accent: #ff7eb3;
+  --accent-gradient: var(--brand-gradient-x);
+  --m1: var(--brand-1); --m2: var(--brand-2); --m3: var(--brand-3); --m4: var(--brand-4);
+}
+:root[data-mood='energetic'] {
+  --accent: #ffb26b;
+  --accent-gradient: linear-gradient(90deg, #ffb26b, #ffb26b);
+  --m1: var(--mood-energetic-1); --m2: var(--mood-energetic-2); --m3: var(--mood-energetic-3); --m4: var(--mood-energetic-2);
+}
+:root[data-mood='happy'] {
+  --accent: #ff8fd6;
+  --accent-gradient: linear-gradient(90deg, #ff8fd6, #ff8fd6);
+  --m1: var(--mood-happy-1); --m2: var(--mood-happy-2); --m3: var(--mood-happy-3); --m4: var(--mood-happy-2);
+}
+:root[data-mood='calm'] {
+  --accent: #8ed8f5;
+  --accent-gradient: linear-gradient(90deg, #8ed8f5, #8ed8f5);
+  --m1: var(--mood-calm-1); --m2: var(--mood-calm-2); --m3: var(--mood-calm-3); --m4: var(--mood-calm-2);
+}
+:root[data-mood='sad'] {
+  --accent: #b6abff;
+  --accent-gradient: linear-gradient(90deg, #b6abff, #b6abff);
+  --m1: var(--mood-sad-1); --m2: var(--mood-sad-2); --m3: var(--mood-sad-3); --m4: var(--mood-sad-2);
+}
+
+:root {
+  --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 42%, transparent);
+  --focus: color-mix(in oklab, var(--accent) 80%, white);
+}

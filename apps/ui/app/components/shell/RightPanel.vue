@@ -1,0 +1,80 @@
+<script setup lang="ts">
+import type { PanelTab } from '~/stores/ui'
+
+// Правая панель большого экрана: очередь, текст, устройства, о треке
+const ui = useUiStore()
+const player = usePlayerStore()
+const toast = useToast()
+const { t } = useI18n()
+
+const tabs = computed(() => [
+  { value: 'queue' as PanelTab, label: t('player.queue') },
+  { value: 'lyrics' as PanelTab, label: t('player.lyrics') },
+  { value: 'devices' as PanelTab, label: t('player.devices') },
+  { value: 'about' as PanelTab, label: t('player.about') },
+])
+
+watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
+  if (open && tab === 'devices') void player.loadDevices()
+}, { immediate: true })
+
+function saveQueue() {
+  toast.show({ text: t('queue.saveSoon'), icon: 'ph:playlist' })
+}
+</script>
+
+<template>
+  <aside class="panel" :class="{ 'is-open': ui.panelOpen }" :aria-hidden="!ui.panelOpen" :inert="!ui.panelOpen || undefined" :aria-label="t('player.panel')">
+    <div class="panel__inner">
+      <header class="panel__head">
+        <UiTabs v-model="ui.panelTab" :items="tabs" :label="t('player.panel')" class="panel__tabs" />
+        <UiIconButton icon="ph:x" :label="t('common.close')" size="sm" side="left" @click="ui.panelOpen = false" />
+      </header>
+      <div class="panel__body no-scrollbar">
+        <MusicQueuePanel v-if="ui.panelTab === 'queue'" />
+        <UiEmptyState v-else-if="ui.panelTab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
+        <div v-else-if="ui.panelTab === 'devices'" class="panel__devices">
+          <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
+          <p class="panel__note">{{ t('devices.note') }}</p>
+        </div>
+        <MusicAboutTrack v-else :track="player.current?.track ?? null" />
+      </div>
+      <footer v-if="ui.panelTab === 'queue' && player.waveActive" class="panel__foot">
+        <span class="panel__foot-text">{{ t('queue.footer') }}</span>
+        <UiButton size="sm" icon="ph:plus" @click="saveQueue">{{ t('queue.saveAsPlaylist') }}</UiButton>
+      </footer>
+    </div>
+  </aside>
+</template>
+
+<style scoped>
+.panel {
+  width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: rgba(10, 11, 15, 0.66);
+  -webkit-backdrop-filter: blur(30px) saturate(1.3);
+  backdrop-filter: blur(30px) saturate(1.3);
+  border-left: 1px solid transparent;
+  transition: width var(--dur-3) var(--ease-out), border-color var(--dur-3);
+}
+.panel.is-open { width: var(--panel-w); border-left-color: var(--hair); }
+.panel__inner { display: flex; flex-direction: column; width: var(--panel-w); height: 100%; min-height: 0; padding-top: var(--titlebar-inset-panel, 0px); }
+.panel__head { display: flex; align-items: center; gap: 8px; flex: none; padding: 6px 12px 0 20px; }
+.panel__tabs { flex: 1; min-width: 0; }
+.panel__tabs :deep(.tabs__list) { gap: 18px; border-bottom: 0; }
+.panel__tabs :deep(.tabs__item) { height: 50px; }
+.panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 24px; border-top: 1px solid var(--hair); }
+.panel__devices { padding: 12px 0; }
+.panel__note { margin: 12px 10px 0; font-size: var(--fs-caption); color: var(--text-3); }
+.panel__foot { display: flex; align-items: center; gap: 12px; flex: none; padding: 16px 20px; border-top: 1px solid var(--hair); }
+.panel__foot-text { flex: 1; min-width: 0; font-size: var(--fs-caption); color: var(--text-3); }
+
+/* Планшет: панель ложится поверх содержимого; рядом со сценой плеера — встаёт в ряд */
+@media (max-width: 1099px) {
+  .panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 28; box-shadow: none; }
+  .panel.is-open { box-shadow: -24px 0 48px -12px rgba(0, 0, 0, 0.7); }
+  .app.is-player .panel { position: relative; box-shadow: none; }
+}
+</style>

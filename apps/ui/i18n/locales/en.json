@@ -1,5 +1,286 @@
 {
   "app": {
-    "name": "DalyWave"
+    "name": "DalyWave",
+    "updateAvailable": "A new DalyWave version is available — {version}",
+    "updateInstall": "Update",
+    "updateFailed": "Couldn't update — try again later"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "library": "Library",
+    "liked": "Liked songs",
+    "settings": "Settings",
+    "admin": "Admin",
+    "back": "Back",
+    "forward": "Forward",
+    "pinned": "Pinned",
+    "artists": "Artists",
+    "newPlaylist": "New playlist",
+    "profile": "Profile",
+    "logout": "Sign out",
+    "newRelease": "New release",
+    "aside": "Sections and library",
+    "main": "Sections",
+    "downloading": "{done} of {total} tracks on the server",
+    "newPlaylistSoon": "Creating playlists arrives with the playlist editor",
+    "of": "of",
+    "syncDone": "Follows on the server",
+    "syncTitle": "Downloading follows"
+  },
+  "common": {
+    "play": "Play",
+    "pause": "Pause",
+    "shuffle": "Shuffle",
+    "all": "All",
+    "more": "More",
+    "close": "Close",
+    "retry": "Retry",
+    "undo": "Undo",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "soon": "Soon",
+    "new": "New",
+    "explicit": "Explicit",
+    "scrollLeft": "Back",
+    "scrollRight": "Forward",
+    "loadFailed": "Couldn't load",
+    "loadFailedText": "The server didn't respond. Check your connection — data will come in once it's back.",
+    "devMock": "Design fixtures: this section isn't on the server yet",
+    "offline": "Offline — playing what's already downloaded",
+    "notFound": "This page doesn't exist",
+    "notFoundText": "It may have been removed, or the link is incomplete"
+  },
+  "wave": {
+    "title": "My Wave",
+    "mood": {
+      "label": "Mood",
+      "any": "Any",
+      "energetic": "Energetic",
+      "happy": "Happy",
+      "calm": "Calm",
+      "sad": "Sad"
+    },
+    "activity": {
+      "label": "Activity",
+      "any": "Any",
+      "wake": "Waking up",
+      "wakeHint": "Energy slowly rises",
+      "road": "On the road",
+      "work": "Working",
+      "sport": "Working out",
+      "sportHint": "Matched to running pace",
+      "rest": "Relaxing",
+      "sleep": "Falling asleep",
+      "sleepHint": "Energy slowly fades",
+      "party": "Party"
+    },
+    "character": {
+      "label": "Character",
+      "fav": "Favourites",
+      "mix": "Familiar and new",
+      "new": "Unfamiliar",
+      "pop": "Popular",
+      "rare": "Rare"
+    },
+    "language": {
+      "label": "Language",
+      "any": "Any",
+      "anyLong": "Any language",
+      "ru": "Russian",
+      "foreign": "Other languages",
+      "none": "Instrumental"
+    },
+    "preset": {
+      "saved": "Saved",
+      "work": "Work",
+      "workMeta": "calm, instrumental",
+      "road": "Road",
+      "roadMeta": "energetic, Russian",
+      "night": "Night",
+      "nightMeta": "sad, rare finds",
+      "save": "Save",
+      "saveMeta": "current mix",
+      "current": "now",
+      "saveSoon": "Saving your own mixes arrives with wave settings on the server"
+    },
+    "listen": "Play my wave",
+    "nowPlaying": "Now playing",
+    "paused": "Paused",
+    "idle": "An endless stream made for you",
+    "learns": "Learns from likes and skips",
+    "readyLabel": "Ready to go"
+  },
+  "player": {
+    "like": "Like",
+    "unlike": "Remove from liked",
+    "liked": "Liked",
+    "dislike": "Dislike",
+    "dislikeHint": "Dislike — don't play again",
+    "notNow": "Skipped without penalty — it will come back",
+    "notNowLabel": "Not now",
+    "moreLike": "More like this",
+    "moreLikeThis": "More like “{title}”",
+    "prev": "Previous",
+    "next": "Next",
+    "seek": "Track position",
+    "queue": "Queue",
+    "lyrics": "Lyrics",
+    "devices": "Devices",
+    "about": "About",
+    "volume": "Volume",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "expand": "Open player",
+    "collapse": "Collapse",
+    "playNextDone": "“{title}” plays next",
+    "enqueued": "“{title}” added to queue",
+    "removed": "“{title}” removed from queue",
+    "manualCleared": "Manual queue cleared",
+    "disliked": "We won't play “{title}” again",
+    "waveRetuned": "The wave adjusts from the next track",
+    "waveFailed": "The wave didn't start — the server didn't respond. Try again",
+    "trackFailed": "“{title}” won't play: the file is unavailable. Playing the next one",
+    "transitionAt": "Transition at {time}",
+    "preview": "30 s preview",
+    "silent": "No sound — stream not ready yet",
+    "quality": "Opus 160",
+    "playingFrom": "Playing from",
+    "waveContext": "My Wave · {mood}",
+    "nothing": "Nothing playing",
+    "nothingHint": "Start the wave — it picks music for you",
+    "panel": "Player panel",
+    "playingWave": "Playing the wave",
+    "region": "Player",
+    "acquiring": "Downloading to the server…",
+    "acquiringQueue": "Downloading to the server · #{n} in queue",
+    "acquiringLong": "The file isn't on the server yet — it's downloading and will start by itself",
+    "waitingDownloader": "Waiting for the Mac downloader",
+    "waitingDownloaderLong": "The Mac downloader is offline — the track will download and start once it connects",
+    "skip": "Play next",
+    "unavailable": "“{title}” isn't in any source — playing the next one",
+    "waveEmpty": "Nothing to build the wave from yet — like a few tracks first"
+  },
+  "transition": {
+    "title": "Transitions",
+    "hint": "for the wave",
+    "gapless": "Gapless",
+    "gaplessDesc": "Tracks join edge to edge",
+    "smooth": "Smooth",
+    "smoothDesc": "6-second overlap",
+    "smart": "Smart",
+    "smartDesc": "Finds the spot: after vocals, on the intro",
+    "dj": "DJ",
+    "djDesc": "Beat-matched like a set",
+    "inApp": "in the app",
+    "expressiveness": "Expressiveness",
+    "subtle": "Subtle",
+    "set": "Like a set",
+    "bold": "Bold",
+    "next": "Next transition: {time}"
+  },
+  "devices": {
+    "title": "Play on",
+    "online": "{n} online",
+    "here": "Playing here",
+    "thisDevice": "This device",
+    "offline": "Offline",
+    "lastSeen": "seen {when}",
+    "note": "Control goes through the server: switch from your phone.",
+    "soon": "Playing on “{name}” arrives with cross-device control"
+  },
+  "queue": {
+    "now": "Now",
+    "manual": "Next — added by you",
+    "fromWave": "Next — from the wave",
+    "fromContext": "Next — from “{title}”",
+    "clear": "Clear",
+    "liveHint": "picked on the fly",
+    "footer": "The wave never ends: it picks more after these.",
+    "saveAsPlaylist": "To playlist",
+    "empty": "Queue is empty",
+    "emptyHint": "Use “Play next” or start the wave",
+    "andMore": "And {n} more — open the full list",
+    "saveSoon": "Saving the queue as a playlist arrives with the playlist editor"
+  },
+  "track": {
+    "playNext": "Play next",
+    "enqueue": "Add to queue",
+    "toPlaylist": "Add to playlist",
+    "radio": "Track radio",
+    "download": "Download to this device",
+    "goArtist": "Go to artist",
+    "goAlbum": "Go to album",
+    "block": "Don't recommend",
+    "report": "Wrong match — fix",
+    "status": {
+      "none": "Not on the server — downloads when played",
+      "noneShort": "downloads when played",
+      "queued": "Queued for download",
+      "acquiring": "Downloading to the server",
+      "ready": "On the server",
+      "disputed": "Waiting for review",
+      "unavailable": "Not found in sources",
+      "failed": "Download failed"
+    }
+  },
+  "record": {
+    "album": "Album",
+    "ep": "EP",
+    "single": "Single",
+    "compile": "Compilation",
+    "playlist": "Playlist",
+    "artist": "Artist",
+    "radio": "Radio"
+  },
+  "about": {
+    "artists": "Artists",
+    "duration": "Duration",
+    "file": "File",
+    "position": "Track number",
+    "status": "On the server",
+    "tempo": "Tempo"
+  },
+  "artist": {
+    "following": "Following"
+  },
+  "auth": {
+    "logoutFailed": "Couldn't sign out — check the connection and try again"
+  },
+  "home": {
+    "artistRadio": "{name} radio",
+    "waveByArtist": "Wave by artist",
+    "shelf": {
+      "continue": "Jump back in",
+      "new-releases": "New from artists you follow",
+      "recent-likes": "Recently liked",
+      "top-artists": "Your artists"
+    }
+  },
+  "lyrics": {
+    "title": "No lyrics yet",
+    "text": "Lyrics will appear once the server learns to fetch them with tracks"
+  },
+  "search": {
+    "placeholder": "Tracks, artists, albums"
+  },
+  "window": {
+    "close": "Close",
+    "maximize": "Maximize",
+    "minimize": "Minimize",
+    "restore": "Restore"
+  },
+  "admin": {
+    "title": "Admin",
+    "back": "Back to app",
+    "nav": {
+      "overview": "Overview",
+      "lanes": "Lanes",
+      "jobs": "Jobs",
+      "access": "Access",
+      "sessions": "Sessions",
+      "audit": "Log"
+    }
   }
 }

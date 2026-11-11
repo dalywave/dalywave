@@ -8,10 +8,11 @@
     "preview": "bun ../../tools/serve.ts .output/public 3401",
     "typecheck": "nuxt typecheck",
     "lint": "eslint .",
-    "api-types": "openapi-typescript http://localhost:8400/api/openapi.json -o app/api/schema.d.ts",
+    "api-types": "bun scripts/api-types.mjs",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@fontsource-variable/onest": "^5.3.1",
     "@nuxt/fonts": "1.2.0",
     "@nuxt/icon": "2.6.2",
     "@nuxtjs/i18n": "10.6.0",

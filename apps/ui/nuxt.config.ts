@@ -1,22 +1,41 @@
 import tailwindcss from '@tailwindcss/vite'
 
+// Данные дизайн-макетов (обложки, превью) — только для моков в разработке
+const fixtures = decodeURIComponent(new URL('../../design/fixtures', import.meta.url).pathname)
+
 // Один интерфейс для сайта и приложений Tauri: SPA, всё нужное для работы без сети — внутри сборки
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-01',
   ssr: false,
   devtools: { enabled: false },
 
-  modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@nuxt/icon', '@nuxt/fonts', '@nuxt/eslint', '@vueuse/nuxt'],
+  modules: [
+    '@pinia/nuxt',
+    '@nuxtjs/i18n',
+    '@nuxt/icon',
+    '@nuxt/fonts',
+    '@nuxt/eslint',
+    '@vueuse/nuxt',
+    // Галерея компонентов нужна только для разработки и проверок скриншотами
+    (_options, nuxt) => {
+      if (nuxt.options.dev) return
+      nuxt.hook('pages:extend', (pages) => {
+        const keep = pages.filter(p => !p.path.startsWith('/dev'))
+        pages.splice(0, pages.length, ...keep)
+      })
+    },
+  ],
 
   css: ['~/assets/css/main.css'],
 
   app: {
     head: {
-      htmlAttrs: { lang: 'ru' },
+      htmlAttrs: { 'lang': 'ru', 'data-theme': 'dark', 'data-mood': 'any' },
       title: 'DalyWave',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-        { name: 'color-scheme', content: 'dark light' },
+        { name: 'color-scheme', content: 'dark' },
+        { name: 'theme-color', content: '#08090c' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -32,6 +51,12 @@ export default defineNuxtConfig({
   nitro: {
     devProxy: {
       '/api': { target: 'http://localhost:8400/api', ws: true },
+    },
+  },
+
+  $development: {
+    nitro: {
+      publicAssets: [{ dir: fixtures, baseURL: '/_fixtures', maxAge: 0 }],
     },
   },
 
@@ -55,7 +80,17 @@ export default defineNuxtConfig({
   // Иконки только из сборки: приложения должны работать без сети
   icon: {
     provider: 'none',
-    clientBundle: { scan: true, sizeLimitKb: 512 },
+    serverBundle: false,
+    fallbackToApi: false,
+    clientBundle: {
+      scan: { globInclude: ['app/**/*.{vue,ts}'] },
+      sizeLimitKb: 512,
+    },
+  },
+
+  // Onest лежит в сборке (@fontsource-variable/onest); модулю шрифтов искать его не нужно
+  fonts: {
+    families: [{ name: 'Onest Variable', provider: 'none' }],
   },
 
   eslint: {
