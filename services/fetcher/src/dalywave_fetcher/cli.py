@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import tools
 from .config import Settings
 
 
@@ -65,7 +66,29 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--once", action="store_true", help="одно задание и выход")
     p.add_argument("--poll", type=float, default=30.0, help="опрос без заданий, с")
 
+    from . import sidecar
+
+    p = sub.add_parser(
+        "sidecar",
+        help="загрузчик внутри приложения: события JSON в stdout, команды из stdin (SIDECAR.md)",
+    )
+    sidecar.add_arguments(p)
+
+    p = sub.add_parser("pot-check", help="поднять свой сервис PO-токенов и получить токен (JSON)")
+    sidecar.add_pot_check_arguments(p)
+
     args = parser.parse_args(argv)
+    if args.command == "sidecar":
+        code = sidecar.run(args)
+        # Не ждём потоков поиска и yt-dlp: задание уже возвращено серверу
+        os._exit(code)
+    if args.command == "pot-check":
+        result = sidecar.pot_check(args)
+        _print(result)
+        return 0 if result.get("ok") else 1
+    if (here := tools.executable_dir()) is not None:
+        # Собранный загрузчик берёт свои ffmpeg, fpcalc и deno, а не из PATH
+        tools.configure({name: path for name, path in tools.resolve([here]).items() if path})
     settings = Settings.from_env()
 
     if args.command == "serve":

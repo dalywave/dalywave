@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from . import __version__
+from . import __version__, progress
 from .analyze import Analysis, AnalyzeError, analyze
 from .config import Settings
 from .deezer import DeezerClient, DeezerError, DeezerNotFoundError, DeezerTrack
@@ -184,6 +184,7 @@ class Fetcher:
         own_dir = out_dir is None
         work = out_dir or Path(tempfile.mkdtemp(prefix=f"{track_id}-", dir=self.jobs_dir()))
         work.mkdir(parents=True, exist_ok=True)
+        interrupted = False
         try:
             self._acquire(
                 result,
@@ -197,14 +198,18 @@ class Fetcher:
             )
             if upload and result.path:
                 t = time.monotonic()
+                progress.report(progress.UPLOADING, 0.0)
                 result.upload = self._upload(result, upload)
                 timer.add("upload", t)
+        except progress.Interrupted:
+            interrupted = True
+            raise
         finally:
             timer.ms["total"] = int((time.monotonic() - started) * 1000)
             result.timings_ms = timer.ms
             # Своя временная папка нужна, только пока файл никуда не отдан.
             uploaded = bool(upload and result.upload and result.upload.get("ok"))
-            if own_dir and (uploaded or result.path is None):
+            if own_dir and (interrupted or uploaded or result.path is None):
                 shutil.rmtree(work, ignore_errors=True)
         return result
 
@@ -229,6 +234,7 @@ class Fetcher:
         keep_rejected: bool,
         threshold: float,
     ) -> None:
+        progress.report(progress.MATCHING, 0.0)
         t = time.monotonic()
         try:
             track = self.deezer.track(result.track_id)
@@ -240,11 +246,13 @@ class Fetcher:
             return
         timer.add("deezer", t)
         result.track = track
+        progress.report(progress.MATCHING, 0.2, track=track.title, artist=track.artist)
 
         t = time.monotonic()
         match = self.matcher.match(track)
         timer.add("match", t)
         result.match = match
+        progress.report(progress.MATCHING, 0.7)
         searches = [st for st in match.steps if st["name"] in ("album", "isrc", "song", "video")]
         if not match.candidates and searches and all("error" in st for st in searches):
             # YouTube Music не ответил ни на один поиск — это сбой, а не «записи нет».
@@ -255,6 +263,7 @@ class Fetcher:
         t = time.monotonic()
         preview_fp, preview_error = self._preview(track, work)
         timer.add("preview", t)
+        progress.report(progress.MATCHING, 1.0)
 
         tried: set[str] = set(exclude)
         queue = self._queue(match, prefer, tried)
@@ -278,6 +287,7 @@ class Fetcher:
         self._settle(result, preview_fp is not None, preview_error)
         if result.chosen and result.chosen.download:
             path = result.chosen.download.path
+            progress.report(progress.VERIFYING, 0.8)
             t = time.monotonic()
             try:
                 result.analysis = analyze(path)
@@ -285,6 +295,7 @@ class Fetcher:
                 result.analysis_error = str(e)
             timer.add("analyze", t)
             result.file_sha256 = sha256_file(path)
+            progress.report(progress.VERIFYING, 1.0)
 
     @staticmethod
     def _settle(result: AcquireResult, has_preview: bool, preview_error: str | None) -> None:
@@ -328,6 +339,7 @@ class Fetcher:
         """Качает и проверяет кандидатов по очереди. True — дальше пробовать бессмысленно."""
         for cand in queue:
             tried.add(cand.video_id)
+            progress.report(progress.DOWNLOADING, 0.0, attempt=len(result.attempts) + 1)
             attempt = self._attempt(cand, work, timer, preview_fp, threshold)
             result.attempts.append(attempt)
             code = attempt.error.code if attempt.error else None
@@ -395,9 +407,11 @@ class Fetcher:
         finally:
             timer.add("download", t)
         if preview_fp is not None:
+            progress.report(progress.VERIFYING, 0.0)
             t = time.monotonic()
             attempt.verify = verify(preview_fp, attempt.download.path, threshold)
             timer.add("verify", t)
+            progress.report(progress.VERIFYING, 0.6)
         return attempt
 
     def _upload(self, result: AcquireResult, target: UploadTarget) -> dict[str, Any]:
@@ -407,10 +421,15 @@ class Fetcher:
         path = chosen.download.path
         headers = dict(target.headers)
         headers.setdefault("Content-Type", chosen.download.mime_type)
+        size = path.stat().st_size
 
         def chunks() -> Iterator[bytes]:
+            sent = 0
             with path.open("rb") as f:
-                yield from iter(lambda: f.read(1 << 20), b"")
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    yield chunk
+                    sent += len(chunk)
+                    progress.report(progress.UPLOADING, sent / size if size else 1.0)
 
         try:
             # Content-Length обязателен: S3 и R2 не принимают PUT частями без него.
@@ -418,7 +437,7 @@ class Fetcher:
                 target.method,
                 target.url,
                 content=chunks(),
-                headers={**headers, "Content-Length": str(path.stat().st_size)},
+                headers={**headers, "Content-Length": str(size)},
                 timeout=httpx.Timeout(30.0, write=300.0),
             )
         except httpx.HTTPError as e:

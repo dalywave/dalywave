@@ -18,6 +18,8 @@ from typing import Any
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
+from . import tools
+
 # Шаг отпечатка: окно 4096 отсчётов с перекрытием 2/3 на частоте 11025 Гц.
 ITEM_S = 4096 / 3 / 11025
 # Порог по калибровке (bench/REPORT.md): верные записи — от 0,92, чужие треки и другие
@@ -44,7 +46,7 @@ def fingerprint(path: Path, length_s: int = 0) -> Fingerprint:
     """Отпечаток файла целиком (`length_s=0`) или его начала."""
     try:
         proc = subprocess.run(
-            ["fpcalc", "-raw", "-json", "-length", str(length_s), str(path)],
+            [tools.exe("fpcalc"), "-raw", "-json", "-length", str(length_s), str(path)],
             capture_output=True,
             text=True,
             timeout=300,

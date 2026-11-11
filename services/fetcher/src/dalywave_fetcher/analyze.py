@@ -15,6 +15,8 @@ from typing import Any
 
 import numpy as np
 
+from . import tools
+
 WAVEFORM_POINTS = 512
 # Для огибающей хватает 8 кГц моно: ей нужна громкость по времени, а не спектр.
 WAVEFORM_RATE = 8000
@@ -75,7 +77,7 @@ def analyze(path: Path, points: int = WAVEFORM_POINTS) -> Analysis:
         f"[w]aresample={WAVEFORM_RATE},aformat=sample_fmts=s16:channel_layouts=mono[wo]"
     )
     cmd = [
-        "ffmpeg",
+        tools.exe("ffmpeg"),
         "-nostdin",
         "-hide_banner",
         "-nostats",

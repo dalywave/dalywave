@@ -31,6 +31,11 @@ dev = [
     "pytest>=9.2",
     "ruff>=0.17",
 ]
+# Сборка загрузчика для приложения: sidecar/build.sh → dist/sidecar/
+sidecar = [
+    "pyinstaller==6.22.3",
+    "pyinstaller-hooks-contrib==2026.9",
+]
 
 [tool.ruff]
 line-length = 100

@@ -50,7 +50,8 @@ Deezer: трек, альбом ──► поиск кандидатов ──�
 4. **Скачивание** (`download.py`). Формат `774/251/bestaudio[acodec=opus]/140/bestaudio`:
    Opus 256 кбит/с (только с Premium), обычный Opus ~130–160 кбит/с (itag 251), AAC как
    запасной. Файл не перекодируется: Opus и AAC перекладываются в MP4 (ISO BMFF, `.m4a`,
-   `ffmpeg -c:a copy -movflags +faststart -f mp4`; `audio/mp4; codecs="opus"`). Opus в MP4
+   `ffmpeg -c:a copy -movflags +faststart -f mp4`; `audio/mp4; codecs="Opus"` — код записи MP4 по
+   RFC 6381: на `codecs="opus"` Safari отвечает «не умею»). Opus в MP4
    играют Safari, AVPlayer, Chrome, Firefox и движок приложений, а `faststart` ставит
    оглавление в начало — плеер начинает играть, не дочитав файл. Записываются itag, кодек, битрейт, частота,
    размер, исходный контейнер и клиент плеера (параметр `c=` ссылки потока), был ли
@@ -143,6 +144,7 @@ uv run pytest -m network          # с настоящими Deezer и YouTube Mu
 | `FETCHER_PROXY` | — | прокси для yt-dlp (`socks5://…`) — запасной путь при блокировке |
 | `FETCHER_SOURCE_ADDRESS` | — | исходящий адрес yt-dlp: `0.0.0.0` — только IPv4, `::` — только IPv6. YouTube судит о клиенте по адресу: на домашнем IPv4 `mweb` получал 403, на IPv6 — нет |
 | `FETCHER_DENO` | `deno` из `PATH` | путь к Deno |
+| `FETCHER_FFMPEG`, `FETCHER_FFPROBE`, `FETCHER_FPCALC` | из `PATH` | пути к ffmpeg, ffprobe, fpcalc. Собранный загрузчик (`dist/sidecar/`) берёт свои программы, лежащие рядом |
 | `FETCHER_MIN_INTERVAL_S` | `3` | пауза между скачиваниями внутри процесса |
 | `FETCHER_SELFTEST_TRACK` | `908604612` | трек Deezer для `/v1/selftest` |
 | `FETCHER_WORKER_TOKEN` | — | токен домашнего загрузчика вместо `--token` |
@@ -164,7 +166,7 @@ uv run pytest -m network          # с настоящими Deezer и YouTube Mu
 `preferVideoIds` — видео, выбранные вручную в «Спорных» (пробуются первыми),
 `excludeVideoIds` — отклонённые, `directUrl` — ссылка, вставленная в «Спорных» (SoundCloud,
 Bandcamp, любой сайт yt-dlp): качается она, как выбор человека. С `upload` файл уходит
-`PUT`-ом по подписанной ссылке (Content-Type — `audio/mp4; codecs="opus"` и т. п.),
+`PUT`-ом по подписанной ссылке (Content-Type — `audio/mp4; codecs="Opus"` и т. п.),
 локальная копия удаляется. Без `upload` файл остаётся в `FETCHER_DATA_DIR/jobs/…`,
 путь — в `file.path`.
 
@@ -173,6 +175,12 @@ Bandcamp, любой сайт yt-dlp): качается она, как выбо�
 YouTube не отдаёт аудио адресу сервера (docs/decisions.md), поэтому качает домашний Mac:
 загрузчик забирает задания с сервера, скачивает со своего адреса, кладёт файл по подписанной
 ссылке в R2 и отчитывается. Серверную сторону делает API (`/api/fetcher/*`).
+
+Основной путь — загрузчик внутри приложения для macOS: один файл `dalywave-fetcher` со своими
+Deno, ffmpeg, fpcalc и сервисом PO-токенов, без Docker (`sidecar/build.sh` → `dist/sidecar/`);
+приложение запускает его как sidecar и говорит с ним строками JSON. Договор — [SIDECAR.md](SIDECAR.md),
+проверка своего сервиса PO-токенов — `dalywave-fetcher pot-check`. Ниже — запуск без приложения
+(launchd).
 
 Настройка на Mac:
 
@@ -244,7 +252,7 @@ Content-Type в подпись ссылки не включается. Ссыл�
       "download": {"itag": "251", "codec": "opus", "container": "mp4", "abrKbps": 136.1, "client": "MWEB", "poToken": true},
       "verify": {"verified": true, "similarity": 0.9761, "offsetS": 157.03, "threshold": 0.8}
     },
-    "file": {"sha256": "40b9…", "sizeBytes": 3353582, "container": "mp4", "mimeType": "audio/mp4; codecs=\"opus\"",
+    "file": {"sha256": "40b9…", "sizeBytes": 3353582, "container": "mp4", "mimeType": "audio/mp4; codecs=\"Opus\"",
              "codec": "opus", "durationMs": 199700, "bitrateKbps": 136, "sampleRate": 48000, "channels": 2,
              "loudnessLufs": -8.4, "truePeakDb": 0.9, "waveform": [312, 640, "… 512 точек 0..1000"], "analysisError": null},
     "upload": {"ok": true, "status": 200, "etag": "\"…\""},

@@ -8,6 +8,7 @@ Opus из WebM и AAC перекладываются в MP4 (ISO BMFF, `.m4a`, `
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ import yt_dlp
 from yt_dlp.utils import YoutubeDLError
 from yt_dlp.version import __version__ as YT_DLP_VERSION
 
+from . import progress, tools
 from .config import Settings
 
 # 774 — Opus 256 кбит/с, только с YouTube Music Premium; 251 — Opus ~130–160 кбит/с;
@@ -156,7 +158,7 @@ class _Collector:
 def ffprobe_duration(path: Path) -> float | None:
     out = subprocess.run(
         [
-            "ffprobe",
+            tools.exe("ffprobe"),
             "-v",
             "error",
             "-show_entries",
@@ -223,7 +225,7 @@ def safe_basename(video_id: str) -> str:
 def probe_codec(path: Path) -> str:
     out = subprocess.run(
         [
-            "ffprobe",
+            tools.exe("ffprobe"),
             "-v",
             "error",
             "-select_streams",
@@ -251,7 +253,7 @@ def remux(src: Path, codec: str) -> tuple[Path, str]:
     if dst == src:
         dst = src.with_name(f"{src.stem}.remux{src.suffix}")
     cmd = [
-        "ffmpeg",
+        tools.exe("ffmpeg"),
         "-nostdin",
         "-hide_banner",
         "-loglevel",
@@ -299,6 +301,11 @@ class Downloader:
             dst.chmod(0o600)
         return dst
 
+    def deno(self) -> str | None:
+        """Путь к Deno для yt-dlp; None — пусть ищет в PATH сам."""
+        deno = self.settings.deno_path or tools.exe("deno")
+        return deno if os.sep in deno else None
+
     def fallback_clients(self) -> tuple[str, ...]:
         """Клиенты для второй попытки того же ролика после 403 и похожих сбоев."""
         s = self.settings
@@ -335,8 +342,12 @@ class Downloader:
             "socket_timeout": 20,
             "cachedir": str(s.data_dir / "yt-dlp-cache"),
             "extractor_args": extractor_args,
-            "js_runtimes": {"deno": {"path": s.deno_path} if s.deno_path else {}},
+            "js_runtimes": {"deno": {"path": deno} if (deno := self.deno()) else {}},
         }
+        ffmpeg = tools.exe("ffmpeg")
+        if os.sep in ffmpeg:
+            # Свой ffmpeg рядом с загрузчиком: ffprobe yt-dlp найдёт по тому же имени в той же папке
+            opts["ffmpeg_location"] = ffmpeg
         if s.proxy:
             opts["proxy"] = s.proxy
         if s.source_address:
@@ -384,6 +395,10 @@ class Downloader:
         def hook(d: dict[str, Any]) -> None:
             if d.get("status") == "downloading":
                 marks.setdefault("transfer", time.monotonic())
+                total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                done = d.get("downloaded_bytes") or 0
+                # Отсюда же приходит и остановка: исключение прерывает скачивание yt-dlp
+                progress.report(progress.DOWNLOADING, done / total if total else 0.0)
             elif d.get("status") == "finished":
                 marks["finished"] = time.monotonic()
 
@@ -458,7 +473,7 @@ def tool_versions(settings: Settings) -> dict[str, str | None]:
 
     return {
         "ytDlp": YT_DLP_VERSION,
-        "deno": first_line([settings.deno_path or "deno", "--version"]),
-        "ffmpeg": first_line(["ffmpeg", "-version"]),
-        "fpcalc": first_line(["fpcalc", "-version"]),
+        "deno": first_line([settings.deno_path or tools.exe("deno"), "--version"]),
+        "ffmpeg": first_line([tools.exe("ffmpeg"), "-version"]),
+        "fpcalc": first_line([tools.exe("fpcalc"), "-version"]),
     }

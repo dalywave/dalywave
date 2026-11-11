@@ -5,6 +5,8 @@
 data
 bench/out
 bench/*.log
+dist
+sidecar
 tests
 cookies*.txt
 .env
