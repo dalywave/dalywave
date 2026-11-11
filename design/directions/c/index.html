@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru" data-route="home">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0B0B0D">
+  <title>DalyWave · «Сцена»</title>
+  <link rel="icon" type="image/svg+xml" href="../../brand/icon-rounded.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Extra+Condensed:wght@700;800;900&family=Golos+Text:wght@400..800&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Знак и системные значки: один спрайт на всю страницу -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <!-- Знак DalyWave — design/brand/glyph.svg, не перерисовывать -->
+    <symbol id="i-glyph" viewBox="0 0 100 100">
+      <path d="M16 31C18.83 37.33 27.33 67.33 33 69C38.67 70.67 44.33 41.00 50 41C55.67 41.00 61.33 70.67 67 69C72.67 67.33 81.17 37.33 84 31" fill="none" stroke="currentColor" stroke-width="11.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-signal" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 16 12"><path d="M8 2.6c2.3 0 4.4.9 6 2.4l1.1-1.1A10 10 0 0 0 8 1 10 10 0 0 0 .9 3.9L2 5a8.4 8.4 0 0 1 6-2.4Zm0 3.3c1.4 0 2.6.5 3.6 1.4l1.1-1.1A6.8 6.8 0 0 0 8 4.3a6.8 6.8 0 0 0-4.7 1.9l1.1 1.1c1-.9 2.2-1.4 3.6-1.4Zm0 3.2c-.6 0-1.1.2-1.5.6L8 11.2l1.5-1.5c-.4-.4-.9-.6-1.5-.6Z"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.6" fill="none" stroke="currentColor" opacity=".38"/><rect x="2" y="2" width="17" height="9" rx="2.2"/><path d="M25 4.5v4c.8-.3 1.4-1.1 1.4-2s-.6-1.7-1.4-2Z" opacity=".4"/></symbol>
+  </svg>
+
+  <div id="app" class="app"></div>
+  <div id="layer" class="layer" aria-live="polite"></div>
+
+  <script src="../../fixtures/data.js"></script>
+  <script src="wave.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
