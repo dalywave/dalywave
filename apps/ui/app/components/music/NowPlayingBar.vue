@@ -13,7 +13,6 @@ const liked = computed(() => (track.value ? library.isLiked(track.value) : false
 const nextAt = computed(() => (player.nextEntry && !player.pending && player.effectiveMode !== 'gapless' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
 const peaks = computed(() => (player.peaks.length ? player.peaks : FLAT))
 const FLAT = Array.from({ length: 120 }, () => 0.18)
-const compact = computed(() => !ui.isDesktop)
 
 function openPlayer() {
   if (track.value) ui.playerOpen = !ui.playerOpen
@@ -72,7 +71,7 @@ function openPlayer() {
     </div>
 
     <div class="bar__right">
-      <MusicTransitionModePicker v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" :web="bridge.kind === 'web'" :next-at="nextAt" :compact="compact" />
+      <MusicTransitionModePicker v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" :web="bridge.kind === 'web'" :next-at="nextAt" icon size="sm" />
       <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="sm" :active="ui.panelOpen && ui.panelTab === 'lyrics'" @click="ui.togglePanel('lyrics')" />
       <UiIconButton icon="ph:queue" :label="t('player.queue')" size="sm" :active="ui.panelOpen && ui.panelTab === 'queue'" @click="ui.togglePanel('queue')" />
       <MusicDevicePicker :devices="player.devices" :playing="player.playing" @open="player.loadDevices()" @select="player.selectDevice" />
@@ -114,7 +113,6 @@ a.bar__title:hover, .bar__artist a:hover { text-decoration: underline; text-unde
 .bar__transport { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; }
 .bar__transport :deep(.pb) { margin: 0 6px; }
 .bar__right { display: flex; align-items: center; justify-content: flex-end; gap: 2px; min-width: 0; }
-.bar__right :deep(.mode-chip) { margin-right: 6px; }
 
 @media (max-width: 1279px) {
   .bar { grid-template-columns: minmax(200px, 1fr) minmax(320px, 520px) minmax(200px, 1fr); gap: 16px; }

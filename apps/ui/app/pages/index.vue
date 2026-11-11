@@ -126,7 +126,10 @@ function playLiked(list: Track[], i: number) {
 .home__note { align-self: center; }
 .home__skel { display: flex; flex-direction: column; gap: 16px; }
 .home__skel-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; }
-@media (max-width: 1099px) {
+@container main (max-width: 760px) {
+  .likes__grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 699px) {
   .likes__grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 699px) {

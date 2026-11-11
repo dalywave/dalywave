@@ -110,6 +110,25 @@ const mood = computed({
 .dock__caret { font-size: 14px; color: var(--text-3); transition: transform var(--dur-2) var(--ease-out); }
 .dock__cell--btn[data-state='open'] .dock__caret { transform: rotate(180deg); }
 
+/* Узкая колонка (открыта правая панель): в ряд четыре ячейки не помещаются — док встаёт сеткой 2×2
+   на всю ширину карточки, разделители — между колонками и между строками */
+@container main (max-width: 820px) {
+  .dock { display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); width: 100%; }
+  .dock__cell { border-radius: 0; }
+  .dock > :nth-child(odd)::before { display: none; }
+  .dock > :nth-child(n + 3)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--line);
+  }
+  .dock > :nth-child(3)::after { left: 16px; }
+  .dock > :nth-child(4)::after { right: 16px; }
+}
+
 .tokens { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
 .token {
   display: inline-flex;

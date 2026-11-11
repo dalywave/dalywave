@@ -38,12 +38,15 @@ const { t } = useI18n()
 </template>
 
 <style scoped>
-.combos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+/* Карточки делят ряд поровну, но не уже своих двух строк: где места мало (открыта правая панель),
+   ряд прокручивается с затуханием у края, а подписи не режутся */
+.combos { display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; }
 .combo {
   display: flex;
+  flex: 1 1 0;
   align-items: center;
   gap: 12px;
-  min-width: 0;
+  min-width: max-content;
   padding: 10px 14px 10px 10px;
   border: 0;
   border-radius: var(--r-4);
@@ -78,10 +81,6 @@ const { t } = useI18n()
 .combo__go { font-size: 16px; color: var(--text-3); opacity: 0; transform: translateX(-4px); transition: opacity var(--dur-1), transform var(--dur-2) var(--ease-out); }
 .combo:hover .combo__go { opacity: 1; transform: none; }
 
-@media (max-width: 1180px) {
-  .combos { display: flex; overflow-x: auto; margin-right: -32px; padding-right: 32px; }
-  .combo { flex: none; padding-right: 18px; }
-}
 @media (max-width: 699px) {
   .combos { gap: 8px; margin: 0 -16px; padding: 0 16px; }
   .combo__go { display: none; }

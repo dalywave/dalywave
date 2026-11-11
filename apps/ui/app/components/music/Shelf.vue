@@ -82,9 +82,10 @@ const scrollable = computed(() => !(atStart.value && atEnd.value))
 .shelf__nav :deep(.ib) { box-shadow: inset 0 0 0 1px var(--line); }
 .shelf__row {
   --gap: 24px;
+  --c: var(--cols);
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  grid-auto-columns: calc((100% - (var(--c) - 1) * var(--gap)) / var(--c));
   gap: var(--gap);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -93,11 +94,18 @@ const scrollable = computed(() => !(atStart.value && atEnd.value))
 .shelf__row > :deep(*) { scroll-snap-align: start; }
 .shelf__row--grid { grid-template-rows: repeat(var(--rows), auto); gap: 16px var(--gap); }
 
-@media (max-width: 1279px) {
-  .shelf__row { --gap: 20px; grid-auto-columns: calc((100% - (max(var(--cols) - 1, 1) - 1) * var(--gap)) / max(var(--cols) - 1, 1)); }
+/* Сколько карточек в ряду — от ширины колонки (окно и правая панель), а не от окна */
+@container main (max-width: 1040px) {
+  .shelf__row { --gap: 20px; --c: max(var(--cols) - 1, 1); }
+  /* Плитки «Продолжить» широкие сами по себе: три в ряд, пока подписи помещаются */
+  .shelf__row--grid { --c: var(--cols); }
 }
-@media (max-width: 1180px) {
-  .shelf__row--grid { grid-auto-columns: calc((100% - var(--gap)) / 2); }
+@container main (max-width: 900px) {
+  .shelf__row--grid { --c: 2; }
+}
+@container main (max-width: 720px) {
+  .shelf__row { --c: max(var(--cols) - 2, 2); }
+  .shelf__row--grid { --c: 2; }
 }
 @media (max-width: 699px) {
   .shelf { gap: 12px; }

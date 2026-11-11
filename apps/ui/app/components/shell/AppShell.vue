@@ -125,7 +125,9 @@ watch(() => route.path, () => {
 .app__main { position: relative; flex: 1; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }
 .app__panel { flex: none; }
 .app__bar { grid-row: 2; grid-column: 1 / -1; }
-.page { position: relative; min-height: 100%; padding: calc(var(--topbar-h) + 8px) 32px 64px; }
+/* Ширину колонки меняет не только окно, но и правая панель — содержимое страниц подстраивается
+   под колонку через @container main, а не под окно */
+.page { position: relative; min-height: 100%; padding: calc(var(--topbar-h) + 8px) 32px 64px; container: main / inline-size; }
 
 @media (max-width: 1279px) {
   .app:not(.is-rail) { --sidebar-w: 232px; }
