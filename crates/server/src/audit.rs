@@ -20,6 +20,10 @@ pub const SESSION_REVOKED: &str = "session.revoked";
 pub const JOB_RETRIED: &str = "job.retried";
 pub const JOB_CANCELLED: &str = "job.cancelled";
 pub const LANE_CHANGED: &str = "lane.changed";
+pub const DOWNLOADER_CREATED: &str = "downloader.created";
+pub const DOWNLOADER_REVOKED: &str = "downloader.revoked";
+/// Решение по спорной записи: выбрано видео, вставлена ссылка, «нет в источниках», повтор
+pub const ACQUISITION_RESOLVED: &str = "acquisition.resolved";
 
 pub async fn record(
     db: impl PgExecutor<'_>,

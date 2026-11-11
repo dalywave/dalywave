@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (EXTRACT(EPOCH FROM (min(run_after) - now())) * 1000)::bigint AS \"ms\"\n               FROM jobs WHERE lane = $1 AND status = 'queued'\n                 AND ($2::text[] IS NULL OR kind = ANY($2)) AND NOT (kind = ANY($3::text[]))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ms",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a3e08a0a8539a5fbd8a9236a646589e41986719626871482ab076b3a65189438"
+}

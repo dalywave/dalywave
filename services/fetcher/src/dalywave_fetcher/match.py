@@ -158,6 +158,8 @@ class Candidate:
 
     @property
     def url(self) -> str:
+        if self.video_id.startswith(("http://", "https://")):
+            return self.video_id
         return f"https://music.youtube.com/watch?v={self.video_id}"
 
     def sort_key(self) -> tuple[bool, float, int, int]:

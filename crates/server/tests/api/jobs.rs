@@ -193,7 +193,7 @@ async fn failures_back_off_and_stale_jobs_are_reaped(db: PgPool) {
     claimed(claim(&db, "mirror", "dead").await);
     assert!(jobs::heartbeat(&db, lost.id, "dead").await.unwrap());
     assert!(
-        jobs::reap(&db, Duration::from_secs(120))
+        jobs::reap(&db, Some(Duration::from_secs(120)))
             .await
             .unwrap()
             .is_empty()
@@ -203,7 +203,9 @@ async fn failures_back_off_and_stale_jobs_are_reaped(db: PgPool) {
         .execute(&db)
         .await
         .unwrap();
-    let reaped = jobs::reap(&db, Duration::from_secs(120)).await.unwrap();
+    let reaped = jobs::reap(&db, Some(Duration::from_secs(120)))
+        .await
+        .unwrap();
     assert_eq!(reaped.len(), 1);
     assert_eq!(reaped[0].status, "queued");
     assert!(
@@ -213,7 +215,7 @@ async fn failures_back_off_and_stale_jobs_are_reaped(db: PgPool) {
     // Остановка воркера возвращает недоделанное без траты попытки
     let again = claimed(claim(&db, "mirror", "w2").await);
     assert_eq!(again.attempts, 2);
-    assert_eq!(jobs::release(&db, "w2").await.unwrap(), 1);
+    assert_eq!(jobs::release(&db, "w2").await.unwrap().len(), 1);
     let row = jobs::get(&db, again.id).await.unwrap().unwrap();
     assert_eq!((row.status.as_str(), row.attempts), ("queued", 1));
 }

@@ -7,7 +7,16 @@ from pathlib import Path
 import pytest
 
 from dalywave_fetcher.config import Settings
-from dalywave_fetcher.download import Downloader, classify_error, ffprobe_duration, remux
+from dalywave_fetcher.download import (
+    Downloader,
+    DownloadError,
+    classify_error,
+    ffprobe_duration,
+    mime_type,
+    remux,
+    safe_basename,
+    source_url,
+)
 
 
 @pytest.mark.parametrize(
@@ -57,9 +66,25 @@ def test_options_with_pot_clients_and_cookies(tmp_path: Path) -> None:
     assert Path(opts["cookiefile"]).read_text() == cookies.read_text()
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="нужен ffmpeg")
-def test_remux_webm_opus_to_ogg_without_reencoding(tmp_path: Path) -> None:
-    src = tmp_path / "a.webm"
+def _probe(path: Path) -> list[str]:
+    return subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=format_name:stream=codec_name",
+            "-of",
+            "default=nw=1:nk=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+
+
+def _encode(dst: Path, codec: str, *extra: str) -> Path:
     subprocess.run(
         [
             "ffmpeg",
@@ -71,30 +96,57 @@ def test_remux_webm_opus_to_ogg_without_reencoding(tmp_path: Path) -> None:
             "-i",
             "sine=frequency=440:duration=3",
             "-c:a",
-            "libopus",
+            codec,
             "-b:a",
             "96k",
-            str(src),
+            *extra,
+            str(dst),
         ],
         check=True,
     )
+    return dst
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="нужен ffmpeg")
+def test_remux_webm_opus_to_mp4_without_reencoding(tmp_path: Path) -> None:
+    src = _encode(tmp_path / "a.webm", "libopus")
     dst, container = remux(src, "opus")
-    assert container == "ogg"
-    assert dst.suffix == ".opus"
-    probe = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=format_name:stream=codec_name",
-            "-of",
-            "default=nw=1:nk=1",
-            str(dst),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    assert probe == ["opus", "ogg"]
+    assert container == "mp4"
+    assert dst.suffix == ".m4a"
+    assert _probe(dst) == ["opus", "mov,mp4,m4a,3gp,3g2,mj2"]
     assert ffprobe_duration(dst) == pytest.approx(3.0, abs=0.1)
+    # faststart: оглавление (moov) — в начале файла, до данных (mdat)
+    head = dst.read_bytes()[:4096]
+    assert head[4:8] == b"ftyp"
+    assert 0 <= head.find(b"moov") < head.find(b"mdat") or b"mdat" not in head
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="нужен ffmpeg")
+def test_remux_aac_keeps_m4a(tmp_path: Path) -> None:
+    src = _encode(tmp_path / "a.m4a", "aac")
+    dst, container = remux(src, "aac")
+    assert (container, dst.suffix) == ("mp4", ".m4a")
+    assert dst != src
+    assert _probe(dst)[0] == "aac"
+
+
+def test_unknown_codec_is_not_remuxed(tmp_path: Path) -> None:
+    with pytest.raises(DownloadError) as e:
+        remux(tmp_path / "a.bin", "speex")
+    assert e.value.code == "unsupported_codec"
+
+
+def test_mime_types_name_the_codec() -> None:
+    assert mime_type("mp4", "opus") == 'audio/mp4; codecs="opus"'
+    assert mime_type("mp4", "aac") == 'audio/mp4; codecs="mp4a.40.2"'
+    assert mime_type("ogg", "opus") == 'audio/ogg; codecs="opus"'
+    assert mime_type("mp3", "mp3") == "audio/mpeg"
+
+
+def test_direct_links_and_safe_names() -> None:
+    assert source_url("afkL3uLNeXA") == "https://www.youtube.com/watch?v=afkL3uLNeXA"
+    url = "https://soundcloud.com/lowborn/light-me-up?si=1"
+    assert source_url(url) == url
+    assert safe_basename("afkL3uLNeXA") == "afkL3uLNeXA"
+    name = safe_basename(url)
+    assert name.startswith("url-") and "/" not in name and len(name) == 20

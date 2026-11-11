@@ -1,6 +1,6 @@
 //! Настройки из переменных `DALYWAVE_*`. Локально их дополняет `.env` в корне репозитория.
 
-use std::{env, net::SocketAddr, path::PathBuf};
+use std::{env, net::SocketAddr, path::PathBuf, time::Duration};
 
 use anyhow::{Context, bail};
 
@@ -8,6 +8,11 @@ pub const DEFAULT_DATABASE_URL: &str = "postgres://dalywave:dalywave@localhost:5
 pub const DEFAULT_PUBLIC_URL: &str = "http://localhost:3400";
 pub const DEFAULT_LISTEN: &str = "0.0.0.0:8400";
 pub const DEFAULT_DEEZER_URL: &str = "https://api.deezer.com";
+pub const DEFAULT_FETCHER_URL: &str = "http://localhost:8402";
+/// Сколько держать запрос загрузчика, пока заданий нет: меньше таймаута его HTTP-клиента (30 с).
+pub const CLAIM_WAIT: Duration = Duration::from_secs(25);
+/// Аренда задания загрузчиком. Обычно трек качается 10–20 с; загрузчик продлевает аренду, пока работает.
+pub const LEASE: Duration = Duration::from_secs(5 * 60);
 /// Deezer пускает ~50 запросов за 5 секунд с одного адреса; API, воркер и fetcher делят этот лимит.
 pub const DEEZER_WINDOW_MAX: u32 = 40;
 pub const DEFAULT_DEEZER_RATE_API: u32 = 25;
@@ -34,6 +39,51 @@ pub struct Config {
     /// Хранилище S3. `None` — файлы живут в памяти процесса (только для разработки и тестов).
     pub s3: Option<S3Config>,
     pub deezer: DeezerConfig,
+    pub fetcher: FetcherConfig,
+}
+
+/// Кто качает аудио. Задачу `acquire` выполняет тот, кто её взял: домашний загрузчик через
+/// `/api/fetcher/*` (всегда) и воркер через серверный fetcher — только с `server` в `DALYWAVE_FETCHER_MODE`.
+#[derive(Clone, Debug)]
+pub struct FetcherConfig {
+    /// Серверный fetcher, например `http://fetcher:8402`.
+    pub url: String,
+    /// Воркер сам качает через серверный fetcher. По умолчанию нет: YouTube не отдаёт аудио адресу
+    /// дата-центра (docs/decisions.md), качает загрузчик на Mac.
+    pub server: bool,
+    /// Long-poll запроса задания.
+    pub claim_wait: Duration,
+    /// Аренда задания загрузчиком.
+    pub lease: Duration,
+}
+
+impl Default for FetcherConfig {
+    fn default() -> Self {
+        Self {
+            url: DEFAULT_FETCHER_URL.into(),
+            server: false,
+            claim_wait: CLAIM_WAIT,
+            lease: LEASE,
+        }
+    }
+}
+
+/// `remote` (по умолчанию), `server` или оба через запятую: `remote,server`.
+fn parse_fetcher_mode(value: Option<&str>) -> anyhow::Result<bool> {
+    let mut server = false;
+    for part in value
+        .unwrap_or("remote")
+        .split([',', '+', ' '])
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+    {
+        match part {
+            "remote" => {}
+            "server" => server = true,
+            other => bail!("DALYWAVE_FETCHER_MODE: unknown mode `{other}` (remote, server)"),
+        }
+    }
+    Ok(server)
 }
 
 /// S3-совместимое хранилище: SeaweedFS локально, Cloudflare R2 в проде — один и тот же код.
@@ -201,6 +251,14 @@ impl Config {
             rate_worker: rate("DEEZER_RATE_WORKER", DEFAULT_DEEZER_RATE_WORKER)?,
         };
 
+        let fetcher_url = var("FETCHER_URL").unwrap_or_else(|| DEFAULT_FETCHER_URL.into());
+        url::Url::parse(&fetcher_url).context("DALYWAVE_FETCHER_URL is not a valid URL")?;
+        let fetcher = FetcherConfig {
+            url: fetcher_url.trim_end_matches('/').to_string(),
+            server: parse_fetcher_mode(var("FETCHER_MODE").as_deref())?,
+            ..Default::default()
+        };
+
         Ok(Self {
             database_url: var("DATABASE_URL").unwrap_or_else(|| DEFAULT_DATABASE_URL.into()),
             listen: var("LISTEN")
@@ -218,6 +276,7 @@ impl Config {
             admin_password,
             s3,
             deezer,
+            fetcher,
         })
     }
 
@@ -390,6 +449,25 @@ mod tests {
         );
         assert_eq!(c.deezer.rate_worker, 10);
         assert!(parse(&[("DEEZER_RATE_API", "100")]).is_err());
+    }
+
+    #[test]
+    fn fetcher_mode() {
+        let c = parse(&[]).unwrap();
+        assert!(!c.fetcher.server, "по умолчанию качает загрузчик на Mac");
+        assert_eq!(c.fetcher.url, DEFAULT_FETCHER_URL);
+        assert!(c.fetcher.claim_wait < Duration::from_secs(30));
+        let c = parse(&[
+            ("FETCHER_MODE", "remote,server"),
+            ("FETCHER_URL", "http://fetcher:8402/"),
+        ])
+        .unwrap();
+        assert!(c.fetcher.server);
+        assert_eq!(c.fetcher.url, "http://fetcher:8402");
+        assert!(parse(&[("FETCHER_MODE", "server")]).unwrap().fetcher.server);
+        assert!(!parse(&[("FETCHER_MODE", "remote")]).unwrap().fetcher.server);
+        assert!(parse(&[("FETCHER_MODE", "cloud")]).is_err());
+        assert!(parse(&[("FETCHER_URL", "not a url")]).is_err());
     }
 
     #[test]

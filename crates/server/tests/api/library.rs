@@ -324,21 +324,15 @@ async fn follow_syncs_discography_and_queues_acquisitions(db: PgPool) {
         .unwrap();
     assert_eq!(total, 6);
 
-    // Обработчика скачивания ещё нет (этап 1b): задача закрывается сразу, запись снова «скачается при запуске»
-    let (kind, outcome) = app.run_job("discography").await.unwrap();
-    assert_eq!(kind, "acquire");
-    assert!(
-        matches!(&outcome, Outcome::Failed(m) if m.contains("ещё не реализован")),
-        "{outcome:?}"
-    );
-    let failed: (String, String) = sqlx::query_as(
-        "SELECT a.status, r.audio_status FROM acquisitions a JOIN recordings r ON r.id = a.recording_id
-         WHERE a.status <> 'queued'",
+    // Скачивание — дело загрузчика на Mac: серверный fetcher выключен, и воркер задачи acquire не берёт
+    assert!(app.run_job("discography").await.is_none());
+    let queued: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM jobs WHERE kind = 'acquire' AND status = 'queued'",
     )
     .fetch_one(&app.state.db)
     .await
     .unwrap();
-    assert_eq!(failed, ("failed".to_string(), "none".to_string()));
+    assert_eq!(queued, 6);
 
     // Отписка: скачанное и очередь остаются
     assert_eq!(

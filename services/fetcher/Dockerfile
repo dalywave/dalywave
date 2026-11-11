@@ -1,5 +1,5 @@
 # DalyWave fetcher: yt-dlp + Deno + ffmpeg + chromaprint. Собирается под arm64 и amd64.
-#   docker build -t dalywave-fetcher:0.1.0 services/fetcher
+#   docker build -t dalywave-fetcher:0.2.0 services/fetcher
 
 # --- Deno: официальный бинарник под архитектуру сборки, с проверкой sha256 ---
 FROM python:3.13-slim AS deno

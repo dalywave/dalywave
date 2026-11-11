@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n              (SELECT count(*) FROM acquisitions\n               WHERE worker = $1 AND status IN ('matching', 'downloading', 'verifying', 'processing')) AS \"running!\",\n              (SELECT count(*) FROM acquisition_attempts\n               WHERE executor = $1 AND created_at > now() - interval '24 hours' AND outcome = 'ready') AS \"ok!\",\n              (SELECT count(*) FROM acquisition_attempts\n               WHERE executor = $1 AND created_at > now() - interval '24 hours'\n                 AND outcome IN ('retry', 'failed', 'postponed')) AS \"failed!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "ok!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "2b16a6b6a8cfba570c80bbaeb053104dd8c8f630edc05d1bfe86e63164367078"
+}

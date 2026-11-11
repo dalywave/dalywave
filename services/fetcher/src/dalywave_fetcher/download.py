@@ -1,10 +1,13 @@
 """Скачивание лучшего аудиопотока через yt-dlp без перекодирования.
 
-Opus из WebM перекладывается в Ogg (`ffmpeg -c:a copy`) — меняется только контейнер.
+Opus из WebM и AAC перекладываются в MP4 (ISO BMFF, `.m4a`, `-movflags +faststart`) —
+меняется только контейнер. Opus в MP4 играют Safari, AVPlayer, Chrome, Firefox и движок
+приложений; `faststart` ставит оглавление в начало, и плеер начинает играть, не дочитав файл.
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import subprocess
@@ -97,7 +100,7 @@ class DownloadResult:
 
     @property
     def mime_type(self) -> str:
-        return "audio/ogg" if self.container == "ogg" else "audio/mp4"
+        return mime_type(self.container, self.codec)
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -172,12 +175,77 @@ def ffprobe_duration(path: Path) -> float | None:
         return None
 
 
+# Кодек → (расширение, контейнер для сервера, формат ffmpeg, параметры формата).
+# Muxer задаётся явно: по расширению .m4a ffmpeg выбрал бы ipod, а тот не знает Opus.
+_TARGETS: dict[str, tuple[str, str, str, list[str]]] = {
+    "opus": (".m4a", "mp4", "mp4", ["-movflags", "+faststart"]),
+    "aac": (".m4a", "mp4", "mp4", ["-movflags", "+faststart"]),
+    "mp3": (".mp3", "mp3", "mp3", []),
+    "flac": (".flac", "flac", "flac", []),
+    "vorbis": (".ogg", "ogg", "ogg", []),
+}
+
+# Кодек для параметра codecs в MIME: по нему браузер решает, сможет ли сыграть файл.
+_MIME_CODECS = {"opus": "opus", "aac": "mp4a.40.2", "vorbis": "vorbis", "flac": "flac"}
+
+
+def mime_type(container: str, codec: str) -> str:
+    """`audio/mp4; codecs="opus"` — для Content-Type в хранилище и плеера."""
+    base = {
+        "mp4": "audio/mp4",
+        "ogg": "audio/ogg",
+        "webm": "audio/webm",
+        "mp3": "audio/mpeg",
+        "flac": "audio/flac",
+    }.get(container, "application/octet-stream")
+    codecs = _MIME_CODECS.get(codec)
+    if codecs and container in ("mp4", "ogg", "webm"):
+        return f'{base}; codecs="{codecs}"'
+    return base
+
+
+def source_url(video_id: str) -> str:
+    """Ролик YouTube по id или ссылка, вставленная в «Спорных» (SoundCloud, Bandcamp…), как есть."""
+    if video_id.startswith(("http://", "https://")):
+        return video_id
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+def safe_basename(video_id: str) -> str:
+    """Имя файла: id видео или, для ссылки, её короткий хеш — в ссылке есть `/` и `?`."""
+    if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", video_id):
+        return video_id
+    return "url-" + hashlib.sha256(video_id.encode()).hexdigest()[:16]
+
+
+def probe_codec(path: Path) -> str:
+    out = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=codec_name",
+            "-of",
+            "default=nw=1:nk=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return out.stdout.strip()
+
+
 def remux(src: Path, codec: str) -> tuple[Path, str]:
-    """Перекладывает аудио в Ogg (Opus) или M4A (AAC) без перекодирования."""
-    if codec == "opus":
-        dst, container, extra = src.with_suffix(".opus"), "ogg", []
-    else:
-        dst, container, extra = src.with_suffix(".m4a"), "mp4", ["-movflags", "+faststart"]
+    """Перекладывает аудио в контейнер для плеера без перекодирования: Opus и AAC — в MP4."""
+    target = _TARGETS.get(codec)
+    if target is None:
+        raise DownloadError("unsupported_codec", f"кодек {codec or 'неизвестен'} не поддерживается")
+    suffix, container, fmt, extra = target
+    dst = src.with_suffix(suffix)
     if dst == src:
         dst = src.with_name(f"{src.stem}.remux{src.suffix}")
     cmd = [
@@ -197,6 +265,8 @@ def remux(src: Path, codec: str) -> tuple[Path, str]:
         "-map_metadata",
         "-1",
         *extra,
+        "-f",
+        fmt,
         str(dst),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -321,9 +391,7 @@ class Downloader:
         started = time.monotonic()
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(
-                    f"https://www.youtube.com/watch?v={video_id}", download=True
-                )
+                info = ydl.extract_info(source_url(video_id), download=True)
         except YoutubeDLError as e:
             message = str(e).removeprefix("ERROR: ")
             text = " ".join([message, *collector.warnings])
@@ -337,7 +405,10 @@ class Downloader:
         if not original.is_file():
             raise DownloadError("unknown", "yt-dlp не сохранил файл", collector.warnings)
         acodec = (requested.get("acodec") or "").split(".")[0]
-        codec = "opus" if acodec == "opus" else "aac" if acodec == "mp4a" else acodec
+        if acodec in ("", "none"):
+            # Не YouTube: кодек в описании формата бывает пустым — спрашиваем у самого файла
+            acodec = probe_codec(original)
+        codec = "aac" if acodec == "mp4a" else acodec
         original_size = original.stat().st_size
 
         remux_started = time.monotonic()

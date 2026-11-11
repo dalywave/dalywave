@@ -1,0 +1,164 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT d.id, d.name, d.created_at, d.revoked_at, d.last_seen_at, d.last_claim_at,\n                  COALESCE(d.revoked_at IS NULL AND d.last_seen_at > now() - interval '2 minutes', false) AS \"online!\",\n                  d.worker_id, d.version, d.yt_dlp, d.capabilities,\n                  (SELECT count(*) FROM jobs j WHERE j.status = 'running' AND j.locked_by = 'device:' || d.id) AS \"running!\",\n                  (SELECT count(*) FROM acquisition_attempts a\n                   WHERE a.executor = 'device:' || d.id AND a.created_at > now() - interval '24 hours'\n                     AND a.outcome = 'ready') AS \"ok!\",\n                  (SELECT count(*) FROM acquisition_attempts a\n                   WHERE a.executor = 'device:' || d.id AND a.created_at > now() - interval '24 hours'\n                     AND a.outcome IN ('retry', 'failed', 'postponed')) AS \"failed!\"\n           FROM downloaders d\n           WHERE $1::uuid IS NULL OR d.id = $1\n           ORDER BY d.revoked_at IS NOT NULL, d.last_seen_at DESC NULLS LAST, d.created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "revoked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "revoked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "last_seen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "last_claim_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "last_claim_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "online!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "worker_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "worker_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "yt_dlp",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "yt_dlp"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "capabilities",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "downloaders",
+            "name": "capabilities"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "ok!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "d5b7ffcd8775e9ad10688f19ab5ec7b6bd91b2ff038f79f55091165798412be1"
+}

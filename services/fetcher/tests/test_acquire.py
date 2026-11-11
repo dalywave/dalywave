@@ -11,6 +11,7 @@ from helpers import make_candidate, make_track
 
 from dalywave_fetcher import acquire as acquire_module
 from dalywave_fetcher.acquire import Fetcher
+from dalywave_fetcher.analyze import Analysis, AnalyzeError
 from dalywave_fetcher.config import Settings
 from dalywave_fetcher.deezer import DeezerTrack
 from dalywave_fetcher.download import DownloadError, DownloadResult
@@ -106,6 +107,8 @@ def matching(monkeypatch: pytest.MonkeyPatch) -> set[str]:
         )
 
     monkeypatch.setattr(acquire_module, "verify", fake_verify)
+    # Громкость и огибающая без ffmpeg: файлы подставные
+    monkeypatch.setattr(acquire_module, "analyze", lambda path: Analysis(-9.0, -0.5, [500] * 512))
     return good
 
 
@@ -225,3 +228,43 @@ def test_search_outage_is_an_error(tmp_path: Path, matching: set[str]) -> None:
     result, _ = run(tmp_path, [], steps=steps)
     assert result.status == "error"
     assert result.error["code"] == "search_failed"
+
+
+def test_chosen_file_carries_loudness_and_waveform(tmp_path: Path, matching: set[str]) -> None:
+    matching.add("a")
+    result, _ = run(tmp_path, [cand("a", 0.95)])
+    file = result.to_json()["file"]
+    assert file["loudnessLufs"] == -9.0
+    assert file["truePeakDb"] == -0.5
+    assert len(file["waveform"]) == 512
+    assert file["analysisError"] is None
+    assert file["bitrateKbps"] == 130
+    assert "analyze" in result.timings_ms
+
+
+def test_failed_analysis_keeps_the_file(
+    tmp_path: Path, matching: set[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(path: Path) -> Analysis:
+        raise AnalyzeError("ffmpeg: сломанный файл")
+
+    monkeypatch.setattr(acquire_module, "analyze", broken)
+    matching.add("a")
+    result, _ = run(tmp_path, [cand("a", 0.95)])
+    assert result.status == "verified"
+    file = result.to_json()["file"]
+    assert file["waveform"] is None
+    assert file["analysisError"] == "ffmpeg: сломанный файл"
+
+
+def test_direct_url_is_a_manual_choice(tmp_path: Path, matching: set[str]) -> None:
+    url = "https://soundcloud.com/lowborn/light-me-up"
+    result, dl = run(tmp_path, [cand("a", 0.95)], direct_url=url, max_attempts=1)
+    assert dl.calls == [url]
+    assert result.status == "unverified"
+    assert result.chosen.candidate.source == "manual"
+    chosen = result.to_json()["chosen"]
+    assert chosen["candidate"]["videoId"] == url
+    assert chosen["candidate"]["url"] == url
+    # Файл назван хешем ссылки: в ней есть «/» и «?»
+    assert result.path.name.startswith("url-")

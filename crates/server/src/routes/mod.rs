@@ -1,14 +1,19 @@
+pub mod acquisitions;
 pub mod admin;
 pub mod auth;
 pub mod catalog;
 pub mod events;
+pub mod fetcher;
 pub mod home;
 pub mod images;
 pub mod library;
 pub mod playlists;
 pub mod queue;
+pub mod sources;
+pub mod stream;
 pub mod sync;
 pub mod system;
+pub mod updates;
 pub mod ws;
 
 use axum::{
@@ -46,11 +51,14 @@ async fn method_not_allowed() -> AppError {
 /// Весь API под `/api`, остальное — интерфейс из STATIC_DIR.
 ///
 /// Разделы закрыты слоями: каталог — любой ролью (`require_access`), медиатека — правом library,
-/// события прослушивания — правом play, админка — admin. Человек без ролей получает 403 `no_access`,
-/// как требует экран «ждём доступа». Картинки открыты всем, WebSocket проверяет вход сам.
+/// события прослушивания и поток трека — правом play, админка — admin. Человек без ролей получает
+/// 403 `no_access`, как требует экран «ждём доступа». Картинки открыты всем, WebSocket проверяет вход
+/// сам, `/api/fetcher/*` — только токен загрузчика `dwk_…` (право `downloader`).
 pub fn router(state: AppState) -> Router {
     let admin = admin::routes()
         .merge(queue::routes())
+        .merge(acquisitions::routes())
+        .merge(sources::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
     let catalog = catalog::routes().route_layer(from_fn_with_state(state.clone(), require_access));
     let library = library::routes()
@@ -58,21 +66,26 @@ pub fn router(state: AppState) -> Router {
         .merge(home::routes())
         .merge(sync::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
-    let play =
-        events::routes().route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
+    let play = events::routes()
+        .merge(stream::routes())
+        .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())
+        .merge(updates::routes())
         .merge(images::routes())
         .merge(ws::routes())
         .merge(catalog)
         .merge(library)
         .merge(play)
+        .merge(fetcher::routes())
         .nest("/auth", auth::routes())
         .nest("/admin", admin)
         .method_not_allowed_fallback(method_not_allowed)
         .fallback(not_found)
         .layer(DefaultBodyLimit::max(security::API_BODY_LIMIT))
-        .layer(from_fn_with_state(state.clone(), security::guard));
+        .layer(from_fn_with_state(state.clone(), security::guard))
+        // Снаружи защитного слоя: preflight отвечается сразу, а заголовки CORS есть и у ошибок
+        .layer(security::cors(&state.config));
 
     let app = Router::new().nest("/api", api);
     let app = match &state.config.static_dir {

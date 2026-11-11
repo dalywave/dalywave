@@ -1,5 +1,6 @@
-//! Обработчики задач этапа 1a: копии картинок, обновление артистов, сверка дискографий подписок.
-//! Обработчик `acquire` добавит этап 1b: `registry().register(kind::ACQUIRE, …)`.
+//! Обработчики задач: копии картинок, обновление артистов, сверка дискографий подписок и скачивание
+//! аудио через серверный fetcher (только с `server` в `DALYWAVE_FETCHER_MODE`; иначе задачи `acquire`
+//! берёт загрузчик на Mac).
 
 use std::sync::Arc;
 
@@ -15,7 +16,9 @@ use super::{
     worker::{Context, JobError, JobResult, Registry},
 };
 use crate::{
+    acquire,
     catalog::{self, ArtistParts},
+    config::FetcherConfig,
     images, jobs,
     storage::{IMMUTABLE, keys},
 };
@@ -23,13 +26,18 @@ use crate::{
 /// Больше Deezer не отдаёт: всё крупнее — не обложка
 const MAX_IMAGE_BYTES: usize = 15 * 1024 * 1024;
 
-/// Обработчики, которые знает этот этап.
-pub fn registry() -> Registry {
+/// Обработчики воркера. Задачи `acquire` воркер выполняет сам, только если включён серверный fetcher.
+pub fn registry(fetcher: &FetcherConfig) -> Registry {
     let mut registry = Registry::default();
     registry
         .register(kind::MIRROR_IMAGE, mirror_image)
         .register(kind::REFRESH_ARTIST, refresh_artist)
         .register(kind::SYNC_DISCOGRAPHY, sync_discography);
+    if fetcher.server {
+        registry.register(kind::ACQUIRE, acquire::server::run);
+    } else {
+        registry.elsewhere(kind::ACQUIRE);
+    }
     registry
 }
 
@@ -76,10 +84,10 @@ pub async fn mirror_image(ctx: Arc<Context>, job: JobRow) -> JobResult {
         return Err(JobError::permanent("нет такой записи каталога"));
     };
     let Some(source) = source else {
-        return Ok(json!({ "skipped": "no_source" }));
+        return Ok(json!({ "skipped": "no_source" }).into());
     };
     if key.is_some() && !p.force {
-        return Ok(json!({ "skipped": "already_mirrored" }));
+        return Ok(json!({ "skipped": "already_mirrored" }).into());
     }
 
     let res = ctx
@@ -163,7 +171,8 @@ pub async fn mirror_image(ctx: Arc<Context>, job: JobRow) -> JobResult {
         "bytes": bytes,
         "palette": processed.palette,
         "applied": updated.rows_affected() == 1,
-    }))
+    })
+    .into())
 }
 
 /// Обновляет устаревшие части страницы артиста (или все, если `force`).
@@ -178,12 +187,12 @@ pub async fn refresh_artist(ctx: Arc<Context>, job: JobRow) -> JobResult {
         freshness.stale()
     };
     let done = catalog::refresh_artist(&ctx.db, &ctx.deezer, p.artist_id, parts).await?;
-    Ok(json!({ "refreshed": done }))
+    Ok(json!({ "refreshed": done }).into())
 }
 
 /// Сверка релизов артиста из подписок и постановка новых треков на скачивание.
 pub async fn sync_discography(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let p: SyncDiscographyPayload = job.payload()?;
     let report = catalog::sync_discography(&ctx.db, &ctx.deezer, p.artist_id).await?;
-    Ok(serde_json::to_value(report)?)
+    Ok(serde_json::to_value(report)?.into())
 }

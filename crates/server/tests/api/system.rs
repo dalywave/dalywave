@@ -60,7 +60,12 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         .map(String::as_str)
         .collect();
     let expected = [
+        "/api/acquisitions/{id}",
+        "/api/admin/acquisitions",
+        "/api/admin/acquisitions/{id}/resolve",
         "/api/admin/audit",
+        "/api/admin/downloaders",
+        "/api/admin/downloaders/{id}",
         "/api/admin/jobs",
         "/api/admin/jobs/{id}/cancel",
         "/api/admin/jobs/{id}/retry",
@@ -69,6 +74,7 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/admin/overview",
         "/api/admin/sessions",
         "/api/admin/sessions/{id}",
+        "/api/admin/sources",
         "/api/admin/users",
         "/api/admin/users/{id}",
         "/api/albums/{id}",
@@ -83,6 +89,9 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/auth/providers",
         "/api/catalog/deezer/{kind}/{deezerId}",
         "/api/events",
+        "/api/fetcher/jobs/claim",
+        "/api/fetcher/jobs/{id}/lease",
+        "/api/fetcher/jobs/{id}/result",
         "/api/healthz",
         "/api/home",
         "/api/images/{kind}/{id}/{file}",
@@ -107,6 +116,8 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/sync",
         "/api/tracks/lookup",
         "/api/tracks/{id}",
+        "/api/tracks/{id}/stream",
+        "/api/updates/{target}/{arch}/{current_version}",
         "/api/ws",
     ];
     let mut sorted = paths.clone();
@@ -138,11 +149,113 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "ServerEvent",
         "ClientMessage",
         "AcquirePayload",
+        "TrackStream",
+        "Acquisition",
+        "AdminAcquisitionPage",
+        "ResolveRequest",
+        "ClaimRequest",
+        "ClaimResponse",
+        "ResultReport",
+        "Lease",
+        "DownloaderToken",
+        "Sources",
     ] {
         assert!(schemas.contains_key(name), "{name}");
     }
     assert_eq!(schemas["Me"]["properties"]["sessionId"]["format"], "uuid");
     assert!(res.body["components"]["securitySchemes"]["session"].is_object());
+    assert!(res.body["components"]["securitySchemes"]["downloader"].is_object());
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn tauri_webviews_get_cors_and_updates_answer_no_content(db: PgPool) {
+    let app = TestApp::new(db).await;
+    let preflight = |origin: &str| {
+        Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/api/library/tracks/0193f0c2-7a1e-7c3a-9b1d-2f4e5a6b7c8d")
+            .header(header::ORIGIN, origin)
+            .header(header::ACCESS_CONTROL_REQUEST_METHOD, "PATCH")
+            .header(
+                header::ACCESS_CONTROL_REQUEST_HEADERS,
+                "authorization,content-type",
+            )
+            .body(Body::empty())
+            .unwrap()
+    };
+    for origin in [
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        PUBLIC_URL,
+    ] {
+        let res = app.send(preflight(origin)).await;
+        assert_eq!(res.status, StatusCode::OK, "{origin}");
+        assert_eq!(res.headers[header::ACCESS_CONTROL_ALLOW_ORIGIN], origin);
+        let methods = res.headers[header::ACCESS_CONTROL_ALLOW_METHODS]
+            .to_str()
+            .unwrap()
+            .to_string();
+        for m in ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] {
+            assert!(methods.contains(m), "{methods}");
+        }
+        let headers = res.headers[header::ACCESS_CONTROL_ALLOW_HEADERS]
+            .to_str()
+            .unwrap()
+            .to_lowercase();
+        assert!(headers.contains("authorization") && headers.contains("content-type"));
+        assert_eq!(res.headers[header::ACCESS_CONTROL_MAX_AGE], "86400");
+        // Приложения входят токеном, а не cookie: credentials не разрешены
+        assert!(
+            !res.headers
+                .contains_key(header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+        );
+    }
+    let res = app.send(preflight("https://evil.example")).await;
+    assert!(
+        !res.headers
+            .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+    );
+
+    // Заголовки CORS есть и у обычного ответа, и у ошибки
+    let req = Request::builder()
+        .uri("/api/healthz")
+        .header(header::ORIGIN, "http://tauri.localhost")
+        .body(Body::empty())
+        .unwrap();
+    let res = app.send(req).await;
+    assert_eq!(
+        res.headers[header::ACCESS_CONTROL_ALLOW_ORIGIN],
+        "http://tauri.localhost"
+    );
+    let req = Request::builder()
+        .uri("/api/library")
+        .header(header::ORIGIN, "tauri://localhost")
+        .header(header::AUTHORIZATION, "Bearer dwd_unknown")
+        .body(Body::empty())
+        .unwrap();
+    let res = app.send(req).await;
+    assert_eq!(res.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        res.headers[header::ACCESS_CONTROL_ALLOW_ORIGIN],
+        "tauri://localhost"
+    );
+    // Изменяющий запрос с токеном из WebView проходит проверку Origin
+    let req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/auth/logout")
+        .header(header::ORIGIN, "tauri://localhost")
+        .header(header::AUTHORIZATION, "Bearer dwd_unknown")
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(app.send(req).await.status, StatusCode::NO_CONTENT);
+
+    // Автообновление: пока обновлений нет — 204, вход не нужен
+    let res = app
+        .get("/api/updates/darwin/aarch64/0.1.0", &Auth::None)
+        .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT);
+    assert!(res.bytes.is_empty());
 }
 
 #[sqlx::test(migrator = "dalywave_server::MIGRATOR")]

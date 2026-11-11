@@ -1,4 +1,5 @@
-"""Полный путь трека: Deezer → поиск → скачивание → проверка отпечатком → загрузка."""
+"""Полный путь трека: Deezer → поиск → скачивание → проверка отпечатком → громкость
+и огибающая → загрузка."""
 
 from __future__ import annotations
 
@@ -14,9 +15,10 @@ from typing import Any
 import httpx
 
 from . import __version__
+from .analyze import Analysis, AnalyzeError, analyze
 from .config import Settings
 from .deezer import DeezerClient, DeezerError, DeezerNotFoundError, DeezerTrack
-from .download import YT_DLP_VERSION, Downloader, DownloadError, DownloadResult
+from .download import YT_DLP_VERSION, Downloader, DownloadError, DownloadResult, safe_basename
 from .match import MIN_TRY_SCORE, Candidate, Matcher, MatchResult, VideosMode
 from .verify import DEFAULT_THRESHOLD, Fingerprint, VerifyError, VerifyResult, fingerprint, verify
 
@@ -68,6 +70,9 @@ class AcquireResult:
     attempts: list[Attempt] = field(default_factory=list)
     chosen: Attempt | None = None
     file_sha256: str | None = None
+    # Громкость и огибающая выбранного файла; не вышло — файл всё равно годится
+    analysis: Analysis | None = None
+    analysis_error: str | None = None
     upload: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
     timings_ms: dict[str, int] = field(default_factory=dict)
@@ -96,6 +101,15 @@ class AcquireResult:
                 "mimeType": d.mime_type,
                 "codec": d.codec,
                 "durationMs": round(d.duration_s * 1000) if d.duration_s else None,
+                "bitrateKbps": round(d.abr) if d.abr else None,
+                "sampleRate": d.asr,
+                "channels": d.channels,
+                **(
+                    self.analysis.to_json()
+                    if self.analysis
+                    else {"loudnessLufs": None, "truePeakDb": None, "waveform": None}
+                ),
+                "analysisError": self.analysis_error,
             }
         candidates = self.match.candidates[:max_candidates] if self.match else []
         return {
@@ -158,9 +172,12 @@ class Fetcher:
         upload: UploadTarget | None = None,
         prefer_video_ids: list[str] | None = None,
         exclude_video_ids: list[str] | None = None,
+        direct_url: str | None = None,
         keep_rejected: bool = False,
         threshold: float = DEFAULT_THRESHOLD,
     ) -> AcquireResult:
+        """`direct_url` — ссылка из «Спорных» (SoundCloud, Bandcamp, любой сайт yt-dlp): качается
+        она как выбор человека, а поиск даёт кандидатов только для отчёта."""
         started = time.monotonic()
         timer = _Timer()
         result = AcquireResult(status="error", track_id=track_id, setup=self.settings.describe())
@@ -173,7 +190,7 @@ class Fetcher:
                 work,
                 timer,
                 max_attempts=max_attempts,
-                prefer=prefer_video_ids or [],
+                prefer=([direct_url] if direct_url else []) + (prefer_video_ids or []),
                 exclude=set(exclude_video_ids or []),
                 keep_rejected=keep_rejected,
                 threshold=threshold,
@@ -260,7 +277,14 @@ class Fetcher:
 
         self._settle(result, preview_fp is not None, preview_error)
         if result.chosen and result.chosen.download:
-            result.file_sha256 = sha256_file(result.chosen.download.path)
+            path = result.chosen.download.path
+            t = time.monotonic()
+            try:
+                result.analysis = analyze(path)
+            except AnalyzeError as e:
+                result.analysis_error = str(e)
+            timer.add("analyze", t)
+            result.file_sha256 = sha256_file(path)
 
     @staticmethod
     def _settle(result: AcquireResult, has_preview: bool, preview_error: str | None) -> None:
@@ -362,7 +386,9 @@ class Fetcher:
         attempt = Attempt(candidate=cand)
         t = time.monotonic()
         try:
-            attempt.download = self.downloader.download(cand.video_id, work, cand.video_id)
+            attempt.download = self.downloader.download(
+                cand.video_id, work, safe_basename(cand.video_id)
+            )
         except DownloadError as e:
             attempt.error = e
             return attempt

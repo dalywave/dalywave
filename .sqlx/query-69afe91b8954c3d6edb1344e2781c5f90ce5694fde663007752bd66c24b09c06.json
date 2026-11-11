@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = 'cancelled', error = $2, updated_at = now()\n         WHERE id = $1 AND status IN ('disputed', 'failed', 'unavailable')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "69afe91b8954c3d6edb1344e2781c5f90ce5694fde663007752bd66c24b09c06"
+}

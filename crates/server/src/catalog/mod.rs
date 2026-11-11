@@ -1173,13 +1173,8 @@ pub async fn sync_discography(
             }
             let res = acquire::enqueue(
                 db,
-                acquire::Request {
-                    track_id: track.id,
-                    reason: AcquireReason::Subscription,
-                    lane: lanes::DISCOGRAPHY,
-                    requested_by: Some(requested_by),
-                    priority: 0,
-                },
+                acquire::Request::new(track.id, AcquireReason::Subscription, lanes::DISCOGRAPHY)
+                    .by(requested_by),
             )
             .await?;
             match res {

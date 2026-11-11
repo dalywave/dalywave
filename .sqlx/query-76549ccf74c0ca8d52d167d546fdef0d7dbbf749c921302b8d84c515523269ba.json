@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT f.codec, f.verified, f.bitrate_kbps FROM recordings r JOIN audio_files f ON f.id = r.primary_file_id\n         WHERE r.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "codec",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "verified",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "verified"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "bitrate_kbps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "bitrate_kbps"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "76549ccf74c0ca8d52d167d546fdef0d7dbbf749c921302b8d84c515523269ba"
+}

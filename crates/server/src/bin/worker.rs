@@ -1,5 +1,6 @@
-//! Исполнитель очереди задач DalyWave: копии картинок, обновление каталога, сверка подписок,
-//! а с этапа 1b — скачивание аудио. Тот же образ, что у API, команда `dalywave-worker`.
+//! Исполнитель очереди задач DalyWave: копии картинок, обновление каталога, сверка подписок, а с
+//! `server` в `DALYWAVE_FETCHER_MODE` — скачивание аудио через серверный fetcher (иначе его берёт
+//! загрузчик на Mac). Тот же образ, что у API, команда `dalywave-worker`.
 
 use std::sync::Arc;
 
@@ -38,7 +39,14 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!(error = %e, "S3 bucket check failed");
     }
     let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_worker)?;
+    let registry = handlers::registry(&config.fetcher);
+    tracing::info!(
+        server_fetcher = config.fetcher.server,
+        fetcher_url = %config.fetcher.url,
+        "audio is acquired by {}",
+        if config.fetcher.server { "the server fetcher and home downloaders" } else { "home downloaders" }
+    );
     let ctx = Context::new(db, Arc::new(config), Arc::new(deezer), Arc::new(storage))?;
-    let worker = Worker::new(Arc::new(ctx), handlers::registry(), Settings::default());
+    let worker = Worker::new(Arc::new(ctx), registry, Settings::default());
     worker.run(boot::shutdown_signal()).await
 }

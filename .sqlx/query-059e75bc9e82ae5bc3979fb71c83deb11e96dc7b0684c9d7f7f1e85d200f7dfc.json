@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE jobs SET\n            status = CASE WHEN attempts < max_attempts THEN 'queued' ELSE 'failed' END,\n            finished_at = CASE WHEN attempts < max_attempts THEN NULL ELSE now() END,\n            last_error = 'исполнитель перестал отвечать', locked_by = NULL, updated_at = now()\n         WHERE status = 'running' AND COALESCE(heartbeat_at, locked_at, updated_at) < now() - make_interval(secs => $1)\n         RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,\n                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+  "query": "UPDATE jobs SET\n            status = CASE WHEN attempts < max_attempts THEN 'queued' ELSE 'failed' END,\n            finished_at = CASE WHEN attempts < max_attempts THEN NULL ELSE now() END,\n            last_error = CASE WHEN lease_expires_at IS NULL THEN 'исполнитель перестал отвечать'\n                              ELSE 'загрузчик не отчитался вовремя' END,\n            locked_by = NULL, lease_expires_at = NULL, updated_at = now()\n         WHERE status = 'running' AND (\n            (lease_expires_at IS NOT NULL AND lease_expires_at < now())\n            OR (lease_expires_at IS NULL AND $1::float8 IS NOT NULL\n                AND COALESCE(heartbeat_at, locked_at, updated_at) < now() - make_interval(secs => $1::float8)))\n         RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,\n                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
   "describe": {
     "columns": [
       {
@@ -126,6 +126,17 @@
       },
       {
         "ordinal": 11,
+        "name": "lease_expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "lease_expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
         "name": "last_error",
         "type_info": "Text",
         "origin": {
@@ -136,7 +147,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "result",
         "type_info": "Jsonb",
         "origin": {
@@ -147,7 +158,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "dedupe_key",
         "type_info": "Text",
         "origin": {
@@ -158,7 +169,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -169,7 +180,7 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -180,7 +191,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "finished_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -211,10 +222,11 @@
       true,
       true,
       true,
+      true,
       false,
       false,
       true
     ]
   },
-  "hash": "80f9b2c582f853023968751d10c94be3db5868139d672d31d05139eb05e2d87d"
+  "hash": "059e75bc9e82ae5bc3979fb71c83deb11e96dc7b0684c9d7f7f1e85d200f7dfc"
 }

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = $2, error = $3, chosen = $4, candidates = $5, worker = $6,\n                updated_at = now(), finished_at = now()\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2eac357de1ffdb6a0e1b332bd12b89bdb448e82e4fe6351aece24cfee5bf766a"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = 'matching', worker = $2, attempts = attempts + 1, upload_key = $3,\n                updated_at = now(), finished_at = NULL\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c49b18714938d296a55e72538dbd21651a6aac76d1e7be98f7c5fddef9633366"
+}

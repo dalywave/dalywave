@@ -150,6 +150,7 @@ def create_app(settings: Settings | None = None, fetcher: Fetcher | None = None)
                 upload=req.upload.target() if req.upload else None,
                 prefer_video_ids=req.prefer_video_ids,
                 exclude_video_ids=req.exclude_video_ids,
+                direct_url=req.direct_url,
             )
             return result.to_json()
 

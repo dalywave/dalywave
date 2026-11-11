@@ -7,7 +7,8 @@ use utoipa::{
 };
 
 use crate::routes::{
-    admin, auth, catalog, events, home, images, library, playlists, queue, sync, system, ws,
+    acquisitions, admin, auth, catalog, events, fetcher, home, images, library, playlists, queue,
+    sources, stream, sync, system, updates, ws,
 };
 
 #[derive(OpenApi)]
@@ -16,6 +17,7 @@ use crate::routes::{
     paths(
         system::healthz,
         system::openapi,
+        updates::check,
         auth::providers,
         auth::oidc_start,
         auth::oidc_callback,
@@ -35,6 +37,12 @@ use crate::routes::{
         queue::cancel_job,
         queue::list_lanes,
         queue::update_lane,
+        acquisitions::list,
+        acquisitions::resolve,
+        sources::list_downloaders,
+        sources::create_downloader,
+        sources::revoke_downloader,
+        sources::sources,
         catalog::search,
         catalog::artist,
         catalog::album,
@@ -69,6 +77,11 @@ use crate::routes::{
         sync::sync,
         events::ingest,
         events::history,
+        stream::stream,
+        stream::acquisition,
+        fetcher::claim,
+        fetcher::renew_lease,
+        fetcher::report,
         ws::ws,
     ),
     components(schemas(
@@ -80,6 +93,8 @@ use crate::routes::{
         dalywave_protocol::jobs::RefreshArtistPayload,
         dalywave_protocol::jobs::SyncDiscographyPayload,
         dalywave_protocol::jobs::AcquireReason,
+        dalywave_protocol::stream::AudioCodec,
+        dalywave_protocol::stream::AudioContainer,
     )),
     modifiers(&Security),
     tags(
@@ -87,6 +102,8 @@ use crate::routes::{
         (name = "catalog", description = "Каталог: поиск, артисты, альбомы, треки, картинки"),
         (name = "library", description = "Медиатека, плейлисты, главная и синхронизация приложений"),
         (name = "events", description = "События прослушивания и история"),
+        (name = "playback", description = "Воспроизведение: ссылка на аудио трека и состояние его скачивания"),
+        (name = "fetcher", description = "Домашний загрузчик: задания, аренда, отчёты (токен `dwk_…`)"),
         (name = "realtime", description = "WebSocket: события в реальном времени"),
         (name = "admin", description = "Админка: доступ, журнал, очередь задач"),
         (name = "system", description = "Служебное"),
@@ -114,6 +131,17 @@ impl Modify for Security {
                 HttpBuilder::new()
                     .scheme(HttpAuthScheme::Bearer)
                     .description(Some("Токен приложения `dwd_…`"))
+                    .build(),
+            ),
+        );
+        components.add_security_scheme(
+            "downloader",
+            SecurityScheme::Http(
+                HttpBuilder::new()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .description(Some(
+                        "Токен домашнего загрузчика `dwk_…`: только `/api/fetcher/*`",
+                    ))
                     .build(),
             ),
         );

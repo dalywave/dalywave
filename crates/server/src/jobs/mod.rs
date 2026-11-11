@@ -2,6 +2,7 @@
 //! `FOR UPDATE SKIP LOCKED` с учётом паузы, параллельности и интервала полосы, пульс исполнителя,
 //! повтор с растущей задержкой до `max_attempts`, возврат зависших задач в очередь.
 //! Исполнитель — бинарник `dalywave-worker` ([`worker`]); обработчики по видам — [`handlers`].
+//! Задачи `acquire` берёт и домашний загрузчик (`/api/fetcher/*`): у него не пульс, а аренда до срока.
 
 pub mod handlers;
 pub mod worker;
@@ -36,6 +37,9 @@ pub mod lanes {
     pub const SCOUT: &str = "scout";
     pub const MIRROR: &str = "mirror";
     pub const MAINTENANCE: &str = "maintenance";
+
+    /// Полосы скачивания аудио в порядке важности: загрузчик берёт задачи именно так.
+    pub const ACQUIRE: [&str; 5] = [NOW, WAVE, LIBRARY, DISCOGRAPHY, DISCOVERY];
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +55,7 @@ pub struct JobRow {
     pub run_after: DateTime<Utc>,
     pub locked_by: Option<String>,
     pub heartbeat_at: Option<DateTime<Utc>>,
+    pub lease_expires_at: Option<DateTime<Utc>>,
     pub last_error: Option<String>,
     pub result: Option<Value>,
     pub dedupe_key: Option<String>,
@@ -81,6 +86,7 @@ impl JobRow {
             run_after: self.run_after,
             locked_by: self.locked_by,
             heartbeat_at: self.heartbeat_at,
+            lease_expires_at: self.lease_expires_at,
             last_error: self.last_error,
             payload: self.payload,
             result: self.result,
@@ -156,6 +162,16 @@ pub struct Enqueued {
     pub created: bool,
 }
 
+/// Будит воркеры и загрузчики, ждущие задач этой полосы. В транзакции сигнал уходит при коммите.
+pub async fn wake(conn: &mut PgConnection, lane: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("SELECT pg_notify($1, $2)")
+        .bind(CHANNEL)
+        .bind(lane)
+        .execute(conn)
+        .await?;
+    Ok(())
+}
+
 /// Ставит задачу в очередь и будит воркер. В транзакции воркер проснётся после коммита.
 pub async fn enqueue(conn: &mut PgConnection, job: NewJob) -> Result<Enqueued, sqlx::Error> {
     // Задача-двойник может закончиться между вставкой и поиском: тогда пробуем вставить ещё раз
@@ -175,11 +191,7 @@ pub async fn enqueue(conn: &mut PgConnection, job: NewJob) -> Result<Enqueued, s
         .fetch_optional(&mut *conn)
         .await?;
         if let Some(id) = inserted {
-            sqlx::query("SELECT pg_notify($1, $2)")
-                .bind(CHANNEL)
-                .bind(job.lane)
-                .execute(&mut *conn)
-                .await?;
+            wake(conn, job.lane).await?;
             return Ok(Enqueued { id, created: true });
         }
         let existing = sqlx::query_scalar!(
@@ -212,9 +224,49 @@ pub enum Claim {
     Paused,
 }
 
+/// Какие виды задач брать.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum Kinds {
+    #[default]
+    Any,
+    Only(Vec<String>),
+    /// Все, кроме этих: их выполняет кто-то другой (задачи `acquire` — загрузчик на Mac).
+    Except(Vec<String>),
+}
+
+impl Kinds {
+    pub fn only(kinds: &[&str]) -> Self {
+        Self::Only(kinds.iter().map(|k| k.to_string()).collect())
+    }
+}
+
+/// Как брать задачу.
+#[derive(Debug, Clone, Default)]
+pub struct ClaimOptions {
+    pub kinds: Kinds,
+    /// Аренда внешнего исполнителя; без неё задачу держит пульс воркера.
+    pub lease: Option<Duration>,
+}
+
 /// Берёт следующую задачу полосы. Строка полосы блокируется на время выборки, поэтому параллельность
 /// и интервал соблюдаются для всех процессов-исполнителей сразу.
 pub async fn claim(db: &PgPool, lane: &str, worker: &str) -> Result<Claim, sqlx::Error> {
+    claim_with(db, lane, worker, ClaimOptions::default()).await
+}
+
+/// [`claim`] с выбором видов задач и арендой.
+pub async fn claim_with(
+    db: &PgPool,
+    lane: &str,
+    worker: &str,
+    opts: ClaimOptions,
+) -> Result<Claim, sqlx::Error> {
+    let (only, except): (Option<Vec<String>>, Vec<String>) = match opts.kinds {
+        Kinds::Any => (None, Vec::new()),
+        Kinds::Only(k) => (Some(k), Vec::new()),
+        Kinds::Except(k) => (None, k),
+    };
+    let lease_s = opts.lease.map(|l| l.as_secs_f64());
     let mut tx = db.begin().await?;
     let Some(l) = sqlx::query!(
         r#"SELECT paused, concurrency,
@@ -240,26 +292,34 @@ pub async fn claim(db: &PgPool, lane: &str, worker: &str) -> Result<Claim, sqlx:
     let job = sqlx::query_as!(
         JobRow,
         "UPDATE jobs SET status = 'running', attempts = attempts + 1, locked_by = $2, locked_at = now(),
-                heartbeat_at = now(), updated_at = now()
+                heartbeat_at = now(), updated_at = now(),
+                lease_expires_at = CASE WHEN $5::float8 IS NULL THEN NULL ELSE now() + make_interval(secs => $5::float8) END
          WHERE id = (
             SELECT id FROM jobs
             WHERE lane = $1 AND status = 'queued' AND run_after <= now()
+              AND ($3::text[] IS NULL OR kind = ANY($3)) AND NOT (kind = ANY($4::text[]))
             ORDER BY priority DESC, run_after, id
             LIMIT 1
             FOR UPDATE SKIP LOCKED
          )
          RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
         lane,
         worker,
+        only.as_deref(),
+        &except,
+        lease_s,
     )
     .fetch_optional(&mut *tx)
     .await?;
     let Some(job) = job else {
         let next = sqlx::query_scalar!(
             r#"SELECT (EXTRACT(EPOCH FROM (min(run_after) - now())) * 1000)::bigint AS "ms"
-               FROM jobs WHERE lane = $1 AND status = 'queued'"#,
+               FROM jobs WHERE lane = $1 AND status = 'queued'
+                 AND ($2::text[] IS NULL OR kind = ANY($2)) AND NOT (kind = ANY($3::text[]))"#,
             lane,
+            only.as_deref(),
+            &except,
         )
         .fetch_one(&mut *tx)
         .await?;
@@ -291,6 +351,26 @@ pub async fn heartbeat(db: &PgPool, id: Uuid, worker: &str) -> Result<bool, sqlx
     Ok(res.rows_affected() == 1)
 }
 
+/// Продлевает аренду внешнего исполнителя. `None` — задача больше не его.
+pub async fn renew_lease(
+    db: &PgPool,
+    id: Uuid,
+    worker: &str,
+    lease: Duration,
+) -> Result<Option<DateTime<Utc>>, sqlx::Error> {
+    let until = sqlx::query_scalar!(
+        r#"UPDATE jobs SET heartbeat_at = now(), lease_expires_at = now() + make_interval(secs => $3::float8)
+           WHERE id = $1 AND status = 'running' AND locked_by = $2 AND lease_expires_at IS NOT NULL
+           RETURNING lease_expires_at AS "until!""#,
+        id,
+        worker,
+        lease.as_secs_f64(),
+    )
+    .fetch_optional(db)
+    .await?;
+    Ok(until)
+}
+
 pub async fn complete(
     db: &PgPool,
     id: Uuid,
@@ -298,22 +378,33 @@ pub async fn complete(
     result: Value,
 ) -> Result<Option<JobRow>, sqlx::Error> {
     let mut tx = db.begin().await?;
+    let job = complete_in(&mut tx, id, worker, result).await?;
+    tx.commit().await?;
+    Ok(job)
+}
+
+/// [`complete`] внутри чужой транзакции.
+pub async fn complete_in(
+    conn: &mut PgConnection,
+    id: Uuid,
+    worker: &str,
+    result: Value,
+) -> Result<Option<JobRow>, sqlx::Error> {
     let job = sqlx::query_as!(
         JobRow,
         "UPDATE jobs SET status = 'done', result = $3, last_error = NULL, finished_at = now(), updated_at = now()
          WHERE id = $1 AND status = 'running' AND locked_by = $2
          RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
         id,
         worker,
         result,
     )
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut *conn)
     .await?;
     if let Some(job) = &job {
-        realtime::publish(&mut *tx, Audience::Admins, job.event()).await;
+        realtime::publish(&mut *conn, Audience::Admins, job.event()).await;
     }
-    tx.commit().await?;
     Ok(job)
 }
 
@@ -337,12 +428,25 @@ pub async fn fail(
     retry: bool,
 ) -> Result<Option<JobRow>, sqlx::Error> {
     let mut tx = db.begin().await?;
+    let job = fail_in(&mut tx, id, worker, error, retry).await?;
+    tx.commit().await?;
+    Ok(job)
+}
+
+/// [`fail`] внутри чужой транзакции.
+pub async fn fail_in(
+    conn: &mut PgConnection,
+    id: Uuid,
+    worker: &str,
+    error: &str,
+    retry: bool,
+) -> Result<Option<JobRow>, sqlx::Error> {
     let attempts = sqlx::query_scalar!(
         "SELECT attempts FROM jobs WHERE id = $1 AND status = 'running' AND locked_by = $2 FOR UPDATE",
         id,
         worker,
     )
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut *conn)
     .await?;
     let Some(attempts) = attempts else {
         return Ok(None);
@@ -359,61 +463,120 @@ pub async fn fail(
             last_error = $2, updated_at = now()
          WHERE id = $1
          RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
         id,
         error,
         delay_ms,
     )
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut *conn)
     .await?;
     if job.status() == JobStatus::Queued {
-        sqlx::query("SELECT pg_notify($1, $2)")
-            .bind(CHANNEL)
-            .bind(&job.lane)
-            .execute(&mut *tx)
-            .await?;
+        wake(conn, &job.lane).await?;
     }
-    realtime::publish(&mut *tx, Audience::Admins, job.event()).await;
-    tx.commit().await?;
+    realtime::publish(&mut *conn, Audience::Admins, job.event()).await;
     Ok(Some(job))
 }
 
-/// Возвращает в очередь задачи, у которых исполнитель перестал слать пульс. Попытка засчитана
-/// при взятии, поэтому задача с исчерпанными попытками закрывается как `failed`.
-pub async fn reap(db: &PgPool, stale_after: Duration) -> Result<Vec<JobRow>, sqlx::Error> {
+/// Откладывает задачу без траты попытки: сбой не её, а исполнителя (YouTube заподозрил бота,
+/// сервис недоступен). Попытки не кончаются, поэтому задача не закроется, пока кто-то не сможет её взять.
+pub async fn postpone_in(
+    conn: &mut PgConnection,
+    id: Uuid,
+    worker: &str,
+    error: &str,
+    delay: Duration,
+) -> Result<Option<JobRow>, sqlx::Error> {
+    let error: String = error.chars().take(2000).collect();
+    let job = sqlx::query_as!(
+        JobRow,
+        "UPDATE jobs SET status = 'queued', attempts = GREATEST(attempts - 1, 0), locked_by = NULL,
+                lease_expires_at = NULL, run_after = now() + make_interval(secs => $4::float8),
+                last_error = $3, updated_at = now()
+         WHERE id = $1 AND status = 'running' AND locked_by = $2
+         RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+        id,
+        worker,
+        error,
+        delay.as_secs_f64(),
+    )
+    .fetch_optional(&mut *conn)
+    .await?;
+    if let Some(job) = &job {
+        wake(conn, &job.lane).await?;
+        realtime::publish(&mut *conn, Audience::Admins, job.event()).await;
+    }
+    Ok(job)
+}
+
+pub async fn postpone(
+    db: &PgPool,
+    id: Uuid,
+    worker: &str,
+    error: &str,
+    delay: Duration,
+) -> Result<Option<JobRow>, sqlx::Error> {
+    let mut tx = db.begin().await?;
+    let job = postpone_in(&mut tx, id, worker, error, delay).await?;
+    tx.commit().await?;
+    Ok(job)
+}
+
+/// Возвращает в очередь задачи, у которых исполнитель перестал слать пульс или не отчитался до конца
+/// аренды. Попытка засчитана при взятии, поэтому задача с исчерпанными попытками закрывается как `failed`.
+/// `stale_after: None` — только просроченные аренды (так их возвращает API, не дожидаясь воркера).
+pub async fn reap(db: &PgPool, stale_after: Option<Duration>) -> Result<Vec<JobRow>, sqlx::Error> {
     let mut tx = db.begin().await?;
     let jobs = sqlx::query_as!(
         JobRow,
         "UPDATE jobs SET
             status = CASE WHEN attempts < max_attempts THEN 'queued' ELSE 'failed' END,
             finished_at = CASE WHEN attempts < max_attempts THEN NULL ELSE now() END,
-            last_error = 'исполнитель перестал отвечать', locked_by = NULL, updated_at = now()
-         WHERE status = 'running' AND COALESCE(heartbeat_at, locked_at, updated_at) < now() - make_interval(secs => $1)
+            last_error = CASE WHEN lease_expires_at IS NULL THEN 'исполнитель перестал отвечать'
+                              ELSE 'загрузчик не отчитался вовремя' END,
+            locked_by = NULL, lease_expires_at = NULL, updated_at = now()
+         WHERE status = 'running' AND (
+            (lease_expires_at IS NOT NULL AND lease_expires_at < now())
+            OR (lease_expires_at IS NULL AND $1::float8 IS NOT NULL
+                AND COALESCE(heartbeat_at, locked_at, updated_at) < now() - make_interval(secs => $1::float8)))
          RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
-        stale_after.as_secs_f64(),
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+        stale_after.map(|s| s.as_secs_f64()),
     )
     .fetch_all(&mut *tx)
     .await?;
     for job in &jobs {
         tracing::warn!(id = %job.id, kind = %job.kind, status = %job.status, "reaped a stale job");
+        if job.status() == JobStatus::Queued {
+            wake(&mut tx, &job.lane).await?;
+        }
         realtime::publish(&mut *tx, Audience::Admins, job.event()).await;
     }
     tx.commit().await?;
     Ok(jobs)
 }
 
-/// Остановка воркера: недоделанные задачи возвращаются в очередь, попытка не засчитывается.
-pub async fn release(db: &PgPool, worker: &str) -> Result<u64, sqlx::Error> {
-    let res = sqlx::query!(
+/// Остановка воркера (или отзыв загрузчика): недоделанные задачи возвращаются в очередь, попытка
+/// не засчитывается.
+pub async fn release(db: &PgPool, worker: &str) -> Result<Vec<JobRow>, sqlx::Error> {
+    let mut tx = db.begin().await?;
+    let jobs = sqlx::query_as!(
+        JobRow,
         "UPDATE jobs SET status = 'queued', attempts = GREATEST(attempts - 1, 0), locked_by = NULL,
-                run_after = now(), updated_at = now()
-         WHERE status = 'running' AND locked_by = $1",
+                lease_expires_at = NULL, run_after = now(), updated_at = now()
+         WHERE status = 'running' AND locked_by = $1
+         RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
         worker,
     )
-    .execute(db)
+    .fetch_all(&mut *tx)
     .await?;
-    Ok(res.rows_affected())
+    for job in &jobs {
+        wake(&mut tx, &job.lane).await?;
+        realtime::publish(&mut *tx, Audience::Admins, job.event()).await;
+    }
+    tx.commit().await?;
+    Ok(jobs)
 }
 
 /// Отмена задачи из очереди или из работы. `None` — задачи нет или она уже закончилась.
@@ -423,7 +586,7 @@ pub async fn cancel(conn: &mut PgConnection, id: Uuid) -> Result<Option<JobRow>,
         "UPDATE jobs SET status = 'cancelled', finished_at = now(), updated_at = now()
          WHERE id = $1 AND status IN ('queued', 'running')
          RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
         id,
     )
     .fetch_optional(&mut *conn)
@@ -440,20 +603,16 @@ pub async fn retry(conn: &mut PgConnection, id: Uuid) -> Result<Option<JobRow>, 
     let job = sqlx::query_as!(
         JobRow,
         "UPDATE jobs SET status = 'queued', attempts = 0, run_after = now(), locked_by = NULL,
-                finished_at = NULL, result = NULL, updated_at = now()
+                lease_expires_at = NULL, finished_at = NULL, result = NULL, updated_at = now()
          WHERE id = $1 AND status IN ('failed', 'cancelled', 'done')
          RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
         id,
     )
     .fetch_optional(&mut *conn)
     .await?;
     if let Some(job) = &job {
-        sqlx::query("SELECT pg_notify($1, $2)")
-            .bind(CHANNEL)
-            .bind(&job.lane)
-            .execute(&mut *conn)
-            .await?;
+        wake(conn, &job.lane).await?;
         realtime::publish(&mut *conn, Audience::Admins, job.event()).await;
     }
     Ok(job)
@@ -475,7 +634,7 @@ pub async fn get(db: &PgPool, id: Uuid) -> Result<Option<JobRow>, sqlx::Error> {
     sqlx::query_as!(
         JobRow,
         "SELECT id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at
+                heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at
          FROM jobs WHERE id = $1",
         id,
     )

@@ -46,7 +46,7 @@ def result_with_file(path: Path) -> AcquireResult:
     download = DownloadResult(
         video_id="vid00000001",
         path=path,
-        container="ogg",
+        container="mp4",
         codec="opus",
         original_container="webm",
         format_id="251",
@@ -66,21 +66,21 @@ def result_with_file(path: Path) -> AcquireResult:
 
 
 def test_upload_puts_file_with_content_type(server: str, tmp_path: Path) -> None:
-    path = tmp_path / "a.opus"
-    path.write_bytes(b"OggS" + bytes(range(256)) * 40)
+    path = tmp_path / "a.m4a"
+    path.write_bytes(b"\x00\x00\x00\x1cftypisom" + bytes(range(256)) * 40)
     fetcher = Fetcher(Settings(data_dir=tmp_path))
     target = UploadTarget(url=f"{server}/dalywave/audio/x?X-Amz-Signature=s", headers={"x-a": "1"})
     status = fetcher._upload(result_with_file(path), target)
     assert status == {"ok": True, "status": 200, "etag": '"abc123"', "error": None}
     assert received["body"] == path.read_bytes()
-    assert received["headers"]["Content-Type"] == "audio/ogg"
+    assert received["headers"]["Content-Type"] == 'audio/mp4; codecs="opus"'
     assert received["headers"]["x-a"] == "1"
     assert received["path"] == "/dalywave/audio/x?X-Amz-Signature=s"
 
 
 def test_upload_reports_rejection(server: str, tmp_path: Path) -> None:
-    path = tmp_path / "a.opus"
-    path.write_bytes(b"OggS")
+    path = tmp_path / "a.m4a"
+    path.write_bytes(b"\x00\x00\x00\x1cftyp")
     fetcher = Fetcher(Settings(data_dir=tmp_path))
     status = fetcher._upload(result_with_file(path), UploadTarget(url=f"{server}/expired"))
     assert status["ok"] is False

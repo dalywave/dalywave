@@ -27,9 +27,23 @@ pub enum Permission {
     Play,
     Library,
     Admin,
+    /// Домашний загрузчик: только `/api/fetcher/*`. Есть лишь у токена загрузчика `dwk_…`,
+    /// роли людей его не дают.
+    Downloader,
 }
 
-names!(Permission { Play => "play", Library => "library", Admin => "admin" });
+names!(Permission {
+    Play => "play",
+    Library => "library",
+    Admin => "admin",
+    Downloader => "downloader",
+});
+
+impl Permission {
+    /// Права, которые дают роли людей.
+    pub const PEOPLE: &'static [Permission] =
+        &[Permission::Play, Permission::Library, Permission::Admin];
+}
 
 /// Как открыта текущая сессия.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

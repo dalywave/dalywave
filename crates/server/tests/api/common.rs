@@ -7,7 +7,7 @@ use axum::{
 };
 use dalywave_server::{
     AppState, Config,
-    config::DeezerConfig,
+    config::{DeezerConfig, FetcherConfig},
     deezer::Deezer,
     jobs::{
         handlers,
@@ -39,6 +39,11 @@ pub fn config() -> Config {
         admin_password: None,
         s3: None,
         deezer: DeezerConfig::default(),
+        // Long-poll загрузчика в тестах — доли секунды, а не 25 с
+        fetcher: FetcherConfig {
+            claim_wait: Duration::from_millis(300),
+            ..FetcherConfig::default()
+        },
     }
 }
 
@@ -127,7 +132,11 @@ impl TestApp {
             self.state.storage.clone(),
         )
         .unwrap();
-        Worker::new(Arc::new(ctx), handlers::registry(), Settings::default())
+        Worker::new(
+            Arc::new(ctx),
+            handlers::registry(&self.state.config.fetcher),
+            Settings::default(),
+        )
     }
 
     /// Одна задача полосы до конца.

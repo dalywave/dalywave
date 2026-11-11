@@ -1,8 +1,9 @@
 # fetcher — поиск и скачивание аудио
 
 Сервис получает трек Deezer, находит ту же запись на YouTube Music, скачивает лучший
-аудиопоток без перекодирования, сверяет отпечаток с 30-секундным превью Deezer и
-отвечает JSON. По желанию кладёт файл в R2 по подписанной ссылке.
+аудиопоток без перекодирования, сверяет отпечаток с 30-секундным превью Deezer, считает
+громкость и огибающую и отвечает JSON. По желанию кладёт файл в R2 по подписанной ссылке.
+Тот же пакет работает домашним загрузчиком на Mac (`fetcher worker`, ниже).
 
 Python 3.13, uv, yt-dlp + Deno, ytmusicapi, ffmpeg, chromaprint. HTTP — FastAPI на `:8402`.
 Прогоны на 20 треках: сводки — [`bench/results-*.md`](bench/), калибровка порога —
@@ -11,8 +12,8 @@ Python 3.13, uv, yt-dlp + Deno, ytmusicapi, ffmpeg, chromaprint. HTTP — FastAP
 ## Как это работает
 
 ```
-Deezer: трек, альбом ──► поиск кандидатов ──► оценка ──► скачивание ──► проверка ──► JSON / R2
-                          (YouTube Music)       0..1      (yt-dlp)      (отпечаток)
+Deezer: трек, альбом ──► поиск кандидатов ──► оценка ──► скачивание ──► проверка ──► громкость ──► JSON / R2
+                          (YouTube Music)       0..1      (yt-dlp)      (отпечаток)   и огибающая
 ```
 
 1. **Deezer** (`deezer.py`). Трек, альбом с полным списком треков и дисков, поиск,
@@ -48,8 +49,10 @@ Deezer: трек, альбом ──► поиск кандидатов ──�
    меньше чем на 0,45. Ниже 0,6 кандидат не качается.
 4. **Скачивание** (`download.py`). Формат `774/251/bestaudio[acodec=opus]/140/bestaudio`:
    Opus 256 кбит/с (только с Premium), обычный Opus ~130–160 кбит/с (itag 251), AAC как
-   запасной. Файл не перекодируется: Opus из WebM перекладывается в Ogg
-   (`ffmpeg -c:a copy`), AAC — в M4A. Записываются itag, кодек, битрейт, частота,
+   запасной. Файл не перекодируется: Opus и AAC перекладываются в MP4 (ISO BMFF, `.m4a`,
+   `ffmpeg -c:a copy -movflags +faststart -f mp4`; `audio/mp4; codecs="opus"`). Opus в MP4
+   играют Safari, AVPlayer, Chrome, Firefox и движок приложений, а `faststart` ставит
+   оглавление в начало — плеер начинает играть, не дочитав файл. Записываются itag, кодек, битрейт, частота,
    размер, исходный контейнер и клиент плеера (параметр `c=` ссылки потока), был ли
    PO-токен. JS-задачи YouTube решает Deno (`yt-dlp-ejs`), PO-токены выдаёт
    bgutil-ytdlp-pot-provider. Скачивания идут по одному, между ними пауза. Если поток
@@ -62,6 +65,11 @@ Deezer: трек, альбом ──► поиск кандидатов ──�
    Порог `0.80` откалиброван: верные записи — от 0,92, чужие треки и другие записи той же
    песни — до 0,62 (`bench/calibration.json`). Не совпало —
    следующий кандидат; кандидаты кончились — «Спорные».
+6. **Громкость и огибающая** (`analyze.py`). Один проход ffmpeg по выбранному файлу:
+   `ebur128=peak=true` — интегральная громкость (EBU R128, LUFS) и истинный пик (dBFS),
+   вторая ветка — моно 8 кГц для огибающей: RMS по 512 равным кускам, 0..1000 от самого
+   громкого. ~0,8 с на трёхминутный трек. Не вышло — файл всё равно годится, причина —
+   в `file.analysisError`.
 
 Статусы ответа:
 
@@ -105,7 +113,7 @@ uv run fetcher calibrate --audio-dir bench/out/<метка> --hard bench/hard-ne
 Образ и бенчмарк в Docker (сеть с сервисом PO-токенов, порт наружу не открыт):
 
 ```sh
-docker build -t dalywave-fetcher:0.1.0 .
+docker build -t dalywave-fetcher:0.2.0 .
 export BENCH_UID=$(id -u) BENCH_GID=$(id -g)
 BENCH_LABEL=docker-default-pot docker compose -f compose.bench.yml run --rm bench
 BENCH_LABEL=docker-mweb-pot FETCHER_PLAYER_CLIENTS=mweb \
@@ -150,39 +158,50 @@ uv run pytest -m network          # с настоящими Deezer и YouTube Mu
 |---|---|---|
 | `GET /v1/healthz` | — | версии yt-dlp, Deno, ffmpeg, fpcalc; доступность сервиса PO-токенов; срок cookies; занят ли сервис |
 | `POST /v1/match` | `{"deezerTrackId": 3040222091, "videos": "auto"}` | `track`, `candidates[]` с `score` и `breakdown`, `steps[]` с временем шагов |
-| `POST /v1/acquire` | `{"deezerTrackId": …, "upload": {"url": "<presigned PUT>", "headers": {}}, "maxAttempts": 3, "preferVideoIds": [], "excludeVideoIds": []}` | `status`, `chosen` (кандидат, `download`, `verify`), `file` (sha256, размер, контейнер, mime), `upload`, `attempts[]`, `candidates[]`, `timingsMs`, `error` |
+| `POST /v1/acquire` | `{"deezerTrackId": …, "upload": {"url": "<presigned PUT>", "headers": {}}, "maxAttempts": 3, "preferVideoIds": [], "excludeVideoIds": [], "directUrl": null}` | `status`, `chosen` (кандидат, `download`, `verify`), `file` (sha256, размер, контейнер, mime, громкость, пик, огибающая), `upload`, `attempts[]`, `candidates[]`, `timingsMs`, `versions`, `error` |
 | `POST /v1/selftest` | `{"deezerTrackId": null}` | `ok`, `status`, `download`, `verify`, `timingsMs` — кнопка «проверить скачивание» |
 
 `preferVideoIds` — видео, выбранные вручную в «Спорных» (пробуются первыми),
-`excludeVideoIds` — отклонённые. С `upload` файл уходит `PUT`-ом по подписанной ссылке
-(Content-Type — по контейнеру: `audio/ogg` или `audio/mp4`), локальная копия удаляется.
-Без `upload` файл остаётся в `FETCHER_DATA_DIR/jobs/…`, путь — в `file.path`.
+`excludeVideoIds` — отклонённые, `directUrl` — ссылка, вставленная в «Спорных» (SoundCloud,
+Bandcamp, любой сайт yt-dlp): качается она, как выбор человека. С `upload` файл уходит
+`PUT`-ом по подписанной ссылке (Content-Type — `audio/mp4; codecs="opus"` и т. п.),
+локальная копия удаляется. Без `upload` файл остаётся в `FETCHER_DATA_DIR/jobs/…`,
+путь — в `file.path`.
 
 ## Домашний загрузчик
 
-Если YouTube заблокирует адрес сервера, тот же пакет работает на домашнем Mac:
+YouTube не отдаёт аудио адресу сервера (docs/decisions.md), поэтому качает домашний Mac:
+загрузчик забирает задания с сервера, скачивает со своего адреса, кладёт файл по подписанной
+ссылке в R2 и отчитывается. Серверную сторону делает API (`/api/fetcher/*`).
 
-```sh
-FETCHER_POT_URL=http://127.0.0.1:4416 FETCHER_WORKER_TOKEN=… \
-  uv run fetcher worker --server https://wave.daly.rest
-```
+Настройка на Mac:
 
-Загрузчик забирает задания с сервера, скачивает со своего адреса, кладёт файл по
-подписанной ссылке в R2 и отчитывается. Цикл реализован (`worker.py`); серверную
-сторону делает Rust-воркер. Все запросы — с `Authorization: Bearer <токен загрузчика>`.
+1. Админка → «Источники» → новый загрузчик (или `POST /api/admin/downloaders {"name": "…"}`).
+   Токен `dwk_…` показывается один раз — сохранить его вне репозитория:
+   `mkdir -p ~/.config/dalywave && pbpaste > ~/.config/dalywave/downloader-token && chmod 600 ~/.config/dalywave/downloader-token`.
+2. Нужны `uv`, `ffmpeg`, `chromaprint` (fpcalc), `deno` (`brew install …`) и Docker Desktop —
+   в нём сервис PO-токенов `dalywave-pot` на `127.0.0.1:4416` (поднимается сам).
+3. Разово: `make downloader` (из корня; `SERVER=…`, `TOKEN=…` по желанию). В автозапуск при
+   входе: `services/fetcher/launchd/install.sh` (`--uninstall` — убрать). Лог —
+   `~/Library/Logs/DalyWave/downloader.log`.
+
+`launchd/run.sh` читает токен из файла (или `FETCHER_WORKER_TOKEN`), поднимает контейнер
+PO-токенов и запускает `uv run fetcher worker --server …`. Все запросы — с
+`Authorization: Bearer <токен загрузчика>`; токен открывает только эти три адреса.
 
 **Взять задание** — `POST /api/fetcher/jobs/claim`:
 
 ```json
 {
   "workerId": "dalynkaa-mac",
-  "version": "0.1.0",
-  "capabilities": {"kinds": ["acquire"], "potProvider": true, "cookies": false, "playerClients": []}
+  "version": "0.2.0",
+  "capabilities": {"kinds": ["acquire"], "potProvider": true, "cookies": false, "playerClients": [], "ytDlp": "2026.10.26"}
 }
 ```
 
-Ответ `204` — заданий нет (повтор через ~30 с), `401/403` — токен не принят (загрузчик
-останавливается), `200`:
+Заданий нет — сервер держит запрос до ~25 секунд и отвечает `204` с `Retry-After` (через
+сколько секунд спросить снова). `401/403` — токен не принят (загрузчик останавливается),
+`200`:
 
 ```json
 {
@@ -193,19 +212,23 @@ FETCHER_POT_URL=http://127.0.0.1:4416 FETCHER_WORKER_TOKEN=… \
     "maxAttempts": 3,
     "preferVideoIds": [],
     "excludeVideoIds": [],
+    "directUrl": null,
     "upload": {
-      "url": "https://<account>.r2.cloudflarestorage.com/dalywave/audio/<uuid>?X-Amz-…",
+      "url": "https://<account>.r2.cloudflarestorage.com/dalywave/audio/<recording>/<file>.m4a?X-Amz-…",
       "method": "PUT",
       "headers": {},
       "expiresAt": "2026-11-11T12:00:00Z"
     },
-    "leaseExpiresAt": "2026-11-11T11:10:00Z"
+    "leaseExpiresAt": "2026-11-11T11:35:00Z"
   }
 }
 ```
 
-Content-Type в подпись ссылки не включается: контейнер (Ogg или M4A) известен только
-после скачивания и приходит в результате. Ссылка должна жить дольше аренды задания.
+Content-Type в подпись ссылки не включается. Ссылка живёт 30 минут — дольше аренды.
+
+**Продлить аренду** — `POST /api/fetcher/jobs/{id}/lease` раз в минуту, пока идёт скачивание
+(в фоне, сам `fetcher worker`): `200 {"leaseExpiresAt": …}`, `409` — задание уже не наше.
+Аренда — 5 минут; не продлили и не отчитались — сервер возвращает задание в очередь.
 
 **Отчитаться** — `POST /api/fetcher/jobs/{id}/result`, ответ `204`:
 
@@ -218,20 +241,25 @@ Content-Type в подпись ссылки не включается: конт�
     "track": {"deezerId": 3040222091, "title": "ящики", "artist": "Mzlff", "durationMs": 199000, "isrc": "RUAGT2454320"},
     "chosen": {
       "candidate": {"videoId": "afkL3uLNeXA", "title": "ящики", "source": "album", "kind": "atv", "score": 1.0, "breakdown": {}},
-      "download": {"itag": "251", "codec": "opus", "container": "ogg", "abrKbps": 136.1, "client": "MWEB", "poToken": true},
+      "download": {"itag": "251", "codec": "opus", "container": "mp4", "abrKbps": 136.1, "client": "MWEB", "poToken": true},
       "verify": {"verified": true, "similarity": 0.9761, "offsetS": 157.03, "threshold": 0.8}
     },
-    "file": {"sha256": "40b9…", "sizeBytes": 3353582, "container": "ogg", "mimeType": "audio/ogg", "codec": "opus", "durationMs": 199700},
+    "file": {"sha256": "40b9…", "sizeBytes": 3353582, "container": "mp4", "mimeType": "audio/mp4; codecs=\"opus\"",
+             "codec": "opus", "durationMs": 199700, "bitrateKbps": 136, "sampleRate": 48000, "channels": 2,
+             "loudnessLufs": -8.4, "truePeakDb": 0.9, "waveform": [312, 640, "… 512 точек 0..1000"], "analysisError": null},
     "upload": {"ok": true, "status": 200, "etag": "\"…\""},
     "attempts": [],
     "candidates": [],
     "error": null,
-    "timingsMs": {"deezer": 197, "match": 1340, "preview": 599, "download": 2983, "verify": 334, "upload": 410, "total": 5866}
+    "timingsMs": {"deezer": 197, "match": 1340, "preview": 599, "download": 2983, "verify": 334, "analyze": 790, "upload": 410, "total": 6656},
+    "versions": {"fetcher": "0.2.0", "ytDlp": "2026.10.26"}
   }
 }
 ```
 
-`result` — тот же объект, что отдаёт `POST /v1/acquire`. Не пришёл результат до
-`leaseExpiresAt` — сервер возвращает задание в очередь. При `error.code` из
-`bot_check`, `rate_limited`, `http_403`, `po_token`, `network` загрузчик делает паузу
-15 минут.
+`result` — тот же объект, что отдаёт `POST /v1/acquire`. Сервер сам проверяет файл в
+хранилище (есть ли, совпадает ли размер) и решает: принять, отдать в «Спорные», отметить
+«нет в источниках» или повторить позже. `409` — задание уже не наше (аренда кончилась,
+его отменили): повторять отчёт бессмысленно. При `error.code` из `bot_check`,
+`rate_limited`, `http_403`, `po_token`, `network`, `cookies_missing` загрузчик делает
+паузу 15 минут, а сервер откладывает задание, не тратя попытку.

@@ -1,14 +1,18 @@
 //! Защита API от подделки запросов: изменяющий запрос с cookie-сессией должен прийти с нашего
 //! Origin, а тело — быть JSON (простые формы браузер шлёт с чужих сайтов без preflight).
+//! CORS открыт только WebView приложений Tauri: они ходят с токеном `dwd_…` в заголовке, без cookie.
+
+use std::time::Duration;
 
 use axum::{
     body::HttpBody,
     extract::{Request, State},
-    http::{HeaderMap, header},
+    http::{HeaderMap, HeaderValue, Method, header},
     middleware::Next,
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::CookieJar;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::{auth, config::Config, error::AppError, session::SESSION_COOKIE, state::AppState};
 
@@ -23,6 +27,29 @@ pub const API_BODY_LIMIT: usize = 1024 * 1024;
 
 pub fn origin_allowed(config: &Config, origin: &str) -> bool {
     TAURI_ORIGINS.contains(&origin) || origin == config.public_origin()
+}
+
+/// CORS на `/api` для WebView Tauri (и сайта). Приложения входят токеном в заголовке, а не cookie,
+/// поэтому credentials не разрешаются: чужая страница не получит ответ с cookie-сессией.
+pub fn cors(config: &Config) -> CorsLayer {
+    let origins: Vec<HeaderValue> = TAURI_ORIGINS
+        .iter()
+        .map(|o| o.to_string())
+        .chain([config.public_origin()])
+        .filter_map(|o| HeaderValue::from_str(&o).ok())
+        .collect();
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
+        .max_age(Duration::from_secs(86400))
 }
 
 /// Слой на всё `/api`.
@@ -101,6 +128,7 @@ mod tests {
             admin_password: None,
             s3: None,
             deezer: Default::default(),
+            fetcher: Default::default(),
         }
     }
 
@@ -160,6 +188,23 @@ mod tests {
             )
             .is_ok()
         );
+        // …в том числе из WebView Tauri
+        for origin in TAURI_ORIGINS {
+            assert!(
+                check_unsafe(
+                    &c,
+                    &headers(&[
+                        ("authorization", "Bearer dwd_x"),
+                        ("origin", origin),
+                        json,
+                        body
+                    ]),
+                    false
+                )
+                .is_ok(),
+                "{origin}"
+            );
+        }
         // Обмен кода приложения: ни cookie, ни Origin
         assert!(check_unsafe(&c, &headers(&[json, body]), false).is_ok());
     }

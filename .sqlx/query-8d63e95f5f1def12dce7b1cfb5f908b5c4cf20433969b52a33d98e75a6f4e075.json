@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT CASE WHEN me.status = 'running' THEN 0 ELSE (\n                  SELECT count(*) FROM jobs j JOIN job_lanes l ON l.lane = j.lane\n                  WHERE j.kind = 'acquire' AND j.status = 'queued' AND j.id <> me.id AND NOT l.paused\n                    AND j.run_after <= now()\n                    AND (array_position($2::text[], j.lane) < array_position($2::text[], me.lane)\n                         OR (j.lane = me.lane AND (j.priority > me.priority\n                             OR (j.priority = me.priority AND (j.run_after, j.id) < (me.run_after, me.id)))))\n              ) END AS \"position!\"\n           FROM jobs me WHERE me.id = $1 AND me.status IN ('queued', 'running')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "position!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8d63e95f5f1def12dce7b1cfb5f908b5c4cf20433969b52a33d98e75a6f4e075"
+}

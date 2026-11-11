@@ -22,6 +22,12 @@ api: ## запустить API на :8400
 worker: ## исполнитель очереди задач (скачивание, обложки, подписки)
 	cargo run -p dalywave-server --bin dalywave-worker
 
+# Аудио качает этот Mac: YouTube не отдаёт его серверу. Токен dwk_… — из админки («Источники»):
+# TOKEN=… или файл ~/.config/dalywave/downloader-token. В автозапуск: services/fetcher/launchd/install.sh
+SERVER ?= https://wave.daly.rest
+downloader: ## загрузчик на этом Mac: make downloader [SERVER=http://localhost:8400] [TOKEN=dwk_…]
+	@FETCHER_WORKER_TOKEN="$(TOKEN)" bash services/fetcher/launchd/run.sh "$(SERVER)"
+
 ui: ## интерфейс на :3400 (проксирует /api на :8400)
 	cd apps/ui && bun run dev
 
@@ -71,4 +77,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker ui app design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker downloader ui app design api-types sqlx-prepare test lint deploy fmt

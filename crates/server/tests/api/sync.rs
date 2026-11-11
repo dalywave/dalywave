@@ -86,7 +86,8 @@ async fn sync_pulls_library_with_catalog_and_tombstones(db: PgPool) {
     assert_eq!(track["artists"][0]["role"], "main");
     let recording = track["recordingId"].as_str().unwrap();
     assert!(ids(page, "recordings", "id").contains(recording));
-    assert_eq!(page["recordings"][0]["audioStatus"], "none");
+    // Лайк сразу ставит запись на скачивание
+    assert_eq!(page["recordings"][0]["audioStatus"], "queued");
     let album_row = page["albums"]
         .as_array()
         .unwrap()

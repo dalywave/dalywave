@@ -11,6 +11,7 @@ pub mod crypto;
 pub mod cursor;
 pub mod deezer;
 pub mod devices;
+pub mod downloaders;
 pub mod error;
 pub mod extract;
 pub mod images;

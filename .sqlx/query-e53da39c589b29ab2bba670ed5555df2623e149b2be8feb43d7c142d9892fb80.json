@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET lane = $2, updated_at = now() WHERE job_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e53da39c589b29ab2bba670ed5555df2623e149b2be8feb43d7c142d9892fb80"
+}

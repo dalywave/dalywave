@@ -186,7 +186,7 @@ pub async fn list_jobs(
     let mut rows = sqlx::query_as!(
         JobRow,
         "SELECT id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,
-                heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at
+                heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at
          FROM jobs
          WHERE ($1::text IS NULL OR lane = $1) AND ($2::text IS NULL OR status = $2)
            AND ($3::text IS NULL OR kind = $3) AND ($4::uuid IS NULL OR id < $4)

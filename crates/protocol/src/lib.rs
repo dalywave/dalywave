@@ -40,10 +40,12 @@ pub mod auth;
 pub mod catalog;
 pub mod error;
 pub mod events;
+pub mod fetcher;
 pub mod home;
 pub mod jobs;
 pub mod library;
 pub mod realtime;
+pub mod stream;
 pub mod sync;
 pub mod system;
 

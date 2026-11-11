@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, acquisition_id, executor, status, outcome, error_code, error, video_id, yt_dlp, total_ms,\n                created_at\n         FROM acquisition_attempts WHERE acquisition_id = ANY($1)\n         ORDER BY created_at DESC, id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "acquisition_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "acquisition_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "executor",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "executor"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "outcome",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "outcome"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "error_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "error_code"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "error"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "video_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "video_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "yt_dlp",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "yt_dlp"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "total_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "total_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "acquisition_attempts",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "f6342984d1e4f1eafd2a5ee1dd9c12a2c9668a116f55a3e4858e4a1b4c5b071f"
+}

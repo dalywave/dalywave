@@ -40,6 +40,8 @@ class AcquireRequest(_Model):
     # Видео, выбранные вручную в «Спорных», пробуются первыми; исключённые — никогда.
     prefer_video_ids: list[str] = Field(default_factory=list)
     exclude_video_ids: list[str] = Field(default_factory=list)
+    # Ссылка, вставленная в «Спорных» (SoundCloud, Bandcamp…): качается она, а не находка поиска.
+    direct_url: str | None = None
 
 
 class SelftestRequest(_Model):

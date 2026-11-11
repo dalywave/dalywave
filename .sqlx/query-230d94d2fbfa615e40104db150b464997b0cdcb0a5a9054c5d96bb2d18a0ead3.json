@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE jobs SET status = 'running', attempts = attempts + 1, locked_by = $2, locked_at = now(),\n                heartbeat_at = now(), updated_at = now()\n         WHERE id = (\n            SELECT id FROM jobs\n            WHERE lane = $1 AND status = 'queued' AND run_after <= now()\n            ORDER BY priority DESC, run_after, id\n            LIMIT 1\n            FOR UPDATE SKIP LOCKED\n         )\n         RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,\n                   heartbeat_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
+  "query": "UPDATE jobs SET status = 'cancelled', finished_at = now(), updated_at = now()\n         WHERE id = $1 AND status IN ('queued', 'running')\n         RETURNING id, kind, lane, priority, payload, status, attempts, max_attempts, run_after, locked_by,\n                   heartbeat_at, lease_expires_at, last_error, result, dedupe_key, created_at, updated_at, finished_at",
   "describe": {
     "columns": [
       {
@@ -126,6 +126,17 @@
       },
       {
         "ordinal": 11,
+        "name": "lease_expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "lease_expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
         "name": "last_error",
         "type_info": "Text",
         "origin": {
@@ -136,7 +147,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "result",
         "type_info": "Jsonb",
         "origin": {
@@ -147,7 +158,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "dedupe_key",
         "type_info": "Text",
         "origin": {
@@ -158,7 +169,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -169,7 +180,7 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -180,7 +191,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "finished_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -193,8 +204,7 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -212,10 +222,11 @@
       true,
       true,
       true,
+      true,
       false,
       false,
       true
     ]
   },
-  "hash": "bba3c347931904880babf233f3029f39c218d15aab61c79496ab56207f08a42b"
+  "hash": "230d94d2fbfa615e40104db150b464997b0cdcb0a5a9054c5d96bb2d18a0ead3"
 }

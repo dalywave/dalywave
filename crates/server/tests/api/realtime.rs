@@ -187,7 +187,14 @@ async fn events_reach_only_their_audience(db: PgPool) {
     assert_eq!(next_json(&mut mine).await["type"], "hello");
     assert_eq!(next_json(&mut admins).await["type"], "hello");
 
-    // Изменение медиатеки (через другой процесс — тот же путь через NOTIFY) — только её владельцу
+    let recording: String =
+        sqlx::query_scalar("SELECT recording_id::text FROM tracks WHERE id = $1::uuid")
+            .bind(&track)
+            .fetch_one(&app.state.db)
+            .await
+            .unwrap();
+    // Изменение медиатеки (через другой процесс — тот же путь через NOTIFY) — только её владельцу.
+    // Лайк заодно ставит запись на скачивание, а скачивание видят все
     assert_eq!(
         app.put(&format!("/api/library/tracks/{track}"), &me)
             .await
@@ -199,6 +206,13 @@ async fn events_reach_only_their_audience(db: PgPool) {
         event,
         json!({ "type": "library.changed", "entities": ["likedTracks"] })
     );
+    for ws in [&mut mine, &mut admins] {
+        let event = next_json(ws).await;
+        assert_eq!(event["type"], "acquisition.updated");
+        assert_eq!(event["recordingId"], recording.as_str());
+        assert_eq!(event["status"], "queued");
+        assert_eq!(event["audioStatus"], "queued");
+    }
     assert_eq!(
         ping(&mut admins, "a").await["type"],
         "pong",
@@ -225,44 +239,15 @@ async fn events_reach_only_their_audience(db: PgPool) {
         "слушателю очередь не приходит"
     );
 
-    // Скачивание записи видят все (этап 1b шлёт это на каждом шаге)
-    let recording: String =
-        sqlx::query_scalar("SELECT recording_id::text FROM tracks WHERE id = $1::uuid")
-            .bind(&track)
-            .fetch_one(&app.state.db)
-            .await
-            .unwrap();
-    let res = dalywave_server::acquire::enqueue(
-        &app.state.db,
-        dalywave_server::acquire::Request {
-            track_id: track.parse().unwrap(),
-            reason: dalywave_protocol::jobs::AcquireReason::Play,
-            lane: "now",
-            requested_by: None,
-            priority: 10,
-        },
-    )
-    .await
-    .unwrap();
-    assert!(
-        matches!(res, dalywave_server::acquire::Enqueue::Queued { .. }),
-        "{res:?}"
-    );
-    let event = next_json(&mut mine).await;
-    assert_eq!(event["type"], "acquisition.updated");
-    assert_eq!(event["recordingId"], recording.as_str());
-    assert_eq!(event["status"], "queued");
-    assert_eq!(event["audioStatus"], "queued");
     // Повторная постановка не создаёт второго скачивания
     let again = dalywave_server::acquire::enqueue(
         &app.state.db,
-        dalywave_server::acquire::Request {
-            track_id: track.parse().unwrap(),
-            reason: dalywave_protocol::jobs::AcquireReason::Play,
-            lane: "now",
-            requested_by: None,
-            priority: 10,
-        },
+        dalywave_server::acquire::Request::new(
+            track.parse().unwrap(),
+            dalywave_protocol::jobs::AcquireReason::Play,
+            "now",
+        )
+        .priority(10),
     )
     .await
     .unwrap();

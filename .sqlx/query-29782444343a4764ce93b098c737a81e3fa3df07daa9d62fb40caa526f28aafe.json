@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = 'unavailable', error = 'в админке: записи нет в источниках',\n                    updated_at = now(), finished_at = now()\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "29782444343a4764ce93b098c737a81e3fa3df07daa9d62fb40caa526f28aafe"
+}

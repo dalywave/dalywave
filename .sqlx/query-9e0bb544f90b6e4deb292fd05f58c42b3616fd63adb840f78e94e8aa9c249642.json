@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = $2, error = COALESCE($3, error), candidates = COALESCE($4, candidates),\n                updated_at = now(), finished_at = CASE WHEN $5 THEN now() ELSE NULL END\n         WHERE id = $1 AND status IN ('queued', 'matching', 'downloading', 'verifying', 'processing')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9e0bb544f90b6e4deb292fd05f58c42b3616fd63adb840f78e94e8aa9c249642"
+}

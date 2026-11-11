@@ -20,7 +20,7 @@ services:
 
   bench:
     build: .
-    image: dalywave-fetcher:0.1.0
+    image: dalywave-fetcher:0.2.0
     depends_on: [pot]
     networks: [fetch]
     # Пишет в смонтированную bench/ — от имени владельца папки на хосте.

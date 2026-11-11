@@ -1,5 +1,6 @@
 //! Медиатека: лайки, сохранённые альбомы, подписки на артистов, «не рекомендовать». Каждое изменение
-//! рассылает `library.changed` — другие устройства запрашивают `/api/sync`.
+//! рассылает `library.changed` — другие устройства запрашивают `/api/sync`. Медиатека живёт на сервере:
+//! лайк и сохранённый альбом ставят треки на скачивание (полоса «Медиатека»), подписка — дискографию.
 
 use std::collections::HashMap;
 
@@ -12,7 +13,7 @@ use axum::{
 use chrono::{DateTime, Utc};
 use dalywave_protocol::{
     ErrorBody,
-    jobs::{SyncDiscographyPayload, kind},
+    jobs::{AcquireReason, SyncDiscographyPayload, kind},
     library::{
         BlockedItem, BlockedKind, BlockedList, DownloadPolicy, FollowRequest, FollowedArtist,
         FollowedArtistPage, LibraryCounts, LibraryOverview, LikedTrack, LikedTrackPage, PageQuery,
@@ -26,8 +27,9 @@ use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::{
+    acquire,
     auth::Principal,
-    catalog::views,
+    catalog::{self, views},
     cursor,
     error::{AppError, AppResult},
     extract::{Json, JsonOrDefault, Path, Query},
@@ -48,6 +50,17 @@ pub fn routes() -> Router<AppState> {
         .route("/library/artists/{id}", put(follow).delete(unfollow))
         .route("/library/blocked", get(blocked))
         .route("/library/blocked/{kind}/{id}", put(block).delete(unblock))
+}
+
+/// Ставит треки медиатеки на скачивание. Сбой постановки не отменяет лайк: он пишется в лог,
+/// а трек скачается при первом запуске.
+async fn acquire_tracks(st: &AppState, ids: &[Uuid], reason: AcquireReason, user: Uuid) {
+    for id in ids {
+        let req = acquire::Request::new(*id, reason, lanes::LIBRARY).by(user);
+        if let Err(e) = acquire::request(&st.db, &st.deezer, req).await {
+            tracing::warn!(track = %id, error = %e, "could not queue a library track for download");
+        }
+    }
 }
 
 async fn changed(conn: &mut PgConnection, user_id: Uuid, entities: Vec<SyncEntity>) {
@@ -227,7 +240,7 @@ pub async fn liked_tracks(
     security(("session" = []), ("device" = [])),
     params(("id" = Uuid, Path, description = "id трека")),
     responses(
-        (status = 204, description = "Трек в понравившихся (повтор безопасен)"),
+        (status = 204, description = "Трек в понравившихся (повтор безопасен) и поставлен на скачивание на сервер"),
         (status = 404, description = "Нет такого трека", body = ErrorBody),
     ),
 )]
@@ -252,6 +265,7 @@ pub async fn like(
         changed(&mut tx, user, vec![SyncEntity::LikedTracks]).await;
     }
     tx.commit().await?;
+    acquire_tracks(&st, &[id], AcquireReason::Like, user).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -341,7 +355,7 @@ pub async fn saved_albums(
     security(("session" = []), ("device" = [])),
     params(("id" = Uuid, Path, description = "id альбома")),
     responses(
-        (status = 204, description = "Альбом в медиатеке (повтор безопасен)"),
+        (status = 204, description = "Альбом в медиатеке (повтор безопасен), его треки поставлены на скачивание на сервер"),
         (status = 404, description = "Нет такого альбома", body = ErrorBody),
     ),
 )]
@@ -366,6 +380,17 @@ pub async fn save_album(
         changed(&mut tx, user, vec![SyncEntity::SavedAlbums]).await;
     }
     tx.commit().await?;
+    // Треки альбома качаются на сервер; их список загружается из Deezer, если его ещё нет
+    if let Err(e) = catalog::ensure_album(&st.db, &st.deezer, id).await {
+        tracing::warn!(album = %id, error = %e, "could not load the album tracks");
+    }
+    let tracks = sqlx::query_scalar!(
+        "SELECT id FROM tracks WHERE album_id = $1 ORDER BY disc_number, track_position NULLS LAST, id",
+        id
+    )
+    .fetch_all(&st.db)
+    .await?;
+    acquire_tracks(&st, &tracks, AcquireReason::Album, user).await;
     Ok(StatusCode::NO_CONTENT)
 }
 

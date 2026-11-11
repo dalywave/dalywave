@@ -1,9 +1,15 @@
 //! Исполнитель очереди (бинарник `dalywave-worker`). На каждую полосу — свой цикл: берёт задачи, пока
 //! полоса позволяет, и спит до сигнала NOTIFY или до ближайшей отложенной задачи. Обработчики
-//! регистрируются по виду задачи в [`Registry`]; задача без обработчика закрывается сразу.
+//! регистрируются по виду задачи в [`Registry`]; задача без обработчика закрывается сразу, а виды,
+//! которые выполняет кто-то другой (задачи `acquire` — загрузчик на Mac), воркер не берёт вовсе.
 
 use std::{
-    collections::HashMap, fmt, future::Future, panic::AssertUnwindSafe, sync::Arc, time::Duration,
+    collections::HashMap,
+    fmt,
+    future::Future,
+    panic::AssertUnwindSafe,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
 
 use dalywave_protocol::jobs::{SyncDiscographyPayload, kind};
@@ -16,7 +22,7 @@ use tokio::{
 };
 use tracing::Instrument;
 
-use super::{Claim, JobRow, NewJob, lanes};
+use super::{Claim, ClaimOptions, JobRow, Kinds, NewJob, lanes};
 use crate::{
     acquire,
     catalog::CatalogError,
@@ -34,6 +40,10 @@ pub struct Context {
     pub storage: Arc<Storage>,
     /// Для картинок: переходы по редиректам разрешены, таймаут побольше
     pub http: reqwest::Client,
+    /// Серверный fetcher: скачивание с проверкой идёт до нескольких минут
+    pub fetcher: reqwest::Client,
+    /// Виды задач на паузе после сбоя исполнителя (YouTube заподозрил бота)
+    pub cooldowns: Cooldowns,
 }
 
 impl Context {
@@ -48,13 +58,46 @@ impl Context {
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(30))
             .build()?;
+        let fetcher = reqwest::Client::builder()
+            .user_agent(concat!("dalywave/", env!("CARGO_PKG_VERSION")))
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(15 * 60))
+            .build()?;
         Ok(Self {
             db,
             config,
             deezer,
             storage,
             http,
+            fetcher,
+            cooldowns: Cooldowns::default(),
         })
+    }
+}
+
+/// Паузы видов задач в этом процессе: пока пауза идёт, воркер такие задачи не берёт.
+#[derive(Debug, Default)]
+pub struct Cooldowns {
+    until: Mutex<HashMap<String, Instant>>,
+}
+
+impl Cooldowns {
+    pub fn pause(&self, kind: &str, duration: Duration) {
+        if let Ok(mut until) = self.until.lock() {
+            until.insert(kind.to_string(), Instant::now() + duration);
+        }
+    }
+
+    /// Виды, у которых пауза ещё идёт.
+    pub fn active(&self) -> Vec<String> {
+        let now = Instant::now();
+        match self.until.lock() {
+            Ok(mut until) => {
+                until.retain(|_, at| *at > now);
+                until.keys().cloned().collect()
+            }
+            Err(_) => Vec::new(),
+        }
     }
 }
 
@@ -131,7 +174,22 @@ impl From<serde_json::Error> for JobError {
     }
 }
 
-pub type JobResult = Result<Value, JobError>;
+/// Чем закончился обработчик.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Done {
+    /// Результат для `jobs.result`; задачу закрывает воркер.
+    Result(Value),
+    /// Обработчик сам закрыл задачу — в одной транзакции со своими данными.
+    Settled(Outcome),
+}
+
+impl From<Value> for Done {
+    fn from(value: Value) -> Self {
+        Self::Result(value)
+    }
+}
+
+pub type JobResult = Result<Done, JobError>;
 
 /// Обработчик задач одного вида. Подходит любая `async fn(Arc<Context>, JobRow) -> JobResult`.
 pub trait Handler: Send + Sync + 'static {
@@ -148,15 +206,22 @@ where
     }
 }
 
-/// Обработчики по видам задач. Этап 1b добавит сюда `acquire`.
+/// Обработчики по видам задач и виды, которые выполняет кто-то другой.
 #[derive(Default, Clone)]
 pub struct Registry {
     handlers: HashMap<String, Arc<dyn Handler>>,
+    elsewhere: Vec<String>,
 }
 
 impl Registry {
     pub fn register(&mut self, kind: &str, handler: impl Handler) -> &mut Self {
         self.handlers.insert(kind.to_string(), Arc::new(handler));
+        self
+    }
+
+    /// Задачи этого вида выполняет другой исполнитель (загрузчик на Mac): воркер их не берёт.
+    pub fn elsewhere(&mut self, kind: &str) -> &mut Self {
+        self.elsewhere.push(kind.to_string());
         self
     }
 
@@ -168,6 +233,10 @@ impl Registry {
         let mut kinds: Vec<&str> = self.handlers.keys().map(String::as_str).collect();
         kinds.sort_unstable();
         kinds
+    }
+
+    pub fn elsewhere_kinds(&self) -> &[String] {
+        &self.elsewhere
     }
 }
 
@@ -234,9 +303,24 @@ impl Worker {
         &self.id
     }
 
+    /// Виды задач, которые этот воркер сейчас не берёт: их выполняет другой исполнитель или они на паузе.
+    fn skipped_kinds(&self) -> Vec<String> {
+        let mut kinds = self.registry.elsewhere_kinds().to_vec();
+        kinds.extend(self.ctx.cooldowns.active());
+        kinds
+    }
+
+    async fn claim(&self, lane: &str) -> Result<Claim, sqlx::Error> {
+        let opts = ClaimOptions {
+            kinds: Kinds::Except(self.skipped_kinds()),
+            lease: None,
+        };
+        jobs::claim_with(&self.ctx.db, lane, &self.id, opts).await
+    }
+
     /// Берёт одну задачу полосы и выполняет её до конца. Для тестов и ручного запуска.
     pub async fn run_once(&self, lane: &str) -> anyhow::Result<Option<(JobRow, Outcome)>> {
-        match jobs::claim(&self.ctx.db, lane, &self.id).await? {
+        match self.claim(lane).await? {
             Claim::Job(job) => {
                 let job = *job;
                 let outcome = self.execute(job.clone()).await;
@@ -269,14 +353,28 @@ impl Worker {
                     .lane_loop(lane.clone(), notify, stop_rx.clone()),
             );
         }
-        tracing::info!(id = %this.id, lanes = lanes.len(), kinds = ?this.registry.kinds(), "worker started");
+        tracing::info!(
+            id = %this.id,
+            lanes = lanes.len(),
+            kinds = ?this.registry.kinds(),
+            elsewhere = ?this.registry.elsewhere_kinds(),
+            "worker started"
+        );
         shutdown.await;
         tracing::info!("worker stopping");
         let _ = stop_tx.send(true);
         while tasks.join_next().await.is_some() {}
         match jobs::release(&this.ctx.db, &this.id).await {
-            Ok(0) => {}
-            Ok(n) => tracing::warn!(released = n, "unfinished jobs returned to the queue"),
+            Ok(released) if released.is_empty() => {}
+            Ok(released) => {
+                tracing::warn!(
+                    released = released.len(),
+                    "unfinished jobs returned to the queue"
+                );
+                if let Err(e) = acquire::after_reap(&this.ctx.db, &released).await {
+                    tracing::error!(error = %e, "could not requeue acquisitions");
+                }
+            }
             Err(e) => tracing::error!(error = %e, "could not release unfinished jobs"),
         }
         tracing::info!("worker stopped");
@@ -295,7 +393,7 @@ impl Worker {
                 break;
             }
             while running.try_join_next().is_some() {}
-            let wait = match jobs::claim(&self.ctx.db, &lane, &self.id).await {
+            let wait = match self.claim(&lane).await {
                 Ok(Claim::Job(job)) => {
                     let me = self.clone();
                     running.spawn(async move {
@@ -377,12 +475,16 @@ impl Worker {
         };
         let ms = started.elapsed().as_millis() as u64;
         let (closed, outcome) = match res {
-            Ok(Ok(result)) => {
+            Ok(Ok(Done::Result(result))) => {
                 tracing::info!(ms, "job done");
                 (
                     jobs::complete(db, job.id, &self.id, result).await,
                     Outcome::Done,
                 )
+            }
+            Ok(Ok(Done::Settled(outcome))) => {
+                tracing::info!(ms, ?outcome, "job settled by its handler");
+                return outcome;
             }
             Ok(Err(e)) => {
                 tracing::warn!(ms, retry = e.retry, error = %e.message, "job failed");
@@ -401,7 +503,15 @@ impl Worker {
             }
         };
         match closed {
-            Ok(Some(_)) => outcome,
+            Ok(Some(row)) => {
+                // Задача скачивания закрыта не своим обработчиком (паника): скачивание — вслед за ней
+                if row.kind == kind::ACQUIRE
+                    && let Err(e) = acquire::result::after_close(db, &row).await
+                {
+                    tracing::error!(error = %e, "could not update the acquisition");
+                }
+                outcome
+            }
             Ok(None) => Outcome::Lost,
             Err(e) => {
                 tracing::error!(error = %e, "could not record the job result");
@@ -419,8 +529,13 @@ impl Worker {
         loop {
             tokio::select! {
                 _ = reap.tick() => {
-                    if let Err(e) = jobs::reap(&self.ctx.db, self.settings.stale_after).await {
-                        tracing::warn!(error = %e, "reaper failed");
+                    match jobs::reap(&self.ctx.db, Some(self.settings.stale_after)).await {
+                        Ok(reaped) => {
+                            if let Err(e) = acquire::after_reap(&self.ctx.db, &reaped).await {
+                                tracing::warn!(error = %e, "could not requeue acquisitions");
+                            }
+                        }
+                        Err(e) => tracing::warn!(error = %e, "reaper failed"),
                     }
                 }
                 _ = schedule.tick() => {

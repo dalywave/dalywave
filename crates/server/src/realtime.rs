@@ -1,6 +1,7 @@
 //! События в реальном времени. API и воркер — разные процессы, поэтому событие уходит в Postgres
 //! `NOTIFY dalywave_events`, а API слушает канал и раздаёт его открытым WebSocket через broadcast.
 //! В транзакции NOTIFY доставляется при коммите: клиент не увидит событие раньше данных.
+//! Тот же слушатель следит за каналом очереди: загрузчик, ждущий задания, просыпается сразу.
 
 use std::{sync::Arc, time::Duration};
 
@@ -8,7 +9,7 @@ use dalywave_protocol::realtime::{Resync, ServerEvent};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgExecutor, PgPool, postgres::PgListener};
 use tokio::{
-    sync::{broadcast, watch},
+    sync::{Notify, broadcast, futures::OwnedNotified, watch},
     task::JoinHandle,
 };
 use uuid::Uuid;
@@ -66,6 +67,8 @@ pub struct Hub {
     stop: watch::Sender<bool>,
     /// Слушатель Postgres подписан на канал
     listening: watch::Sender<bool>,
+    /// В очереди появилась задача (или полоса освободилась)
+    jobs: Arc<Notify>,
 }
 
 impl Default for Hub {
@@ -77,6 +80,7 @@ impl Default for Hub {
             tx,
             stop,
             listening,
+            jobs: Arc::new(Notify::new()),
         }
     }
 }
@@ -106,6 +110,12 @@ impl Hub {
 
     pub fn is_listening(&self) -> bool {
         *self.listening.borrow()
+    }
+
+    /// Сигнал «в очереди что-то изменилось». Чтобы не пропустить сигнал между проверкой очереди
+    /// и ожиданием, `enable()` у полученного future зовут до проверки.
+    pub fn jobs_changed(&self) -> OwnedNotified {
+        Arc::clone(&self.jobs).notified_owned()
     }
 
     /// Ждёт, пока слушатель Postgres подпишется на канал (события раньше этого не доходят).
@@ -141,17 +151,21 @@ pub fn spawn_listener(db: PgPool, hub: Arc<Hub>) -> JoinHandle<()> {
                     _ = stopping.changed() => return,
                 };
                 match next {
+                    Ok(Some(n)) if n.channel() == crate::jobs::CHANNEL => hub.jobs.notify_waiters(),
                     Ok(Some(n)) => match serde_json::from_str::<Envelope>(n.payload()) {
                         Ok(envelope) => hub.send(envelope),
                         Err(e) => tracing::warn!(error = %e, "unreadable realtime event"),
                     },
                     // Связь потеряна и восстановлена: что пришло в промежутке — неизвестно
-                    Ok(None) => hub.send(Envelope {
-                        to: Audience::All,
-                        event: ServerEvent::Resync(Resync {
-                            reason: "reconnected".into(),
-                        }),
-                    }),
+                    Ok(None) => {
+                        hub.jobs.notify_waiters();
+                        hub.send(Envelope {
+                            to: Audience::All,
+                            event: ServerEvent::Resync(Resync {
+                                reason: "reconnected".into(),
+                            }),
+                        })
+                    }
                     Err(e) if is_closed(&e) => return,
                     Err(e) => {
                         tracing::warn!(error = %e, "realtime listener failed, reconnecting");
@@ -166,7 +180,7 @@ pub fn spawn_listener(db: PgPool, hub: Arc<Hub>) -> JoinHandle<()> {
 
 async fn connect(db: &PgPool) -> Result<PgListener, sqlx::Error> {
     let mut listener = PgListener::connect_with(db).await?;
-    listener.listen(CHANNEL).await?;
+    listener.listen_all([CHANNEL, crate::jobs::CHANNEL]).await?;
     Ok(listener)
 }
 

@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs SET lane = $2, priority = GREATEST(priority, $3), updated_at = now(),\n                run_after = CASE WHEN $2 = 'now' THEN LEAST(run_after, now()) ELSE run_after END\n         WHERE id = $1 AND status = 'queued'\n           AND (array_position($4::text[], lane) > array_position($4::text[], $2) OR (lane = $2 AND priority < $3))\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int2",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8ba42f69f529093c94159029d2112a38de991803bcdc6e1f7427abb5c955b301"
+}

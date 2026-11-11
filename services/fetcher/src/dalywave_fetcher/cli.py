@@ -37,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--max-attempts", type=int, default=3)
     p.add_argument("--prefer", nargs="*", default=[], metavar="VIDEO_ID")
     p.add_argument("--exclude", nargs="*", default=[], metavar="VIDEO_ID")
+    p.add_argument("--url", help="качать эту ссылку (SoundCloud, Bandcamp…) вместо найденного")
     p.add_argument("--keep-rejected", action="store_true", help="не удалять отклонённые файлы")
 
     p = sub.add_parser("bench", help="прогон эталонного набора")
@@ -102,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
             max_attempts=args.max_attempts,
             prefer_video_ids=args.prefer,
             exclude_video_ids=args.exclude,
+            direct_url=args.url,
             keep_rejected=args.keep_rejected,
         )
         _print(result.to_json())

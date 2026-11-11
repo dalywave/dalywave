@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE downloaders SET yt_dlp = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c4bbb03bfdbbb309e1201ed6e136d656b3b01ca8a08047420c0bb24c9d66e4c9"
+}

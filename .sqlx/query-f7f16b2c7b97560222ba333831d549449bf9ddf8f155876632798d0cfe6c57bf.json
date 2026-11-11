@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs SET heartbeat_at = now(), lease_expires_at = now() + make_interval(secs => $3::float8)\n           WHERE id = $1 AND status = 'running' AND locked_by = $2 AND lease_expires_at IS NOT NULL\n           RETURNING lease_expires_at AS \"until!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "until!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "lease_expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "f7f16b2c7b97560222ba333831d549449bf9ddf8f155876632798d0cfe6c57bf"
+}

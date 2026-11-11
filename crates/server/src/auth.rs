@@ -21,12 +21,13 @@ use crate::{
     users::parse_roles,
 };
 
-/// Права ролей. Роли совмещаются, права складываются.
+/// Права ролей. Роли совмещаются, права складываются. `downloader` роли не дают: он только у токена
+/// домашнего загрузчика ([`crate::downloaders`]).
 pub fn permissions(roles: &[Role]) -> Vec<Permission> {
     let mut out: Vec<Permission> = roles
         .iter()
         .flat_map(|role| match role {
-            Role::Admin => Permission::ALL,
+            Role::Admin => Permission::PEOPLE,
             Role::Listener => &[Permission::Play, Permission::Library],
         })
         .copied()
@@ -193,8 +194,9 @@ mod tests {
         );
         assert_eq!(
             permissions(&[Role::Listener, Role::Admin]),
-            Permission::ALL.to_vec()
+            Permission::PEOPLE.to_vec()
         );
+        assert!(!permissions(&[Role::Admin]).contains(&Permission::Downloader));
     }
 
     #[test]
