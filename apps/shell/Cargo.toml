@@ -1,0 +1,74 @@
+[package]
+name = "dalywave-shell"
+version = "0.1.0"
+description = "DalyWave — оболочка Tauri для macOS и Windows"
+authors = ["Zakhar Stupak"]
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+# Свой workspace: тяжёлые зависимости Tauri и WebView не попадают в сборку и тесты сервера,
+# а CI сервера на Linux не требует библиотек GTK/WebKit.
+[workspace]
+
+[lib]
+name = "dalywave_shell_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.5", features = ["tray-icon", "image-png"] }
+tauri-plugin-deep-link = "2.6.3"
+tauri-plugin-log = "2.10.2"
+tauri-plugin-opener = "2.7.3"
+tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }
+# TLS — системный (Security.framework, SChannel): доверие из ОС и никакой сборки C-криптографии
+tauri-plugin-updater = { version = "2.14.1", default-features = false, features = ["native-tls", "system-proxy", "zip"] }
+tauri-plugin-window-state = "2.5.0"
+
+base64 = "0.22"
+getrandom = "0.4"
+keyring = "4.2"
+log = "0.4"
+reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls", "http2", "system-proxy"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+souvlaki = "0.9.3"
+thiserror = "2"
+tokio = { version = "1.54", features = ["macros", "net", "io-util", "sync", "time"] }
+url = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSButton",
+    "NSControl",
+    "NSResponder",
+    "NSView",
+    "NSWindow",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSGeometry"] }
+
+[target.'cfg(windows)'.dependencies]
+window-vibrancy = "0.8.1"
+windows-sys = { version = "0.61", features = [
+    "Wdk_System_SystemServices",
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemInformation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = "symbols"
+panic = "abort"
+
+[profile.dev.package."*"]
+opt-level = 1

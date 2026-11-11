@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>DalyWave — стенд оболочки</title>
+<style>
+  :root { --titlebar-h: 0px; --controls-right: 0px; --controls-cy: 0px; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #08090c; color: #f3f5f9; font: 13px/1.45 -apple-system, system-ui, sans-serif; overflow: hidden; }
+  .app { display: grid; grid-template-columns: 256px 1fr; height: 100%; }
+  .sidebar { background: rgba(13, 15, 20, 0.92); border-right: 1px solid rgba(255,255,255,.06); position: relative; }
+  .chrome { height: var(--titlebar-h); position: relative; }
+  /* Линия центра «светофора» — для проверки выравнивания */
+  .guide { position: absolute; left: 0; right: 0; top: var(--controls-cy); height: 1px; background: rgba(255, 126, 179, .55); pointer-events: none; z-index: 5; }
+  .guide.v { left: var(--controls-right); top: 0; width: 1px; height: var(--titlebar-h); background: rgba(126, 200, 255, .55); }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 20px 18px; font-weight: 700; font-size: 17px; }
+  .brand svg { width: 26px; height: 26px; }
+  .nav a { display: block; margin: 2px 12px; padding: 10px 12px; border-radius: 10px; color: #f3f5f9; text-decoration: none; }
+  .nav a.on { background: rgba(255,255,255,.075); }
+  .main { position: relative; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { height: max(var(--titlebar-h), 48px); display: flex; align-items: center; gap: 8px; padding: 0 12px 0 20px; }
+  .search { flex: 0 1 380px; height: 36px; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); display: flex; align-items: center; padding: 0 12px; color: rgba(232,236,244,.56); }
+  .spacer { flex: 1; align-self: stretch; }
+  .caption { display: none; align-self: stretch; }
+  [data-controls="windows"] .caption { display: flex; }
+  .caption button { width: 46px; border: 0; background: transparent; color: #f3f5f9; font-size: 14px; }
+  .caption button:hover, .caption button[data-caption-hover] { background: rgba(255,255,255,.08); }
+  .caption button[data-caption-pressed] { background: rgba(255,255,255,.14); }
+  .caption button.x:hover { background: #c42b1c; }
+  .body { padding: 8px 20px 20px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; flex: 1; }
+  .card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; padding: 14px; min-width: 0; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: rgba(232,236,244,.56); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  .buttons button { background: rgba(255,255,255,.08); color: #f3f5f9; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  pre, #log { margin: 0; font: 11px/1.5 ui-monospace, Menlo, monospace; color: rgba(232,236,244,.75); white-space: pre-wrap; word-break: break-all; }
+  /* ?vibrancy — проверка системного размытия под боковой панелью (окно с transparent и windowEffects) */
+  .vibrancy, .vibrancy body { background: transparent; }
+  .vibrancy .sidebar { background: rgba(13, 15, 20, 0.7); }
+  .vibrancy .main { background: #08090c; }
+  #log { max-height: 340px; overflow: auto; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="chrome" data-tauri-drag-region="deep"></div>
+    <div class="brand"><svg viewBox="0 0 100 100"><path d="M16 31C18.83 37.33 27.33 67.33 33 69C38.67 70.67 44.33 41.00 50 41C55.67 41.00 61.33 70.67 67 69C72.67 67.33 81.17 37.33 84 31" fill="none" stroke="#fff" stroke-width="11.5" stroke-linecap="round" stroke-linejoin="round"/></svg>DalyWave</div>
+    <nav class="nav"><a class="on" href="#">Главная</a><a href="#">Поиск</a><a href="#">Медиатека</a></nav>
+  </aside>
+  <section class="main">
+    <header class="topbar" data-tauri-drag-region="deep">
+      <div class="search">Треки, артисты, альбомы</div>
+      <div class="spacer"></div>
+      <div class="caption">
+        <button id="btn-min-c" title="Свернуть">—</button>
+        <button id="btn-max" title="Развернуть">□</button>
+        <button id="btn-close-c" class="x" title="Закрыть">✕</button>
+      </div>
+    </header>
+    <div class="body">
+      <div class="card"><h3>Окно</h3><div class="buttons">
+        <button id="btn-platform">platformInfo</button><button id="btn-is-max">isMaximized</button>
+        <button id="btn-min">minimize</button><button id="btn-max-t">toggleMaximize</button>
+        <button id="btn-close">close (в трей)</button><button id="btn-theme-dark">theme dark</button><button id="btn-theme-light">theme light</button>
+        <button id="btn-locale-en">locale en</button><button id="btn-locale-ru">locale ru</button>
+      </div></div>
+      <div class="card"><h3>Вход и прочее</h3><div class="buttons">
+        <button id="btn-login">login</button><button id="btn-cancel">cancel</button><button id="btn-logout">logout</button>
+        <button id="btn-token">getToken</button><button id="btn-session">session</button><button id="btn-server">server</button>
+        <button id="btn-np-play">nowPlaying ▶</button><button id="btn-np-pause">nowPlaying ❚❚</button><button id="btn-np-clear">nowPlaying ×</button>
+        <button id="btn-external">openExternal</button><button id="btn-external-bad">openExternal file:</button><button id="btn-update">update check</button>
+        <button id="btn-audio-play">audio ▶ (WebView)</button><button id="btn-audio-pause">audio ❚❚</button>
+      </div></div>
+      <div class="card"><h3>__DALYWAVE_SHELL__</h3><pre id="info"></pre></div>
+      <div class="card"><h3>Журнал</h3><div id="log"></div></div>
+    </div>
+  </section>
+</div>
+<div class="guide"></div><div class="guide v"></div>
+<script type="module" src="/harness.js"></script>
+</body>
+</html>

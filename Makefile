@@ -25,6 +25,24 @@ worker: ## исполнитель очереди задач (скачивани�
 ui: ## интерфейс на :3400 (проксирует /api на :8400)
 	cd apps/ui && bun run dev
 
+# Подпись: Developer ID из связки ключей (иначе ad-hoc), ключ обновлений — вне репозитория,
+# пароль к нему — в связке ключей (apps/shell/README.md). CI=true: DMG без AppleScript к Finder.
+# Свои ключи сборки: make app TAURI_ARGS='--debug --bundles app'
+UPDATER_KEY ?= $(HOME)/.tauri/dalywave-updater.key
+app: ## приложение macOS: DalyWave.app и .dmg в apps/shell/target/release/bundle
+	@cd apps/shell && \
+	id="$${APPLE_SIGNING_IDENTITY:-$$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n1)}"; \
+	extra=(); \
+	if [ -f "$(UPDATER_KEY)" ]; then \
+	  export TAURI_SIGNING_PRIVATE_KEY="$(UPDATER_KEY)"; \
+	  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$$(security find-generic-password -s dalywave-updater-key -a "$$USER" -w)"; \
+	else \
+	  echo "Нет $(UPDATER_KEY) — сборка без файлов автообновления"; \
+	  extra=(--config '{"bundle":{"createUpdaterArtifacts":false}}'); \
+	fi; \
+	echo "Подпись: $${id:-ad-hoc}"; \
+	CI=true APPLE_SIGNING_IDENTITY="$${id:--}" cargo tauri build "$${extra[@]}" $(TAURI_ARGS)
+
 design: ## статика макетов на :4400
 	bun tools/serve.ts design 4400
 
@@ -53,4 +71,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker ui design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ui app design api-types sqlx-prepare test lint deploy fmt

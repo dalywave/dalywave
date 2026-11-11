@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DalyWave",
+  "mainBinaryName": "DalyWave",
+  "identifier": "rest.daly.wave",
+  "build": {
+    "devUrl": "http://localhost:3400",
+    "frontendDist": "../ui/.output/public",
+    "beforeBuildCommand": {
+      "script": "bun run build",
+      "cwd": "../ui"
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "DalyWave",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 600,
+        "center": true,
+        "visible": false,
+        "dragDropEnabled": false,
+        "backgroundColor": "#08090c"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'wasm-unsafe-eval'",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data:",
+        "img-src": "'self' asset: data: blob: https: http://localhost:* http://127.0.0.1:*",
+        "media-src": "'self' blob: data: https: http://localhost:* http://127.0.0.1:*",
+        "connect-src": "'self' ipc: http://ipc.localhost https: wss: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*",
+        "worker-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "frame-src": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "publisher": "Zakhar Stupak",
+    "copyright": "© 2026 Zakhar Stupak",
+    "category": "Music",
+    "shortDescription": "Личный музыкальный сервис",
+    "longDescription": "DalyWave — личный музыкальный сервис: своя медиатека, волна с настроениями и переходы как у диджея.",
+    "homepage": "https://wave.daly.rest",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["dalywave"]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc4NTVGNkQ2QUQwQ0U3ODcKUldTSDV3eXQxdlpWZUh1OGlQcHlhdkFraWMvb2Q3MHg2d2hJenQ0cnZ5c2M3QVFHT0tFOVdaSi8K",
+      "endpoints": [
+        "https://wave.daly.rest/api/updates/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
