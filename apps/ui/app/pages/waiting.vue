@@ -39,7 +39,7 @@ async function logout() {
         <span class="wait__avatar">{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</span>
         <span class="wait__whotext">
           <span class="wait__name">{{ auth.user?.name }}</span>
-          <span class="wait__email">{{ auth.user?.email ?? t('noEmail') }}</span>
+          <span v-if="auth.user?.email" class="wait__email">{{ auth.user.email }}</span>
         </span>
       </div>
       <div class="wait__actions">
@@ -71,19 +71,17 @@ async function logout() {
   "ru": {
     "title": "Ждём доступа",
     "heading": "{name}, вы почти внутри",
-    "text": "Вход через daly.rest прошёл. Осталось, чтобы администратор DalyWave выдал вам роль — тогда откроется музыка",
-    "noEmail": "почта не указана",
+    "text": "Осталось дождаться, пока администратор откроет вам доступ",
     "check": "Проверить ещё раз",
-    "still": "Доступа пока нет — администратор ещё не выдал роль",
+    "still": "Доступа пока нет",
     "logout": "Выйти"
   },
   "en": {
     "title": "Waiting for access",
     "heading": "{name}, you're almost in",
-    "text": "You signed in with daly.rest. Now a DalyWave admin needs to give you a role — then the music opens up",
-    "noEmail": "no email",
+    "text": "An admin just needs to give you access",
     "check": "Check again",
-    "still": "No access yet — the admin hasn't given you a role",
+    "still": "No access yet",
     "logout": "Sign out"
   }
 }

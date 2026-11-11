@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
 .fp { position: absolute; inset: 0; z-index: 25; overflow: hidden; background: #020509; container-type: inline-size; }
 .fp__wave { position: absolute; inset: 0; z-index: 0; }
 .fp__wave::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(70% 60% at 50% 40%, transparent 40%, rgba(2, 4, 8, 0.6) 100%); }
-.fp__collapse { position: absolute; left: 20px; top: 12px; z-index: 2; }
+.fp :deep(.fp__collapse) { position: absolute; left: 20px; top: 10px; z-index: 2; }
 .fp__context {
   position: absolute;
   top: 12px;
@@ -286,14 +286,14 @@ onBeforeUnmount(() => {
 .pp { position: fixed; inset: 0; z-index: 90; overflow: hidden; background: #020509; animation: sheet-in var(--dur-4) var(--ease-out); outline: none; }
 .pp__wave { position: absolute; top: 0; left: 0; right: 0; height: 62%; }
 .pp__wave::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, #020509 0%, rgba(2, 5, 9, 0) 34%), linear-gradient(180deg, rgba(2, 5, 9, 0.6) 0%, rgba(2, 5, 9, 0) 22%); }
-.pp__body { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; padding: var(--safe-top) 24px calc(var(--safe-bottom) + 8px); overflow-y: auto; }
+.pp__body { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; padding: calc(var(--safe-top) + 6px) 24px calc(var(--safe-bottom) + 12px); overflow-y: auto; }
 .pp__head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; height: 52px; margin: 0 -10px; flex: none; }
 .pp__ctx { min-width: 0; text-align: center; }
 .pp__kicker { font-size: 10.5px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .pp__ctx-title { font-size: 15px; font-weight: 650; }
-.pp__art { position: relative; width: min(100%, 44vh); margin: 18px auto 0; flex: none; }
+.pp__art { position: relative; width: min(100%, 44vh); margin: clamp(16px, 3.5vh, 40px) auto 0; flex: none; }
 .pp__art :deep(.art) { width: 100%; border-radius: 14px; box-shadow: var(--shadow-cover); }
-.pp__info { margin-top: 26px; flex: none; }
+.pp__info { margin-top: clamp(22px, 4.5vh, 48px); flex: none; }
 .pp__titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .pp__titlerow :deep(.badge) { margin-top: 6px; flex: none; }
 .pp__titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -301,7 +301,7 @@ onBeforeUnmount(() => {
 .pp__artist { font-size: 17px; color: var(--text-2); }
 .pp__reason { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: var(--fs-small); color: var(--accent); }
 .pp__scrub { margin-top: 20px; flex: none; }
-.pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; padding: 0 4px; flex: none; }
+.pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: clamp(16px, 3.5vh, 40px); padding: 0 4px; flex: none; }
 .pp__controls :deep(.ib__icon) { font-size: 28px; }
 .pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; flex: none; }
 .pp__secondary :deep(.mode-chip) { height: 32px; }

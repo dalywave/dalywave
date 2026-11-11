@@ -65,9 +65,7 @@ function play(shuffle = false) {
         </template>
         <template #meta>
           <span>{{ formatCount(tracks.length, 'track', lang) }}</span>
-          <span class="dot">·</span>
           <span>{{ formatLongDuration(duration, lang) }}</span>
-          <span v-if="more" class="dot">·</span>
           <span v-if="more">{{ tg('common.loading') }}</span>
         </template>
         <template #actions>
@@ -95,7 +93,6 @@ function play(shuffle = false) {
 <style scoped>
 .liked { display: flex; flex-direction: column; gap: 24px; }
 .liked__art { display: grid; place-items: center; aspect-ratio: 1; border-radius: var(--r-4); background: radial-gradient(110% 110% at 25% 15%, var(--m3), var(--m2) 45%, var(--m1)); box-shadow: var(--shadow-cover); color: #fff; font-size: 72px; }
-.dot { color: var(--text-4); }
 .liked__tools { display: flex; align-items: center; gap: 16px; }
 .liked__filter { width: min(360px, 100%); }
 .liked__count { font-size: var(--fs-small); color: var(--text-3); }

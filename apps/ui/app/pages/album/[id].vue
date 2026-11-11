@@ -75,9 +75,9 @@ async function copyLink() {
         </template>
         <template #meta>
           <span>{{ formatCount(data.tracks.length, 'track', lang) }}</span>
-          <span class="dot">·</span>
           <span>{{ formatLongDuration(data.totalDurationMs, lang) }}</span>
-          <span class="dot">·</span>
+        </template>
+        <template v-if="data.tracks.length" #status>
           <span class="ready" :class="{ 'is-full': data.readyTracks >= data.tracks.length }">
             <Icon :name="data.readyTracks >= data.tracks.length ? 'ph:check-circle-fill' : 'ph:cloud-arrow-down'" />
             {{ data.readyTracks >= data.tracks.length ? t('allReady') : t('ready', { n: data.readyTracks, total: data.tracks.length }) }}
@@ -112,7 +112,6 @@ async function copyLink() {
         <span v-if="releaseDate">{{ t('released', { date: releaseDate }) }}</span>
         <span v-if="data.label">℗ {{ data.label }}</span>
         <span v-if="data.genres.length">{{ data.genres.join(', ') }}</span>
-        <span v-if="data.upc">UPC {{ data.upc }}</span>
         <ShellDevMockNote :sections="['catalog']" what="альбом" />
       </footer>
     </template>
@@ -121,10 +120,10 @@ async function copyLink() {
 
 <style scoped>
 .album { display: flex; flex-direction: column; gap: 28px; }
-.dot { color: var(--text-4); }
-.ready { display: inline-flex; align-items: center; gap: 5px; }
-.ready :deep(svg) { color: var(--text-3); }
-.ready.is-full :deep(svg) { color: var(--success); }
+.ready { display: inline; }
+.ready :deep(.iconify) { margin-right: 5px; vertical-align: -2px; }
+.ready :deep(.iconify) { color: var(--text-3); }
+.ready.is-full :deep(.iconify) { color: var(--success); }
 .album__disc { display: flex; flex-direction: column; gap: 4px; }
 .album__disc-title { display: flex; align-items: center; gap: 8px; margin: 8px 10px 4px; font-size: var(--fs-small); font-weight: 650; color: var(--text-2); }
 .album__empty { color: var(--text-3); }
@@ -150,7 +149,7 @@ async function copyLink() {
     "linkFailed": "Не получилось скопировать ссылку",
     "radioSoon": "Волна по альбому появится вместе с рекомендациями",
     "allReady": "Весь на сервере",
-    "ready": "{n} из {total} на сервере — остальное скачается при запуске",
+    "ready": "{n} из {total} на сервере",
     "disc": "Диск {n}",
     "noTracks": "Треков пока нет: альбом анонсирован или сервер ещё не получил список",
     "released": "Вышел {date}"
@@ -167,7 +166,7 @@ async function copyLink() {
     "linkFailed": "Couldn't copy the link",
     "radioSoon": "Album radio arrives with recommendations",
     "allReady": "All on the server",
-    "ready": "{n} of {total} on the server — the rest downloads when played",
+    "ready": "{n} of {total} on the server",
     "disc": "Disc {n}",
     "noTracks": "No tracks yet: the album is announced or the server hasn't got the list",
     "released": "Released {date}"

@@ -47,7 +47,7 @@ const mood = computed({
 </script>
 
 <template>
-  <div v-if="variant === 'dock'" class="dock" role="group" :aria-label="t('wave.title')">
+  <div v-if="variant === 'dock'" v-edge-fade class="dock" role="group" :aria-label="t('wave.title')">
     <div class="dock__cell">
       <span class="dock__label">{{ t('wave.mood.label') }}</span>
       <MusicMoodOrbs v-model="mood" />
@@ -59,7 +59,7 @@ const mood = computed({
       </button>
     </UiMenu>
   </div>
-  <div v-else class="tokens no-scrollbar">
+  <div v-else v-edge-fade class="tokens no-scrollbar">
     <UiMenu v-for="g in GROUPS" :key="g.key" :items="items(g.key)" align="start" side="bottom">
       <button type="button" class="token" :aria-label="t(g.labelKey)">
         {{ valueLabel(g.key, true) }}<Icon name="ph:caret-down" class="token__caret" />

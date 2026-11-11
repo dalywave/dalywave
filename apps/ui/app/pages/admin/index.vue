@@ -103,6 +103,7 @@ const STATUS_COLOR: Record<AudioStatus, string> = {
   unavailable: 'rgba(232, 236, 244, 0.45)',
   failed: 'var(--danger)',
 }
+const storageTotal = computed(() => (overview.value ? overview.value.storage.audioBytes + overview.value.storage.imageBytes : 0))
 const recTotal = computed(() => overview.value?.recordingsByStatus.reduce((s, x) => s + x.count, 0) ?? 0)
 const recParts = computed(() => (overview.value?.recordingsByStatus ?? []).filter(x => x.count > 0))
 const uptime = computed(() => {
@@ -113,6 +114,21 @@ const uptime = computed(() => {
 })
 
 // ---------- Очереди ----------
+
+/** «3 файла», «223 картинки» */
+function countWord(n: number, ru: [string, string, string], en: [string, string]) {
+  return lang.value === 'en' ? `${formatNumber(n, 'en')}\u00a0${n === 1 ? en[0] : en[1]}` : `${formatNumber(n)}\u00a0${plural(n, ru)}`
+}
+
+/** «2 потока · пауза 2 с» — сколько задач полоса делает разом и сколько ждёт между ними */
+function laneMode(l: Lane) {
+  const workers = lang.value === 'en'
+    ? `${l.concurrency} ${l.concurrency === 1 ? 'worker' : 'workers'}`
+    : `${l.concurrency}\u00a0${plural(l.concurrency, ['поток', 'потока', 'потоков'])}`
+  if (!l.minIntervalMs) return workers
+  const sec = (l.minIntervalMs / 1000).toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: 1 })
+  return `${workers} · ${t('lanes.pause', { s: sec })}`
+}
 
 async function toggleLane(l: Lane, paused: boolean) {
   const was = l.paused
@@ -286,7 +302,7 @@ async function moreAudit() {
       <p class="ad__caption">{{ t('tiles.caption') }}</p>
 
       <div v-if="overview" class="ad__grid">
-        <div class="card">
+        <div class="card card--rec">
           <h3 class="card__title">{{ t('rec.title') }}</h3>
           <div class="rec__total tnum">{{ formatNumber(recTotal, lang) }} <span>{{ t('rec.records') }}</span></div>
           <div class="rec__bar" role="img" :aria-label="recParts.map(p => `${t(`rec.status.${p.status}`)}: ${p.count}`).join(', ')">
@@ -314,11 +330,25 @@ async function moreAudit() {
         </div>
         <div class="card">
           <h3 class="card__title">{{ t('storage.title') }}</h3>
-          <dl class="kv">
-            <dt>{{ t('storage.audio') }}</dt><dd class="tnum">{{ formatBytes(overview.storage.audioBytes, lang) }} · {{ formatNumber(overview.storage.audioFiles, lang) }} {{ t('storage.files') }}</dd>
-            <dt>{{ t('storage.images') }}</dt><dd class="tnum">{{ formatBytes(overview.storage.imageBytes, lang) }} · {{ formatNumber(overview.storage.images, lang) }} {{ t('storage.covers') }}</dd>
-          </dl>
-          <p class="card__note">{{ t('storage.note') }}</p>
+          <div class="rec__total tnum">{{ formatBytes(storageTotal, lang) }} <span>{{ t('storage.used') }}</span></div>
+          <div class="rec__bar" role="img" :aria-label="`${t('storage.audio')}: ${formatBytes(overview.storage.audioBytes, lang)}, ${t('storage.images')}: ${formatBytes(overview.storage.imageBytes, lang)}`">
+            <i v-if="overview.storage.audioBytes" :style="{ flexGrow: overview.storage.audioBytes, background: 'var(--accent)' }" />
+            <i v-if="overview.storage.imageBytes" :style="{ flexGrow: overview.storage.imageBytes, background: '#8ed8f5' }" />
+          </div>
+          <ul class="store">
+            <li>
+              <i style="background: var(--accent)" />
+              <span class="store__name">{{ t('storage.audio') }}</span>
+              <b class="tnum">{{ formatBytes(overview.storage.audioBytes, lang) }}</b>
+              <small class="tnum">{{ countWord(overview.storage.audioFiles, ['файл', 'файла', 'файлов'], ['file', 'files']) }}</small>
+            </li>
+            <li>
+              <i style="background: #8ed8f5" />
+              <span class="store__name">{{ t('storage.images') }}</span>
+              <b class="tnum">{{ formatBytes(overview.storage.imageBytes, lang) }}</b>
+              <small class="tnum">{{ countWord(overview.storage.images, ['картинка', 'картинки', 'картинок'], ['image', 'images']) }}</small>
+            </li>
+          </ul>
         </div>
       </div>
       <UiEmptyState v-else-if="failed.overview" icon="ph:cloud-warning" :title="t('failed')" tone="error" compact>
@@ -340,18 +370,26 @@ async function moreAudit() {
             <span role="columnheader" class="num">{{ t('lanes.running') }}</span>
             <span role="columnheader" class="num">{{ t('lanes.failed') }}</span>
             <span role="columnheader" class="num">{{ t('lanes.done') }}</span>
-            <span role="columnheader" class="num">{{ t('lanes.concurrency') }}</span>
-            <span role="columnheader">{{ t('lanes.state') }}</span>
+            <span role="columnheader" class="lanes__mode-h">{{ t('lanes.mode') }}</span>
+            <span role="columnheader" class="sr-only">{{ t('lanes.state') }}</span>
           </div>
           <div v-for="l in lanes" :key="l.lane" class="lanes__row" :class="{ 'is-paused': l.paused }" role="row">
-            <span role="cell" class="lanes__name"><b>{{ l.title }}</b><code>{{ l.lane }}</code></span>
+            <span role="cell" class="lanes__name">
+              <b>{{ l.title }}<UiBadge v-if="l.paused" variant="meta">{{ t('lanes.pausedLabel') }}</UiBadge></b>
+              <code>{{ l.lane }}</code>
+              <small class="lanes__mode-sm">{{ laneMode(l) }}</small>
+            </span>
             <span role="cell" class="num tnum">{{ l.queued || '—' }}</span>
             <span role="cell" class="num tnum" :class="{ 'is-on': l.running }">{{ l.running || '—' }}</span>
             <span role="cell" class="num tnum" :class="{ 'is-bad': l.failed }">{{ l.failed || '—' }}</span>
             <span role="cell" class="num tnum">{{ l.done24h || '—' }}</span>
-            <span role="cell" class="num tnum">{{ l.concurrency }}<small v-if="l.minIntervalMs"> · {{ (l.minIntervalMs / 1000).toLocaleString(lang) }} с</small></span>
+            <span role="cell" class="lanes__mode">{{ laneMode(l) }}</span>
             <span role="cell" class="lanes__state">
-              <UiSwitch :model-value="!l.paused" :label="l.paused ? t('lanes.pausedLabel') : t('lanes.runningLabel')" @update:model-value="v => toggleLane(l, !v)" />
+              <UiTooltip :text="l.paused ? t('lanes.resumeHint') : t('lanes.pauseHint')" side="left">
+                <span class="lanes__switch">
+                  <UiSwitch :model-value="!l.paused" :label="t(l.paused ? 'lanes.switchPaused' : 'lanes.switchRunning', { title: l.title })" hide-label @update:model-value="v => toggleLane(l, !v)" />
+                </span>
+              </UiTooltip>
             </span>
           </div>
         </div>
@@ -412,7 +450,7 @@ async function moreAudit() {
           <div class="user__main">
             <div class="user__name">{{ u.name }}<UiBadge v-if="u.id === auth.user?.id" variant="meta">{{ t('access.you') }}</UiBadge></div>
             <div class="user__meta">
-              <span>{{ u.email ?? t('access.noEmail') }}</span>
+              <span v-if="u.email">{{ u.email }}</span>
               <span>{{ u.issuer ? 'daly.rest' : t('access.local') }}</span>
               <span v-if="u.lastLoginAt">{{ t('access.lastLogin', { when: formatRelative(u.lastLoginAt, lang) }) }}</span>
             </div>
@@ -502,15 +540,21 @@ async function moreAudit() {
 .tile__extra { font-size: var(--fs-caption); color: var(--danger); }
 .tile--bad .tile__icon { color: var(--danger); }
 .ad__grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; }
+.store { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--fs-small); }
+.store li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; }
+.store i { width: 8px; height: 8px; border-radius: 2px; }
+.store__name { min-width: 0; color: var(--text-2); }
+.store b { font-weight: 600; text-align: right; }
+.store small { grid-column: 2 / -1; font-size: var(--fs-caption); color: var(--text-3); }
 .card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 18px 20px; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
 .card--flush { gap: 0; padding: 4px 0; }
 .card__title { margin: 0; font-size: var(--fs-caption); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
-.card__note { margin: auto 0 0; font-size: var(--fs-caption); color: var(--text-3); }
+.card__note { margin: 4px 0 0; font-size: var(--fs-caption); line-height: 1.45; color: var(--text-3); text-wrap: pretty; }
 .rec__total { font-size: var(--fs-h2); font-weight: 700; letter-spacing: var(--tr-title); }
 .rec__total span { font-size: var(--fs-small); font-weight: 500; color: var(--text-2); }
 .rec__bar { display: flex; gap: 2px; height: 10px; overflow: hidden; border-radius: 5px; background: var(--fill-2); }
 .rec__bar i { display: block; min-width: 4px; height: 100%; }
-.rec__legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--fs-small); }
+.rec__legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--fs-small); }
 .rec__legend li { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .rec__legend li.is-zero { color: var(--text-4); }
 .rec__legend i { width: 8px; height: 8px; flex: none; border-radius: 2px; }
@@ -518,17 +562,24 @@ async function moreAudit() {
 .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; margin: 0; font-size: var(--fs-small); }
 .kv dt { color: var(--text-2); }
 .kv dd { margin: 0; font-weight: 600; text-align: right; }
-.lanes__row { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(60px, 0.6fr)) minmax(150px, 1.2fr); align-items: center; gap: 12px; min-height: 52px; padding: 6px 20px; border-top: 1px solid var(--hair); font-size: var(--fs-small); }
+.lanes__row { display: grid; grid-template-columns: minmax(170px, 1.8fr) repeat(4, minmax(56px, 0.5fr)) minmax(150px, 1.3fr) 48px; align-items: center; gap: 16px; min-height: 56px; padding: 6px 20px; border-top: 1px solid var(--hair); font-size: var(--fs-small); }
 .lanes__row--head { min-height: 40px; border-top: 0; font-size: var(--fs-caption); font-weight: 600; color: var(--text-3); }
 .lanes__row.is-paused .lanes__name b { color: var(--text-2); }
 .lanes__name { display: flex; flex-direction: column; min-width: 0; }
-.lanes__name b { font-weight: 600; }
+.lanes__name b { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.lanes__mode { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
+.lanes__mode-h { padding-left: 20px; white-space: nowrap; }
+.lanes__mode { padding-left: 20px; }
+.lanes__mode-sm { display: none; font-size: var(--fs-caption); color: var(--text-3); }
+.lanes__row.is-paused .lanes__mode { color: var(--text-3); }
+.lanes__switch { display: inline-flex; }
 .lanes__name code, .job__meta code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-3); }
 .num { text-align: right; }
 .num small { color: var(--text-3); }
 .is-on { color: var(--accent); font-weight: 600; }
 .is-bad { color: var(--danger); font-weight: 600; }
 .lanes__state { display: flex; justify-content: flex-end; }
+.lanes__row--head > :last-child { justify-self: end; }
 .job, .user, .sess { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-top: 1px solid var(--hair); }
 .job:first-child, .user:first-child, .sess:first-child, .log:first-child { border-top: 0; }
 .job__status { flex: none; min-width: 92px; justify-content: center; }
@@ -554,10 +605,11 @@ async function moreAudit() {
 @media (max-width: 1199px) {
   .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ad__grid { grid-template-columns: 1fr 1fr; }
+  .card--rec { grid-column: 1 / -1; }
 }
 @media (max-width: 899px) {
-  .lanes__row { grid-template-columns: minmax(140px, 1.6fr) repeat(3, minmax(48px, 0.6fr)) minmax(120px, 1fr); }
-  .lanes__row > :nth-child(5), .lanes__row > :nth-child(6) { display: none; }
+  .lanes__row { grid-template-columns: minmax(140px, 1.5fr) repeat(2, minmax(48px, 0.5fr)) minmax(130px, 1.2fr) 48px; gap: 12px; }
+  .lanes__row > :nth-child(4), .lanes__row > :nth-child(5) { display: none; }
   .log { grid-template-columns: 110px minmax(0, 1fr); }
   .log__who, .log__details { grid-column: 2; }
 }
@@ -566,10 +618,15 @@ async function moreAudit() {
   .ad__title { font-size: 28px; }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ad__grid { grid-template-columns: minmax(0, 1fr); }
-  .lanes__row { grid-template-columns: minmax(0, 1fr) 56px auto; padding: 6px 14px; }
-  .lanes__row > :nth-child(3), .lanes__row > :nth-child(4) { display: none; }
+  .lanes__row { grid-template-columns: minmax(0, 1fr) 48px 48px; padding: 8px 14px; }
+  .lanes__row > :nth-child(3), .lanes__row > :nth-child(6) { display: none; }
+  .lanes__mode-sm { display: block; }
   .job, .user, .sess { flex-wrap: wrap; padding: 12px 14px; }
-  .job__status { min-width: 0; }
+  .job { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 6px; }
+  .job__status { grid-row: 1; grid-column: 1; justify-self: start; min-width: 0; }
+  .job__actions { grid-row: 1; grid-column: 2; }
+  .job__main { grid-column: 1 / -1; }
+  .job__title { display: block; }
   .user__roles { width: 100%; justify-content: flex-start; padding-left: 54px; }
 }
 </style>
@@ -599,7 +656,7 @@ async function moreAudit() {
       "status": { "ready": "На сервере", "queued": "В очереди", "acquiring": "Скачиваются", "none": "Не скачаны", "disputed": "Спорные", "unavailable": "Нет в источниках", "failed": "Ошибка" }
     },
     "lib": { "title": "Каталог и медиатека", "tracks": "Треков", "recordings": "Записей", "albums": "Альбомов", "artists": "Артистов", "liked": "Лайков", "followed": "Подписок", "playlists": "Плейлистов" },
-    "storage": { "title": "Хранилище", "audio": "Звук", "images": "Обложки и фото", "files": "файлов", "covers": "картинок", "note": "Обложки копируются в своё хранилище — без них интерфейс не зависит от Deezer" },
+    "storage": { "title": "Хранилище", "audio": "Звук", "images": "Обложки и фото", "used": "занято" },
     "lanes": {
       "title": "Очереди задач",
       "hint": "Полосы работают независимо: пауза одной не задерживает остальные",
@@ -608,10 +665,14 @@ async function moreAudit() {
       "running": "Идут",
       "failed": "Ошибки",
       "done": "За сутки",
-      "concurrency": "Потоков",
-      "state": "Работает",
+      "mode": "Как работает",
+      "state": "Включена",
+      "pause": "пауза {s} с",
+      "pauseHint": "Работает — выключите, чтобы поставить на паузу",
+      "resumeHint": "На паузе — включите, чтобы продолжить",
+      "switchRunning": "«{title}» работает",
+      "switchPaused": "«{title}» на паузе",
       "pausedLabel": "На паузе",
-      "runningLabel": "Работает",
       "paused": "«{title}» на паузе",
       "resumed": "«{title}» снова работает",
       "changeFailed": "Не получилось изменить очередь"
@@ -638,7 +699,6 @@ async function moreAudit() {
       "hint": "Новые люди входят через daly.rest и ждут, пока им выдадут роль. Администраторы daly.rest — администраторы и здесь",
       "waiting": "ждут: {n}",
       "you": "это вы",
-      "noEmail": "почта не указана",
       "local": "локальный вход",
       "lastLogin": "входил {when}",
       "disabled": "Отключён",
@@ -723,7 +783,7 @@ async function moreAudit() {
       "status": { "ready": "On the server", "queued": "Queued", "acquiring": "Downloading", "none": "Not downloaded", "disputed": "Disputed", "unavailable": "Not in sources", "failed": "Failed" }
     },
     "lib": { "title": "Catalog and library", "tracks": "Tracks", "recordings": "Recordings", "albums": "Albums", "artists": "Artists", "liked": "Likes", "followed": "Follows", "playlists": "Playlists" },
-    "storage": { "title": "Storage", "audio": "Audio", "images": "Covers and photos", "files": "files", "covers": "images", "note": "Covers are copied to our own storage — the UI doesn't depend on Deezer" },
+    "storage": { "title": "Storage", "audio": "Audio", "images": "Covers and photos", "used": "used" },
     "lanes": {
       "title": "Job lanes",
       "hint": "Lanes run independently: pausing one doesn't hold up the others",
@@ -732,10 +792,14 @@ async function moreAudit() {
       "running": "Running",
       "failed": "Failed",
       "done": "24 h",
-      "concurrency": "Workers",
-      "state": "Running",
+      "mode": "How it runs",
+      "state": "Enabled",
+      "pause": "{s} s pause",
+      "pauseHint": "Running — switch off to pause",
+      "resumeHint": "Paused — switch on to resume",
+      "switchRunning": "“{title}” is running",
+      "switchPaused": "“{title}” is paused",
       "pausedLabel": "Paused",
-      "runningLabel": "Running",
       "paused": "“{title}” paused",
       "resumed": "“{title}” running again",
       "changeFailed": "Couldn't change the lane"
@@ -762,7 +826,6 @@ async function moreAudit() {
       "hint": "New people sign in with daly.rest and wait for a role. daly.rest admins are admins here too",
       "waiting": "waiting: {n}",
       "you": "you",
-      "noEmail": "no email",
       "local": "local sign-in",
       "lastLogin": "signed in {when}",
       "disabled": "Disabled",

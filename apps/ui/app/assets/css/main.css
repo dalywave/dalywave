@@ -118,6 +118,18 @@
     var(--ink-1);
 }
 
+/* Горизонтальные ленты (v-edge-fade): край, за которым есть ещё, тихо гаснет.
+   --fade-w — ширина затухания; у лент, вылезающих за поля экрана, её хватает на поле и полкарточки */
+.edge-fade {
+  --fade-w: 44px;
+  --fl: 0px;
+  --fr: 0px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%);
+}
+.edge-fade.can-left { --fl: var(--fade-w); }
+.edge-fade.can-right { --fr: var(--fade-w); }
+
 /* Windows 11 с Mica: под прозрачными местами — системный фон окна */
 html[data-backdrop='mica'], html[data-backdrop='mica'] body { background: transparent; }
 html[data-backdrop='mica'] .ambient { background-color: transparent; }

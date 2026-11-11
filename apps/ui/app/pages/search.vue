@@ -117,6 +117,7 @@ const topPlaying = computed(() => {
         :options="[{ value: 'catalog', label: t('catalog'), icon: 'ph:globe-hemisphere-east' }, { value: 'library', label: t('mine'), icon: 'ph:books' }]"
         :label="t('scope')"
         size="sm"
+        :block="ui.isPhone"
         class="search__scope"
         @update:model-value="setScope"
       />
@@ -233,6 +234,9 @@ const topPlaying = computed(() => {
   .search__title { width: 100%; font-size: 28px; }
   .search__field { width: 100%; }
   .search__scope { width: 100%; }
+  .search__scope :deep(.seg__item) { height: 32px; }
+  .search__artists { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .search__artist { padding: 6px 12px 6px 6px; }
   .search__idle, .search__lead, .search__skel { padding: 0 16px; }
   .search__more { padding: 0 8px; }
   .search__more .search__h2 { padding: 0 8px; }

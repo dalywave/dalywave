@@ -33,7 +33,7 @@ function update(v: unknown) {
 <style scoped>
 .ssp {
   display: inline-grid;
-  grid-template-columns: repeat(2, 136px);
+  grid-template-columns: repeat(2, 120px);
   gap: 4px;
   max-width: 100%;
   padding: 4px;
@@ -45,9 +45,9 @@ function update(v: unknown) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding: 16px 16px 10px;
+  padding: 10px 14px 8px;
   border: 0;
   border-radius: var(--r-3);
   background: transparent;

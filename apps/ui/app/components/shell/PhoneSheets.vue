@@ -23,7 +23,6 @@ watch(() => ui.sheetTab, (tab) => {
       <UiEmptyState v-else-if="ui.sheetTab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
       <div v-else-if="ui.sheetTab === 'devices'">
         <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
-        <p class="note">{{ t('devices.note') }}</p>
       </div>
       <MusicAboutTrack v-else-if="ui.sheetTab === 'about'" :track="player.current?.track ?? null" />
     </div>
@@ -32,5 +31,4 @@ watch(() => ui.sheetTab, (tab) => {
 
 <style scoped>
 .pad { padding: 0 8px 16px; }
-.note { margin: 12px 10px 0; font-size: var(--fs-caption); color: var(--text-3); }
 </style>

@@ -5,6 +5,8 @@ defineProps<{
   label: string
   hint?: string
   disabled?: boolean
+  /** Подпись только для экранного диктора: в строке настроек её роль играет название строки */
+  hideLabel?: boolean
 }>()
 
 const model = defineModel<boolean>({ default: false })
@@ -16,7 +18,7 @@ const id = useId()
     <SwitchRoot :id="id" v-model="model" :disabled="disabled" class="sw__track">
       <SwitchThumb class="sw__thumb" />
     </SwitchRoot>
-    <label :for="id" class="sw__text">
+    <label :for="id" class="sw__text" :class="{ 'sr-only': hideLabel }">
       <span>{{ label }}</span>
       <span v-if="hint" class="sw__hint">{{ hint }}</span>
     </label>

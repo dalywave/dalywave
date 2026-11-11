@@ -46,7 +46,7 @@
     "scrollLeft": "Back",
     "scrollRight": "Forward",
     "loadFailed": "Couldn't load",
-    "loadFailedText": "The server didn't respond. Check your connection — data will come in once it's back.",
+    "loadFailedText": "The server didn't respond. Try again in a moment.",
     "devMock": "Design fixtures: this section isn't on the server yet",
     "offline": "Offline — playing what's already downloaded",
     "notFound": "This page doesn't exist",
@@ -149,15 +149,15 @@
     "playingFrom": "Playing from",
     "waveContext": "My Wave · {mood}",
     "nothing": "Nothing playing",
-    "nothingHint": "Start the wave — it picks music for you",
+    "nothingHint": "Nothing playing",
     "panel": "Player panel",
     "playingWave": "Playing the wave",
     "region": "Player",
     "acquiring": "Downloading to the server…",
     "acquiringQueue": "Downloading to the server · #{n} in queue",
-    "acquiringLong": "The file isn't on the server yet — it's downloading and will start by itself",
+    "acquiringLong": "Downloading — will start by itself",
     "waitingDownloader": "Waiting for the Mac downloader",
-    "waitingDownloaderLong": "The Mac downloader is offline — the track will download and start once it connects",
+    "waitingDownloaderLong": "Waiting for the Mac downloader — the track will start by itself",
     "skip": "Play next",
     "unavailable": "“{title}” isn't in any source — playing the next one",
     "waveEmpty": "Nothing to build the wave from yet — like a few tracks first"
@@ -215,7 +215,7 @@
     "block": "Don't recommend",
     "report": "Wrong match — fix",
     "status": {
-      "none": "Not on the server — downloads when played",
+      "none": "Downloads when played",
       "noneShort": "downloads when played",
       "queued": "Queued for download",
       "acquiring": "Downloading to the server",
@@ -259,8 +259,8 @@
     }
   },
   "lyrics": {
-    "title": "No lyrics yet",
-    "text": "Lyrics will appear once the server learns to fetch them with tracks"
+    "title": "No lyrics",
+    "text": ""
   },
   "search": {
     "placeholder": "Tracks, artists, albums"

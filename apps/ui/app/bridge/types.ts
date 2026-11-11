@@ -8,6 +8,9 @@ import type {
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch,
 } from '~/api/types'
+import type { DownloaderSnapshot } from './tauri/shell'
+
+export type { DownloaderPhase, DownloaderSnapshot, DownloaderStage, DownloaderStatus } from './tauri/shell'
 
 export type Platform = 'web' | 'macos' | 'windows' | 'linux' | 'ios' | 'ipados' | 'android'
 
@@ -202,6 +205,22 @@ export interface AppUpdate {
   notes: string | null
 }
 
+/** Загрузчик музыки в приложении для компьютера (macOS, Windows): пока приложение открыто,
+ *  компьютер качает музыку для сервера со своего адреса. Ведёт оболочка — apps/shell/BRIDGE.md */
+export interface Downloader {
+  state(): Promise<DownloaderSnapshot>
+  /** Каждая перемена; ход задания — до 4 раз в секунду */
+  onState(cb: (state: DownloaderSnapshot) => void): () => void
+  /** «Скачивать на этом Mac»; первое включение заводит токен загрузчика (только администратору) */
+  setEnabled(enabled: boolean): Promise<DownloaderSnapshot>
+  /** Пауза: текущий трек доделывает, новых заданий не берёт */
+  setPaused(paused: boolean): Promise<DownloaderSnapshot>
+  /** Сервер не принял токен (отозван в админке) — завести новый */
+  recreateToken(): Promise<DownloaderSnapshot>
+  /** Журнал загрузчика в системном просмотрщике */
+  openLog(): Promise<void>
+}
+
 export interface Bridge {
   readonly kind: 'web' | 'tauri'
   readonly platform: Platform
@@ -235,6 +254,9 @@ export interface Bridge {
 
   /** Язык меню в трее и строке меню приложения */
   setLocale(locale: 'ru' | 'en'): void
+
+  /** Загрузчик на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
+  readonly downloader: Downloader | null
 
   auth: {
     providers(): Promise<AuthProviders>

@@ -35,12 +35,10 @@ function saveQueue() {
         <UiEmptyState v-else-if="ui.panelTab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
         <div v-else-if="ui.panelTab === 'devices'" class="panel__devices">
           <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
-          <p class="panel__note">{{ t('devices.note') }}</p>
         </div>
         <MusicAboutTrack v-else :track="player.current?.track ?? null" />
       </div>
       <footer v-if="ui.panelTab === 'queue' && player.waveActive" class="panel__foot">
-        <span class="panel__foot-text">{{ t('queue.footer') }}</span>
         <UiButton size="sm" icon="ph:plus" @click="saveQueue">{{ t('queue.saveAsPlaylist') }}</UiButton>
       </footer>
     </div>
@@ -67,9 +65,7 @@ function saveQueue() {
 .panel__tabs :deep(.tabs__item) { height: 50px; }
 .panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 24px; border-top: 1px solid var(--hair); }
 .panel__devices { padding: 12px 0; }
-.panel__note { margin: 12px 10px 0; font-size: var(--fs-caption); color: var(--text-3); }
-.panel__foot { display: flex; align-items: center; gap: 12px; flex: none; padding: 16px 20px; border-top: 1px solid var(--hair); }
-.panel__foot-text { flex: 1; min-width: 0; font-size: var(--fs-caption); color: var(--text-3); }
+.panel__foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex: none; padding: 16px 20px; border-top: 1px solid var(--hair); }
 
 /* Планшет: панель ложится поверх содержимого; рядом со сценой плеера — встаёт в ряд */
 @media (max-width: 1099px) {

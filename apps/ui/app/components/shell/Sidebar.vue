@@ -100,8 +100,10 @@ function newPlaylist() {
       </section>
     </div>
 
-    <footer v-if="followed.length" class="side__foot">
-      <UiTooltip :text="rail ? (sync.complete ? t('nav.syncDone') : t('nav.syncTitle')) : undefined" side="right">
+    <!-- Подвал: строки состояния друг под другом. Сюда одной строкой встаёт <DownloaderIndicator />;
+         пустой подвал прячется сам (:empty) -->
+    <footer class="side__foot">
+      <UiTooltip v-if="followed.length" :text="rail ? (sync.complete ? t('nav.syncDone') : t('nav.syncTitle')) : undefined" side="right">
         <NuxtLink to="/library?tab=artists" class="sync">
           <UiProgressRing :state="sync.complete ? 'done' : sync.done === 0 ? 'queued' : 'progress'" :value="sync.total ? sync.done / sync.total : 1" :size="28" />
           <span class="sync__text">
@@ -110,6 +112,7 @@ function newPlaylist() {
           </span>
         </NuxtLink>
       </UiTooltip>
+      <ShellDownloaderIndicator :rail="rail" />
     </footer>
   </aside>
 </template>
@@ -151,8 +154,9 @@ function newPlaylist() {
 .item--artist { min-height: 40px; padding-top: 4px; padding-bottom: 4px; }
 .item--artist .item__art { width: 28px; height: 28px; margin: 0 4px; border-radius: 50%; }
 .item--skel { pointer-events: none; }
-.item__dl { width: 6px; height: 6px; flex: none; margin-right: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-.side__foot { padding: 12px; border-top: 1px solid var(--hair); }
+.item__dl { width: 5px; height: 5px; flex: none; margin-right: 8px; border-radius: 50%; background: var(--accent); opacity: 0.8; }
+.side__foot { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-top: 1px solid var(--hair); }
+.side__foot:empty { display: none; }
 .sync { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: var(--r-3); text-align: left; transition: background-color var(--dur-1); }
 .sync:hover { background: var(--fill-1); }
 .sync__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }

@@ -53,11 +53,6 @@ function savePreset() {
               <span v-if="now.reason" class="hero__reason"><Icon name="ph:sparkle-fill" />{{ typographRu(now.reason) }}</span>
             </span>
           </template>
-          <template v-else>
-            <span class="hero__now-label">{{ t('wave.readyLabel') }}</span>
-            <span class="hero__now-title">{{ t('wave.idle') }}</span>
-            <span class="hero__now-sub">{{ t('wave.learns') }}</span>
-          </template>
         </div>
       </div>
       <div class="hero__dock"><MusicWaveSettingsBar v-model="settings" variant="dock" /></div>
@@ -104,7 +99,7 @@ function savePreset() {
 .hero__now-title { overflow: hidden; font-size: var(--fs-h4); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .hero__now-sub { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; }
 .hero__reason { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
-.hero__reason :deep(svg) { font-size: 12px; }
+.hero__reason :deep(.iconify) { font-size: 12px; }
 .hero__dock { grid-area: dock; display: flex; min-width: 0; }
 .hero__below { margin-top: 12px; }
 

@@ -37,8 +37,8 @@ function openPlayer() {
         <div v-else-if="entry?.reason" class="bar__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
       </div>
       <div v-else class="bar__meta">
-        <span class="bar__title">{{ t('wave.title') }}</span>
-        <span class="bar__artist">{{ t('player.nothingHint') }}</span>
+        <span class="bar__title ellipsis">{{ t('wave.title') }}</span>
+        <span class="bar__artist ellipsis">{{ t('player.nothingHint') }}</span>
       </div>
     </div>
 
@@ -109,7 +109,7 @@ function openPlayer() {
 a.bar__title:hover, .bar__artist a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
 .bar__artist { font-size: var(--fs-small); color: var(--text-2); }
 .bar__reason { display: flex; align-items: center; gap: 4px; font-size: var(--fs-caption); color: var(--text-3); }
-.bar__reason :deep(svg) { flex: none; font-size: 12px; color: var(--accent); }
+.bar__reason :deep(.iconify) { flex: none; font-size: 12px; color: var(--accent); }
 .bar__center { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .bar__transport { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; }
 .bar__transport :deep(.pb) { margin: 0 6px; }

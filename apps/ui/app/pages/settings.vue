@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import type { Health } from '~/api/types'
-import type { Section } from '~/bridge/types'
-import { waveSummary } from '~/utils/wave-options'
+import type { TransitionMode } from '~/stores/player'
 
-// Настройки: аккаунт, воспроизведение, внешний вид и язык, о приложении
+// Настройки: аккаунт, воспроизведение, волна, внешний вид, о приложении.
+// Колонка по центру; каждая группа — <SettingsGroup> из строк <SettingsRow> (см. components/settings).
+// Разделы других модулей встают между группами одной строкой — тем же набором кирпичей
 const auth = useAuthStore()
 const player = usePlayerStore()
 const prefs = usePrefsStore()
+const ui = useUiStore()
 const bridge = useBridge()
 const toast = useToast()
-const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
+const { tg } = useGlobalT()
 const i18n = useNuxtApp().$i18n
 useHead({ title: () => t('title') })
 
 const health = ref<Health | null>(null)
 const healthFailed = ref(false)
-const mockedSections = ref<Section[]>([])
 onMounted(async () => {
   try {
     health.value = await bridge.admin.health()
@@ -24,18 +25,33 @@ onMounted(async () => {
   catch {
     healthFailed.value = true
   }
-  await bridge.ready()
-  mockedSections.value = (['catalog', 'home', 'library', 'events', 'stream', 'wave', 'devices'] as Section[]).filter(s => bridge.mocked(s))
 })
 
-const via = computed(() => (auth.me?.via === 'password' ? t('viaPassword') : auth.me?.via === 'device' ? t('viaDevice') : t('viaOidc')))
-const initial = computed(() => (auth.user?.name ?? '?').charAt(0).toUpperCase())
-const uptime = computed(() => {
-  const s = health.value?.uptimeS ?? 0
-  if (s < 3600) return t('minutes', { n: Math.max(1, Math.round(s / 60)) })
-  if (s < 86400) return t('hours', { n: Math.round(s / 3600) })
-  return t('days', { n: Math.round(s / 86400) })
-})
+// ---------- Аккаунт ----------
+
+const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpperCase())
+const accountMeta = computed(() => [auth.user?.email, auth.isAdmin ? t('roleAdmin') : null].filter(Boolean).join(' · '))
+
+async function logout() {
+  await auth.logout().catch(() => toast.error(t('logoutFailed')))
+  await navigateTo('/login')
+}
+
+// ---------- Воспроизведение ----------
+
+const MODES: TransitionMode[] = ['gapless', 'smooth', 'smart', 'dj']
+const hasExpressiveness = (m: TransitionMode) => m === 'smart' || m === 'dj'
+const exprLabel = computed(() => (player.expressiveness < 0.34 ? tg('transition.subtle') : player.expressiveness < 0.67 ? tg('transition.set') : tg('transition.bold')))
+
+// ---------- Волна ----------
+
+const waveIsDefault = computed(() => player.wave.mood === 'any' && player.wave.activity === 'any' && player.wave.character === 'mix' && player.wave.language === 'any')
+function resetWave() {
+  player.setWave({ mood: 'any', activity: 'any', character: 'mix', language: 'any' })
+  toast.show({ text: t('waveReset'), icon: 'ph:arrow-counter-clockwise' })
+}
+
+// ---------- Внешний вид ----------
 
 const language = computed({
   get: () => (i18n.locale.value === 'en' ? 'en' : 'ru') as 'ru' | 'en',
@@ -51,150 +67,122 @@ const language = computed({
     }
   },
 })
-
-function resetWave() {
-  player.setWave({ mood: 'any', activity: 'any', character: 'mix', language: 'any' })
-  toast.show({ text: t('waveReset'), icon: 'ph:arrow-counter-clockwise' })
-}
-
-async function logout() {
-  await auth.logout().catch(() => toast.error(t('logoutFailed')))
-  await navigateTo('/login')
-}
 </script>
 
 <template>
   <div class="set">
     <h1 class="set__title">{{ t('title') }}</h1>
 
-    <section class="card" :aria-label="t('account')">
-      <h2 class="card__title">{{ t('account') }}</h2>
-      <div class="acct">
-        <span class="acct__avatar">
-          <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="">
-          <span v-else>{{ initial }}</span>
-        </span>
-        <div class="acct__text">
-          <div class="acct__name">{{ auth.user?.name }}</div>
-          <div class="acct__meta">{{ auth.user?.email ?? t('noEmail') }} · {{ via }}</div>
-          <div class="acct__roles">
-            <UiBadge v-for="r in auth.roles" :key="r" :variant="r === 'admin' ? 'new' : 'meta'">{{ r === 'admin' ? t('roleAdmin') : t('roleListener') }}</UiBadge>
-          </div>
-        </div>
-        <UiButton variant="ghost" icon="ph:sign-out" @click="logout">{{ t('logout') }}</UiButton>
-      </div>
-      <p class="card__note">{{ t('accountNote') }}</p>
-    </section>
+    <SettingsGroup :title="t('account')">
+      <SettingsRow class="acct" :title="auth.user?.name" :description="accountMeta || undefined">
+        <template #lead>
+          <span class="acct__avatar">
+            <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="">
+            <span v-else>{{ initial }}</span>
+          </span>
+        </template>
+        <UiButton v-if="!ui.isPhone" variant="ghost" size="sm" @click="logout">{{ t('logout') }}</UiButton>
+      </SettingsRow>
+      <SettingsRow v-if="ui.isPhone" as="button" :title="t('logout')" danger @click="logout" />
+    </SettingsGroup>
 
-    <section class="card" :aria-label="t('playback')">
-      <h2 class="card__title">{{ t('playback') }}</h2>
-      <div class="row row--block">
-        <div class="row__text">
-          <div class="row__label">{{ t('transitions') }}</div>
-          <div class="row__hint">{{ t('transitionsHint') }}</div>
-        </div>
-        <div class="pop pop--static set__modes">
-          <MusicTransitionModeOptions v-model:mode="player.transition" v-model:expressiveness="player.expressiveness" :web="bridge.kind === 'web'" />
-        </div>
-      </div>
-      <div class="row">
-        <UiSwitch v-model="player.normalize" :label="t('normalize')" :hint="t('normalizeHint')" />
-      </div>
-      <div class="row">
-        <div class="row__text">
-          <div class="row__label">{{ t('scrubber') }}</div>
-          <div class="row__hint">{{ t('scrubberHint') }}</div>
-        </div>
+    <SettingsGroup :title="t('playback')">
+      <SettingsRow :title="t('normalize')">
+        <UiSwitch v-model="player.normalize" :label="t('normalize')" hide-label />
+      </SettingsRow>
+      <SettingsRow :title="t('scrubber')" stack>
         <MusicScrubberStylePicker v-model="prefs.scrubber" :label="t('scrubber')" />
-      </div>
-    </section>
+      </SettingsRow>
+    </SettingsGroup>
 
-    <section class="card" :aria-label="t('wave')">
-      <h2 class="card__title">{{ t('wave') }}</h2>
-      <div class="row">
-        <div class="row__text">
-          <div class="row__label">{{ t('waveNow') }}</div>
-          <div class="row__hint">{{ waveSummary(player.wave, lang) }}</div>
-        </div>
-        <UiButton icon="ph:arrow-counter-clockwise" @click="resetWave">{{ t('waveResetBtn') }}</UiButton>
+    <SettingsGroup :title="t('transitions')">
+      <div role="radiogroup" :aria-label="t('transitions')" class="set__radios">
+        <template v-for="m in MODES" :key="m">
+          <SettingsRow
+            as="button"
+            radio
+            :checked="player.transition === m"
+            :description="tg(`transition.${m}Desc`)"
+            @click="player.transition = m"
+          >
+            <template #title>
+              {{ tg(`transition.${m}`) }}<span v-if="m === 'dj' && bridge.kind === 'web'" class="set__quiet">{{ tg('transition.inApp') }}</span>
+            </template>
+          </SettingsRow>
+          <SettingsRow v-if="player.transition === m && hasExpressiveness(m)" indent>
+            <div class="expr">
+              <div class="expr__head"><span>{{ tg('transition.expressiveness') }}</span><span>{{ exprLabel }}</span></div>
+              <UiSlider v-model="player.expressiveness" :label="tg('transition.expressiveness')" :value-text="exprLabel" />
+            </div>
+          </SettingsRow>
+        </template>
       </div>
-    </section>
+    </SettingsGroup>
 
-    <section class="card" :aria-label="t('appearance')">
-      <h2 class="card__title">{{ t('appearance') }}</h2>
-      <div class="row">
-        <div class="row__text">
-          <div class="row__label">{{ t('theme') }}</div>
-          <div class="row__hint">{{ t('themeHint') }}</div>
-        </div>
+    <SettingsGroup :title="t('wave')">
+      <SettingsRow :title="t('waveRow')">
+        <UiButton size="sm" :disabled="waveIsDefault" @click="resetWave">{{ t('waveResetBtn') }}</UiButton>
+      </SettingsRow>
+    </SettingsGroup>
+
+    <SettingsGroup :title="t('appearance')">
+      <SettingsRow :title="t('theme')">
         <UiSegmentedControl
           model-value="dark"
-          :options="[{ value: 'dark', label: t('dark'), icon: 'ph:moon' }, { value: 'light', label: t('light'), icon: 'ph:sun', disabled: true, hint: t('soon') }]"
+          :options="[{ value: 'dark', label: t('dark') }, { value: 'light', label: t('light'), disabled: true, hint: t('soon') }]"
           :label="t('theme')"
+          :size="ui.isPhone ? 'sm' : 'md'"
         />
-      </div>
-      <div class="row">
-        <div class="row__text">
-          <div class="row__label">{{ t('language') }}</div>
-          <div class="row__hint">{{ t('languageHint') }}</div>
-        </div>
-        <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" />
-      </div>
-    </section>
+      </SettingsRow>
+      <SettingsRow :title="t('language')">
+        <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
+      </SettingsRow>
+    </SettingsGroup>
 
-    <section class="card" :aria-label="t('about')">
-      <h2 class="card__title">{{ t('about') }}</h2>
-      <dl class="facts">
-        <dt>{{ t('server') }}</dt>
-        <dd>
-          <span v-if="health" class="ok"><Icon name="ph:check-circle-fill" />{{ t('serverOk', { version: health.version, uptime }) }}</span>
-          <span v-else-if="healthFailed" class="bad"><Icon name="ph:warning-circle-fill" />{{ t('serverDown') }}</span>
-          <span v-else>…</span>
-        </dd>
-        <dt>{{ t('device') }}</dt>
-        <dd>{{ bridge.kind === 'tauri' ? t('deviceApp', { platform: bridge.platform }) : t('deviceWeb') }}</dd>
-        <template v-if="mockedSections.length">
-          <dt>{{ t('mocks') }}</dt>
-          <dd class="warn">{{ t('mocksText', { list: mockedSections.join(', ') }) }}</dd>
-        </template>
-      </dl>
-    </section>
+    <!-- Сюда одной строкой встают разделы других модулей, например <DownloaderSettings /> -->
+    <ShellDownloaderSettings />
+
+    <SettingsGroup :title="t('about')">
+      <SettingsRow :title="t('server')">
+        <span class="status" :class="health ? 'status--ok' : healthFailed ? 'status--bad' : ''"><i />{{ health ? t('serverOk') : healthFailed ? t('serverDown') : '…' }}</span>
+      </SettingsRow>
+      <SettingsRow v-if="health" :title="t('version')">
+        <span class="value tnum">{{ health.version }}</span>
+      </SettingsRow>
+    </SettingsGroup>
   </div>
 </template>
 
 <style scoped>
-.set { display: flex; flex-direction: column; gap: 20px; max-width: 760px; padding-top: 16px; }
-.set__title { margin: 0 0 8px; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
-.card { display: flex; flex-direction: column; gap: 4px; padding: 20px 24px; border-radius: var(--r-5); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
-.card__title { margin: 0 0 8px; font-size: var(--fs-small); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
-.card__note { margin: 8px 0 0; font-size: var(--fs-caption); color: var(--text-3); }
-.acct { display: flex; align-items: center; gap: 16px; }
-.acct__avatar { display: grid; place-items: center; width: 56px; height: 56px; flex: none; overflow: hidden; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); font-size: 20px; font-weight: 700; }
+.set { display: flex; flex-direction: column; gap: 40px; width: 100%; max-width: 720px; margin: 0 auto; padding-top: 16px; }
+.set__title { margin: 0 0 -8px; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
+
+/* Профиль: фото с daly.rest или буква на «Сумерках» */
+.acct { --sr-lead: 44px; min-height: 68px; }
+.acct__avatar { display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: var(--brand-gradient); font-size: 18px; font-weight: 750; color: #fff; }
 .acct__avatar img { width: 100%; height: 100%; object-fit: cover; }
-.acct__text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-.acct__name { font-size: var(--fs-h4); font-weight: 650; }
-.acct__meta { overflow: hidden; font-size: var(--fs-small); color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
-.acct__roles { display: flex; gap: 6px; margin-top: 4px; }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px 0; border-top: 1px solid var(--hair); }
-.card__title + .row, .card__title + .acct { border-top: 0; }
-.row--block { flex-direction: column; align-items: stretch; gap: 12px; }
-.row__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.row__label { font-weight: 600; }
-.row__hint { font-size: var(--fs-small); color: var(--text-3); }
-.set__modes { width: 100%; max-width: 420px; }
-.facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 24px; margin: 0; font-size: var(--fs-small); }
-.facts dt { color: var(--text-3); }
-.facts dd { margin: 0; }
-.ok, .bad { display: inline-flex; align-items: center; gap: 6px; }
-.ok :deep(svg) { color: var(--success); }
-.bad { color: var(--danger); }
-.warn { color: var(--warning); }
+.acct :deep(.sr__title) { font-size: var(--fs-h4); font-weight: 650; overflow-wrap: anywhere; }
+.acct :deep(.sr__desc) { overflow-wrap: anywhere; }
+
+.set__radios { display: contents; }
+.set__quiet { font-size: var(--fs-caption); font-weight: 500; color: var(--text-3); }
+
+/* Выразительность — под выбранным «Умным» или «Диджеем» */
+.expr { display: flex; flex: 1; flex-direction: column; gap: 6px; padding-right: 32px; }
+.expr__head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--fs-caption); color: var(--text-3); }
+.expr :deep(.sl__thumb) { transform: scale(1); }
+
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-4); }
+.status--ok i { background: var(--success); }
+.status--bad { color: var(--danger); }
+.status--bad i { background: var(--danger); }
+.value { font-size: var(--fs-small); color: var(--text-2); }
+
 @media (max-width: 699px) {
-  .set { padding: 8px 16px 0; }
-  .set__title { font-size: 28px; }
-  .card { padding: 16px; }
-  .row { flex-direction: column; align-items: stretch; gap: 12px; }
-  .acct { flex-wrap: wrap; }
+  .set { gap: 32px; padding: 8px 16px 0; }
+  .set__title { margin: 0 0 -4px; font-size: 28px; }
+  .expr { padding-right: 0; }
 }
 </style>
 
@@ -203,90 +191,54 @@ async function logout() {
   "ru": {
     "title": "Настройки",
     "account": "Аккаунт",
-    "noEmail": "почта не указана",
-    "viaOidc": "вход через daly.rest",
-    "viaPassword": "аварийный вход",
-    "viaDevice": "вход приложения",
     "roleAdmin": "Администратор",
-    "roleListener": "Слушатель",
     "logout": "Выйти",
     "logoutFailed": "Не получилось выйти — попробуйте ещё раз",
-    "accountNote": "Имя, фото и способы входа меняются на daly.rest — здесь они обновятся при следующем входе",
     "playback": "Воспроизведение",
-    "transitions": "Переходы между треками",
-    "transitionsHint": "Действует для волны и списков",
     "normalize": "Выравнивать громкость",
-    "normalizeHint": "Тихие и громкие треки звучат одинаково — по замеру громкости на сервере",
     "scrubber": "Полоса прокрутки",
-    "scrubberHint": "Действует в\u00a0панели плеера, большом плеере и\u00a0мини-плеере",
+    "transitions": "Переходы между треками",
     "wave": "Моя волна",
-    "waveNow": "Сейчас",
+    "waveRow": "Настройки волны",
     "waveResetBtn": "Сбросить",
-    "waveReset": "Настройки волны сброшены: любое настроение, знакомое и новое",
+    "waveReset": "Настройки волны сброшены",
     "appearance": "Внешний вид",
     "theme": "Тема",
-    "themeHint": "Светлая тема появится позже",
     "dark": "Тёмная",
     "light": "Светлая",
     "soon": "Скоро",
-    "language": "Язык интерфейса",
-    "languageHint": "Названия треков и артистов не переводятся",
+    "language": "Язык",
     "about": "О приложении",
     "server": "Сервер",
-    "serverOk": "Работает · версия {version} · {uptime} без перезапуска",
+    "serverOk": "Работает",
     "serverDown": "Не отвечает",
-    "minutes": "{n} мин",
-    "hours": "{n} ч",
-    "days": "{n} дн.",
-    "device": "Это устройство",
-    "deviceWeb": "Сайт в браузере",
-    "deviceApp": "Приложение · {platform}",
-    "mocks": "Макеты",
-    "mocksText": "Разделы из design/fixtures, пока их нет на сервере: {list}"
+    "version": "Версия"
   },
   "en": {
     "title": "Settings",
     "account": "Account",
-    "noEmail": "no email",
-    "viaOidc": "signed in with daly.rest",
-    "viaPassword": "emergency sign-in",
-    "viaDevice": "app sign-in",
     "roleAdmin": "Admin",
-    "roleListener": "Listener",
     "logout": "Sign out",
     "logoutFailed": "Couldn't sign out — try again",
-    "accountNote": "Name, photo and sign-in methods are managed on daly.rest — they update here on your next sign-in",
     "playback": "Playback",
-    "transitions": "Transitions",
-    "transitionsHint": "For the wave and lists",
     "normalize": "Normalize volume",
-    "normalizeHint": "Quiet and loud tracks play at the same level — measured on the server",
     "scrubber": "Progress bar",
-    "scrubberHint": "Applies to the player bar, full player and mini player",
+    "transitions": "Transitions",
     "wave": "My Wave",
-    "waveNow": "Now",
+    "waveRow": "Wave settings",
     "waveResetBtn": "Reset",
-    "waveReset": "Wave settings reset: any mood, familiar and new",
+    "waveReset": "Wave settings reset",
     "appearance": "Appearance",
     "theme": "Theme",
-    "themeHint": "The light theme comes later",
     "dark": "Dark",
     "light": "Light",
     "soon": "Soon",
-    "language": "Interface language",
-    "languageHint": "Track and artist names aren't translated",
+    "language": "Language",
     "about": "About",
     "server": "Server",
-    "serverOk": "Running · version {version} · up for {uptime}",
+    "serverOk": "Running",
     "serverDown": "Not responding",
-    "minutes": "{n} min",
-    "hours": "{n} h",
-    "days": "{n} d",
-    "device": "This device",
-    "deviceWeb": "Website in a browser",
-    "deviceApp": "App · {platform}",
-    "mocks": "Mocks",
-    "mocksText": "Sections from design/fixtures until the server has them: {list}"
+    "version": "Version"
   }
 }
 </i18n>

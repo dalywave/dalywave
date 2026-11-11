@@ -65,11 +65,11 @@ function playLiked(list: Track[], i: number) {
 
     <template v-if="home">
       <template v-for="s in home.shelves" :key="s.id">
-        <MusicShelf v-if="s.kind === 'continue'" :title="shelfTitle(s)" :cols="3" :rows="2" phone-width="82%">
+        <MusicShelf v-if="s.kind === 'continue'" :title="shelfTitle(s)" :cols="3" :rows="s.items.length > 3 ? 2 : 1" phone-width="82%">
           <MusicResumeCard v-for="it in s.items" :key="`${it.type}:${it.id}`" :item="it" />
         </MusicShelf>
 
-        <MusicShelf v-else-if="s.kind === 'new_releases'" :title="shelfTitle(s)" :hint="t('newHint')" :cols="5">
+        <MusicShelf v-else-if="s.kind === 'new_releases'" :title="shelfTitle(s)" :cols="5">
           <MusicAlbumCard
             v-for="a in albums(s)"
             :key="a.id"
@@ -151,7 +151,6 @@ function playLiked(list: Track[], i: number) {
       "evening": "Добрый вечер",
       "night": "Доброй ночи"
     },
-    "newHint": "Сервер скачивает новинки сам, как только они выходят",
     "recent": "Недавно понравилось",
     "allLiked": "Все любимые",
     "settings": "Настройки",
@@ -173,7 +172,6 @@ function playLiked(list: Track[], i: number) {
       "evening": "Good evening",
       "night": "Good night"
     },
-    "newHint": "The server downloads new releases as soon as they're out",
     "recent": "Recently liked",
     "allLiked": "All liked",
     "settings": "Settings",

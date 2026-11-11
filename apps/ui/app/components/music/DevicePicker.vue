@@ -26,6 +26,5 @@ function pick(d: PlaybackDevice) {
       <UiIconButton icon="ph:devices" :label="t('player.devices')" :size="size" :tooltip="false" :active="devices.some(d => d.current && d.kind !== 'web')" />
     </template>
     <MusicDeviceList :devices="devices" :playing="playing" @select="pick" />
-    <div class="pop__foot">{{ t('devices.note') }}</div>
   </UiPopover>
 </template>

@@ -44,14 +44,11 @@ const moreItems = computed<MenuEntry[]>(() => {
         </template>
         <template #meta>
           <span v-if="pl.pinned" class="pinned"><Icon name="ph:push-pin-fill" />{{ t('pinned') }}</span>
-          <span v-if="pl.pinned" class="dot">·</span>
           <span>{{ formatCount(pl.tracksCount, 'track', lang) }}</span>
-          <span class="dot">·</span>
           <span>{{ formatLongDuration(pl.durationMs, lang) }}</span>
-          <template v-if="tracks.length && ready < tracks.length">
-            <span class="dot">·</span>
-            <span>{{ t('ready', { n: ready, total: tracks.length }) }}</span>
-          </template>
+        </template>
+        <template v-if="tracks.length && ready < tracks.length" #status>
+          <span class="ready"><Icon name="ph:cloud-arrow-down" />{{ t('ready', { n: ready, total: tracks.length }) }}</span>
         </template>
         <template #actions>
           <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :loading="loading === `playlist:${pl.id}`" :disabled="!tracks.length" @click="playPlaylist(pl.id)">
@@ -76,8 +73,8 @@ const moreItems = computed<MenuEntry[]>(() => {
 <style scoped>
 .playlist { display: flex; flex-direction: column; gap: 28px; }
 .playlist__desc { font-size: var(--fs-body); font-weight: 450; color: var(--text-2); }
-.dot { color: var(--text-4); }
 .pinned { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
+.ready :deep(.iconify) { margin-right: 5px; vertical-align: -2px; color: var(--text-3); }
 .playlist__note { align-self: center; }
 @media (max-width: 699px) {
   .playlist { gap: 20px; }

@@ -142,6 +142,72 @@ export interface UpdateInfo {
   date: string | null
 }
 
+/**
+ * Загрузчик на этом Mac (только macOS) с точки зрения приложения:
+ * - `disabled` — выключен («Скачивать на этом Mac»); `signed-out` — нет входа;
+ *   `forbidden` — токен загрузчика заводит только администратор;
+ * - `provisioning` — заводим токен на сервере; `starting` — процесс запущен, состояния ещё нет;
+ * - `running` — работает, подробности — в `status`; `stopping` — останавливается;
+ * - `restarting` — упал или сервер не выдал токен, новая попытка в `retryAtMs`;
+ * - `token-rejected` — сервер не принял токен (отозван): `downloader.recreateToken()`;
+ * - `broken` — программы загрузчика не нашлись или не запускаются.
+ */
+export type DownloaderPhase =
+  | 'disabled' | 'signed-out' | 'forbidden' | 'provisioning' | 'starting' | 'running'
+  | 'stopping' | 'restarting' | 'token-rejected' | 'broken'
+
+/** Этап задания: Deezer и поиск на YouTube Music → скачивание → отпечаток и громкость → в хранилище */
+export type DownloaderStage = 'matching' | 'downloading' | 'verifying' | 'uploading'
+
+/** Событие `status` самого загрузчика (services/fetcher/SIDECAR.md, «Протокол») */
+export interface DownloaderStatus {
+  state: 'starting' | 'idle' | 'working' | 'paused' | 'offline' | 'error' | 'stopping'
+  /** Желание пользователя: при `working` — «доделает трек, потом пауза» */
+  paused: boolean
+  server: string
+  workerName: string
+  /** Только при `working`; `track` и `artist` — null первые ~0,3 с */
+  job: {
+    id: string
+    deezerTrackId: number | null
+    track: string | null
+    artist: string | null
+    stage: DownloaderStage
+    /** 0…1 внутри этапа */
+    progress: number
+    /** Номер кандидата */
+    attempt: number
+  } | null
+  /** `offline`: `server_unreachable`, `server_error`; `error`: `bot_check`, `rate_limited`, … */
+  error: { code: string, message: string } | null
+  /** RFC 3339: следующая попытка (`offline`) или конец отдыха (`error`) */
+  retryAt: string | null
+  /** За сегодня по часам Mac */
+  counters: { date: string, doneToday: number, failedToday: number }
+  pot: { state: 'starting' | 'ready' | 'failed' | 'off', version?: string, message?: string }
+}
+
+export interface DownloaderSnapshot {
+  /** «Скачивать на этом Mac» */
+  enabled: boolean
+  /** Пауза, которую оставил пользователь (запоминается) */
+  paused: boolean
+  phase: DownloaderPhase
+  /** Последний `status` загрузчика — пока он работает */
+  status: DownloaderStatus | null
+  server: string
+  /** Имя в админке («Источники»): «Mac <имя компьютера>» */
+  workerName: string
+  logFile: string
+  /** Версии из `hello` */
+  version: string | null
+  ytDlp: string | null
+  /** Почему не работает (выдача токена, запуск, код выхода); `message` — для журнала */
+  error: { code: string, message: string } | null
+  /** `restarting`: когда следующая попытка, мс от 1970 года */
+  retryAtMs: number | null
+}
+
 export interface ShellEvents {
   'window:maximized': { maximized: boolean }
   'window:fullscreen': { fullscreen: boolean }
@@ -168,6 +234,8 @@ export interface ShellEvents {
   'update:progress': { downloadedBytes: number, totalBytes: number | null }
   /** Ссылки dalywave:// кроме возврата входа — на будущее (треки, альбомы) */
   'deep-link:open': { url: string }
+  /** macOS: загрузчик на этом Mac — при каждой перемене, ход задания — до 4 раз в секунду */
+  'downloader:state': DownloaderSnapshot
 }
 
 export type InvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>
@@ -250,6 +318,18 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       check: () => call<UpdateInfo | null>('update_check'),
       /** Скачивает, ставит и перезапускает приложение */
       install: () => call<void>('update_install'),
+    },
+    /** Загрузчик музыки на этом Mac — только macOS (на других системах команд нет) */
+    downloader: {
+      state: () => call<DownloaderSnapshot>('downloader_state'),
+      /** «Скачивать на этом Mac» — запоминается; включение заводит токен, если его ещё нет */
+      setEnabled: (enabled: boolean) => call<DownloaderSnapshot>('downloader_set_enabled', { enabled }),
+      /** Пауза: текущий трек загрузчик доделывает, новых заданий не берёт; запоминается */
+      setPaused: (paused: boolean) => call<DownloaderSnapshot>('downloader_set_paused', { paused }),
+      /** `token-rejected`: забыть отозванный токен и завести новый */
+      recreateToken: () => call<DownloaderSnapshot>('downloader_recreate_token'),
+      /** Журнал загрузчика — в «Консоли» */
+      openLog: () => call<void>('downloader_open_log'),
     },
     on<E extends keyof ShellEvents>(event: E, handler: (payload: ShellEvents[E]) => void): Promise<() => void> {
       return tauri.listen<ShellEvents[E]>(event, e => handler(e.payload))

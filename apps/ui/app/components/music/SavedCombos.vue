@@ -8,7 +8,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="combos no-scrollbar" role="group" :aria-label="t('wave.preset.saved')">
+  <div v-edge-fade class="combos no-scrollbar" role="group" :aria-label="t('wave.preset.saved')">
     <button
       v-for="p in WAVE_PRESETS"
       :key="p.id"

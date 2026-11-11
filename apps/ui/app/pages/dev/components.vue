@@ -265,6 +265,14 @@ function showToast(kind: 'plain' | 'undo' | 'error') {
           <UiTabs v-model="tab" :items="[{ value: 'queue', label: 'Очередь', count: 7 }, { value: 'lyrics', label: 'Текст' }, { value: 'devices', label: 'Устройства' }]" label="Панель" />
           <div class="row"><UiKbd :keys="['⌘', 'K']" /><UiKbd :keys="['⇧', '→']" /><UiKbd :keys="['L']" /><UiKbd :keys="['Space']" /></div>
         </DevSpec>
+        <DevSpec label="SettingsGroup + SettingsRow: переключатель · выбор справа · варианты · подстрока" col wide>
+          <SettingsGroup title="Воспроизведение">
+            <SettingsRow title="Выравнивать громкость"><UiSwitch v-model="sw1" label="Выравнивать громкость" hide-label /></SettingsRow>
+            <SettingsRow title="Язык"><UiSegmentedControl v-model="tab" :options="[{ value: 'queue', label: 'Русский' }, { value: 'lyrics', label: 'English' }]" label="Язык" /></SettingsRow>
+            <SettingsRow as="button" radio :checked="sw2" title="Умный" description="Сам находит место для перехода" @click="sw2 = !sw2" />
+            <SettingsRow v-if="sw2" indent><UiSlider v-model="slider" label="Выразительность" /></SettingsRow>
+          </SettingsGroup>
+        </DevSpec>
       </div>
     </section>
 

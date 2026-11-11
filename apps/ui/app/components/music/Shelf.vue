@@ -14,6 +14,7 @@ withDefaults(defineProps<{
 }>(), { cols: 5, rows: 1, phoneWidth: '148px' })
 
 const { t } = useI18n()
+const ui = useUiStore()
 const row = ref<HTMLElement | null>(null)
 const atStart = ref(true)
 const atEnd = ref(false)
@@ -59,6 +60,7 @@ const scrollable = computed(() => !(atStart.value && atEnd.value))
     </header>
     <div
       ref="row"
+      v-edge-fade="ui.isPhone"
       class="shelf__row no-scrollbar"
       :class="{ 'shelf__row--grid': rows > 1 }"
       :style="{ '--cols': cols, '--rows': rows, '--phone-w': phoneWidth }"

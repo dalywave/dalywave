@@ -82,15 +82,18 @@ function onKey(e: KeyboardEvent) {
       <NuxtLink v-if="track.album" :to="`/album/${track.album.id}`" @click.stop>{{ track.album.title }}</NuxtLink>
     </div>
     <div class="tr__end" role="cell">
-      <UiTooltip v-if="status === 'none'" :text="t('track.status.none')">
-        <span class="tr__state tr__state--cloud" role="img" :aria-label="t('track.status.none')"><Icon name="ph:cloud-arrow-down" /></span>
-      </UiTooltip>
-      <UiTooltip v-else-if="status === 'queued' || status === 'acquiring'" :text="t(`track.status.${status}`)">
-        <span class="tr__state"><UiProgressRing :state="status === 'queued' ? 'queued' : 'progress'" :value="0.42" :size="18" :label="t(`track.status.${status}`)" /></span>
-      </UiTooltip>
-      <UiTooltip v-else-if="status === 'disputed' || status === 'failed'" :text="t(`track.status.${status}`)">
-        <span class="tr__state tr__state--warn" role="img" :aria-label="t(`track.status.${status}`)"><Icon name="ph:warning-circle" /></span>
-      </UiTooltip>
+      <!-- Место под состояние есть всегда: колонки в широком списке не гуляют от строки к строке -->
+      <span class="tr__slot">
+        <UiTooltip v-if="status === 'none'" :text="t('track.status.none')">
+          <span class="tr__state tr__state--cloud" role="img" :aria-label="t('track.status.none')"><Icon name="ph:cloud-arrow-down" /></span>
+        </UiTooltip>
+        <UiTooltip v-else-if="status === 'queued' || status === 'acquiring'" :text="t(`track.status.${status}`)">
+          <span class="tr__state"><UiProgressRing :state="status === 'queued' ? 'queued' : 'progress'" :value="0.42" :size="18" :label="t(`track.status.${status}`)" /></span>
+        </UiTooltip>
+        <UiTooltip v-else-if="status === 'disputed' || status === 'failed'" :text="t(`track.status.${status}`)">
+          <span class="tr__state tr__state--warn" role="img" :aria-label="t(`track.status.${status}`)"><Icon name="ph:warning-circle" /></span>
+        </UiTooltip>
+      </span>
       <UiIconButton
         class="tr__like"
         :class="{ 'is-liked': liked }"
@@ -163,6 +166,7 @@ function onKey(e: KeyboardEvent) {
 .tr__album a:hover { color: var(--text-1); }
 
 .tr__end { display: flex; align-items: center; gap: 4px; }
+.tr__slot { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; }
 .tr__state { display: inline-grid; place-items: center; width: 22px; height: 22px; color: var(--text-3); font-size: 17px; flex: none; }
 .tr__state--warn { color: var(--warning); }
 .tr__dur { width: 40px; text-align: right; font-size: var(--fs-small); color: var(--text-3); }

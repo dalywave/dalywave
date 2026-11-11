@@ -121,7 +121,6 @@ async function submit() {
         <UiButton v-if="providers?.oidc !== null" variant="primary" size="lg" block :href="loginHref" icon="ph:sign-in" class="login__main" @click="appLogin">
           {{ t('oidc', { title: providers?.oidc?.title ?? 'daly.rest' }) }}
         </UiButton>
-        <p class="login__hint">{{ t('oidcHint') }}</p>
       </template>
 
       <template v-if="providers?.password && bridge.auth.passwordAllowed">
@@ -138,13 +137,12 @@ async function submit() {
               type="password"
               autocomplete="current-password"
               :aria-invalid="!!formError || undefined"
-              :aria-describedby="formError ? 'pw-error' : 'pw-hint'"
+              :aria-describedby="formError ? 'pw-error' : undefined"
               :placeholder="t('form.placeholder')"
             >
             <UiButton type="submit" variant="secondary" :loading="busy" :disabled="!password">{{ t('form.submit') }}</UiButton>
           </div>
           <p v-if="formError" id="pw-error" class="login__form-error" role="alert">{{ formError }}</p>
-          <p v-else id="pw-hint" class="login__form-hint">{{ t('form.hint') }}</p>
         </form>
       </template>
     </main>
@@ -173,9 +171,8 @@ async function submit() {
 .login__title { margin: 18px 0 0; font-size: 32px; font-weight: 750; letter-spacing: var(--tr-display); line-height: 1.1; }
 .login__lead { max-width: 300px; margin: 8px 0 24px; color: var(--text-2); text-wrap: balance; }
 .login__error { display: flex; align-items: flex-start; gap: 10px; width: 100%; margin-bottom: 16px; padding: 10px 12px; border-radius: var(--r-3); background: color-mix(in oklab, var(--danger) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 30%, transparent); font-size: var(--fs-small); text-align: left; }
-.login__error :deep(svg) { flex: none; margin-top: 1px; font-size: 18px; color: var(--danger); }
+.login__error :deep(.iconify) { flex: none; margin-top: 1px; font-size: 18px; color: var(--danger); }
 .login__main { width: 100%; }
-.login__hint { margin: 10px 0 0; font-size: var(--fs-caption); color: var(--text-3); text-wrap: balance; }
 .login__sep { display: flex; align-items: center; gap: 12px; width: 100%; margin: 22px 0 10px; font-size: var(--fs-caption); color: var(--text-4); }
 .login__sep::before, .login__sep::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
 .login__browser { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 18px 16px; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); animation: fade-in var(--dur-2); }
@@ -203,7 +200,6 @@ async function submit() {
 .login__input:focus-visible { outline: none; background: var(--fill-2); box-shadow: inset 0 0 0 1.5px var(--focus); }
 .login__input[aria-invalid='true'] { box-shadow: inset 0 0 0 1.5px var(--danger); }
 .login__form-error { margin: 0; font-size: var(--fs-caption); color: var(--danger); }
-.login__form-hint { margin: 0; font-size: var(--fs-caption); color: var(--text-3); }
 @media (max-width: 699px) {
   .login { align-items: end; padding: 16px 12px calc(16px + var(--safe-bottom)); }
   .login__card { padding: 32px 20px 20px; border-radius: 28px; }
@@ -217,10 +213,9 @@ async function submit() {
     "title": "Вход",
     "lead": "Своя музыка на своём сервере — и волна, которая знает, что вам нравится",
     "oidc": "Войти через {title}",
-    "oidcHint": "Один аккаунт для всех приложений: Google, Discord, Telegram, Twitch или ключ доступа",
     "or": "или",
     "emergency": "Аварийный вход",
-    "serverDown": "Сервер DalyWave не отвечает. Проверьте, что он запущен, и обновите страницу",
+    "serverDown": "Сервер не отвечает. Обновите страницу чуть позже",
     "errors": {
       "cancelled": "Вход отменён. Можно попробовать ещё раз",
       "expired": "Ссылка для входа устарела — начните заново",
@@ -248,9 +243,8 @@ async function submit() {
     },
     "form": {
       "label": "Пароль владельца",
-      "placeholder": "Пароль из .env на сервере",
+      "placeholder": "Пароль",
       "submit": "Войти",
-      "hint": "Только когда daly.rest недоступен. Пять попыток в минуту",
       "wrong": "Пароль не подошёл",
       "rateLimited": "Слишком много попыток. Подождите минуту",
       "failed": "Не получилось войти. Проверьте связь с сервером"
@@ -260,10 +254,9 @@ async function submit() {
     "title": "Sign in",
     "lead": "Your music on your own server — and a wave that knows what you like",
     "oidc": "Sign in with {title}",
-    "oidcHint": "One account for every app: Google, Discord, Telegram, Twitch or a passkey",
     "or": "or",
     "emergency": "Emergency sign-in",
-    "serverDown": "The DalyWave server isn't responding. Make sure it's running and reload",
+    "serverDown": "The server isn't responding. Reload in a moment",
     "errors": {
       "cancelled": "Sign-in was cancelled. You can try again",
       "expired": "The sign-in link expired — start over",
@@ -291,9 +284,8 @@ async function submit() {
     },
     "form": {
       "label": "Owner password",
-      "placeholder": "Password from .env on the server",
+      "placeholder": "Password",
       "submit": "Sign in",
-      "hint": "Only when daly.rest is unavailable. Five attempts per minute",
       "wrong": "Wrong password",
       "rateLimited": "Too many attempts. Wait a minute",
       "failed": "Couldn't sign in. Check the connection to the server"

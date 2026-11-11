@@ -2,8 +2,9 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, LikedTrackPage, Track } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AudioEngine, Bridge, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveTrack, WindowChrome } from '../types'
+import type { AudioEngine, Bridge, Downloader, MediaCommand, NowPlayingInfo, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
+import { lazyDownloader } from '../tauri/downloader'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
 import { createHttp, done, toApiError, unwrap, type HttpOptions } from './http'
@@ -50,6 +51,17 @@ export interface WebBridgeOptions extends HttpOptions {
   onSessionEnded?: (cb: () => void) => void
   /** Звук приложения — движок на Rust; по умолчанию — WebAudio сайта */
   audio?: () => AudioEngine
+  /** Загрузчик на компьютере (приложение); у сайта его нет */
+  downloader?: Downloader | null
+}
+
+/** Только разработка: загрузчик изображает мок — `?downloader=idle|working|paused|offline|…` */
+function devDownloader(): Downloader | null {
+  if (import.meta.dev) {
+    const scenario = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('downloader') : null
+    if (scenario) return lazyDownloader(() => import('../mock/downloader').then(m => m.createDevDownloader(scenario)))
+  }
+  return null
 }
 
 export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
@@ -194,6 +206,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
     updates: opts.updates ?? { onAvailable: () => () => {}, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
+    downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
 
     auth: {
       providers: () => unwrap(api.GET('/api/auth/providers')),

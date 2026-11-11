@@ -49,7 +49,7 @@ const active = computed(() => route.hash || '#overview')
 .adm__brand { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px; }
 .adm__nav { display: flex; flex: 1; flex-direction: column; gap: 2px; }
 .adm__link { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 12px; border-radius: var(--r-3); font-weight: 550; color: var(--text-2); transition: color var(--dur-1), background-color var(--dur-1); }
-.adm__link :deep(svg) { font-size: 20px; }
+.adm__link :deep(.iconify) { font-size: 20px; }
 .adm__link:hover { color: var(--text-1); background: var(--fill-1); }
 .adm__link.is-active { color: var(--text-1); background: var(--fill-2); }
 .adm__main { min-width: 0; overflow-y: auto; scroll-behavior: smooth; scroll-padding-top: 16px; }

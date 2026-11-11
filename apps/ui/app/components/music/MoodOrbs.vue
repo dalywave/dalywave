@@ -19,7 +19,7 @@ function update(v: unknown) {
 </script>
 
 <template>
-  <RadioGroupRoot :model-value="model" class="moods" :class="`moods--${variant}`" :aria-label="t('wave.mood.label')" orientation="horizontal" @update:model-value="update">
+  <RadioGroupRoot v-edge-fade="variant === 'full'" :model-value="model" class="moods" :class="[`moods--${variant}`, { 'no-scrollbar': variant === 'full' }]" :aria-label="t('wave.mood.label')" orientation="horizontal" @update:model-value="update">
     <UiTooltip v-for="o in MOOD_OPTIONS" :key="o.value" :text="variant === 'compact' ? t(o.key) : undefined">
       <RadioGroupItem :value="o.value" class="mood" :class="{ 'is-hover': hover === o.value }">
         <span
@@ -67,17 +67,31 @@ function update(v: unknown) {
 .mood:focus-visible .mood__orb { outline-color: var(--focus); }
 .mood__label { font-size: var(--fs-small); font-weight: 550; white-space: nowrap; }
 .moods--compact .mood__label { display: none; }
-.moods--full { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.moods--full .mood {
-  flex-direction: column;
+/* Плитки на телефоне: лента с постоянной шириной плиток; выходит за поля экрана и гаснет к краю */
+.moods--full {
+  display: flex;
   gap: 8px;
-  padding: 12px 2px 10px;
+  margin: 0 -16px;
+  padding: 4px 16px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 16px;
+  overscroll-behavior-x: contain;
+}
+.moods--full .mood {
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  width: 78px;
+  height: 84px;
+  padding: 0 4px;
   border-radius: var(--r-4);
   background: var(--fill-1);
   box-shadow: inset 0 0 0 1px var(--hair);
+  scroll-snap-align: start;
 }
 .moods--full .mood__orb { width: 30px; height: 30px; }
 .moods--full .mood[aria-checked='true'] { background: var(--fill-2); box-shadow: inset 0 0 0 1px var(--line); }
-.moods--full .mood__label { max-width: 100%; overflow: hidden; font-size: 11.5px; letter-spacing: -0.01em; text-overflow: ellipsis; }
-.moods--full .mood { min-width: 0; padding-left: 0; padding-right: 0; }
+.moods--full .mood__label { font-size: var(--fs-caption); letter-spacing: -0.005em; }
 </style>
