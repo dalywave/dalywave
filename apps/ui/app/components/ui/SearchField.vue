@@ -12,7 +12,7 @@ const emit = defineEmits<{ submit: [value: string], focus: [] }>()
 const model = defineModel<string>({ default: '' })
 const input = ref<HTMLInputElement | null>(null)
 
-defineExpose({ focus: () => input.value?.focus() })
+defineExpose({ focus: () => input.value?.focus(), blur: () => input.value?.blur() })
 
 onMounted(() => {
   if (props.autofocus) input.value?.focus()
@@ -84,7 +84,7 @@ function clear() {
 .sf__input::placeholder { color: var(--text-3); }
 .sf__input::-webkit-search-cancel-button { display: none; }
 .sf:hover, .sf.is-hover { background: var(--fill-2); }
-.sf:focus-within, .sf.is-focus { background: var(--ink-3); box-shadow: inset 0 0 0 1px var(--accent-line), 0 0 0 4px var(--accent-soft); color: var(--text-2); }
+.sf:focus-within, .sf.is-focus { background: var(--ink-4); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-2); }
 .sf__kbd { flex: none; }
 .sf__clear { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); font-size: 18px; flex: none; }
 .sf__clear:hover { color: var(--text-1); }

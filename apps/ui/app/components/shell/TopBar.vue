@@ -23,7 +23,8 @@ function onInput(v: string) {
   clearTimeout(timer)
   timer = setTimeout(() => {
     const query = v.trim() ? { q: v.trim() } : {}
-    if (route.path === '/search') void router.replace({ path: '/search', query })
+    // Фильтры поиска (?type, ?scope) переживают новый запрос
+    if (route.path === '/search') void router.replace({ path: '/search', query: { ...route.query, q: v.trim() || undefined } })
     else if (v.trim()) void router.push({ path: '/search', query })
   }, 180)
 }

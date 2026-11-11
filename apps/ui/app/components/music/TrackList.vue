@@ -15,6 +15,8 @@ const props = withDefaults(defineProps<{
   /** С какого размера включать окно */
   virtualFrom?: number
   label?: string
+  /** Строки без состояния на сервере */
+  plain?: boolean
 }>(), { variant: 'default', start: 1, virtualFrom: 120 })
 
 const player = usePlayerStore()
@@ -116,6 +118,7 @@ function onContext(target: EventTarget | null) {
           :index="variant === 'album' ? (track.trackPosition ?? i + start) : i + start"
           :variant="variant"
           :reason="reasons?.[track.id]"
+          :plain="plain"
           @play="play(i)"
         />
       </div>

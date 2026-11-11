@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   playing?: boolean
   queueUid?: string
   forceHover?: boolean
+  /** Без состояния на сервере (поиск): трек, которого ещё нет, просто включается */
+  plain?: boolean
 }>(), { variant: 'default' })
 
 const emit = defineEmits<{ play: [] }>()
@@ -24,7 +26,7 @@ const isCurrent = computed(() => props.playing ?? player.current?.track.id === p
 const isPlaying = computed(() => isCurrent.value && (props.playing ?? player.playing))
 const liked = computed(() => library.isLiked(props.track))
 const status = computed(() => library.statusOf(props.track))
-const remote = computed(() => status.value === 'none')
+const remote = computed(() => !props.plain && status.value === 'none')
 const unavailable = computed(() => status.value === 'unavailable')
 const artists = computed(() => props.track.artists.map(a => a.name).join(', '))
 // «Remix», «(Live)» — приглушённо после названия, в скобках
@@ -83,7 +85,7 @@ function onKey(e: KeyboardEvent) {
     </div>
     <div class="tr__end" role="cell">
       <!-- Место под состояние есть всегда: колонки в широком списке не гуляют от строки к строке -->
-      <span class="tr__slot">
+      <span v-if="!plain" class="tr__slot">
         <UiTooltip v-if="status === 'none'" :text="t('track.status.none')">
           <span class="tr__state tr__state--cloud" role="img" :aria-label="t('track.status.none')"><Icon name="ph:cloud-arrow-down" /></span>
         </UiTooltip>
