@@ -1,0 +1,107 @@
+// Скриншоты страниц на разных размерах — для проверки интерфейса глазами.
+//
+//   bun tools/shot.mjs <url> [--routes home,player] [--sizes phone,desktop] [--out dir]
+//                      [--theme dark|light] [--full] [--wait ms] [--dpr n] [--reduced-motion]
+//                      [--eval "js"] [--cookie name=value] [--name base]
+//
+// В url можно поставить {route}: http://localhost:3400{route} --routes /,/search
+// Без {route} маршрут добавляется как #hash: http://localhost:4400/directions/a/ --routes home,player
+// Печатает ошибки консоли и неудачные запросы — их тоже надо исправлять.
+import { chromium } from "playwright-core";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+
+const SIZES = {
+  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  phoneSmall: { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  tablet: { viewport: { width: 1024, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  laptop: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 },
+  desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
+  wide: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 },
+};
+
+function parse(argv) {
+  const opts = { urls: [], routes: [""], sizes: ["phone", "desktop"], out: "artifacts/shots", wait: 600, cookies: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    const next = () => argv[++i];
+    if (a === "--routes") opts.routes = next().split(",").map((s) => s.trim());
+    else if (a === "--sizes") opts.sizes = next().split(",").map((s) => s.trim());
+    else if (a === "--out") opts.out = next();
+    else if (a === "--theme") opts.theme = next();
+    else if (a === "--full") opts.full = true;
+    else if (a === "--wait") opts.wait = Number(next());
+    else if (a === "--dpr") opts.dpr = Number(next());
+    else if (a === "--reduced-motion") opts.reducedMotion = true;
+    else if (a === "--eval") opts.eval = next();
+    else if (a === "--cookie") opts.cookies.push(next());
+    else if (a === "--name") opts.name = next();
+    else if (a.startsWith("--")) throw new Error(`неизвестный флаг ${a}`);
+    else opts.urls.push(a);
+  }
+  if (!opts.urls.length) throw new Error("нужен хотя бы один url");
+  return opts;
+}
+
+const slug = (s) => s.replace(/^#/, "").replace(/[^a-z0-9а-яё]+/gi, "-").replace(/^-|-$/g, "") || "root";
+
+const opts = parse(process.argv.slice(2));
+mkdirSync(opts.out, { recursive: true });
+
+const browser = await chromium.launch({
+  channel: "chrome",
+  headless: true,
+  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--autoplay-policy=no-user-gesture-required"],
+});
+
+let problems = 0;
+for (const sizeName of opts.sizes) {
+  const size = SIZES[sizeName];
+  if (!size) throw new Error(`неизвестный размер ${sizeName}: ${Object.keys(SIZES).join(", ")}`);
+  const context = await browser.newContext({
+    ...size,
+    deviceScaleFactor: opts.dpr ?? size.deviceScaleFactor,
+    colorScheme: opts.theme === "light" ? "light" : "dark",
+    reducedMotion: opts.reducedMotion ? "reduce" : "no-preference",
+    locale: "ru-RU",
+    timezoneId: "Europe/Berlin",
+  });
+  for (const urlTemplate of opts.urls) {
+    for (const cookie of opts.cookies) {
+      const [name, ...rest] = cookie.split("=");
+      await context.addCookies([{ name, value: rest.join("="), url: new URL(urlTemplate.replace("{route}", "/")).origin }]);
+    }
+    for (const route of opts.routes) {
+      const url = urlTemplate.includes("{route}")
+        ? urlTemplate.replace("{route}", route)
+        : route ? `${urlTemplate.split("#")[0]}#${route}` : urlTemplate;
+      const page = await context.newPage();
+      const label = `${sizeName} ${url}`;
+      page.on("console", (m) => {
+        // Предупреждения программного WebGL в Chrome без окна — не ошибки страницы
+        if (m.text().includes("GL Driver Message")) return;
+        if (m.type() === "error" || m.type() === "warning") {
+          problems++;
+          console.log(`  [console.${m.type()}] ${label}: ${m.text()}`);
+        }
+      });
+      page.on("pageerror", (e) => { problems++; console.log(`  [pageerror] ${label}: ${e.message}`); });
+      page.on("requestfailed", (r) => { problems++; console.log(`  [requestfailed] ${label}: ${r.url()} ${r.failure()?.errorText}`); });
+      page.on("response", (r) => {
+        if (r.status() >= 400 && !r.url().endsWith("/favicon.ico")) { problems++; console.log(`  [http ${r.status()}] ${label}: ${r.url()}`); }
+      });
+      await page.goto(url, { waitUntil: "networkidle", timeout: 30000 }).catch((e) => console.log(`  [goto] ${label}: ${e.message}`));
+      await page.evaluate(() => document.fonts?.ready).catch(() => {});
+      if (opts.eval) await page.evaluate(opts.eval).catch((e) => console.log(`  [eval] ${label}: ${e.message}`));
+      await page.waitForTimeout(opts.wait);
+      const base = opts.name ?? slug(route || new URL(url).pathname);
+      const file = join(opts.out, `${base}-${sizeName}${opts.theme === "light" ? "-light" : ""}.png`);
+      await page.screenshot({ path: file, fullPage: !!opts.full });
+      console.log(file);
+      await page.close();
+    }
+  }
+  await context.close();
+}
+await browser.close();
+if (problems) console.log(`проблем в консоли и сети: ${problems}`);

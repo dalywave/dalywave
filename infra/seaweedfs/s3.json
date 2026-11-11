@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "dalywave",
+      "credentials": [{ "accessKey": "dalywave", "secretKey": "dalywave-local-secret" }],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}

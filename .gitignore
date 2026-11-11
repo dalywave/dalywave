@@ -1,0 +1,45 @@
+# Секреты и локальные настройки
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+cookies*.txt
+
+# Rust
+/target/
+**/target/
+
+# JS
+node_modules/
+.nuxt/
+.output/
+.data/
+dist/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Tauri / Xcode
+**/gen/schemas/
+**/gen/apple/build/
+**/gen/apple/DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Данные дизайна и проверок: обложки, превью, скриншоты собираются скриптами
+/design/fixtures/img/
+/design/fixtures/audio/
+/design/shots/
+/services/fetcher/bench/out/
+/artifacts/
+
+# Системное
+.DS_Store
+*.log
