@@ -1,37 +1,51 @@
 //! Выбор перехода для пары треков.
 //!
-//! Перебираются границы фраз уходящего (вторая половина трека, после вокала — проверкой «голос на
-//! голос»), начала фраз входящего (первая фраза, где уже есть звук), приёмы и длины. У каждого
-//! варианта — оценка: длина под «выразительность», совместимость тональностей, скачок энергии,
-//! сколько музыки пропадает с конца уходящего и с начала входящего, сила растяжения. Голос на
-//! голос — вариант отброшен.
+//! Как у диджея: уходящий уводится на границе фразы в своей концовке, а не там, где он уже
+//! затих. Концовка — начало концовки из анализа или, если её нет, последние такты перед концом
+//! музыки ([`Analysis::music_end`]: дальше затухание и тишина). Сведение по долям (смешивание со
+//! сменой баса, фильтр) подбирается так, чтобы входящий полностью принял трек к концу музыки
+//! уходящего; эхо-выход и резкая смена — на границе фразы в начале концовки. Входящий входит с
+//! начала своей фразы на вступлении (для резкой смены — ещё и с конца вступления, «в дроп»).
 //!
-//! Сведение по долям (смешивание со сменой баса, фильтр) растягивает входящий: каждая его доля
-//! ложится на долю уходящего, после перехода скорость за 4 такта возвращается к своей. Эхо-выход и
-//! резкая смена темп не трогают: уходящий обрывается на сильной доле, и с неё же звучит входящий.
+//! Перебираются границы фраз уходящего, начала фраз входящего, приёмы и длины (4–32 такта). У
+//! каждого варианта — оценка: длина под «выразительность», совместимость тональностей, скачок
+//! энергии, насколько выход раньше или позже концовки, сколько вступления входящего пропадает,
+//! сила растяжения. Голос на голос — вариант отброшен.
 //!
-//! Страховка — «Умный» ([`Technique::Fade`]): равномощное наложение после вокала, без растяжения.
-//! Он выбирается, если сетки долей нет или модель в ней не уверена, если доли неровные (живое
-//! исполнение), если размер такта разный или темпы расходятся больше чем на 8 % (с учётом
-//! «вдвое»), и если для перехода нигде нет места.
+//! Сведение по долям растягивает входящий: каждая его доля ложится на долю уходящего, после
+//! перехода скорость плавно возвращается к своей (4–16 тактов, чем сильнее растяжение, тем
+//! дольше). Растяжение — не больше 8 % (с учётом половинного и двойного темпа); дальше, при
+//! разном размере такта или ненадёжной сетке входящего — эхо-выход или резкая смена на сильную
+//! долю: им нужна только сетка уходящего.
+//!
+//! Страховка — «Умный» ([`Technique::Fade`]): равномощное наложение у конца музыки, без
+//! растяжения. Только если у уходящего нет надёжной сетки долей (нет анализа полного файла,
+//! модель не уверена, доли в концовке идут неровно) или для перехода нигде нет места. Причина —
+//! в [`Plan::note`] (движок пишет её в журнал).
 
 use std::fmt;
 
-use crate::analysis::{Analysis, Grid};
+use crate::analysis::{Analysis, BARS_PER_PHRASE, Grid};
 use crate::curves::Curves;
 use crate::key;
 use crate::tempo::TempoMap;
 
 /// Темпы расходятся больше — не сводим по долям.
 pub const MAX_TEMPO_GAP: f64 = 0.08;
-/// Уверенность модели в сетке долей ниже — не сводим по долям.
+/// Уверенность в сетке долей ниже — не сводим по долям.
 pub const MIN_CONFIDENCE: f64 = 0.5;
 /// Доли идут неровнее — живое исполнение, сетка не держит.
 pub const MIN_REGULARITY: f64 = 0.85;
 /// Наложение «Умного», мс (как на сайте).
 pub const SMART_FADE_MS: f64 = 4000.0;
-/// За сколько тактов скорость входящего возвращается к своей.
-pub const RAMP_BARS: u32 = 4;
+/// Где проверяется ровность долей: столько от конца музыки уходящего и от начала входящего.
+const CHECK_WINDOW_MS: f64 = 90_000.0;
+
+/// За сколько тактов скорость входящего возвращается к своей: по 2 такта на процент растяжения,
+/// от 4 до 16 — заметного «уплывания» темпа нет.
+pub fn ramp_bars(ratio: f64) -> u32 {
+    ((ratio - 1.0).abs() * 200.0).round().clamp(4.0, 16.0) as u32
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Technique {
@@ -149,15 +163,15 @@ impl Plan {
     }
 }
 
-/// «Умный»: после вокала уходящего, без тишины и длинного хвоста, на звуке входящего.
+/// «Умный»: после вокала уходящего, у конца его музыки (не в хвосте затухания), на звуке
+/// входящего. `note` — почему не по долям.
 pub fn smart(input: &PlanInput<'_>, note: impl Into<String>) -> Plan {
     let out = input.out;
     let dur = input.out_duration_ms.unwrap_or_else(|| out.duration());
-    let (_, audible_end) = out.audible();
-    let end = if audible_end > 0.0 {
-        audible_end.min(dur)
-    } else {
+    let end = if out.energy_curve.is_empty() {
         dur
+    } else {
+        out.music_end().min(dur)
     };
     let mut start = end - SMART_FADE_MS;
     let vocals = out.vocal_end();
@@ -175,7 +189,8 @@ pub fn smart(input: &PlanInput<'_>, note: impl Into<String>) -> Plan {
         .find(|b| *b >= first - 50.0)
         .unwrap_or(first)
         .max(0.0);
-    Plan::crossfade(start, in_start, length, note.into())
+    let note = format!("страховка «Умный»: {}", note.into());
+    Plan::crossfade(start, in_start, length, note)
 }
 
 /// Сколько входящих долей на одну долю уходящего (1, 2 или ½) и скорость растяжения.
@@ -190,12 +205,20 @@ fn tempo_match(go: &Grid, gi: &Grid) -> (f64, f64) {
 struct Ctx<'a> {
     input: &'a PlanInput<'a>,
     go: Grid,
-    gi: Grid,
+    /// Сетка входящего, если она есть (для сведения по долям — ещё и надёжная).
+    gi: Option<Grid>,
+    /// Можно ли сводить по долям.
+    sync: bool,
     m: f64,
     x: f64,
     key: f64,
+    /// Конец музыки уходящего: дальше затухание.
     out_end: f64,
+    out_dur: f64,
+    /// Начало концовки уходящего.
+    outro: f64,
     in_first: f64,
+    in_phrases: Vec<f64>,
 }
 
 pub fn plan(input: &PlanInput<'_>) -> Plan {
@@ -207,76 +230,154 @@ pub fn plan(input: &PlanInput<'_>) -> Plan {
     };
     let (out, inc) = (input.out, input.inc);
     let x = input.expressiveness.clamp(0.0, 1.0);
-    let (Some(go), Some(gi)) = (out.grid(), inc.grid()) else {
-        return smart(input, "нет сетки долей");
-    };
-    if go.confidence < MIN_CONFIDENCE || gi.confidence < MIN_CONFIDENCE {
-        return smart(
-            input,
-            format!(
-                "сетка долей неуверенная ({:.2} → {:.2})",
-                go.confidence, gi.confidence
-            ),
-        );
-    }
-    if go.regularity < MIN_REGULARITY || gi.regularity < MIN_REGULARITY {
-        return smart(input, "доли идут неровно");
-    }
-    if go.beats_per_bar != gi.beats_per_bar {
-        return smart(input, "разный размер такта");
-    }
-    let (m, ratio) = tempo_match(&go, &gi);
-    if (ratio - 1.0).abs() > MAX_TEMPO_GAP {
-        return smart(
-            input,
-            format!(
-                "темпы {:.1} и {:.1} BPM расходятся на {:.0} %",
-                go.bpm,
-                gi.bpm,
-                (ratio - 1.0).abs() * 100.0
-            ),
-        );
-    }
     let out_dur = input.out_duration_ms.unwrap_or_else(|| out.duration());
-    let (_, out_audible) = out.audible();
+    let out_end = out.music_end().min(out_dur);
+
+    // Уходящий: без его сетки нет ни границ фраз, ни сильных долей для выхода
+    let Some(go) = out.grid() else {
+        return smart(
+            input,
+            "у уходящего нет сетки долей (полный файл ещё не разобран)",
+        );
+    };
+    if go.confidence < MIN_CONFIDENCE {
+        return smart(
+            input,
+            format!("сетка долей уходящего неуверенная ({:.2})", go.confidence),
+        );
+    }
+    let out_reg = out.regularity_between(out_end - CHECK_WINDOW_MS, out_end);
+    if out_reg < MIN_REGULARITY {
+        return smart(
+            input,
+            format!("доли уходящего в концовке идут неровно ({out_reg:.2})"),
+        );
+    }
+
+    // Входящий: надёжная сетка нужна только для сведения по долям
+    let in_first = inc.audible().0;
+    let gi = inc.grid();
+    let mut m = 1.0;
+    let no_sync: Option<String> = match gi {
+        None => Some("у входящего нет сетки долей".into()),
+        Some(gi) => {
+            let in_reg = inc.regularity_between(in_first, in_first + CHECK_WINDOW_MS);
+            let (mm, ratio) = tempo_match(&go, &gi);
+            m = mm;
+            if gi.confidence < MIN_CONFIDENCE {
+                Some(format!(
+                    "сетка долей входящего неуверенная ({:.2})",
+                    gi.confidence
+                ))
+            } else if in_reg < MIN_REGULARITY {
+                Some(format!(
+                    "доли входящего во вступлении идут неровно ({in_reg:.2})"
+                ))
+            } else if go.beats_per_bar != gi.beats_per_bar {
+                Some(format!(
+                    "разный размер такта ({} и {})",
+                    go.beats_per_bar, gi.beats_per_bar
+                ))
+            } else if (ratio - 1.0).abs() > MAX_TEMPO_GAP {
+                Some(format!(
+                    "темпы {:.1} и {:.1} BPM расходятся на {:.0} %",
+                    go.bpm,
+                    gi.bpm,
+                    (ratio - 1.0).abs() * 100.0
+                ))
+            } else {
+                None
+            }
+        }
+    };
     let ctx = Ctx {
         input,
         go,
         gi,
+        sync: no_sync.is_none(),
         m,
         x,
         key: key::compat(out.key_camelot.as_deref(), inc.key_camelot.as_deref()),
-        out_end: out_audible.min(out_dur),
-        in_first: inc.audible().0,
+        out_end,
+        out_dur,
+        outro: out.outro_start().min(out_end),
+        in_first,
+        in_phrases: if gi.is_some() {
+            inc.phrases().starts
+        } else {
+            Vec::new()
+        },
     };
 
-    // Вход: первая сильная доля со звуком (начало вступления — самое длинное место без голоса)
-    // и первые две границы фраз
-    let in_points: Vec<f64> = {
-        let audible = |s: &f64| *s + gi.beat_ms >= ctx.in_first;
-        let mut v: Vec<f64> = inc
-            .downbeats_ms
-            .iter()
-            .copied()
-            .find(audible)
-            .into_iter()
-            .collect();
-        for s in inc.phrases().starts.into_iter().filter(audible).take(2) {
-            if v.iter().all(|x| (x - s).abs() > 1.0) {
-                v.push(s);
+    // Вход: первая сильная доля со звуком, первые две границы фраз и (для резкой смены и
+    // эхо-выхода) начало фразы у конца вступления. Без сетки — первая доля со звуком.
+    let in_points: Vec<f64> = match gi {
+        Some(gi) => {
+            let audible = |s: &f64| *s + gi.beat_ms >= in_first;
+            let mut v: Vec<f64> = inc
+                .downbeats_ms
+                .iter()
+                .copied()
+                .find(audible)
+                .into_iter()
+                .collect();
+            let mut add = |s: f64| {
+                if v.iter().all(|x| (x - s).abs() > 1.0) {
+                    v.push(s);
+                }
+            };
+            for s in ctx.in_phrases.iter().copied().filter(audible).take(2) {
+                add(s);
             }
+            let bar = gi.bar_ms();
+            if let Some(drop) = inc
+                .intro_end_ms
+                .filter(|ie| *ie > in_first + 4.0 * bar)
+                .and_then(|ie| {
+                    ctx.in_phrases
+                        .iter()
+                        .copied()
+                        .filter(|s| (s - ie).abs() <= 2.0 * bar)
+                        .min_by(|a, b| (a - ie).abs().total_cmp(&(b - ie).abs()))
+                })
+            {
+                add(drop);
+            }
+            v
         }
-        v
+        None => vec![
+            inc.beats_ms
+                .iter()
+                .copied()
+                .find(|b| *b >= in_first - 50.0)
+                .unwrap_or(in_first)
+                .max(0.0),
+        ],
     };
-    let out_points: Vec<f64> = out
+    // Выход: границы фраз уходящего во второй части трека, не позже чем за 2 такта до конца
+    // музыки, и середины фраз (4 такта): в медленном треке фраза длится полминуты, и до
+    // ближайшей границы иначе пришлось бы уходить слишком рано
+    let bar = go.bar_ms();
+    let half = BARS_PER_PHRASE / 2;
+    let out_points: Vec<(f64, bool)> = out
         .phrases()
         .starts
         .into_iter()
-        .filter(|p| *p >= out_dur * 0.4 && *p >= out_dur - 150_000.0 && *p <= ctx.out_end)
+        .flat_map(|p| {
+            let i = out.downbeats_ms.partition_point(|d| *d < p - 1.0);
+            [
+                Some((p, true)),
+                out.downbeats_ms.get(i + half).map(|d| (*d, false)),
+            ]
+        })
+        .flatten()
+        .filter(|(p, _)| {
+            *p >= out_dur * 0.35 && *p >= out_end - 180_000.0 && *p <= out_end - 2.0 * bar
+        })
         .collect();
 
-    let mut best: Option<(f64, Plan)> = None;
-    for &p in &out_points {
+    let mut candidates: Vec<(f64, Plan)> = Vec::new();
+    for &(p, phrase) in &out_points {
         for &s in &in_points {
             for (technique, bars) in [
                 (Technique::Blend, 32),
@@ -290,36 +391,79 @@ pub fn plan(input: &PlanInput<'_>) -> Plan {
                 (Technique::Echo, 1),
                 (Technique::Cut, 0),
             ] {
-                if let Some((score, plan)) = ctx.candidate(p, s, technique, bars)
-                    && best.as_ref().is_none_or(|(b, _)| score > *b)
-                {
-                    best = Some((score, plan));
-                }
+                candidates.extend(
+                    ctx.candidate(p, s, technique, bars)
+                        .map(|(score, plan)| (score - if phrase { 0.0 } else { 0.04 }, plan)),
+                );
             }
         }
     }
+    // Длина наложения — пожелание выразительности, но не длиннее, чем вообще помещается (голос
+    // уходящего до конца и короткое вступление входящего оставляют место на 4–8 тактов)
+    let pref: f64 = if x < 0.34 {
+        32.0
+    } else if x < 0.67 {
+        16.0
+    } else {
+        8.0
+    };
+    let longest = candidates
+        .iter()
+        .filter(|(_, p)| p.is_beatmatched())
+        .map(|(_, p)| f64::from(p.bars))
+        .fold(0.0, f64::max);
+    let pref = if longest > 0.0 {
+        pref.min(longest)
+    } else {
+        pref
+    };
+    let best = candidates
+        .into_iter()
+        .map(|(score, plan)| {
+            let len = if plan.is_beatmatched() {
+                0.12 * (f64::from(plan.bars) / pref).log2().abs()
+            } else {
+                0.0
+            };
+            (score - len, plan)
+        })
+        .fold(None::<(f64, Plan)>, |best, c| match best {
+            Some(b) if b.0 >= c.0 => Some(b),
+            _ => Some(c),
+        });
     match best {
-        Some((_, plan)) => plan,
-        None => smart(input, "после вокала нет места для перехода по долям"),
+        Some((_, mut plan)) => {
+            if let Some(why) = no_sync {
+                plan.note.push_str(&format!("; по долям не сводим: {why}"));
+            }
+            plan
+        }
+        None => smart(input, "в концовке нет места для перехода по долям"),
     }
 }
 
 impl Ctx<'_> {
     fn candidate(&self, p: f64, s: f64, technique: Technique, bars: u32) -> Option<(f64, Plan)> {
         let (out, inc) = (self.input.out, self.input.inc);
-        let (go, gi) = (&self.go, &self.gi);
+        let go = &self.go;
         let bpb = go.beats_per_bar as usize;
         let jp = out.beat_near(p)?;
-        let is = inc.beat_near(s)?;
-        let s = inc.beats_ms[is];
         let x = self.x;
+        let bar = go.bar_ms();
 
-        let (start, in_offset, length, tempo, ratio, swap_ms) = match technique {
+        let (start, in_offset, length, tempo, ratio, swap_ms, s) = match technique {
             Technique::Blend | Technique::Filter => {
+                if !self.sync {
+                    return None;
+                }
+                let gi = self.gi.as_ref()?;
+                let is = inc.beat_near(s)?;
+                let s = inc.beats_ms[is];
                 let k_total = bars as usize * bpb;
                 let start = out.beats_ms[jp];
                 let length = out.beat_at((jp + k_total) as f64, go) - start;
-                if start + length > self.out_end + go.beat_ms {
+                // Наложение не уходит в затухание уходящего и тем более за конец файла
+                if start + length > (self.out_end + 2.0 * bar).min(self.out_dur) {
                     return None;
                 }
                 let mut knots: Vec<(f64, f64)> = (0..=k_total)
@@ -335,7 +479,7 @@ impl Ctx<'_> {
                 let (t0, s0) = knots[k_total - 1];
                 let r_end = (s1 - s0) / (t1 - t0);
                 // Возврат к своей скорости — по долям входящего, скорость меняется линейно
-                let n = (RAMP_BARS * gi.beats_per_bar) as usize;
+                let n = (ramp_bars(r_end) * gi.beats_per_bar) as usize;
                 let mut idx = is as f64 + k_total as f64 * self.m;
                 let (mut t, mut prev) = (t1, r_end);
                 for q in 1..=n {
@@ -349,7 +493,7 @@ impl Ctx<'_> {
                 }
                 let swap_beat = (bars as usize / 2) * bpb;
                 let swap = out.beat_at((jp + swap_beat) as f64, go) - start;
-                (start, 0.0, length, TempoMap::new(knots), ratio, swap)
+                (start, 0.0, length, TempoMap::new(knots), ratio, swap, s)
             }
             Technique::Echo => {
                 if jp < bpb {
@@ -357,22 +501,30 @@ impl Ctx<'_> {
                 }
                 let start = out.beats_ms[jp - bpb];
                 let cut = out.beats_ms[jp] - start;
-                (start, cut, cut + 10.0, TempoMap::identity(s), 1.0, cut)
+                (start, cut, cut + 10.0, TempoMap::identity(s), 1.0, cut, s)
             }
-            Technique::Cut => (out.beats_ms[jp], 0.0, 10.0, TempoMap::identity(s), 1.0, 0.0),
+            Technique::Cut => (
+                out.beats_ms[jp],
+                0.0,
+                10.0,
+                TempoMap::identity(s),
+                1.0,
+                0.0,
+                s,
+            ),
             Technique::Fade => return None,
         };
         if start < self.input.earliest_ms {
             return None;
         }
+        let beatmatched = matches!(technique, Technique::Blend | Technique::Filter);
         let cut_at = start + in_offset;
-        // Оборвать посреди вокала грубо, но рэп часто поёт до последней секунды: тогда эхо-выход
-        // на границе фразы — лучшее, что есть, поэтому штраф, а не запрет
-        let cut_in_vocals =
-            matches!(technique, Technique::Echo | Technique::Cut) && out.vocal_at(cut_at + 1.0);
-        if matches!(technique, Technique::Echo | Technique::Cut) && cut_at > self.out_end {
+        if !beatmatched && cut_at > self.out_end - 2.0 * bar {
             return None;
         }
+        // Оборвать посреди вокала грубо, но рэп часто поёт до последней секунды: тогда эхо-выход
+        // на границе фразы — лучшее, что есть, поэтому штраф, а не запрет
+        let cut_in_vocals = !beatmatched && out.vocal_at(cut_at + 1.0);
         let plan = Plan {
             technique,
             start_ms: start,
@@ -393,73 +545,94 @@ impl Ctx<'_> {
             return None;
         }
 
-        // Оценка
-        let pref = if x < 0.34 {
-            32.0
-        } else if x < 0.67 {
-            16.0
-        } else {
-            8.0
-        };
-        let bar = go.bar_ms();
-        let de = match (
-            inc.energy_mean(s, s + 8.0 * bar),
-            out.energy_mean(cut_at - 8.0 * bar, cut_at),
-        ) {
+        // Оценка (без длины наложения — её учитывает `plan`, когда известны все варианты)
+        let in_bar = self.gi.map_or(bar, |g| g.bar_ms());
+        let e_in = inc.energy_mean(s, s + 8.0 * in_bar);
+        let e_out = out.energy_mean(cut_at - 8.0 * bar, cut_at);
+        let de = match (e_in, e_out) {
             (Some(a), Some(b)) => a - b,
             _ => 0.0,
         };
+        let energetic = e_in.is_some_and(|e| e >= 0.6) && e_out.is_some_and(|e| e >= 0.6);
         let k = self.key;
         let stretch = (ratio - 1.0).abs();
+        // Несовместимые тональности режут слух тем сильнее, чем дольше звучат вместе
+        let clash = (1.0 - k) * (f64::from(bars) / 16.0).min(1.0);
+        // Сведение по долям — основа «Диджея»; эхо-выход и резкая смена — с выразительностью,
+        // при несовместимой тональности и при скачке энергии
         let mut score = match technique {
-            Technique::Blend => 0.35 * k + 0.25 * (1.0 - x) - 0.3 * de.abs() - 2.0 * stretch,
+            Technique::Blend => {
+                0.45 + 0.3 * (1.0 - x) - 0.3 * clash - 0.15 * de.abs() - 2.0 * stretch
+            }
             Technique::Filter => {
-                0.1 + 0.15 * k + 0.3 * x
-                    - 0.15 * de.abs()
+                0.3 + 0.25 * x
+                    - 0.1 * clash
+                    - 0.1 * de.abs()
                     - 2.0 * stretch
                     - if x < 0.25 { 0.2 } else { 0.0 }
             }
             Technique::Echo => {
-                -0.05 + 0.35 * x + 0.3 * (-de - 0.1).max(0.0) + 0.2 * (1.0 - k)
+                0.05 + 0.35 * x + 0.2 * (-de - 0.1).max(0.0) + 0.15 * (1.0 - k)
                     // Эхо-выход заметен — для «незаметного» он последнее средство
                     - if x < 0.34 { 0.25 } else { 0.0 }
             }
             Technique::Cut => {
-                -0.15 + 0.35 * x + 0.5 * (de - 0.15).max(0.0) + 0.1 * (1.0 - k)
+                -0.05
+                    + 0.4 * x
+                    + 0.4 * (de - 0.15).max(0.0)
+                    + 0.1 * (1.0 - k)
+                    + if energetic { 0.15 } else { 0.0 }
                     - if x < 0.5 { 0.3 } else { 0.0 }
             }
             Technique::Fade => 0.0,
         };
-        if plan.is_beatmatched() {
-            // Длина — пожелание: короче, если длинному не хватает места после вокала
-            score -= 0.12 * (f64::from(bars) / pref).log2().abs();
-        }
         if cut_in_vocals {
             score -= match technique {
                 Technique::Echo => 0.15,
                 _ => 0.3,
             };
         }
-        let heard_until = if plan.is_beatmatched() {
-            start + length
+        // Где выходить. Сведение по долям: входящий принимает трек к концу музыки уходящего,
+        // начало — не раньше концовки (или конца музыки минус длина наложения). Эхо и резкая
+        // смена: на начале концовки, но не ближе 4 тактов к концу музыки.
+        // Штраф — за секунды: столько «тела» трека пропадает или столько звучит затухание.
+        let (early, late) = if beatmatched {
+            let target = self.outro.min(self.out_end - length);
+            (
+                (target - start).max(0.0),
+                0.03 * (start + length - self.out_end).max(0.0),
+            )
         } else {
-            cut_at
+            let target = self.outro.min(self.out_end - 4.0 * bar);
+            (
+                (target - cut_at).max(0.0),
+                0.005 * (cut_at - target).max(0.0),
+            )
         };
-        let skipped_out = (self.out_end - heard_until).max(0.0) / 1000.0;
+        score -= (0.008 * early + late) / 1000.0;
+        // Вступление входящего: пропущенное — жаль, вход с границы фразы — фразы совпадают
         let skipped_in = (s - self.in_first).max(0.0) / 1000.0;
-        score -= 0.004 * (skipped_out - 6.0).max(0.0) + 0.004 * skipped_in;
+        score -= 0.004 * skipped_in;
+        if self.in_phrases.iter().any(|q| (q - s).abs() < 1.0) {
+            score += 0.03;
+        }
 
+        let bar_no = out.downbeats_ms.partition_point(|d| *d < start - 1.0) + 1;
         let note = format!(
-            "{technique} {bars} т. с {:.1} с уходящего на {:.1} с входящего, темп ×{ratio:.3}, \
-             тональности {:.1}, энергия {de:+.2}",
+            "{technique} {bars} т. с {:.1} с уходящего (такт {bar_no}, концовка {:.1} с, музыка до \
+             {:.1} с) на {:.1} с входящего, темп ×{ratio:.3}, тональности {:.1}, энергия {de:+.2}",
             start / 1000.0,
-            s / 1000.0,
+            self.outro / 1000.0,
+            self.out_end / 1000.0,
+            s.max(0.0) / 1000.0,
             k
         );
         Some((score, Plan { note, ..plan }))
     }
 
     /// Голос на голос: в какой-то момент оба трека ясно слышны (не тише −6 дБ) и в обоих поют.
+    /// Миллисекунды самой смены (у эхо-выхода и резкой смены уходящий гаснет за 8 мс, а входящий
+    /// открывается за 3) — не наложение: шаг проверки мог попасть прямо в них.
     fn voices_clash(&self, plan: &Plan) -> bool {
         let (out, inc) = (self.input.out, self.input.inc);
         if out.vocal_segments.is_empty() || inc.vocal_segments.is_empty() {
@@ -470,7 +643,7 @@ impl Ctx<'_> {
         let mut t = 0.0;
         while t < plan.length_ms {
             let mix = curves.at(t);
-            if t >= plan.in_offset_ms
+            if t >= plan.in_offset_ms + 20.0
                 && mix.out.gain > 0.5
                 && mix.inc.gain > 0.5
                 && out.vocal_at(plan.start_ms + t)
@@ -551,16 +724,27 @@ mod tests {
 
     #[test]
     fn falls_back_to_smart() {
+        // Темпы далеко — не страховка, а эхо-выход или резкая смена на сильной доле: им сетка
+        // входящего не нужна
         let out = synthetic(124.0, 4 * 96, 0.0);
         let far = synthetic(100.0, 4 * 96, 0.0);
         let p = plan(&input(&out, &far, 0.5));
-        assert_eq!(p.technique, Technique::Fade);
+        assert!(
+            matches!(p.technique, Technique::Echo | Technique::Cut),
+            "{}",
+            p.note
+        );
         assert!(p.note.contains("расходятся"), "{}", p.note);
         assert!(p.tempo.is_identity());
+        let g = out.grid().unwrap();
+        assert!(out.is_downbeat(p.in_at_ms(), &g), "{}", p.note);
 
+        // Страховка — только когда у уходящего нет надёжной сетки
         let mut shaky = synthetic(124.0, 4 * 96, 0.0);
         shaky.bpm_confidence = Some(0.3);
-        assert_eq!(plan(&input(&shaky, &out, 0.5)).technique, Technique::Fade);
+        let p = plan(&input(&shaky, &out, 0.5));
+        assert_eq!(p.technique, Technique::Fade);
+        assert!(p.note.starts_with("страховка «Умный»"), "{}", p.note);
 
         let empty = Analysis::default();
         let p = plan(&input(&empty, &out, 0.5));
@@ -569,6 +753,60 @@ mod tests {
             p.length_ms, 500.0,
             "длины нет — короткое наложение в начале"
         );
+    }
+
+    #[test]
+    fn exits_on_a_phrase_before_the_fade_out() {
+        // 124 BPM, 192 с; последние 24 с — затухание, концовка (по анализу) — со 160 с
+        let mut out = synthetic(124.0, 4 * 99, 0.0);
+        let n = out.energy_curve.len();
+        for (s, e) in out.energy_curve.iter_mut().enumerate() {
+            if s + 24 >= n {
+                *e = 600.0 * (n - s) as f64 / 25.0;
+            }
+        }
+        out.outro_start_ms = Some(160_000.0);
+        let end = out.music_end();
+        assert!(end < out.duration() - 8000.0, "{end}");
+        let inc = synthetic(124.0, 4 * 96, 0.0);
+        let bar = 4.0 * 60_000.0 / 124.0;
+        for x in [0.1, 0.5, 0.9] {
+            let p = plan(&input(&out, &inc, x));
+            assert_ne!(p.technique, Technique::Fade, "{}", p.note);
+            // Уходящий отдаёт трек до затухания, а не в нём
+            let heard = if p.is_beatmatched() {
+                p.start_ms + p.length_ms
+            } else {
+                p.in_at_ms()
+            };
+            assert!(heard <= end + 2.0 * bar, "{x}: {}", p.note);
+            // и не раньше чем за 32 такта до конца музыки
+            assert!(heard >= end - 32.0 * bar, "{x}: {}", p.note);
+            // Начало — на сильной доле, на границе фразы или середине фразы
+            let edge = if p.is_beatmatched() {
+                p.start_ms
+            } else {
+                p.in_at_ms()
+            };
+            let phrases = out.refined().phrases();
+            assert!(
+                phrases
+                    .starts
+                    .iter()
+                    .any(|q| (q - edge).abs() < 1.0 || (q + 4.0 * bar - edge).abs() < 1.0),
+                "{x}: {}",
+                p.note
+            );
+        }
+    }
+
+    #[test]
+    fn ramp_grows_with_stretch() {
+        assert_eq!(ramp_bars(1.0), 4);
+        assert_eq!(ramp_bars(1.01), 4);
+        assert_eq!(ramp_bars(0.96), 8);
+        assert_eq!(ramp_bars(1.08), 16);
+        assert_eq!(ramp_bars(1.2), 16);
     }
 
     #[test]

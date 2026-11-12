@@ -125,16 +125,29 @@ fn dj_blend_lands_downbeats_together() {
 }
 
 #[test]
-fn dj_falls_back_to_smart_on_far_tempos() {
+fn dj_far_tempos_go_out_on_a_downbeat() {
+    // Темпы расходятся на 23 % — по долям не свести, но и не «Умный» на затухании: эхо-выход или
+    // резкая смена на сильной доле уходящего, входящий — со своей сильной доли
     let a = track("c", 124.0, 60.0, 0.1);
     let b = track("d", 96.0, 40.0, 0.1);
     let r = render_dj(&a, &b, 30_000, RATE, 50, false, Duration::from_secs(120)).unwrap();
-    assert_eq!(r.plan.technique, "fade", "{:?}", r.plan);
-    assert!(r.plan.note.contains("расходятся"), "{}", r.plan.note);
-    // «Умный» — наложение в конце уходящего, весь входящий после него
-    let total = r.mix.len() as f64 / 2.0 / RATE as f64;
+    let p = &r.plan;
+    assert!(p.technique == "echo" || p.technique == "cut", "{p:?}");
+    assert!(p.note.contains("расходятся"), "{}", p.note);
+    assert!(p.tempo.is_identity());
+    let cut = p.start_ms + p.in_offset_ms;
+    let bar = 4.0 * 60_000.0 / 124.0;
+    let bars = ((cut - 100.0) / bar).round();
     assert!(
-        (total - (30.0 + 40.0 - 4.0)).abs() < 1.5,
-        "длина рендера {total:.2} с"
+        (100.0 + bars * bar - cut).abs() < 1.0,
+        "срез {cut} не на сильной доле"
+    );
+    assert!((p.in_start_ms - 100.0).abs() < 1.0, "{p:?}");
+    // До среза — уходящий, после — весь входящий с его первой доли
+    let total = r.mix.len() as f64 / 2.0 / RATE as f64;
+    let expected = (cut - 30_000.0) / 1000.0 + (40_000.0 - p.in_start_ms) / 1000.0;
+    assert!(
+        (total - expected).abs() < 1.0,
+        "длина рендера {total:.2} с, ждали {expected:.2}"
     );
 }

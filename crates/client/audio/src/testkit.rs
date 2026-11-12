@@ -406,7 +406,7 @@ impl AlignReport {
 
     pub fn summary(&self) -> String {
         format!(
-            "{}/{} окон по 16 долей в пределах {} мс, медиана {:.1} мс, худшее {:.1} мс",
+            "{}/{} окон долей в пределах {} мс, медиана {:.1} мс, худшее {:.1} мс",
             self.within, self.checked, self.tolerance_ms, self.median_ms, self.worst_ms
         )
     }
@@ -439,6 +439,56 @@ fn onset_strength(samples: &[f32], rate: u32) -> Vec<f32> {
                 ((energy[k] + 1e-10).ln() - (energy[k - 3] + 1e-10).ln()).max(0.0)
             }
         })
+        .collect()
+}
+
+/// Сила ударов бочки по миллисекундам: рост логарифма энергии низа (однополюсный ФНЧ ~120 Гц,
+/// два каскада) за 5 мс. Верх в живой музыке часто занят хэтами между долями (фанк, фонк) —
+/// там атаки верха не говорят, где доля, а бочка говорит.
+fn kick_strength(samples: &[f32], rate: u32) -> Vec<f32> {
+    let hop = (rate / 1000).max(1) as usize;
+    let a = (-std::f32::consts::TAU * 120.0 / rate as f32).exp();
+    let (mut y1, mut y2) = (0.0f32, 0.0f32);
+    let energy: Vec<f32> = samples
+        .chunks(hop * 2)
+        .map(|c| {
+            let mut e = 0.0;
+            for pair in c.chunks(2) {
+                let m = (pair[0] + pair.get(1).copied().unwrap_or(0.0)) * 0.5;
+                y1 = m + a * (y1 - m);
+                y2 = y1 + a * (y2 - y1);
+                e += y2 * y2;
+            }
+            e
+        })
+        .collect();
+    (0..energy.len())
+        .map(|k| {
+            if k < 5 {
+                0.0
+            } else {
+                ((energy[k] + 1e-10).ln() - (energy[k - 5] + 1e-10).ln()).max(0.0)
+            }
+        })
+        .collect()
+}
+
+/// Как [`grid_lags`], но по ударам бочки: где сетка анализа стоит относительно бочки.
+pub fn kick_lags(
+    samples: &[f32],
+    rate: u32,
+    beats_ms: &[f64],
+    span_ms: std::ops::Range<f64>,
+) -> Vec<(f64, f64)> {
+    let s = kick_strength(samples, rate);
+    let beats: Vec<f64> = beats_ms
+        .iter()
+        .copied()
+        .filter(|b| span_ms.contains(b))
+        .collect();
+    beats
+        .chunks(16)
+        .filter_map(|w| grid_lag(&s, w).map(|l| (w[0], l)))
         .collect()
 }
 
@@ -485,11 +535,34 @@ fn grid_lag(strength: &[f32], beats_ms: &[f64]) -> Option<f64> {
     Some(best.0 as f64 + frac)
 }
 
+/// Сдвиг атак одной дорожки относительно её ожидаемых долей (время в рендере) окнами по 16
+/// долей на отрезке `span_ms`: (начало окна, сдвиг в мс). Окна, где атаки не выделяются,
+/// пропускаются. Если дорожка звучит не в том темпе, что обещает карта темпа, сдвиг уплывает
+/// от окна к окну.
+pub fn grid_lags(
+    samples: &[f32],
+    rate: u32,
+    beats_ms: &[f64],
+    span_ms: std::ops::Range<f64>,
+) -> Vec<(f64, f64)> {
+    let s = onset_strength(samples, rate);
+    let beats: Vec<f64> = beats_ms
+        .iter()
+        .copied()
+        .filter(|b| span_ms.contains(b))
+        .collect();
+    beats
+        .chunks(16)
+        .filter_map(|w| grid_lag(&s, w).map(|l| (w[0], l)))
+        .collect()
+}
+
 /// Совпадают ли доли двух дорожек одного рендера. `out_beats_ms` и `in_beats_ms` — где по
 /// анализу (и карте темпа входящего) должны звучать доли каждой дорожки, время в рендере;
-/// сверяется отрезок `span_ms` окнами по 16 долей уходящего. В каждом окне у каждой
-/// дорожки ищется сдвиг её атак относительно своих долей, расхождение — разница сдвигов:
-/// так в счёт идут все удары окна, а не одна атака, которую в живой музыке легко спутать.
+/// сверяется отрезок `span_ms` окнами по 16 долей уходящего (отрезок короче 32 долей — по 8).
+/// В каждом окне у каждой дорожки ищется сдвиг её атак относительно своих долей, расхождение —
+/// разница сдвигов: так в счёт идут все удары окна, а не одна атака, которую в живой музыке
+/// легко спутать.
 pub fn downbeat_alignment(
     outgoing: &[f32],
     incoming: &[f32],
@@ -507,7 +580,9 @@ pub fn downbeat_alignment(
         .filter(|b| span_ms.contains(b))
         .collect();
     let mut offsets = Vec::new();
-    for w in beats.chunks(16) {
+    // Короткое наложение (4 такта) — окнами по 8 долей, иначе окно одно и атак во вступлении мало
+    let size = if beats.len() < 32 { 8 } else { 16 };
+    for w in beats.chunks(size) {
         let (a, b) = (w[0] - 1.0, w[w.len() - 1] + 1.0);
         let inc: Vec<f64> = in_beats_ms
             .iter()

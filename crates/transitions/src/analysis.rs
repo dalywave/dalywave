@@ -126,15 +126,212 @@ impl Analysis {
         })
     }
 
+    /// Сетка с починкой. Модель местами меняет уровень пульса: в куплете отдаёт каждую долю, в
+    /// припеве — через одну (шаги 420 и 840 мс вперемешку), теряет доли в брейках и ставит
+    /// сильные доли то через такт, то через два. Средний шаг такой сетки ровный, а «ровность» —
+    /// нет, и раньше такие треки целиком уходили в страховку.
+    ///
+    /// Починка: основной шаг — частый пульс, если он занимает заметную долю сетки (≥ 25 %);
+    /// пропуски кратной длины заполняются равномерно, лишние доли (ближе полушага) убираются.
+    /// Сильные доли — каждые `n` долей (n = 4 или 3, что лучше объясняет модель): пропуски
+    /// заполняются, лишние (ближе n − 1 доли к предыдущей) убираются, сдвиг фазы на долю
+    /// принимается. Уверенность растёт ровно настолько, насколько ровнее стала сетка. Готовые
+    /// фразы с сервера сбрасываются — они считаны по сетке до починки.
+    pub fn repaired(&self) -> Analysis {
+        let mut b: Vec<f64> = self.beats_ms.clone();
+        b.sort_by(f64::total_cmp);
+        b.dedup_by(|x, y| (*x - *y).abs() < 1.0);
+        if b.len() < 16 {
+            return self.clone();
+        }
+        let steps: Vec<f64> = b.windows(2).map(|w| w[1] - w[0]).collect();
+        let Some(m) = median(&mut steps.clone()) else {
+            return self.clone();
+        };
+        let near = |x: f64, tol: f64| -> Vec<f64> {
+            steps
+                .iter()
+                .copied()
+                .filter(|s| (s - x).abs() <= tol * x)
+                .collect()
+        };
+        let share = |x: f64| near(x, 0.08).len() as f64 / steps.len() as f64;
+        // Частый пульс — если он не случайные лишние доли и не быстрее 210 BPM
+        let base = if share(m / 2.0) >= 0.25 && 60_000.0 / (m / 2.0) <= 210.0 {
+            m / 2.0
+        } else {
+            m
+        };
+        let Some(t) = median(&mut near(base, 0.08)) else {
+            return self.clone();
+        };
+        let inliers_before = near(m, 0.07).len() as f64 / steps.len() as f64;
+
+        // Лишняя доля (ближе 0,6 шага к соседней): из двух остаётся та, с которой соседние шаги
+        // ближе к целому числу шагов
+        let off = |g: f64| (g - (g / t).round().max(1.0) * t).abs();
+        let mut clean: Vec<f64> = Vec::with_capacity(b.len());
+        for (i, &x) in b.iter().enumerate() {
+            if let Some(&last) = clean.last()
+                && x - last < 0.6 * t
+            {
+                let prev = clean.len().checked_sub(2).map(|j| clean[j]);
+                let next = b.get(i + 1).copied();
+                let drop_last = match (prev, next) {
+                    (Some(p), Some(n)) => off(x - p) + off(n - x) < off(last - p) + off(n - last),
+                    (Some(p), None) => off(x - p) < off(last - p),
+                    (None, Some(n)) => off(n - x) < off(n - last),
+                    (None, None) => false,
+                };
+                if drop_last {
+                    clean.pop();
+                    clean.push(x);
+                }
+                continue;
+            }
+            clean.push(x);
+        }
+
+        // Пропуски кратной длины — равномерно
+        let mut beats = Vec::with_capacity(clean.len() * 2);
+        beats.push(clean[0]);
+        for &x in &clean[1..] {
+            let last = *beats.last().unwrap_or(&x);
+            let gap = x - last;
+            let k = (gap / t).round();
+            if (2.0..=64.0).contains(&k) {
+                for q in 1..k as usize {
+                    beats.push(last + gap * q as f64 / k);
+                }
+            }
+            beats.push(x);
+        }
+
+        // Сильные доли — номерами долей новой сетки
+        let index_of = |ms: f64| -> Option<usize> {
+            let i = beats.partition_point(|x| *x < ms);
+            [i.checked_sub(1), Some(i)]
+                .into_iter()
+                .flatten()
+                .filter(|j| *j < beats.len())
+                .min_by(|a, b| (beats[*a] - ms).abs().total_cmp(&(beats[*b] - ms).abs()))
+                .filter(|j| (beats[*j] - ms).abs() <= t / 3.0)
+        };
+        let mut idx: Vec<usize> = self
+            .downbeats_ms
+            .iter()
+            .filter_map(|d| index_of(*d))
+            .collect();
+        idx.sort_unstable();
+        idx.dedup();
+        let gaps: Vec<usize> = idx.windows(2).map(|w| w[1] - w[0]).collect();
+        let fits = |n: usize| gaps.iter().filter(|g| **g % n == 0).count();
+        let per_bar = if !gaps.is_empty() && fits(3) > fits(4) + gaps.len() / 4 {
+            3
+        } else {
+            4
+        };
+        let mut down: Vec<usize> = Vec::with_capacity(beats.len() / per_bar + 1);
+        for i in idx {
+            match down.last().copied() {
+                None => down.push(i),
+                Some(last) if i < last + per_bar - 1 => {}
+                Some(mut last) => {
+                    while i > last + per_bar + per_bar / 2 {
+                        last += per_bar;
+                        down.push(last);
+                    }
+                    down.push(i);
+                }
+            }
+        }
+
+        let new_steps: Vec<f64> = beats.windows(2).map(|w| w[1] - w[0]).collect();
+        let inliers_after = new_steps
+            .iter()
+            .filter(|s| (*s - t).abs() <= 0.07 * t)
+            .count() as f64
+            / new_steps.len().max(1) as f64;
+        let bpm_confidence = self.bpm_confidence.map(|c| {
+            if inliers_before > 0.0 && inliers_after > inliers_before {
+                (c * inliers_after / inliers_before).min(1.0)
+            } else {
+                c
+            }
+        });
+        Analysis {
+            bpm: Some(60_000.0 / t),
+            bpm_confidence,
+            downbeats_ms: down.iter().map(|i| beats[*i]).collect(),
+            beats_ms: beats,
+            phrases_ms: Vec::new(),
+            ..self.clone()
+        }
+    }
+
+    /// Насколько ровно идут доли на отрезке (как [`Grid::regularity`]); меньше 8 долей — 0.
+    pub fn regularity_between(&self, from: f64, to: f64) -> f64 {
+        let b: Vec<f64> = self
+            .beats_ms
+            .iter()
+            .copied()
+            .filter(|x| *x >= from && *x <= to)
+            .collect();
+        if b.len() < 8 {
+            return 0.0;
+        }
+        let steps: Vec<f64> = b.windows(2).map(|w| w[1] - w[0]).collect();
+        let Some(m) = median(&mut steps.clone()) else {
+            return 0.0;
+        };
+        let dev = steps.iter().map(|s| (s - m).abs()).sum::<f64>() / steps.len() as f64;
+        (1.0 - dev / m).clamp(0.0, 1.0)
+    }
+
+    /// Где музыка трека по-настоящему кончается: дальше — затухание или тишина. Последняя
+    /// секунда, где сглаженная (3 с) энергия не ниже половины «тела» трека (70-й перцентиль).
+    /// Нет кривой энергии — конец трека.
+    pub fn music_end(&self) -> f64 {
+        let dur = self.duration();
+        let c = &self.energy_curve;
+        if c.len() < 8 {
+            return dur;
+        }
+        let mut sorted = c.clone();
+        sorted.sort_by(f64::total_cmp);
+        let body = sorted[(sorted.len() * 7 / 10).min(sorted.len() - 1)];
+        let smooth = |i: usize| {
+            let a = i.saturating_sub(1);
+            let b = (i + 2).min(c.len());
+            c[a..b].iter().sum::<f64>() / (b - a) as f64
+        };
+        let last = (0..c.len())
+            .rev()
+            .find(|i| smooth(*i) >= 0.5 * body)
+            .unwrap_or(c.len() - 1);
+        ((last + 1) as f64 * 1000.0).min(dur)
+    }
+
+    /// Начало концовки: оттуда уходящий можно уводить, не теряя «тела» трека. Концовка из
+    /// анализа, если она есть и кончается не раньше музыки; иначе — конец музыки.
+    pub fn outro_start(&self) -> f64 {
+        let end = self.music_end();
+        self.outro_start_ms
+            .filter(|o| *o > 0.0 && *o < end)
+            .unwrap_or(end)
+    }
+
     /// Сетка долей без ступенек: модель отдаёт доли с шагом кадра (20 мс), а сведение требует
-    /// точности в единицы миллисекунд. Каждая доля заменяется прямой, проведённой методом
-    /// наименьших квадратов через ±8 соседних долей, — медленные изменения темпа сохраняются,
-    /// дрожание кадров уходит. Сильные доли переносятся на ближайшие уточнённые доли.
+    /// точности в единицы миллисекунд. Сначала сетка чинится ([`Analysis::repaired`]), потом
+    /// каждая доля заменяется прямой, проведённой методом наименьших квадратов через ±8
+    /// соседних долей, — медленные изменения темпа сохраняются, дрожание кадров уходит. Сильные
+    /// доли переносятся на ближайшие уточнённые доли.
     pub fn refined(&self) -> Analysis {
         const HALF: usize = 8;
-        let b = &self.beats_ms;
+        let fixed = self.repaired();
+        let b = &fixed.beats_ms;
         if b.len() < 2 * HALF + 1 {
-            return self.clone();
+            return fixed;
         }
         let refined: Vec<f64> = (0..b.len())
             .map(|i| {
@@ -156,11 +353,11 @@ impl Analysis {
                 if (fit - b[i]).abs() > 40.0 { b[i] } else { fit }
             })
             .collect();
-        let downbeats = self
+        let downbeats = fixed
             .downbeats_ms
             .iter()
             .map(|d| {
-                let j = self.beat_near(*d).unwrap_or(0);
+                let j = fixed.beat_near(*d).unwrap_or(0);
                 if (b[j] - d).abs() <= 40.0 {
                     refined[j]
                 } else {
@@ -171,7 +368,7 @@ impl Analysis {
         Analysis {
             beats_ms: refined,
             downbeats_ms: downbeats,
-            ..self.clone()
+            ..fixed
         }
     }
 
@@ -446,6 +643,83 @@ pub(crate) mod tests {
             .fold(0.0, f64::max);
         assert!(worst < 2.0, "{worst}");
         assert!((r.downbeats_ms[1] - truth[4]).abs() < 2.0);
+    }
+
+    #[test]
+    fn repair_restores_the_fast_pulse() {
+        // 142 BPM: модель то отдаёт каждую долю, то через одну (куплет — 840 мс, припев —
+        // 420), сильные доли — то каждый такт, то через такт; плюс лишняя доля посреди такта
+        let truth = synthetic(142.0, 4 * 64, 100.0);
+        let mut a = truth.clone();
+        let b = &truth.beats_ms;
+        a.beats_ms = b
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| (i / 64) % 2 == 1 || i % 2 == 0)
+            .map(|(_, t)| *t)
+            .collect();
+        a.beats_ms.push(b[100] + 130.0);
+        a.beats_ms.sort_by(f64::total_cmp);
+        a.downbeats_ms = truth
+            .downbeats_ms
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| (i / 16) % 2 == 1 || i % 2 == 0)
+            .map(|(_, t)| *t)
+            .collect();
+        a.bpm_confidence = Some(0.5);
+        let raw = a.grid().unwrap();
+        assert!(raw.regularity < 0.85, "{}", raw.regularity);
+
+        let r = a.repaired();
+        assert_eq!(r.beats_ms.len(), b.len());
+        let worst = r
+            .beats_ms
+            .iter()
+            .zip(b)
+            .map(|(x, t)| (x - t).abs())
+            .fold(0.0, f64::max);
+        assert!(worst < 1e-6, "{worst}");
+        assert_eq!(r.downbeats_ms, truth.downbeats_ms);
+        let g = r.grid().unwrap();
+        assert!((g.bpm - 142.0).abs() < 0.01 && g.regularity > 0.99);
+        assert_eq!(g.beats_per_bar, 4);
+        assert!(g.confidence > 0.7, "{}", g.confidence);
+        // Ровную сетку починка не трогает
+        assert_eq!(truth.repaired().beats_ms, truth.beats_ms);
+    }
+
+    #[test]
+    fn spurious_beat_loses_to_the_real_one() {
+        // Как у «ящиков»: 3360, 3620 (лишняя), 3840 — остаётся 3840
+        let mut a = synthetic(125.0, 64, 0.0);
+        a.beats_ms.push(3620.0);
+        a.beats_ms.sort_by(f64::total_cmp);
+        let r = a.repaired();
+        assert!(r.beats_ms.contains(&3840.0) && !r.beats_ms.contains(&3620.0));
+        assert_eq!(r.beats_ms.len(), 64);
+    }
+
+    #[test]
+    fn music_ends_before_the_fade_out() {
+        let mut a = synthetic(120.0, 4 * 50, 0.0); // 100 с
+        for (s, e) in a.energy_curve.iter_mut().enumerate() {
+            if s >= 80 {
+                *e = 600.0 * (100 - s) as f64 / 21.0;
+            }
+        }
+        let end = a.music_end();
+        assert!((88_000.0..=92_000.0).contains(&end), "{end}");
+        assert_eq!(a.outro_start(), end);
+        a.outro_start_ms = Some(70_000.0);
+        assert_eq!(a.outro_start(), 70_000.0);
+        // Без кривой — конец трека
+        a.energy_curve.clear();
+        assert_eq!(a.music_end(), a.duration());
+        // Местная ровность
+        let s = synthetic(120.0, 200, 0.0);
+        assert!(s.regularity_between(10_000.0, 60_000.0) > 0.99);
+        assert_eq!(s.regularity_between(0.0, 2000.0), 0.0);
     }
 
     #[test]
