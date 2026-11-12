@@ -1,6 +1,6 @@
 [package]
 name = "dalywave-shell"
-version = "0.1.1"
+version = "0.1.2"
 description = "DalyWave — оболочка Tauri для macOS, Windows, iPhone и iPad"
 authors = ["Zakhar Stupak"]
 edition = "2024"
