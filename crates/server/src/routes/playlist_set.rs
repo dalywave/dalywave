@@ -26,7 +26,7 @@ use dalywave_transitions::set::{self, Curve, Fit, SetTrack};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use super::playlists::{changed, lock_editable, touch};
+use super::playlists::{changed_playlist, lock_own_editable, touch};
 use crate::{
     auth::Principal,
     error::{AppError, AppResult, bad},
@@ -259,6 +259,7 @@ pub async fn preview(
         (status = 200, description = "Сет применён; прежний порядок — для «Отменить»", body = SetApplied),
         (status = 400, description = "Нет позиции `firstItemId`", body = ErrorBody),
         (status = 404, description = "Нет такого плейлиста", body = ErrorBody),
+        (status = 403, description = "Совместный плейлист: собирает только владелец", body = ErrorBody),
         (status = 409, description = "Плейлист собирается сам (микс): сначала сохранить копию", body = ErrorBody),
         (status = 422, description = "Слишком длинный плейлист (`too_long`)", body = ErrorBody),
     ),
@@ -271,14 +272,15 @@ pub async fn apply(
 ) -> AppResult<Json<SetApplied>> {
     let user = principal.user.id;
     let mut tx = st.db.begin().await?;
-    lock_editable(&mut tx, user, id).await?;
+    // Сет собирает только владелец: в совместном плейлисте порядок общий
+    lock_own_editable(&mut tx, user, id).await?;
     let (previous, preview, next) = plan(&mut tx, id, &opts, false).await?;
     if preview.changed {
         reorder(&mut tx, id, &next).await?;
         touch(&mut tx, id).await?;
-        changed(
+        changed_playlist(
             &mut tx,
-            user,
+            id,
             vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
         )
         .await;
@@ -311,7 +313,8 @@ pub async fn set_order(
 ) -> AppResult<StatusCode> {
     let user = principal.user.id;
     let mut tx = st.db.begin().await?;
-    lock_editable(&mut tx, user, id).await?;
+    // Сет собирает только владелец: в совместном плейлисте порядок общий
+    lock_own_editable(&mut tx, user, id).await?;
     let current = sqlx::query_scalar!(
         "SELECT id FROM playlist_items WHERE playlist_id = $1 ORDER BY position, id",
         id
@@ -330,9 +333,9 @@ pub async fn set_order(
     if next != current {
         reorder(&mut tx, id, &next).await?;
         touch(&mut tx, id).await?;
-        changed(
+        changed_playlist(
             &mut tx,
-            user,
+            id,
             vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
         )
         .await;

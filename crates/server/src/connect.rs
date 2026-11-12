@@ -289,12 +289,32 @@ pub async fn release(st: &AppState, user: Uuid, link: &Link) {
     .execute(&st.db)
     .await;
     let res = match res {
-        Ok(r) if r.rows_affected() > 0 => announce(&st.db, &st.hub, user).await,
+        Ok(r) if r.rows_affected() > 0 => {
+            friends_see_stop(st, user, device).await;
+            announce(&st.db, &st.hub, user).await
+        }
         Ok(_) => Ok(()),
         Err(e) => Err(e.into()),
     };
     if let Err(e) = res {
         tracing::warn!(error = %e, "connect release failed");
+    }
+}
+
+/// Пропало активное устройство — у друзей «сейчас играет» сменится на «последнее».
+async fn friends_see_stop(st: &AppState, user: Uuid, device: &str) {
+    let active = sqlx::query_scalar!(
+        "SELECT active_connect_id FROM playback_state WHERE user_id = $1",
+        user
+    )
+    .fetch_optional(&st.db)
+    .await
+    .ok()
+    .flatten()
+    .flatten();
+    if active.as_deref() == Some(device) {
+        let st = st.clone();
+        tokio::spawn(async move { crate::social::announce_activity(&st, user).await });
     }
 }
 
@@ -334,6 +354,14 @@ async fn publish(
     };
     let json = serde_json::to_value(&state).unwrap_or_default();
     prefetch_lyrics(st, &state);
+    // Что играло до этого снимка: друзьям сообщается только смена трека или паузы
+    let before = sqlx::query!(
+        r#"SELECT state -> 'current' -> 'track' ->> 'id' AS "track?", (state ->> 'playing')::boolean AS "playing?"
+           FROM playback_state WHERE user_id = $1"#,
+        user
+    )
+    .fetch_optional(&st.db)
+    .await?;
     // Снимок принимается от активного устройства; если активного нет — отправитель им становится
     let row = sqlx::query!(
         r#"WITH prev AS (SELECT active_connect_id FROM playback_state WHERE user_id = $1 FOR UPDATE)
@@ -359,6 +387,12 @@ async fn publish(
             state: None,
         })));
     };
+    let track = state.current.as_ref().map(|c| c.track.id.to_string());
+    let was = before.map(|b| (b.track, b.playing.unwrap_or(false)));
+    if was != Some((track, state.playing)) {
+        let st = st.clone();
+        tokio::spawn(async move { crate::social::announce_activity(&st, user).await });
+    }
     if row.prev.as_deref() != Some(device.as_str()) {
         realtime::deliver(
             &st.hub,

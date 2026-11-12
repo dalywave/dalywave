@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { PlaylistItem, Track } from '~/api/types'
+import type { PersonRef, PlaylistItem, Track } from '~/api/types'
 import type { MenuEntry } from '~/types/ui'
 
 // Плейлист: обложка, описание, треки с альбомами. Свой — «Изменить» (название, описание, обложка,
 // порядок), «Добавить треки», убрать из меню трека или выделением. Микс только для чтения:
-// его можно «Сохранить как плейлист»
+// его можно «Сохранить как плейлист». Совместный: под названием — участники, у треков — кто добавил;
+// участник добавляет, убирает и переставляет треки. Плейлист друга — только слушать и сохранить копию
 const route = useRoute()
 const router = useRouter()
 const bridge = useBridge()
@@ -13,6 +14,7 @@ const shareMenu = useShare()
 const ui = useUiStore()
 const lang = useLang()
 const pla = usePlaylistActions()
+const pui = usePlaylistUi()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
 
@@ -33,7 +35,33 @@ const items = computed(() => data.value?.items ?? [])
 const tracks = computed(() => items.value.map(i => i.track))
 const playing = computed(() => !!pl.value && isPlayingContext('playlist', pl.value.id))
 const kindKey = computed(() => (pl.value?.kind === 'mix' ? 'kind.mix' : pl.value?.kind === 'smart' ? 'kind.smart' : 'kind.user'))
+/** Треки можно менять: свой или совместный, где человек участник */
 const mine = computed(() => !!pl.value && pla.editable(pl.value))
+/** Название, обложка, сет, удаление — только владелец */
+const owner = computed(() => !!pl.value && mine.value && pla.isOwner(pl.value))
+
+// ---------- Совместный: участники и кто добавил ----------
+
+const auth = useAuthStore()
+/** Владелец и участники: владелец — первым */
+const people = computed<PersonRef[]>(() => {
+  const p = pl.value
+  if (!p) return []
+  const me = auth.user ? { id: auth.user.id, name: auth.user.name, avatarUrl: auth.user.avatarUrl ?? null } : null
+  const own = p.owner ?? (p.access === 'owner' ? me : null)
+  return [...(own ? [own] : []), ...(p.members ?? [])]
+})
+const peopleLine = computed(() => {
+  const names = people.value.map(x => (x.id === auth.user?.id ? t('you') : x.name))
+  const line = names.length <= 3 ? names.join(', ') : t('andMore', { names: names.slice(0, 2).join(', '), n: names.length - 2 })
+  return line.charAt(0).toUpperCase() + line.slice(1)
+})
+const addedBy = computed(() => {
+  if (!pl.value?.collaborative) return undefined
+  const byId = new Map(people.value.map(x => [x.id, x]))
+  return items.value.map(i => (i.addedBy ? byId.get(i.addedBy) ?? null : null))
+})
+watch(() => pui.peopleChanged, () => void refresh())
 
 // Правка — в адресе (?edit=1): «Изменить» из меню в боковой панели открывает сразу её
 const editing = computed(() => mine.value && route.query.edit === '1')
@@ -58,7 +86,7 @@ async function refresh() {
 const addOpen = ref(false)
 
 // «Собрать как сет» поменял порядок этого плейлиста (или его вернули «Отменить») — перечитать
-const pui = usePlaylistUi()
+
 watch(() => pui.reordered, (r) => {
   if (r?.id === id.value) void refresh()
 })
@@ -133,14 +161,25 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
       <MusicPhoneNav fallback="/library" />
       <MusicPageState :state="state" @retry="load" />
     </template>
-    <MusicPlaylistEditor v-else-if="data && editing" :key="`edit:${data.playlist.id}`" :detail="data" @done="finishEdit" />
+    <MusicPlaylistEditor v-else-if="data && editing" :key="`edit:${data.playlist.id}`" :detail="data" :order-only="!owner" @done="finishEdit" />
     <template v-else-if="data && pl">
-      <MusicPageHeader :kicker="t(kindKey)" :title="pl.title" back="/library">
+      <MusicPageHeader :kicker="pl.collaborative ? tg('pl.shared') : t(kindKey)" :title="pl.title" back="/library">
         <template #art>
           <MusicPlaylistCover :id="pl.id" :title="pl.title" :covers="pl.covers" :image="pl.image" :kind="pl.kind" :generated="pl.kind === 'mix'" />
         </template>
-        <template v-if="pl.description" #sub>
-          <span class="playlist__desc">{{ pl.description }}</span>
+        <template v-if="pl.description || pl.collaborative || pl.owner" #sub>
+          <!-- Совместный: кто в плейлисте (нажатие — участники и приглашение); чужой — чей -->
+          <button v-if="pl.collaborative && pl.access !== 'viewer'" type="button" class="playlist__people" @click="pui.openPeople(pl)">
+            <span class="playlist__stack" aria-hidden="true">
+              <FriendsAvatar v-for="x in people.slice(0, 4)" :key="x.id" :person="x" :size="26" />
+            </span>
+            <span class="ellipsis">{{ peopleLine }}</span>
+          </button>
+          <NuxtLink v-else-if="pl.owner" :to="`/friends/${pl.owner.id}`" class="playlist__people">
+            <FriendsAvatar :person="pl.owner" :size="26" />
+            <span class="ellipsis">{{ pl.owner.name }}</span>
+          </NuxtLink>
+          <span v-if="pl.description" class="playlist__desc">{{ pl.description }}</span>
         </template>
         <template v-if="pl.tracksCount" #meta>
           <span>{{ formatCount(pl.tracksCount, 'track', lang) }}</span>
@@ -154,10 +193,11 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
         </template>
         <template #tools>
           <UiIconButton v-if="mine && !ui.isPhone" icon="ph:plus" :label="t('addTracks')" size="lg" @click="addOpen = true" />
-          <UiIconButton v-if="mine && !ui.isPhone" icon="ph:pencil-simple" :label="tg('pl.edit')" size="lg" @click="startEdit" />
+          <UiIconButton v-if="owner && !ui.isPhone" icon="ph:pencil-simple" :label="tg('pl.edit')" size="lg" @click="startEdit" />
+          <UiIconButton v-if="mine && !ui.isPhone" :icon="owner ? 'ph:user-plus' : 'ph:users-three'" :label="owner ? (pl.collaborative ? tg('pl.people') : tg('pl.invite')) : tg('pl.people')" size="lg" @click="pui.openPeople(pl)" />
           <UiIconButton v-if="!mine && !ui.isPhone" icon="ph:plus-circle" :label="tg('pl.saveAs')" size="lg" @click="pla.duplicate(pl)" />
-          <UiIconButton v-if="!ui.isPhone && pl.tracksCount > 2" icon="ph:vinyl-record" :label="tg('pl.set.title')" size="lg" @click="pui.openSet(pl)" />
-          <MusicDownloadButton v-if="tracks.length" kind="playlist" :ref-id="pl.id" :title="pl.title" />
+          <UiIconButton v-if="!ui.isPhone && pl.tracksCount > 2 && (owner || pl.kind !== 'user')" icon="ph:vinyl-record" :label="tg('pl.set.title')" size="lg" @click="pui.openSet(pl)" />
+          <MusicDownloadButton v-if="tracks.length && pl.access !== 'viewer'" kind="playlist" :ref-id="pl.id" :title="pl.title" />
           <UiMenu :items="moreItems" align="start">
             <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />
           </UiMenu>
@@ -172,6 +212,7 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
         :label="pl.title"
         :extra-menu="mine ? extraMenu : undefined"
         :remove-many="mine ? removeIndices : undefined"
+        :added-by="addedBy"
       />
       <UiEmptyState v-else-if="mine" icon="ph:playlist" :title="t('empty')" :text="t('emptyMine')">
         <UiButton variant="primary" icon="ph:plus" @click="addOpen = true">{{ t('addTracks') }}</UiButton>
@@ -184,7 +225,12 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
 
 <style scoped>
 .playlist { display: flex; flex-direction: column; gap: 28px; }
-.playlist__desc { display: -webkit-box; overflow: hidden; font-size: var(--fs-body); font-weight: 450; color: var(--text-2); text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.playlist__people { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; min-height: 32px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-body); font-weight: 600; color: var(--text-1); text-align: left; cursor: pointer; }
+.playlist__people:hover .ellipsis { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
+.playlist__people:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: var(--r-1); }
+.playlist__stack { display: inline-flex; flex: none; }
+.playlist__stack > * + * { margin-left: -8px; box-shadow: 0 0 0 2px var(--ink-1); }
+.playlist__desc { flex-basis: 100%; display: -webkit-box; overflow: hidden; font-size: var(--fs-body); font-weight: 450; color: var(--text-2); text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 @media (max-width: 699px) {
   .playlist { gap: 20px; }
   .playlist > :deep(.tl) { padding: 0 8px; }
@@ -200,7 +246,9 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
     "shuffle": "Перемешать",
     "addTracks": "Добавить треки",
     "empty": "В плейлисте пока пусто",
-    "emptyMine": "Найдите треки или возьмите из подходящих"
+    "emptyMine": "Найдите треки или возьмите из подходящих",
+    "you": "вы",
+    "andMore": "{names} и ещё {n}"
   },
   "en": {
     "title": "Playlist",
@@ -209,7 +257,9 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
     "shuffle": "Shuffle",
     "addTracks": "Add tracks",
     "empty": "This playlist is empty",
-    "emptyMine": "Search for tracks or pick from suggestions"
+    "emptyMine": "Search for tracks or pick from suggestions",
+    "you": "you",
+    "andMore": "{names} and {n} more"
   }
 }
 </i18n>

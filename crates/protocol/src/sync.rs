@@ -15,6 +15,7 @@ use crate::{
     catalog::{ArtistRole, AudioStatus, ImageSet, RecordType},
     library::{BlockedKind, DownloadPolicy, PlaylistKind},
     settings::SyncSettings,
+    social::PersonRef,
     wave::WaveSettings,
 };
 
@@ -206,6 +207,17 @@ pub struct SyncPlaylist {
     pub folder_id: Option<Uuid>,
     #[serde(default)]
     pub position: f64,
+    /// Совместный плейлист.
+    #[serde(default)]
+    pub collaborative: bool,
+    /// Владелец, если плейлист не свой (человек — участник совместного).
+    #[serde(default)]
+    pub owner: Option<PersonRef>,
+    /// Участники совместного (без владельца): имена и аватары для «кто добавил».
+    #[serde(default)]
+    pub members: Vec<PersonRef>,
+    #[serde(default)]
+    pub friends_can_see: bool,
 }
 
 /// Папка плейлистов.
@@ -230,6 +242,9 @@ pub struct SyncPlaylistItem {
     pub track_id: Uuid,
     pub position: f64,
     pub added_at: DateTime<Utc>,
+    /// Кто добавил (в совместном плейлисте).
+    #[serde(default)]
+    pub added_by: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

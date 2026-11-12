@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO social_settings (user_id, invite_code) VALUES ($1, $2)\n         ON CONFLICT (user_id) DO UPDATE SET invite_code = $2, updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "43d5545d5146794021d5b4668200aa05b0c0032633f2b98a8c6a772641792d91"
+}

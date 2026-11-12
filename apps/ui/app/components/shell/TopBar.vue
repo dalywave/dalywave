@@ -45,6 +45,11 @@ const canForward = computed(() => {
 
 const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpperCase())
 
+// Друзья: что слушают — правая панель; точка — ждут ответа запросы в друзья
+const friends = useFriendsStore()
+const priv = usePrivateSession()
+const friendsOpen = computed(() => ui.panelOpen && ui.panelTab === 'friends')
+
 async function logout() {
   try {
     await auth.logout()
@@ -57,6 +62,9 @@ async function logout() {
 
 const accountMenu = computed<MenuEntry[]>(() => [
   { kind: 'heading', label: auth.user?.name ?? '', hint: auth.user?.email ?? undefined },
+  priv.entry(),
+  { label: t('friends.title'), icon: 'ph:users-three', onSelect: () => navigateTo('/friends') },
+  { kind: 'separator' },
   { label: t('nav.history'), icon: 'ph:clock-counter-clockwise', onSelect: () => navigateTo('/history') },
   { label: t('nav.settings'), icon: 'ph:gear-six', onSelect: () => navigateTo('/settings') },
   ...(auth.isAdmin ? [{ label: t('nav.admin'), icon: 'ph:shield-check', onSelect: () => navigateTo('/admin') }] : []),
@@ -75,10 +83,17 @@ const accountMenu = computed<MenuEntry[]>(() => [
     <RecognizeButton size="sm" class="top__mic" />
     <div class="top__spacer" />
     <NotifyBell />
+    <UiTooltip :text="t('friends.panel')" side="bottom">
+      <button type="button" class="friends" :class="{ 'is-open': friendsOpen }" :aria-label="t('friends.panel')" :aria-pressed="friendsOpen" @click="ui.togglePanel('friends')">
+        <Icon name="ph:users-three" class="friends__icon" />
+        <span v-if="friends.incoming.length" class="friends__dot" aria-hidden="true" />
+      </button>
+    </UiTooltip>
     <UiMenu :items="accountMenu" align="end">
-      <button type="button" class="avatar" :aria-label="t('nav.profile')">
+      <button type="button" class="avatar" :class="{ 'is-private': priv.on.value }" :aria-label="priv.on.value ? `${t('nav.profile')} · ${t('friends.private')}` : t('nav.profile')">
         <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="" class="avatar__img">
         <span v-else>{{ initial }}</span>
+        <span v-if="priv.on.value" class="avatar__private" aria-hidden="true"><Icon name="ph:eye-slash-bold" /></span>
       </button>
     </UiMenu>
   </header>
@@ -130,6 +145,16 @@ const accountMenu = computed<MenuEntry[]>(() => [
 }
 .avatar:hover, .avatar[data-state='open'] { box-shadow: inset 0 0 0 1px rgba(var(--hi-rgb), 0.3), 0 0 0 4px var(--fill-2); }
 .avatar__img { width: 100%; height: 100%; object-fit: cover; }
+/* Приватная сессия: значок на аватаре, чтобы не забыть, что друзья ничего не видят */
+.avatar { position: relative; overflow: visible; }
+.avatar__img { border-radius: 50%; }
+.avatar__private { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--text-1); box-shadow: 0 0 0 2px var(--ink-1); color: var(--on-light); font-size: 10px; }
+/* Как колокольчик рядом: тот же круг и тот же вес значка */
+.friends { position: relative; display: grid; place-items: center; width: 32px; height: 32px; flex: none; padding: 0; border: 0; border-radius: 50%; background: var(--fill-1); color: var(--text-2); transition: background-color var(--dur-1), color var(--dur-1); }
+.friends:hover, .friends.is-open { background: var(--fill-2); color: var(--text-1); }
+.friends:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.friends__icon { font-size: 18px; }
+.friends__dot { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--ink-1); }
 @media (max-width: 1023px) {
   .top { padding: 0 16px 0 20px; }
 }

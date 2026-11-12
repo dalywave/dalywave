@@ -4,9 +4,11 @@ pub mod admin_catalog;
 pub mod analysis;
 pub mod auth;
 pub mod catalog;
+pub mod collab;
 pub mod connect;
 pub mod events;
 pub mod fetcher;
+pub mod friends;
 pub mod home;
 pub mod images;
 pub mod imports;
@@ -91,6 +93,8 @@ pub fn router(state: AppState) -> Router {
         .merge(playlists::routes())
         .merge(playlist_folders::routes())
         .merge(playlist_set::routes())
+        .merge(collab::routes())
+        .merge(friends::routes())
         .merge(home::routes())
         .merge(taste::routes())
         .merge(rewind::routes())

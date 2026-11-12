@@ -101,6 +101,8 @@ const moreItems = computed<MenuEntry[]>(() => {
     </div>
 
     <div class="bar__right">
+      <!-- Приватная сессия: друзья не видят, что играет -->
+      <FriendsPrivateChip variant="icon" />
       <!-- Таймер сна стоит: луна с остатком -->
       <MusicSleepTimerButton v-if="sound.sleepActive" size="sm" />
       <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" :web="!connect.djAvailable" :next-at="nextAt" icon size="sm" />

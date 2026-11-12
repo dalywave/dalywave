@@ -863,6 +863,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_get_friends"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["invite"];
+        put?: never;
+        post: operations["reset_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/invite/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["invite_preview"];
+        put?: never;
+        post: operations["use_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["people"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/privacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_privacy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_privacy"];
+        trace?: never;
+    };
+    "/api/friends/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/requests/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["cancel_request"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/requests/{userId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/requests/{userId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["decline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/friends/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profile"];
+        put?: never;
+        post?: never;
+        delete: operations["unfriend"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/healthz": {
         parameters: {
             query?: never;
@@ -1679,6 +1839,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/playlists/join/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["join_preview"];
+        put?: never;
+        post: operations["join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/playlists/{id}": {
         parameters: {
             query?: never;
@@ -1693,6 +1869,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_patch_playlists_id_"];
+        trace?: never;
+    };
+    "/api/playlists/{id}/collaborative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["make_collaborative"];
+        post?: never;
+        delete: operations["stop_collaborative"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/playlists/{id}/cover": {
@@ -1721,6 +1913,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["duplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["invite_get_playlists_id_invite"];
+        put?: never;
+        post: operations["reset_invite_post_playlists_id_invite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1786,6 +1994,38 @@ export interface paths {
         put?: never;
         post: operations["move_item"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_members"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_member"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1865,6 +2105,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["preview_post_playlists_id_set_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_visibility"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2612,6 +2868,12 @@ export interface components {
             /** Format: uuid */
             trackId: string;
         };
+        /** @description Откуда играет: альбом, плейлист, артист — нажатие открывает его. */
+        ActivityContext: {
+            id: string;
+            title: string;
+            type: components["schemas"]["ContextType"];
+        };
         /** @description Добавить треки: в конец, в начало или после позиции. */
         AddPlaylistItems: {
             /**
@@ -2621,6 +2883,10 @@ export interface components {
             afterItemId?: string | null;
             atStart?: boolean;
             trackIds: string[];
+        };
+        /** @description Пригласить друзей в совместный плейлист. */
+        AddPlaylistMembers: {
+            userIds: string[];
         };
         AddedPlaylistItems: {
             items: components["schemas"]["PlaylistItem"][];
@@ -3517,6 +3783,78 @@ export interface components {
             items: components["schemas"]["FollowedArtist"][];
             nextCursor: string | null;
         };
+        Friend: {
+            activity: components["schemas"]["FriendActivity"] | null;
+            person: components["schemas"]["PersonRef"];
+            /** Format: date-time */
+            since: string;
+        };
+        /** @description Что слушает (или слушал последним) друг. */
+        FriendActivity: {
+            /**
+             * Format: date-time
+             * @description Сейчас — когда начался трек; последнее — когда слушал.
+             */
+            at: string;
+            context: components["schemas"]["ActivityContext"] | null;
+            /** @description У друга открыто «Слушать вместе»: код для `/jam/{code}`. */
+            jamCode: string | null;
+            /** @description Играет прямо сейчас; иначе — последнее, что слушал, в `at`. */
+            now: boolean;
+            track: components["schemas"]["Track"];
+        };
+        /** @description Друг начал слушать другое (или перестал). */
+        FriendActivityEvent: {
+            activity: components["schemas"]["FriendActivity"] | null;
+            /** Format: uuid */
+            userId: string;
+        };
+        /** @description Друзья (слушающие сейчас — первыми) и запросы. */
+        FriendList: {
+            friends: components["schemas"]["Friend"][];
+            /** @description Ждут моего ответа. */
+            incoming: components["schemas"]["FriendRequest"][];
+            /** @description Я отправил, ответа нет. */
+            outgoing: components["schemas"]["FriendRequest"][];
+        };
+        /** @description Страница друга. */
+        FriendProfile: {
+            activity: components["schemas"]["FriendActivity"] | null;
+            /** @description Ваши общие артисты: кого слушаете оба, самые общие первыми. */
+            commonArtists: components["schemas"]["ArtistSummary"][];
+            person: components["schemas"]["PersonRef"];
+            /** @description Его плейлисты, открытые друзьям. */
+            playlists: components["schemas"]["PlaylistSummary"][];
+            relation: components["schemas"]["Relation"];
+            /**
+             * Format: date-time
+             * @description Друзья с этого момента (только у друзей).
+             */
+            since: string | null;
+            tasteMatch: components["schemas"]["TasteMatch"] | null;
+            /** @description Топ артистов за 30 дней. */
+            topArtists: components["schemas"]["FriendTopArtist"][];
+        };
+        FriendRequest: {
+            /** Format: date-time */
+            createdAt: string;
+            person: components["schemas"]["PersonRef"];
+        };
+        /** @description Чем закончился запрос: отправлен или (встречный уже был) — сразу друзья. */
+        FriendRequestResult: {
+            relation: components["schemas"]["Relation"];
+        };
+        /** @description Артист в топе друга за месяц. */
+        FriendTopArtist: {
+            artist: components["schemas"]["ArtistSummary"];
+            /** Format: int64 */
+            plays: number;
+        };
+        /** @description Друзья или запросы изменились: перечитать список. */
+        FriendsChange: {
+            /** @description Что поменялось: `requests`, `friends`, `privacy`. */
+            what: string;
+        };
         /** @description Голова сети вкуса на отложенных по времени данных: у сети и у правил. */
         HeadMetrics: {
             /** Format: double */
@@ -3885,6 +4223,12 @@ export interface components {
              * @description Анализов по превью — это и есть индекс каталога.
              */
             size: number;
+        };
+        /** @description Ссылка «Добавить в друзья»: кто откроет её, станет другом сразу. */
+        InviteLink: {
+            code: string;
+            /** @description Полный адрес для QR-кода и «Поделиться». */
+            url: string;
         };
         /** @description Сессия глазами хозяина. */
         Jam: {
@@ -4481,6 +4825,10 @@ export interface components {
             /** @description Например «Mac Захара». */
             name: string;
         };
+        NewFriendRequest: {
+            /** Format: uuid */
+            userId: string;
+        };
         NewPlaylist: {
             description?: string | null;
             title: string;
@@ -4540,7 +4888,7 @@ export interface components {
          * @description Вид уведомления.
          * @enum {string}
          */
-        NotificationKind: "release" | "import" | "rewind" | "review" | "sources" | "test";
+        NotificationKind: "release" | "import" | "rewind" | "review" | "sources" | "test" | "friends" | "shared_playlist";
         /** @description Вид уведомлений включён или нет. */
         NotificationKindSetting: {
             enabled: boolean;
@@ -4613,8 +4961,23 @@ export interface components {
          * @enum {string}
          */
         PendingStatus: "acquiring" | "waiting_for_downloader";
+        PeopleList: {
+            items: components["schemas"]["PersonCard"][];
+        };
         /** @enum {string} */
         Permission: "play" | "library" | "admin" | "downloader";
+        /** @description Человек в поиске и в приглашении: кем приходится. */
+        PersonCard: {
+            person: components["schemas"]["PersonRef"];
+            relation: components["schemas"]["Relation"];
+        };
+        /** @description Человек на сервере: имя и аватар из daly.rest. */
+        PersonRef: {
+            avatarUrl: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         Ping: {
             id?: string | null;
         };
@@ -4699,6 +5062,11 @@ export interface components {
             /** Format: uuid */
             waveSessionId?: string | null;
         };
+        /**
+         * @description Кем человек приходится плейлисту.
+         * @enum {string}
+         */
+        PlaylistAccess: "owner" | "member" | "viewer";
         PlaylistDetail: {
             items: components["schemas"]["PlaylistItem"][];
             playlist: components["schemas"]["PlaylistSummary"];
@@ -4724,9 +5092,21 @@ export interface components {
             collapsed?: boolean | null;
             title?: string | null;
         };
+        /** @description Приглашение в совместный плейлист по ссылке: что за плейлист, чей и вошёл ли уже. */
+        PlaylistInvite: {
+            /** @description Уже участник (или владелец): ссылка просто открывает плейлист. */
+            joined: boolean;
+            owner: components["schemas"]["PersonRef"];
+            playlist: components["schemas"]["PlaylistSummary"];
+        };
         PlaylistItem: {
             /** Format: date-time */
             addedAt: string;
+            /**
+             * Format: uuid
+             * @description Кто добавил трек (видно в совместном плейлисте).
+             */
+            addedBy: string | null;
             /** Format: uuid */
             id: string;
             /**
@@ -4760,6 +5140,10 @@ export interface components {
          */
         PlaylistSort: "recent" | "title" | "custom";
         PlaylistSummary: {
+            /** @description Кем плейлист приходится смотрящему: свой, участник совместного, плейлист друга. */
+            access?: components["schemas"]["PlaylistAccess"];
+            /** @description Совместный: участники добавляют и переставляют треки. */
+            collaborative?: boolean;
             /** @description Обложки первых альбомов плейлиста (до четырёх) — для мозаики. */
             covers: components["schemas"]["ImageSet"][];
             /** Format: date-time */
@@ -4772,12 +5156,17 @@ export interface components {
              * @description Папка, в которой лежит плейлист; `null` — вне папок.
              */
             folderId?: string | null;
+            /** @description Друзья видят плейлист на странице владельца. */
+            friendsCanSee?: boolean;
             /** @description Кто собрал плейлист вида `mix`: `daily_mix`, `discover_weekly`, `on_repeat`, `repeat_rewind`, `rewind`… */
             generator?: string | null;
             /** Format: uuid */
             id: string;
             image?: components["schemas"]["ImageSet"] | null;
             kind: components["schemas"]["PlaylistKind"];
+            /** @description Участники совместного (без владельца). */
+            members?: components["schemas"]["PersonRef"][];
+            owner: components["schemas"]["PersonRef"] | null;
             pinned: boolean;
             /**
              * Format: date-time
@@ -4795,9 +5184,37 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description Открыть или скрыть плейлист от друзей. */
+        PlaylistVisibility: {
+            friendsCanSee: boolean;
+        };
         Pong: {
             id: string | null;
         };
+        /** @description Приватность прослушиваний. */
+        Privacy: {
+            /**
+             * @description Приватная сессия идёт: друзья не видят, что играет, а сыгранное в ней не попадает в
+             *     «последнее» и в топ на странице друга.
+             */
+            privateSession: boolean;
+            /**
+             * Format: date-time
+             * @description Когда сессия закончится сама; `null` — до выключения (или сессии нет).
+             */
+            privateUntil: string | null;
+            /** @description «Показывать друзьям, что я слушаю». */
+            shareListening: boolean;
+        };
+        PrivacyPatch: {
+            privateSession?: components["schemas"]["PrivateSessionMode"] | null;
+            shareListening?: boolean | null;
+        };
+        /**
+         * @description Приватная сессия: на 6 часов или до выключения.
+         * @enum {string}
+         */
+        PrivateSessionMode: "off" | "hours6" | "until_off";
         /**
          * @description Канал доставки push.
          * @enum {string}
@@ -5064,6 +5481,11 @@ export interface components {
             /** @description Машинная причина: `unknown_track`, `unknown_artist`, `invalid`. */
             reason: string;
         };
+        /**
+         * @description Кем человек приходится тому, кто спрашивает.
+         * @enum {string}
+         */
+        Relation: "me" | "none" | "friend" | "outgoing" | "incoming";
         /**
          * @description Загрузчик бросает задание (приложение закрывают посреди скачивания): задание сразу возвращается
          *     в очередь, попытка не тратится.
@@ -5713,6 +6135,12 @@ export interface components {
         }) | (components["schemas"]["NotificationsRead"] & {
             /** @enum {string} */
             type: "notification.read";
+        }) | (components["schemas"]["FriendsChange"] & {
+            /** @enum {string} */
+            type: "friends.changed";
+        }) | (components["schemas"]["FriendActivityEvent"] & {
+            /** @enum {string} */
+            type: "friends.activity";
         });
         /** @description Серверный fetcher — второй исполнитель (`DALYWAVE_FETCHER_MODE` с `server`). */
         ServerFetcher: {
@@ -6199,14 +6627,20 @@ export interface components {
             wavePresets?: components["schemas"]["SyncWavePreset"][];
         };
         SyncPlaylist: {
+            /** @description Совместный плейлист. */
+            collaborative?: boolean;
             /** Format: date-time */
             createdAt: string;
             description: string;
             /** Format: uuid */
             folderId?: string | null;
+            friendsCanSee?: boolean;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["PlaylistKind"];
+            /** @description Участники совместного (без владельца): имена и аватары для «кто добавил». */
+            members?: components["schemas"]["PersonRef"][];
+            owner?: components["schemas"]["PersonRef"] | null;
             pinned: boolean;
             /** Format: double */
             position?: number;
@@ -6234,6 +6668,11 @@ export interface components {
         SyncPlaylistItem: {
             /** Format: date-time */
             addedAt: string;
+            /**
+             * Format: uuid
+             * @description Кто добавил (в совместном плейлисте).
+             */
+            addedBy?: string | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -6429,6 +6868,23 @@ export interface components {
              * @description Когда грани собирались в последний раз.
              */
             updatedAt: string | null;
+        };
+        /**
+         * @description Совпадение вкусов. Честная метрика из двух частей (каждая 0…1):
+         *     - `artists` — пересечение долей прослушиваний по артистам за полгода: сумма по общим артистам
+         *       меньшей из двух долей (1 — слушаете одних и тех же в тех же пропорциях);
+         *     - `sound` — насколько близки грани вкуса по звучанию (взвешенная лучшая пара граней, косинус
+         *       приведён к шкале, где «случайные треки» — около нуля).
+         *
+         *     `percent` — среднее двух частей (или одна, если второй нет).
+         */
+        TasteMatch: {
+            /** Format: float */
+            artists: number | null;
+            /** Format: int32 */
+            percent: number;
+            /** Format: float */
+            sound: number | null;
         };
         /** @description `GET /api/taste`. */
         TasteOverview: {
@@ -9017,6 +9473,366 @@ export interface operations {
             };
         };
     };
+    list_get_friends: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Друзья (слушающие сейчас — первыми) и запросы */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendList"];
+                };
+            };
+        };
+    };
+    invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Своя ссылка «Добавить в друзья» */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteLink"];
+                };
+            };
+        };
+    };
+    reset_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Новая ссылка; прежняя больше не работает */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteLink"];
+                };
+            };
+        };
+    };
+    invite_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код из ссылки */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Кто зовёт в друзья и кем уже приходится */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonCard"];
+                };
+            };
+            /** @description Ссылка больше не работает (`invite_expired`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    use_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код из ссылки */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Теперь друзья: ссылку дал сам человек */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonCard"];
+                };
+            };
+            /** @description Ссылка больше не работает (`invite_expired`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    people: {
+        parameters: {
+            query?: {
+                /** @description Часть имени; пусто — все, у кого есть доступ к сервису. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Люди сервиса (с доступом) по имени и кем приходятся */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeopleList"];
+                };
+            };
+        };
+    };
+    get_privacy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Показывать ли друзьям, что я слушаю, и идёт ли приватная сессия */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Privacy"];
+                };
+            };
+        };
+    };
+    update_privacy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyPatch"];
+            };
+        };
+        responses: {
+            /** @description Приватность после изменения */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Privacy"];
+                };
+            };
+        };
+    };
+    request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewFriendRequest"];
+            };
+        };
+        responses: {
+            /** @description Запрос отправлен (`outgoing`) или встречный уже был — друзья (`friend`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendRequestResult"];
+                };
+            };
+            /** @description Себе запрос не отправить */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого человека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    cancel_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Кому отправлен запрос */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запрос отменён (если был) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Кто прислал запрос */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Теперь друзья */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendRequestResult"];
+                };
+            };
+            /** @description Запроса нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    decline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Кто прислал запрос */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запрос отклонён: отправитель об этом не узнает, повтор не тревожит */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Человек */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница друга: что слушает, открытые плейлисты, топ за месяц, совпадение вкусов. Не другу — только имя и кем приходится */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendProfile"];
+                };
+            };
+            /** @description Нет такого человека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unfriend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Друг */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Больше не друзья (с обеих сторон) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     healthz: {
         parameters: {
             query?: never;
@@ -11200,6 +12016,79 @@ export interface operations {
             };
         };
     };
+    join_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код из ссылки */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Куда зовут: плейлист, владелец, вошёл ли уже */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistInvite"];
+                };
+            };
+            /** @description Ссылка больше не работает (`invite_expired`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код из ссылки */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Человек — участник; плейлист у него в медиатеке */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Ссылка больше не работает (`invite_expired`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Участников уже слишком много */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     detail: {
         parameters: {
             query?: never;
@@ -11244,12 +12133,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Плейлист удалён вместе с позициями */
+            /** @description Плейлист удалён вместе с позициями (и у участников) */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Участник совместного плейлиста — может только выйти */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
             };
             /** @description Нет такого плейлиста */
             404: {
@@ -11285,6 +12183,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    make_collaborative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Плейлист совместный: друзья, которых позовут, смогут добавлять треки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Микс — сначала сохранить копию */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    stop_collaborative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Плейлист снова только свой: участники его больше не видят, ссылка не работает */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Нет такого плейлиста */
@@ -11426,6 +12415,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    invite_get_playlists_id_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ссылка-приглашение (плейлист становится совместным) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteLink"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reset_invite_post_playlists_id_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Новая ссылка; прежняя больше не работает */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteLink"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Нет такого плейлиста */
@@ -11605,6 +12676,101 @@ export interface operations {
                 };
             };
             /** @description Нет такого плейлиста или позиции */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    add_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPlaylistMembers"];
+            };
+        };
+        responses: {
+            /** @description Друзья — участники (плейлист становится совместным) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Среди людей есть не друзья */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+                /** @description Участник; свой id — выйти из плейлиста */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Участник убран (или вышел): плейлиста у него больше нет */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Убрать другого может только владелец */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста или участника */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -11797,6 +12963,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description Совместный плейлист: собирает только владелец */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Нет такого плейлиста */
             404: {
                 headers: {
@@ -11871,6 +13046,51 @@ export interface operations {
             };
             /** @description Слишком длинный плейлист (`too_long`) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    set_visibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaylistVisibility"];
+            };
+        };
+        responses: {
+            /** @description Видят ли друзья плейлист на странице владельца */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlists SET collaborative = true, invite_code = COALESCE(invite_code, $2), updated_at = now()\n         WHERE id = $1 AND (NOT collaborative OR invite_code IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cf5377e69895e3e505494c5cf479c7e5565ba92de486977bdcc07d619fb60541"
+}

@@ -34,6 +34,8 @@ export function notificationIcon(kind: string): string {
     case 'rewind': return 'ph:calendar-star'
     case 'review': return 'ph:scales'
     case 'sources': return 'ph:warning-circle'
+    case 'friends': return 'ph:users-three'
+    case 'shared_playlist': return 'ph:playlist'
     default: return 'ph:bell-simple'
   }
 }

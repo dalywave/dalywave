@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE friend_requests SET declined_at = now()\n         WHERE from_user = $1 AND to_user = $2 AND declined_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a8be20ace907f06862721e55027c27199e8707fbf9db6ca59df8045d894d3cda"
+}

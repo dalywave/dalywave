@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM playlists p WHERE p.id = $1\n                                  AND (p.user_id = $2 OR EXISTS (SELECT 1 FROM playlist_members m\n                                                                 WHERE m.playlist_id = p.id AND m.user_id = $2))) AS \"e!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "e!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f6d80009ba1c0ee1e719644b74cd538cc69ca0e37707deba00b691dec186939e"
+}

@@ -6,7 +6,7 @@
 //! закончились), и следующий проход берёт всё с `txid >= xmin`. Строка может прийти повторно, но не
 //! потеряется. Связанные строки каталога (трек понравился, а сам трек старый) приходят вместе со страницей.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use axum::{Router, extract::State, routing::get};
 use chrono::{DateTime, NaiveDate, Utc};
@@ -15,6 +15,7 @@ use dalywave_protocol::{
     catalog::{ArtistRole, AudioStatus, RecordType},
     library::{BlockedKind, PlaylistKind},
     settings::SyncSettings,
+    social::PersonRef,
     sync::{
         SyncAlbum, SyncArtist, SyncBlockedItem, SyncDeviceDownload, SyncDeviceSetItem, SyncEntity,
         SyncFollowedArtist, SyncLikedTrack, SyncPage, SyncPlaylist, SyncPlaylistFolder,
@@ -532,31 +533,7 @@ async fn collect(
             })
         }),
     );
-    out.extend(
-        sqlx::query!(
-            "SELECT id, title, description, kind, pinned, created_at, updated_at, folder_id, position, rev
-             FROM playlists
-             WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
-            user, w, after, fetch,
-        )
-        .fetch_all(&mut *conn)
-        .await?
-        .into_iter()
-        .map(|r| {
-            Change::Playlist(SyncPlaylist {
-                id: r.id,
-                rev: r.rev,
-                title: r.title,
-                description: r.description,
-                kind: r.kind.parse().unwrap_or(PlaylistKind::User),
-                pinned: r.pinned,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
-                folder_id: r.folder_id,
-                position: r.position,
-            })
-        }),
-    );
+    out.extend(playlists(&mut *conn, user, w, after, fetch).await?);
     out.extend(
         sqlx::query_as!(
             SyncPlaylistFolder,
@@ -588,9 +565,12 @@ async fn collect(
     }
     out.extend(
         sqlx::query!(
-            "SELECT i.id, i.playlist_id, i.track_id, i.position, i.added_at, i.rev
+            "SELECT i.id, i.playlist_id, i.track_id, i.position, i.added_at, i.added_by, i.rev
              FROM playlist_items i JOIN playlists p ON p.id = i.playlist_id
-             WHERE p.user_id = $1 AND i.txid >= $2::text::xid8 AND i.rev > $3 ORDER BY i.rev LIMIT $4",
+             WHERE (p.user_id = $1
+                    OR (p.collaborative
+                        AND EXISTS (SELECT 1 FROM playlist_members m WHERE m.playlist_id = p.id AND m.user_id = $1)))
+               AND i.txid >= $2::text::xid8 AND i.rev > $3 ORDER BY i.rev LIMIT $4",
             user, w, after, fetch,
         )
         .fetch_all(&mut *conn)
@@ -604,6 +584,7 @@ async fn collect(
                 track_id: r.track_id,
                 position: r.position,
                 added_at: r.added_at,
+                added_by: r.added_by,
             })
         }),
     );
@@ -780,6 +761,107 @@ async fn collect(
         .map(|r| Change::Recording(r.into())),
     );
     Ok(out)
+}
+
+/// Плейлисты человека: свои и совместные, где он участник. У чужого место и «закреплён» — из строки
+/// участника, а номер изменения — больший из двух: строка приходит заново, когда меняется любая.
+/// Участники и владелец совместного — именами и аватарами, чтобы и без сети было видно, кто добавил трек.
+async fn playlists(
+    conn: &mut PgConnection,
+    user: Uuid,
+    w: &str,
+    after: i64,
+    fetch: i64,
+) -> Result<Vec<Change>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT p.id, p.title, p.description, p.kind, p.created_at, p.updated_at, p.collaborative,
+                  p.friends_can_see, p.user_id AS owner_id,
+                  p.folder_id AS "folder_id?", p.position AS "position!", p.pinned AS "pinned!", p.rev AS "rev!"
+           FROM playlists p
+           WHERE p.user_id = $1 AND p.txid >= $2::text::xid8 AND p.rev > $3
+           UNION ALL
+           SELECT p.id, p.title, p.description, p.kind, p.created_at, p.updated_at, p.collaborative,
+                  p.friends_can_see, p.user_id, NULL, m.position, m.pinned, GREATEST(p.rev, m.rev)
+           FROM playlist_members m JOIN playlists p ON p.id = m.playlist_id
+           WHERE m.user_id = $1 AND p.collaborative AND (p.txid >= $2::text::xid8 OR m.txid >= $2::text::xid8)
+             AND GREATEST(p.rev, m.rev) > $3
+           ORDER BY 13 LIMIT $4"#,
+        user,
+        w,
+        after,
+        fetch,
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+    let shared: Vec<Uuid> = rows
+        .iter()
+        .filter(|r| r.collaborative == Some(true))
+        .filter_map(|r| r.id)
+        .collect();
+    let mut members: HashMap<Uuid, Vec<PersonRef>> = HashMap::new();
+    let mut people: HashMap<Uuid, PersonRef> = HashMap::new();
+    if !shared.is_empty() {
+        for r in sqlx::query!(
+            "SELECT m.playlist_id, u.id, u.name, u.avatar_url FROM playlist_members m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.playlist_id = ANY($1) ORDER BY m.joined_at, u.id",
+            &shared
+        )
+        .fetch_all(&mut *conn)
+        .await?
+        {
+            members.entry(r.playlist_id).or_default().push(PersonRef {
+                id: r.id,
+                name: r.name,
+                avatar_url: r.avatar_url,
+            });
+        }
+        let owners: Vec<Uuid> = rows
+            .iter()
+            .filter_map(|r| r.owner_id)
+            .filter(|o| *o != user)
+            .collect();
+        for p in sqlx::query_as!(
+            PersonRef,
+            "SELECT id, name, avatar_url FROM users WHERE id = ANY($1)",
+            &owners
+        )
+        .fetch_all(&mut *conn)
+        .await?
+        {
+            people.insert(p.id, p);
+        }
+    }
+    Ok(rows
+        .into_iter()
+        .filter_map(|r| {
+            let id = r.id?;
+            let owner = r.owner_id?;
+            let collaborative = r.collaborative.unwrap_or(false);
+            Some(Change::Playlist(SyncPlaylist {
+                id,
+                rev: r.rev,
+                title: r.title?,
+                description: r.description?,
+                kind: r.kind?.parse().unwrap_or(PlaylistKind::User),
+                pinned: r.pinned,
+                created_at: r.created_at?,
+                updated_at: r.updated_at?,
+                folder_id: r.folder_id,
+                position: r.position,
+                owner: (owner != user)
+                    .then(|| people.get(&owner).cloned())
+                    .flatten(),
+                members: if collaborative {
+                    members.remove(&id).unwrap_or_default()
+                } else {
+                    Vec::new()
+                },
+                collaborative,
+                friends_can_see: r.friends_can_see.unwrap_or(true),
+            }))
+        })
+        .collect())
 }
 
 /// Каталожные строки, без которых строки медиатеки этой страницы не показать: понравился старый

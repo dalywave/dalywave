@@ -5,7 +5,11 @@ import type { MenuEntry } from '~/types/ui'
 // Правка своего плейлиста, как в Apple Music: название, описание, обложка; строки — «⊖» слева,
 // ручка справа. Убрать и переставить применяются сразу (у удаления — «Отменить»), название
 // и описание — по «Готово». На телефоне строку можно смахнуть влево
-const props = defineProps<{ detail: PlaylistDetail }>()
+const props = defineProps<{
+  detail: PlaylistDetail
+  /** Участник совместного плейлиста: порядок и состав, без названия, описания и обложки */
+  orderOnly?: boolean
+}>()
 const emit = defineEmits<{ done: [] }>()
 
 const bridge = useBridge()
@@ -232,11 +236,23 @@ onMounted(() => nextTick(grow))
   <div class="ed" :class="{ 'is-sorting': sortable.dragging.value }">
     <!-- Телефон: своя верхняя строка с «Готово» -->
     <div v-if="ui.isPhone" class="ed__bar">
-      <span class="ed__bar-title">{{ t('pl.edit') }}</span>
+      <span class="ed__bar-title">{{ orderOnly ? t('pl.reorder') : t('pl.edit') }}</span>
       <UiButton variant="ghost" class="ed__bar-done" :loading="saving" :disabled="!titleOk" @click="done">{{ t('pl.done') }}</UiButton>
     </div>
 
-    <header class="ed__head">
+    <header v-if="orderOnly" class="ed__head ed__head--order">
+      <div class="ed__cover ed__cover--static">
+        <MusicPlaylistCover :id="pl.id" :title="title" :covers="covers" :image="pl.image" :kind="pl.kind" :show-title="false" />
+      </div>
+      <div class="ed__fields">
+        <span class="ed__label">{{ t('pl.reorder') }}</span>
+        <span class="ed__static-title">{{ title }}</span>
+        <div v-if="!ui.isPhone" class="ed__actions">
+          <UiButton variant="primary" size="lg" @click="emit('done')">{{ t('pl.done') }}</UiButton>
+        </div>
+      </div>
+    </header>
+    <header v-else class="ed__head">
       <UiMenu :items="coverMenu" align="start">
         <button type="button" class="ed__cover" :aria-label="t('pl.coverChange')" :aria-busy="coverBusy || undefined">
           <MusicPlaylistCover :id="pl.id" :title="title" :covers="covers" :image="pl.image" :kind="pl.kind" :show-title="false" />
@@ -340,6 +356,8 @@ onMounted(() => nextTick(grow))
 .ed__label { font-size: var(--fs-caption); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .ed__title, .ed__desc { width: 100%; margin: 0 0 10px; padding: 8px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; color: var(--text-1); font: inherit; outline: none; transition: border-color var(--dur-1); }
 .ed__title { font-size: clamp(28px, 3.4vw, 44px); font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.1; }
+.ed__cover--static { cursor: default; }
+.ed__static-title { font-size: clamp(28px, 3.4vw, 44px); font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.1; overflow-wrap: anywhere; }
 .ed__desc { min-height: 40px; resize: none; overflow: hidden; font-size: var(--fs-body); color: var(--text-2); line-height: 1.45; }
 .ed__title:focus, .ed__desc:focus { border-bottom-color: var(--text-2); }
 .ed__title::placeholder, .ed__desc::placeholder { color: var(--text-4); }

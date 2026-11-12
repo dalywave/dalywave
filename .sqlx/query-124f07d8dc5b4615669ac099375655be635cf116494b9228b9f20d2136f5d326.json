@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO playlist_members (playlist_id, user_id, position)\n         VALUES ($1, $2, COALESCE(LEAST(\n             (SELECT min(position) FROM playlists WHERE user_id = $2 AND folder_id IS NULL),\n             (SELECT min(position) FROM playlist_folders WHERE user_id = $2),\n             (SELECT min(position) FROM playlist_members WHERE user_id = $2)), 1024) - 1024)\n         ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "124f07d8dc5b4615669ac099375655be635cf116494b9228b9f20d2136f5d326"
+}

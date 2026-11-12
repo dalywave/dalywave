@@ -17,6 +17,18 @@ const HOSTS = [
 const OWN_HOSTS = ['wave.daly.rest']
 const KINDS: ShareKind[] = ['track', 'album', 'artist', 'playlist']
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/** Код ссылки-приглашения: «Добавить в друзья», вход в совместный плейлист */
+const CODE = /^[\w-]{8,32}$/
+
+/** Приглашения и друзья: `friends`, `friends/{id}`, `friends/add/{code}`, `playlist/join/{code}` */
+function socialRoute(parts: string[]): string | null {
+  const [a, b, c] = parts
+  if (a === 'friends' && !b) return '/friends'
+  if (a === 'friends' && b && UUID.test(b) && !c) return `/friends/${b}`
+  if (a === 'friends' && b === 'add' && c && CODE.test(c)) return `/friends/add/${c}`
+  if (a === 'playlist' && b === 'join' && c && CODE.test(c)) return `/playlist/join/${c}`
+  return null
+}
 
 function ownHost(host: string) {
   return OWN_HOSTS.includes(host) || (typeof location !== 'undefined' && /^https?:$/.test(location.protocol) && host === location.host)
@@ -25,8 +37,11 @@ function ownHost(host: string) {
 /** Своя ссылка → экран: `/album/{id}` */
 export function ownRoute(url: URL): string | null {
   if (!ownHost(url.host)) return null
-  const [kind, id] = url.pathname.split('/').filter(Boolean)
-  return kind && id && KINDS.includes(kind as ShareKind) && UUID.test(id) ? `/${kind}/${id}` : null
+  const parts = url.pathname.split('/').filter(Boolean)
+  const [kind, id] = parts
+  const social = socialRoute(parts)
+  if (social) return social
+  return kind && id && KINDS.includes(kind as ShareKind) && UUID.test(id) && parts.length === 2 ? `/${kind}/${id}` : null
 }
 
 /** Разделы, которые открываются ссылкой приложения как есть (уведомления: перенос, итоги, админка) */
@@ -42,6 +57,8 @@ export function appRoute(text: string): string | null {
     const url = new URL(raw)
     const host = url.host
     const parts = url.pathname.split('/').filter(Boolean)
+    const social = socialRoute([host, ...parts])
+    if (social) return social
     if (KINDS.includes(host as ShareKind)) {
       const [id] = parts
       return id && UUID.test(id) ? `/${host}/${id}` : null

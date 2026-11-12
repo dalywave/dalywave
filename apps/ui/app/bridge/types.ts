@@ -20,6 +20,7 @@ import type {
   Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
+  FriendList, FriendProfile, FriendRequestResult, InviteLink, PeopleList, PersonCard, Privacy, PrivacyPatch, PlaylistInvite,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -688,6 +689,38 @@ export interface Bridge {
     /** Плейлисты удалённой папки встают на её место */
     removeFolder(id: string): Promise<PlaylistList>
     moveFolder(id: string, body: MovePlaylistFolder): Promise<PlaylistList>
+    /** Совместный: участники добавляют, убирают и переставляют треки; выключить — участники уходят */
+    setCollaborative(id: string, on: boolean): Promise<PlaylistSummary>
+    /** Видят ли друзья плейлист на странице владельца */
+    setVisibility(id: string, friendsCanSee: boolean): Promise<PlaylistSummary>
+    /** Ссылка-приглашение в совместный; `reset` — новая, прежняя перестаёт работать */
+    invite(id: string, reset?: boolean): Promise<InviteLink>
+    /** Позвать друзей (плейлист становится совместным) */
+    addMembers(id: string, userIds: string[]): Promise<PlaylistSummary>
+    /** Убрать участника; свой id — выйти из плейлиста */
+    removeMember(id: string, userId: string): Promise<void>
+    /** Куда зовёт ссылка: плейлист, владелец, вошёл ли уже */
+    joinPreview(code: string): Promise<PlaylistInvite>
+    join(code: string): Promise<PlaylistSummary>
+  }
+
+  /** Друзья: запросы, ссылка, что слушают, страница друга, приватность */
+  friends: {
+    list(): Promise<FriendList>
+    /** Люди сервиса по имени (пусто — все) */
+    people(q?: string): Promise<PeopleList>
+    request(userId: string): Promise<FriendRequestResult>
+    cancel(userId: string): Promise<void>
+    accept(userId: string): Promise<FriendRequestResult>
+    decline(userId: string): Promise<void>
+    remove(userId: string): Promise<void>
+    profile(userId: string): Promise<FriendProfile>
+    /** Своя ссылка «Добавить в друзья»; `reset` — новая */
+    invite(reset?: boolean): Promise<InviteLink>
+    invitePreview(code: string): Promise<PersonCard>
+    useInvite(code: string): Promise<PersonCard>
+    privacy(): Promise<Privacy>
+    updatePrivacy(patch: PrivacyPatch): Promise<Privacy>
   }
 
   /** Уведомления: центр, настройки по видам и тихие часы, подписки устройств на push */

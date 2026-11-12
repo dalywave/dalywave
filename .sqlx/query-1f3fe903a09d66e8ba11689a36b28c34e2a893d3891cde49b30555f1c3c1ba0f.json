@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO playlist_items (playlist_id, track_id, position)\n         SELECT $1, t, p FROM unnest($2::uuid[], $3::float8[]) AS x(t, p)\n         RETURNING id",
+  "query": "INSERT INTO playlist_items (playlist_id, track_id, position, added_by)\n         SELECT $1, t, p, $4 FROM unnest($2::uuid[], $3::float8[]) AS x(t, p)\n         RETURNING id",
   "describe": {
     "columns": [
       {
@@ -19,12 +19,13 @@
       "Left": [
         "Uuid",
         "UuidArray",
-        "Float8Array"
+        "Float8Array",
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "1aabee76b17712dceaa0478c9eaeb3cf25b06dd81e34c685cfe5c436f0e55997"
+  "hash": "1f3fe903a09d66e8ba11689a36b28c34e2a893d3891cde49b30555f1c3c1ba0f"
 }

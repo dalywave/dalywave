@@ -14,6 +14,7 @@ use dalywave_protocol::{
         LikedTrack, LikedTrackPage, PlaylistDetail, PlaylistFolder, PlaylistItem, PlaylistKind,
         PlaylistList, PlaylistSummary, SavedAlbum, SavedAlbumPage,
     },
+    social::{PersonRef, PlaylistAccess},
 };
 use rusqlite::{OptionalExtension, Row, params};
 use uuid::Uuid;
@@ -290,7 +291,7 @@ impl Store {
                         (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id),
                         (SELECT coalesce(sum(t.duration_ms), 0) FROM playlist_items i JOIN tracks t ON t.id = i.track_id
                          WHERE i.playlist_id = p.id),
-                        p.folder_id, p.position
+                        p.folder_id, p.position, p.collaborative, p.owner, p.members, p.friends_can_see
                  FROM playlists p WHERE p.id = ?1",
             )?
             .query_row([id.to_string()], |r| {
@@ -310,10 +311,21 @@ impl Store {
                     position: r.get(10)?,
                     played_at: None,
                     generator: None,
+                    collaborative: r.get(11)?,
+                    owner: r
+                        .get::<_, Option<String>>(12)?
+                        .and_then(|o| serde_json::from_str::<PersonRef>(&o).ok()),
+                    members: serde_json::from_str(&r.get::<_, String>(13)?).unwrap_or_default(),
+                    friends_can_see: r.get(14)?,
+                    access: PlaylistAccess::Owner,
                 })
             })
             .optional()?;
         let Some(mut p) = base else { return Ok(None) };
+        // В локальной базе только своё и совместные, где человек участник
+        if p.owner.is_some() {
+            p.access = PlaylistAccess::Member;
+        }
         let mut st = conn.prepare_cached(
             "SELECT al.id, al.image FROM playlist_items i JOIN tracks t ON t.id = i.track_id
              JOIN albums al ON al.id = t.album_id
@@ -368,24 +380,26 @@ impl Store {
             return Ok(None);
         };
         let mut st = self.conn().prepare_cached(
-            "SELECT id, track_id, position, added_at FROM playlist_items WHERE playlist_id = ?1 ORDER BY position",
+            "SELECT id, track_id, position, added_at, added_by FROM playlist_items WHERE playlist_id = ?1
+             ORDER BY position",
         )?;
-        let rows: Vec<(String, String, f64, String)> = st
+        let rows: Vec<(String, String, f64, String, Option<String>)> = st
             .query_map([id.to_string()], |r| {
-                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
             })?
             .collect::<Result<_, _>>()?;
         let ids: Vec<Uuid> = rows.iter().map(|r| uuid(r.1.clone())).collect();
         let tracks = self.tracks(&ids)?;
         let items = rows
             .into_iter()
-            .filter_map(|(item, track, position, added)| {
+            .filter_map(|(item, track, position, added, by)| {
                 let track = tracks.iter().find(|t| t.id.to_string() == track)?.clone();
                 Some(PlaylistItem {
                     id: uuid(item),
                     position,
                     added_at: time(&added),
                     track,
+                    added_by: by.and_then(|b| b.parse().ok()),
                 })
             })
             .collect();
