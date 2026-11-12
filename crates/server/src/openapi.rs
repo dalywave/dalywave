@@ -8,8 +8,9 @@ use utoipa::{
 
 use crate::routes::{
     acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, events, fetcher, home,
-    images, imports, library, lyrics, offline, playlists, queue, reco, recognize, rewind, share,
-    sources, stream, sync, system, taste, updates, wave, wave_presets, ws,
+    images, imports, jam, library, lyrics, offline, playlist_folders, playlists, queue, reco,
+    recognize, rewind, settings, share, sources, stream, sync, system, taste, updates, wave,
+    wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -69,6 +70,7 @@ use crate::routes::{
         lyrics::track_lyrics,
         lyrics::search_lyrics,
         wave::similar,
+        wave::suggest,
         wave::sound_search,
         wave::create_session,
         wave::session,
@@ -117,6 +119,13 @@ use crate::routes::{
         playlists::set_cover,
         playlists::remove_cover,
         playlists::duplicate,
+        playlist_folders::create,
+        playlist_folders::update,
+        playlist_folders::remove,
+        playlist_folders::move_folder,
+        playlist_folders::move_playlist,
+        settings::get_settings,
+        settings::update,
         home::home,
         taste::overview,
         taste::less,
@@ -125,12 +134,22 @@ use crate::routes::{
         rewind::years,
         rewind::year,
         rewind::playlist,
+        rewind::soundtrack,
+        rewind::more,
+        rewind::save_more,
+        rewind::seen,
+        rewind::event_settings,
+        rewind::update_event,
         recognize::resolve,
         recognize::history,
         recognize::remove,
         sync::sync,
         events::ingest,
         events::history,
+        events::history_days,
+        events::clear_history,
+        events::hide_play,
+        events::report_wrong_recording,
         stream::stream,
         stream::acquisition,
         offline::list_downloads,
@@ -145,6 +164,23 @@ use crate::routes::{
         fetcher::release,
         ws::ws,
         connect::devices,
+        jam::overview,
+        jam::start,
+        jam::update,
+        jam::end,
+        jam::remove_guest,
+        jam::approve,
+        jam::decline,
+        jam::invite,
+        jam::join,
+        jam::guest_view,
+        jam::search,
+        jam::add,
+        jam::react,
+        jam::skip,
+        jam::stream,
+        jam::leave,
+        jam::guest_ws,
     ),
     components(schemas(
         dalywave_protocol::imports::ImportJobPayload,
@@ -166,6 +202,8 @@ use crate::routes::{
         dalywave_protocol::jobs::AcquireReason,
         dalywave_protocol::stream::AudioCodec,
         dalywave_protocol::stream::AudioContainer,
+        dalywave_protocol::stream::NetworkKind,
+        dalywave_protocol::stream::StreamQuality,
     )),
     modifiers(&Security),
     tags(
@@ -179,6 +217,7 @@ use crate::routes::{
         (name = "wave", description = "«Моя волна» и радио: сессии, выдача с причинами, реакции"),
         (name = "fetcher", description = "Домашний загрузчик: задания, аренда, отчёты (токен `dwk_…`)"),
         (name = "realtime", description = "WebSocket: события в реальном времени"),
+        (name = "jam", description = "«Слушать вместе»: сессия хозяина и гости по ссылке (токен `dwj_…`)"),
         (name = "admin", description = "Админка: доступ, журнал, очередь задач"),
         (name = "releases", description = "Выпуски приложений: загрузка сборки и регистрация (токен выпусков)"),
         (name = "system", description = "Служебное"),
@@ -206,6 +245,17 @@ impl Modify for Security {
                 HttpBuilder::new()
                     .scheme(HttpAuthScheme::Bearer)
                     .description(Some("Токен приложения `dwd_…`"))
+                    .build(),
+            ),
+        );
+        components.add_security_scheme(
+            "jam",
+            SecurityScheme::Http(
+                HttpBuilder::new()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .description(Some(
+                        "Токен гостя «Слушать вместе» `dwj_…`: только `/api/jam/guest/*` своей сессии",
+                    ))
                     .build(),
             ),
         );

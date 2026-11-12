@@ -25,6 +25,6 @@ function pick(d: PlaybackDevice) {
     <template #trigger>
       <UiIconButton icon="ph:devices" :label="t('player.devices')" :size="size" :tooltip="false" :active="devices.some(d => d.current && d.kind !== 'web')" />
     </template>
-    <MusicDeviceList :devices="devices" :playing="playing" @select="pick" />
+    <MusicDeviceList :devices="devices" :playing="playing" @select="pick" @jam="open = false" />
   </UiPopover>
 </template>

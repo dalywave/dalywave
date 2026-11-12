@@ -1,7 +1,7 @@
 <script lang="ts">
-import type { ImageSet, PlaylistSummary } from '~/api/types'
+import type { ImageSet, PlaylistFolder, PlaylistSummary } from '~/api/types'
 
-export type LibraryKind = 'playlist' | 'album' | 'artist'
+export type LibraryKind = 'playlist' | 'album' | 'artist' | 'folder'
 
 /** Элемент медиатеки: плейлист, сохранённый альбом или артист из подписок */
 export interface LibraryItem {
@@ -15,7 +15,11 @@ export interface LibraryItem {
   pinned: boolean
   /** Когда попал в медиатеку — для сортировки и колонки «Добавлено» */
   added: string
+  /** Для «Недавних»: плейлист — когда играл или менялся, папка — по самому свежему внутри */
+  recent?: string
   playlist?: PlaylistSummary
+  /** Папка плейлистов: открывается списком своих плейлистов */
+  folder?: PlaylistFolder
   image?: ImageSet | null
   explicit?: boolean
 }
@@ -35,8 +39,8 @@ const { t } = useI18n()
 const ui = useUiStore()
 const { playAlbum, playArtist, playPlaylist, isPlayingContext, loading } = usePlayActions()
 
-const to = computed(() => `/${props.item.kind}/${props.item.id}`)
-const playing = computed(() => isPlayingContext(props.item.kind, props.item.id))
+const to = computed(() => (props.item.kind === 'folder' ? `/library?tab=playlists&folder=${props.item.id}` : `/${props.item.kind}/${props.item.id}`))
+const playing = computed(() => props.item.kind !== 'folder' && isPlayingContext(props.item.kind, props.item.id))
 const busy = computed(() => loading.value === `${props.item.kind}:${props.item.id}`)
 const round = computed(() => props.item.kind === 'artist')
 const sub = computed(() => (ui.isPhone && props.layout === 'grid' ? props.item.short ?? props.item.sub : props.item.sub))
@@ -52,8 +56,9 @@ function play() {
   <div class="le" :class="[`le--${layout}`, { 'le--round': round, 'is-playing': playing }]" :data-key="item.key">
     <NuxtLink :to="to" class="le__link" :aria-label="item.title" />
     <div class="le__art">
+      <span v-if="item.kind === 'folder'" class="le__cover le__folder" aria-hidden="true"><Icon name="ph:folder-simple" /></span>
       <MusicPlaylistCover
-        v-if="item.playlist"
+        v-else-if="item.playlist"
         :id="item.playlist.id"
         :title="item.playlist.title"
         :covers="item.playlist.covers"
@@ -72,7 +77,7 @@ function play() {
         class="le__cover"
       />
       <MusicPlayButton
-        v-if="!ui.isPhone"
+        v-if="!ui.isPhone && item.kind !== 'folder'"
         class="le__play"
         :playing="playing"
         :loading="busy"
@@ -109,6 +114,13 @@ function play() {
 .le__e { flex: none; }
 .le__sub { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: var(--fs-small); color: var(--text-2); }
 .le__pin { flex: none; font-size: 12px; color: var(--accent); }
+/* Папка — плоская плитка со значком, без обложек */
+.le__folder { display: grid; place-items: center; aspect-ratio: 1; background: var(--fill-2); color: var(--text-3); font-size: 56px; }
+.le--list .le__folder { font-size: 24px; }
+/* Перетаскивание (компьютер): линия места и подсветка папки */
+.le.is-drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent-line); border-radius: var(--r-3); }
+.le.is-drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.le.is-drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 
 /* Сетка: обложка сверху, подпись под ней */
 .le--grid { flex-direction: column; gap: 10px; }
@@ -144,6 +156,8 @@ function play() {
   .le--grid .le__sub { font-size: var(--fs-caption); }
   .le--list { gap: 12px; min-height: 72px; padding: 6px 8px; }
   .le--list .le__art { width: 60px; }
+  .le--grid .le__folder { font-size: 36px; }
+  .le--list .le__folder { font-size: 28px; }
   .le--list .le__title { font-size: 15px; font-weight: 550; }
 }
 </style>

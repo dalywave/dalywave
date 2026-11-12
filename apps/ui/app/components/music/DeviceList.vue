@@ -12,8 +12,9 @@ const props = withDefaults(defineProps<{
   playing?: boolean
   variant?: 'compact' | 'sheet'
 }>(), { variant: 'compact' })
-const emit = defineEmits<{ select: [device: PlaybackDevice] }>()
+const emit = defineEmits<{ select: [device: PlaybackDevice], jam: [] }>()
 const { t } = useI18n()
+const jam = useJamStore()
 const lang = useLang()
 const out = useAudioOutputs()
 
@@ -46,6 +47,17 @@ function meta(d: PlaybackDevice) {
 const kindLabel = (d: PlaybackDevice) => (d.kind === 'web' ? t('devices.tab') : t('devices.onlineOne'))
 
 const routeHint = computed(() => out.current.value?.name ?? t('devices.routesHint'))
+
+// «Слушать вместе» — последней строкой, как Jam в списке устройств Spotify
+const jamHint = computed(() => {
+  if (!jam.active) return t('jam.hint')
+  const n = jam.guests.length
+  return n ? t('jam.withGuests', { n }) : t('jam.running')
+})
+function openJam() {
+  emit('jam')
+  void jam.open()
+}
 const systemHint = computed(() => (out.state.value.followsSystem ? out.current.value?.name ?? '' : ''))
 </script>
 
@@ -92,6 +104,17 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
           <span class="drow__name ellipsis">{{ d.name }}</span>
           <span class="drow__meta ellipsis">{{ meta(d) }}</span>
         </span>
+      </button>
+    </section>
+
+    <section class="dsec">
+      <button type="button" class="drow" :class="{ 'is-current': jam.active }" @click="openJam">
+        <Icon name="ph:users-three" class="drow__icon" :class="{ 'drow__icon--accent': jam.active }" />
+        <span class="drow__text">
+          <span class="drow__name ellipsis">{{ t('jam.title') }}</span>
+          <span class="drow__meta ellipsis">{{ jamHint }}</span>
+        </span>
+        <Icon name="ph:caret-right" class="drow__chev" />
       </button>
     </section>
 
@@ -186,6 +209,15 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
         </button>
       </template>
     </template>
+    <div class="pop__sep" role="presentation" />
+    <button type="button" role="listitem" class="dev" :class="{ 'is-current': jam.active }" @click="openJam">
+      <span class="dev__icon"><Icon name="ph:users-three" /></span>
+      <span class="dev__text">
+        <span class="dev__name ellipsis">{{ t('jam.title') }}</span>
+        <span class="dev__meta ellipsis">{{ jamHint }}</span>
+      </span>
+      <Icon name="ph:caret-right" class="dev__chev" />
+    </button>
   </div>
 </template>
 
@@ -203,6 +235,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .dev.is-current.is-offline { opacity: 0.7; }
 .dev.is-cta .dev__meta { color: var(--accent); }
 .dev__check { font-size: 18px; color: var(--accent); }
+.dev__chev, .drow__chev { flex: none; font-size: 16px; color: var(--text-3); }
 .dev__eq { display: inline-flex; align-items: flex-end; gap: 1.5px; width: 11px; height: 11px; flex: none; color: var(--accent); }
 .dev__eq i { flex: 1; height: 100%; border-radius: 1px; background: currentColor; transform-origin: bottom; animation: eq-bounce 1s var(--ease-in-out) infinite; }
 .dev__eq i:nth-child(2) { animation-delay: -0.35s; animation-duration: 0.8s; }

@@ -13,16 +13,18 @@ use dalywave_protocol::{
     ErrorBody,
     catalog::AudioStatus,
     jobs::{AcquireReason, Acquisition},
-    stream::{StreamPending, StreamReady, TrackStream},
+    stream::{StreamPending, StreamQuery, StreamReady, TrackStream},
 };
 use uuid::Uuid;
 
 use crate::{
-    acquire::{self, Enqueue, PLAY_PRIORITY, PlayableFile, Request},
+    acquire::{self, Enqueue, PLAY_PRIORITY, Request},
     auth::Principal,
     error::{AppError, AppResult},
-    extract::{Json, Path},
+    extract::{Json, Path, Query},
     jobs::lanes,
+    renditions::{self, Picked},
+    routes::settings,
     state::AppState,
     storage::AUDIO_GET_TTL,
 };
@@ -33,7 +35,12 @@ pub fn routes() -> Router<AppState> {
         .route("/acquisitions/{id}", get(acquisition))
 }
 
-async fn ready(st: &AppState, file: PlayableFile) -> AppResult<Response> {
+async fn ready(st: &AppState, picked: Picked) -> AppResult<Response> {
+    let Picked {
+        file,
+        quality,
+        lossless,
+    } = picked;
     let url = st
         .storage
         .presign_get(&file.storage_key, AUDIO_GET_TTL)
@@ -53,6 +60,8 @@ async fn ready(st: &AppState, file: PlayableFile) -> AppResult<Response> {
         loudness_lufs: file.loudness_lufs,
         true_peak_db: file.true_peak_db,
         waveform: file.waveform,
+        quality,
+        lossless,
     });
     // В ответе подписанная ссылка со сроком: кешировать его нельзя
     Ok((
@@ -91,9 +100,11 @@ async fn not_playable(st: &AppState, track_id: Uuid) -> AppResult<AppError> {
     path = "/api/tracks/{id}/stream",
     tag = "playback",
     security(("session" = []), ("device" = [])),
-    params(("id" = Uuid, Path, description = "id трека")),
+    params(("id" = Uuid, Path, description = "id трека"), StreamQuery),
     responses(
-        (status = 200, description = "`status: ready` — подписанная ссылка на файл (6 часов), формат, громкость, форма волны", body = TrackStream),
+        (status = 200, description = "`status: ready` — подписанная ссылка на файл (6 часов), формат, громкость, форма волны. \
+                                      Файл — под качество: явное `quality` или по `network` и настройкам слушателя; \
+                                      «Экономия» до готовности копии отдаёт обычный файл (`quality: normal`)", body = TrackStream),
         (status = 202, description = "`status: acquiring` — трек скачивается вне очереди; `waiting_for_downloader` — \
                                       в очереди, но качать некому: загрузчик на Mac не на связи", body = TrackStream),
         (status = 404, description = "Нет такого трека", body = ErrorBody),
@@ -105,15 +116,18 @@ pub async fn stream(
     State(st): State<AppState>,
     principal: Principal,
     Path(id): Path<Uuid>,
+    Query(q): Query<StreamQuery>,
 ) -> AppResult<Response> {
     let recording = sqlx::query_scalar!("SELECT recording_id FROM tracks WHERE id = $1", id)
         .fetch_optional(&st.db)
         .await?
         .ok_or(AppError::NotFound)?;
+    let user_settings = settings::of(&st.db, principal.user.id).await?;
+    let quality = renditions::quality_for(q.quality, q.network, &user_settings);
     if let Some(recording) = recording
-        && let Some(file) = acquire::playable_file(&st.db, recording).await?
+        && let Some(picked) = renditions::pick(&st.db, recording, quality).await?
     {
-        return ready(&st, file).await;
+        return ready(&st, picked).await;
     }
     let req = Request::new(id, AcquireReason::Play, lanes::NOW)
         .by(principal.user.id)
@@ -129,8 +143,8 @@ pub async fn stream(
                     .fetch_one(&st.db)
                     .await?;
             return match recording {
-                Some(r) => match acquire::playable_file(&st.db, r).await? {
-                    Some(file) => ready(&st, file).await,
+                Some(r) => match renditions::pick(&st.db, r, quality).await? {
+                    Some(picked) => ready(&st, picked).await,
                     None => Err(AppError::Unavailable("файл записи недоступен".into())),
                 },
                 None => Err(AppError::NotFound),

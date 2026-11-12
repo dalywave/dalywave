@@ -11,8 +11,8 @@ use dalywave_protocol::{
     },
     library::{
         DownloadPolicy, FollowedArtist, FollowedArtistPage, LibraryCounts, LibraryOverview,
-        LikedTrack, LikedTrackPage, PlaylistDetail, PlaylistItem, PlaylistKind, PlaylistList,
-        PlaylistSummary, SavedAlbum, SavedAlbumPage,
+        LikedTrack, LikedTrackPage, PlaylistDetail, PlaylistFolder, PlaylistItem, PlaylistKind,
+        PlaylistList, PlaylistSummary, SavedAlbum, SavedAlbumPage,
     },
 };
 use rusqlite::{OptionalExtension, Row, params};
@@ -121,6 +121,7 @@ impl Store {
                         },
                         artists: Vec::new(),
                         liked: r.get(14)?,
+                        clean_id: None,
                     })
                 })
                 .optional()?;
@@ -288,7 +289,8 @@ impl Store {
                 "SELECT p.id, p.title, p.description, p.kind, p.pinned, p.created_at, p.updated_at,
                         (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id),
                         (SELECT coalesce(sum(t.duration_ms), 0) FROM playlist_items i JOIN tracks t ON t.id = i.track_id
-                         WHERE i.playlist_id = p.id)
+                         WHERE i.playlist_id = p.id),
+                        p.folder_id, p.position
                  FROM playlists p WHERE p.id = ?1",
             )?
             .query_row([id.to_string()], |r| {
@@ -304,6 +306,10 @@ impl Store {
                     duration_ms: r.get(8)?,
                     covers: Vec::new(),
                     image: None,
+                    folder_id: r.get::<_, Option<String>>(9)?.and_then(|f| f.parse().ok()),
+                    position: r.get(10)?,
+                    played_at: None,
+                    generator: None,
                 })
             })
             .optional()?;
@@ -337,7 +343,24 @@ impl Store {
         for id in ids {
             items.extend(self.playlist_summary(id)?);
         }
-        Ok(PlaylistList { items })
+        let conn = self.conn();
+        let mut st = conn.prepare_cached(
+            "SELECT id, title, position, collapsed, created_at, updated_at FROM playlist_folders
+             ORDER BY position, id",
+        )?;
+        let folders = st
+            .query_map([], |r| {
+                Ok(PlaylistFolder {
+                    id: uuid(r.get(0)?),
+                    title: r.get(1)?,
+                    position: r.get(2)?,
+                    collapsed: r.get(3)?,
+                    created_at: time(&r.get::<_, String>(4)?),
+                    updated_at: time(&r.get::<_, String>(5)?),
+                })
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(PlaylistList { items, folders })
     }
 
     pub fn playlist(&self, id: Uuid) -> StoreResult<Option<PlaylistDetail>> {

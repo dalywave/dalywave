@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Итоги 2026 — на компьютере</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300..800&display=swap">
+  <link rel="icon" type="image/svg+xml" href="../brand/icon-rounded.svg">
+  <link rel="stylesheet" href="rewind.css">
+  <link rel="stylesheet" href="b.css">
+  <link rel="stylesheet" href="c.css">
+  <style>
+    /* Как в приложении на компьютере: телефонная рамка историй над затемнённым экраном */
+    body { overflow: hidden; }
+    .desk { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; gap: 24px; background: #08090c url("../shots/a/home-desktop.png") center / cover no-repeat; }
+    .desk::before { content: ""; position: absolute; inset: 0; background: rgba(4, 5, 7, 0.86); }
+    .frame { position: relative; height: min(calc(100dvh - 64px), 900px); aspect-ratio: 9 / 16; border-radius: 28px; overflow: hidden; box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+    .frame .story { --top-safe: 0px; }
+    .side { position: relative; z-index: 1; display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; transition: background 0.15s; }
+    .side:hover { background: rgba(255, 255, 255, 0.18); }
+    .side:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .side svg { width: 22px; height: 22px; }
+  </style>
+</head>
+<body>
+  <div class="desk">
+    <button type="button" class="side" data-dir="-1" aria-label="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="frame"><div id="story"></div></div>
+    <button type="button" class="side" data-dir="1" aria-label="Дальше"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <script src="rewind.js"></script>
+  <script src="wave.js"></script>
+  <script src="a.js"></script>
+  <script src="b.js"></script>
+  <script src="c.js"></script>
+  <script>
+    document.fonts.ready.then(() => {
+      const story = window.RW.boot(document.getElementById("story"));
+      for (const b of document.querySelectorAll(".side")) {
+        b.addEventListener("click", () => { const d = Number(b.dataset.dir); story.go(story.i + d, d); });
+      }
+    });
+  </script>
+</body>
+</html>

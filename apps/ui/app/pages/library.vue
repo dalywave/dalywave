@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { FollowedArtist, SavedAlbum, Track } from '~/api/types'
+import type { FollowedArtist, PlaylistSummary, SavedAlbum, Track } from '~/api/types'
+import type { TreeNode } from '~/composables/usePlaylistTree'
 import type { LibraryItem } from '~/components/library/Entry.vue'
 import type { MenuEntry } from '~/types/ui'
 
@@ -7,12 +8,11 @@ import type { MenuEntry } from '~/types/ui'
 // «Недавно добавленные»; ниже — всё сохранённое одним списком с фильтрами, сортировкой и видом
 // «сетка/список». Закреплённые плейлисты всегда первыми
 type Filter = 'playlists' | 'albums' | 'artists' | 'downloaded' | 'recent'
-type Sort = 'added' | 'title'
 type View = 'grid' | 'list'
 
 // «Скачанное» — только в приложении: закреплённое на этом устройстве
 const BASE_FILTERS: Filter[] = ['playlists', 'albums', 'artists']
-const KIND_OF: Record<Exclude<Filter, 'downloaded' | 'recent'>, LibraryItem['kind']> = { playlists: 'playlist', albums: 'album', artists: 'artist' }
+const KIND_OF: Record<Exclude<Filter, 'downloaded' | 'recent'>, LibraryItem['kind'][]> = { playlists: ['playlist', 'folder'], albums: ['album'], artists: ['artist'] }
 
 const route = useRoute()
 const router = useRouter()
@@ -29,7 +29,19 @@ const { tg } = useGlobalT()
 const { playAlbum, playArtist } = usePlayActions()
 const pla = usePlaylistActions()
 const pui = usePlaylistUi()
+const tree = usePlaylistTree()
 useHead({ title: () => t('title') })
+
+// Открытая папка (?folder=…): её плейлисты вместо всей медиатеки
+const folderId = computed(() => (typeof route.query.folder === 'string' ? route.query.folder : null))
+const openFolder = computed(() => tree.folderOf(folderId.value))
+function closeFolder() {
+  void router.replace({ query: { ...route.query, folder: undefined } })
+}
+// Папку удалили (здесь или на другом устройстве) — назад к медиатеке
+watch([openFolder, () => library.playlists], ([f, list]) => {
+  if (folderId.value && list && !f) closeFolder()
+})
 
 const FILTERS = computed<Filter[]>(() => (offline.available ? [...BASE_FILTERS, 'downloaded'] : BASE_FILTERS))
 
@@ -70,7 +82,8 @@ function stored<T extends string>(key: string, allowed: readonly T[], fallback: 
   })
   return v
 }
-const sort = stored<Sort>('dw.library.sort', ['added', 'title'], () => 'added')
+// Порядок — настройка слушателя (общая для устройств): «Недавние», «По названию», «Свой порядок»
+const sort = tree.sort
 const view = stored<View>('dw.library.view', ['grid', 'list'], () => (ui.isPhone ? 'list' : 'grid'))
 
 const albums = ref<SavedAlbum[] | null>(null)
@@ -99,22 +112,42 @@ const ready = computed(() => !!library.playlists && !!albums.value && !!artists.
 // ---------- Всё сохранённое одним списком ----------
 
 
-const items = computed<LibraryItem[]>(() => {
-  const out: LibraryItem[] = []
-  for (const p of library.playlists ?? []) {
-    if (pui.hidden.has(p.id)) continue
-    out.push({
-      key: `playlist:${p.id}`,
-      kind: 'playlist',
-      id: p.id,
-      title: p.title,
-      sub: pla.subOf(p),
-      short: p.tracksCount ? formatCount(p.tracksCount, 'track', lang.value) : pla.subOf(p),
-      pinned: p.pinned,
-      added: p.createdAt,
-      playlist: p,
-    })
+function playlistItem(p: PlaylistSummary): LibraryItem {
+  return {
+    key: `playlist:${p.id}`,
+    kind: 'playlist',
+    id: p.id,
+    title: p.title,
+    sub: pla.subOf(p),
+    short: p.tracksCount ? formatCount(p.tracksCount, 'track', lang.value) : pla.subOf(p),
+    pinned: p.pinned,
+    added: p.createdAt,
+    recent: p.playedAt && p.playedAt > p.updatedAt ? p.playedAt : p.updatedAt,
+    playlist: p,
   }
+}
+
+/** Папки и плейлисты вне папок — в порядке дерева (он же «Свой порядок») */
+const listItems = computed<LibraryItem[]>(() => tree.tree.value.map((n) => {
+  if (n.kind === 'playlist') return playlistItem(n.playlist)
+  const recent = [n.folder.updatedAt, ...n.children.map(p => (p.playedAt && p.playedAt > p.updatedAt ? p.playedAt : p.updatedAt))].sort().at(-1)
+  return {
+    key: `folder:${n.id}`,
+    kind: 'folder',
+    id: n.id,
+    title: n.folder.title,
+    sub: n.children.length ? `${tg('folder.kind')} · ${formatCount(n.children.length, 'playlist', lang.value)}` : tg('folder.empty'),
+    short: n.children.length ? formatCount(n.children.length, 'playlist', lang.value) : tg('folder.empty'),
+    pinned: false,
+    added: n.folder.createdAt,
+    recent,
+    folder: n.folder,
+  }
+}))
+
+const items = computed<LibraryItem[]>(() => {
+  if (openFolder.value) return tree.childrenOf(openFolder.value.id).map(playlistItem)
+  const out: LibraryItem[] = [...listItems.value]
   // Убранное только что (из меню) исчезает сразу, не дожидаясь перезагрузки
   for (const s of albums.value ?? []) {
     if (!library.isSaved(s.album)) continue
@@ -148,11 +181,19 @@ const items = computed<LibraryItem[]>(() => {
 })
 
 const collator = computed(() => new Intl.Collator(lang.value, { sensitivity: 'base', numeric: true }))
-const sorted = computed(() => [...items.value].sort((a, b) => {
-  if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-  if (sort.value === 'title') return collator.value.compare(a.title, b.title)
-  return b.added.localeCompare(a.added)
-}))
+// Плейлисты и папки уже в порядке дерева; в «Своём порядке» альбомы и артисты — следом, новые сверху
+const sorted = computed(() => {
+  if (sort.value === 'custom' || openFolder.value) {
+    const lists = items.value.filter(i => i.kind === 'playlist' || i.kind === 'folder')
+    const rest = items.value.filter(i => i.kind === 'album' || i.kind === 'artist').sort((a, b) => b.added.localeCompare(a.added))
+    return [...lists, ...rest]
+  }
+  return [...items.value].sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+    if (sort.value === 'title') return collator.value.compare(a.title, b.title)
+    return (b.recent ?? b.added).localeCompare(a.recent ?? a.added)
+  })
+})
 
 const visible = computed(() => {
   const f = filter.value
@@ -161,9 +202,9 @@ const visible = computed(() => {
   if (f === 'downloaded') {
     // Альбом из медиатеки и он же, догруженный отдельно, — один раз (догрузка может прийти позже списка)
     const seen = new Set<string>()
-    return [...sorted.value.filter(i => offline.isPinned(i.kind, i.id)), ...pinnedOutside.value].filter(i => !seen.has(i.key) && !!seen.add(i.key))
+    return [...sorted.value.filter(i => i.kind !== 'folder' && offline.isPinned(i.kind, i.id)), ...pinnedOutside.value].filter(i => !seen.has(i.key) && !!seen.add(i.key))
   }
-  return sorted.value.filter(i => i.kind === KIND_OF[f])
+  return sorted.value.filter(i => KIND_OF[f].includes(i.kind))
 })
 
 // ---------- Скачанное (приложение) ----------
@@ -205,10 +246,13 @@ const deviceSummary = computed(() => {
 })
 const downloadedEmpty = computed(() => !visible.value.length && !likedPinned.value && !pinnedTracks.value.length)
 
-const newest = computed(() => [...items.value].filter(i => i.kind !== 'artist').sort((a, b) => b.added.localeCompare(a.added)))
+const newest = computed(() => [
+  ...(library.playlists ?? []).filter(p => !pui.hidden.has(p.id)).map(playlistItem),
+  ...items.value.filter(i => i.kind === 'album'),
+].sort((a, b) => b.added.localeCompare(a.added)))
 const recentCovers = computed(() => newest.value.slice(0, 3).map(i => i.image ?? i.playlist?.covers[0]).filter(c => !!c))
 
-const showTiles = computed(() => !failed.value && (filter.value === null || filter.value === 'playlists'))
+const showTiles = computed(() => !failed.value && !openFolder.value && (filter.value === null || filter.value === 'playlists'))
 
 function dateOf(i: LibraryItem) {
   return ui.isPhone ? undefined : formatShortDate(i.added, lang.value)
@@ -233,9 +277,29 @@ function showRecent() {
 
 const sortItems = computed<MenuEntry[]>(() => [
   { kind: 'heading', label: t('sortBy') },
-  { label: t('sort.added'), checked: sort.value === 'added', onSelect: () => (sort.value = 'added') },
-  { label: t('sort.title'), checked: sort.value === 'title', onSelect: () => (sort.value = 'title') },
+  ...tree.sortItems.value,
 ])
+
+// Перетаскивание строк (компьютер, список): в папку, из неё и в «Своём порядке» — на новое место
+const canDrag = computed(() => !ui.isPhone && view.value === 'list' && filter.value !== 'recent' && filter.value !== 'downloaded')
+function nodeOf(i: LibraryItem): TreeNode | null {
+  if (i.kind === 'folder' && i.folder) return { kind: 'folder', id: i.id, folder: i.folder, children: tree.childrenOf(i.id) }
+  if (i.kind === 'playlist' && i.playlist) return { kind: 'playlist', id: i.id, playlist: i.playlist }
+  return null
+}
+function dragAttrs(i: LibraryItem) {
+  const n = canDrag.value ? nodeOf(i) : null
+  if (!n) return {}
+  return {
+    draggable: 'true',
+    class: tree.dropClass(n.id),
+    onDragstart: (e: DragEvent) => tree.onDragStart(n.kind, n.id, e),
+    onDragend: () => tree.onDragEnd(),
+    onDragover: (e: DragEvent) => tree.onDragOver(n, e),
+    onDragleave: () => tree.onDragLeave(n),
+    onDrop: (e: DragEvent) => void tree.onDrop(n, e),
+  }
+}
 
 // ---------- Меню элемента: правый щелчок или долгое нажатие ----------
 
@@ -243,6 +307,10 @@ const menuItems = ref<MenuEntry[]>([])
 function onContext(target: EventTarget | null) {
   const key = (target as HTMLElement | null)?.closest<HTMLElement>('[data-key]')?.dataset.key
   const item = key ? items.value.find(i => i.key === key) : undefined
+  if (item?.kind === 'folder' && item.folder) {
+    menuItems.value = tree.folderMenu(item.folder)
+    return
+  }
   menuItems.value = item ? menuFor(item) : []
 }
 
@@ -293,24 +361,41 @@ async function create() {
   }
 }
 
+async function newFolder() {
+  createOpen.value = false
+  const id = await tree.createFolder()
+  if (id) void router.push({ query: { ...route.query, tab: 'playlists', folder: id } })
+}
+
 const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpperCase())
 </script>
 
 <template>
   <div class="lib">
-    <header class="lib__head">
+    <!-- Открытая папка: «назад», название, меню папки -->
+    <header v-if="openFolder" class="lib__head lib__head--folder">
+      <UiIconButton icon="ph:caret-left" :label="t('back')" :size="ui.isPhone ? 'lg' : 'md'" :tooltip="false" class="lib__back" @click="closeFolder" />
+      <h1 class="lib__title lib__title--folder ellipsis">{{ openFolder.title }}</h1>
+      <UiMenu :items="tree.folderMenu(openFolder)" align="end">
+        <UiIconButton icon="ph:dots-three" :label="tg('common.more')" :size="ui.isPhone ? 'lg' : 'md'" :tooltip="false" />
+      </UiMenu>
+    </header>
+    <header v-else class="lib__head">
       <NuxtLink v-if="ui.isPhone" to="/settings" class="lib__avatar" :aria-label="tg('nav.settings')">
         <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="">
         <template v-else>{{ initial }}</template>
       </NuxtLink>
       <h1 class="lib__title">{{ t('title') }}</h1>
       <!-- Новый плейлист: на телефоне — лист снизу, на компьютере — всплывающая панель у кнопки -->
+      <!-- «Недавно прослушанное» -->
+      <UiIconButton icon="ph:clock-counter-clockwise" :label="tg('nav.history')" :size="ui.isPhone ? 'lg' : 'sm'" :tooltip="ui.isPhone ? false : undefined" to="/history" class="lib__hist" />
       <template v-if="ui.isPhone">
         <UiIconButton icon="ph:plus" :label="t('newPlaylist')" size="lg" :tooltip="false" class="lib__plus" @click="createOpen = true" />
         <UiSheet v-model:open="createOpen" :title="t('newPlaylist')">
           <form class="newpl newpl--sheet" @submit.prevent="create">
             <input v-model="newTitle" class="newpl__input" :placeholder="t('newPlaceholder')" :aria-label="t('newPlaylist')" maxlength="120" enterkeyhint="done" autofocus>
             <UiButton type="submit" variant="primary" size="lg" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('create') }}</UiButton>
+            <UiButton size="lg" icon="ph:folder-simple-plus" block @click="newFolder">{{ tg('folder.new') }}</UiButton>
           </form>
         </UiSheet>
       </template>
@@ -323,10 +408,11 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
           <UiButton type="submit" variant="primary" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('create') }}</UiButton>
         </form>
       </UiPopover>
+      <UiIconButton v-if="!ui.isPhone" icon="ph:folder-simple-plus" :label="tg('folder.new')" size="sm" class="lib__folder" @click="newFolder" />
     </header>
 
     <!-- Фильтры: повторное нажатие или крестик возвращают всё -->
-    <div ref="chipsEl" v-edge-fade class="chips no-scrollbar" role="toolbar" :aria-label="t('filters')">
+    <div v-if="!openFolder" ref="chipsEl" v-edge-fade class="chips no-scrollbar" role="toolbar" :aria-label="t('filters')">
       <button v-if="filter" type="button" class="chip chip--clear" :aria-label="t('showAll')" @click="filter = null">
         <Icon name="ph:x-bold" />
       </button>
@@ -356,7 +442,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
         <LibraryTile tone="wave" :icon="waveOn ? 'ph:pause-fill' : 'ph:play-fill'" :title="t('wave')" :meta="waveOn ? t('wavePlaying') : t('waveListen')" :active="player.waveActive" @click="onWave" />
         <LibraryTile v-if="newest.length" tone="recent" icon="ph:sparkle-fill" :title="t('recent')" :meta="newest[0]?.title" :covers="recentCovers" @click="showRecent" />
       </div>
-      <RewindCard v-if="filter === null" class="lib__rewind" />
+      <RewindCard v-if="filter === null && !openFolder" class="lib__rewind" />
 
       <!-- Скачанное: сколько на устройстве, все лайки, отдельные треки -->
       <div v-if="filter === 'downloaded' && offline.status && !downloadedEmpty" class="dl">
@@ -380,7 +466,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
           <span v-if="filter === 'recent'" class="sortbtn sortbtn--static">{{ t('sort.added') }}</span>
           <UiMenu v-else :items="sortItems" align="start">
             <button type="button" class="sortbtn">
-              <Icon name="ph:arrows-down-up" />{{ t(`sort.${sort}`) }}
+              <Icon name="ph:arrows-down-up" />{{ tg(`plSort.${sort}`) }}
             </button>
           </UiMenu>
           <span class="list__gap" />
@@ -395,7 +481,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 
         <UiContextMenu v-if="visible.length" :items="menuItems" @open="onContext">
           <div class="items" :class="`items--${view}`">
-            <LibraryEntry v-for="i in visible" :key="i.key" :item="i" :layout="view" :date="view === 'list' ? dateOf(i) : undefined" />
+            <LibraryEntry v-for="i in visible" :key="i.key" :item="i" :layout="view" :date="view === 'list' ? dateOf(i) : undefined" v-bind="dragAttrs(i)" />
           </div>
         </UiContextMenu>
 
@@ -420,6 +506,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
         <UiEmptyState v-else-if="filter === 'artists'" icon="ph:user-circle-plus" :title="t('empty.artists')" :text="t('empty.artistsText')">
           <UiButton to="/search" icon="ph:magnifying-glass">{{ t('find') }}</UiButton>
         </UiEmptyState>
+        <UiEmptyState v-else-if="openFolder" icon="ph:folder-simple" :title="tg('folder.empty')" :text="t('empty.folderText')" />
         <UiEmptyState v-else icon="ph:playlist" :title="t('empty.playlists')" :text="t('empty.playlistsText')">
           <UiButton icon="ph:plus" @click="createOpen = true">{{ t('newPlaylist') }}</UiButton>
         </UiEmptyState>
@@ -438,6 +525,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 .lib { display: flex; flex-direction: column; gap: 20px; padding-top: 16px; }
 
 .lib__head { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.lib__head--folder { gap: 4px; }
+.lib__back { margin-left: -10px; }
+.lib__title.lib__title--folder { font-size: 28px; }
 .lib__title { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
 .lib__avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--hair); font-size: 15px; font-weight: 700; }
 .lib__avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -517,6 +607,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 @media (max-width: 699px) {
   .lib { gap: 16px; padding: 8px 16px 0; }
   .lib__title { font-size: 28px; }
+  .lib__title.lib__title--folder { font-size: 22px; }
   .lib__plus { margin-right: -6px; }
   .chips { --fade-w: 16px; margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; }
   .tiles { gap: 10px; }
@@ -543,6 +634,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "recent": "Недавно добавленные",
     "sortBy": "Сортировка",
     "sort": { "added": "Сначала новые", "title": "По названию" },
+    "back": "Медиатека",
     "asList": "Списком",
     "asGrid": "Сеткой",
     "pin": "Закрепить",
@@ -567,7 +659,8 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
       "artists": "Здесь будут ваши артисты",
       "artistsText": "Подпишитесь — новые релизы появятся сами",
       "downloaded": "Скачанного пока нет",
-      "downloadedText": "Музыка, сохранённая на устройство, будет здесь"
+      "downloadedText": "Музыка, сохранённая на устройство, будет здесь",
+      "folderText": "Плейлисты попадают сюда через «Переместить в папку» в их меню"
     }
   },
   "en": {
@@ -583,6 +676,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "recent": "Recently added",
     "sortBy": "Sort by",
     "sort": { "added": "Newest first", "title": "Title" },
+    "back": "Library",
     "asList": "List view",
     "asGrid": "Grid view",
     "pin": "Pin",
@@ -607,7 +701,8 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
       "artists": "Your artists will live here",
       "artistsText": "Follow them — new releases show up on their own",
       "downloaded": "Nothing downloaded yet",
-      "downloadedText": "Music saved to this device will be here"
+      "downloadedText": "Music saved to this device will be here",
+      "folderText": "Add playlists with “Move to folder” in their menu"
     }
   }
 }

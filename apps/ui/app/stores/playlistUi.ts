@@ -8,6 +8,15 @@ export interface ConfirmRequest {
   danger?: boolean
 }
 
+/** Короткий ввод названия (папка): заголовок, начальное значение, кнопка */
+export interface PromptRequest {
+  title: string
+  value?: string
+  placeholder?: string
+  action: string
+  maxLength?: number
+}
+
 // Общие окна работы с плейлистами: выбор плейлиста для треков, подтверждение, удаляемое прямо
 // сейчас (скрыто, пока у «Отменить» не кончилось время) и треки, которые тянут мышью
 export const usePlaylistUi = defineStore('playlistUi', () => {
@@ -18,6 +27,10 @@ export const usePlaylistUi = defineStore('playlistUi', () => {
   const confirmReq = ref<ConfirmRequest | null>(null)
   const confirmOpen = ref(false)
   let resolveConfirm: ((ok: boolean) => void) | null = null
+
+  const promptReq = ref<PromptRequest | null>(null)
+  const promptOpen = ref(false)
+  let resolvePrompt: ((value: string | null) => void) | null = null
 
   /** Удалённые, но ещё не стёртые на сервере плейлисты: списки их не показывают */
   const hidden = ref(new Set<string>())
@@ -50,5 +63,25 @@ export const usePlaylistUi = defineStore('playlistUi', () => {
     if (!open) answer(false)
   })
 
-  return { pickTracks, pickOpen, confirmReq, confirmOpen, hidden, dragTracks, pick, confirm, answer }
+  /** Спросить название; `null` — передумали */
+  function prompt(req: PromptRequest): Promise<string | null> {
+    resolvePrompt?.(null)
+    promptReq.value = req
+    promptOpen.value = true
+    return new Promise((resolve) => {
+      resolvePrompt = resolve
+    })
+  }
+
+  function submitPrompt(value: string | null) {
+    promptOpen.value = false
+    resolvePrompt?.(value)
+    resolvePrompt = null
+  }
+
+  watch(promptOpen, (open) => {
+    if (!open) submitPrompt(null)
+  })
+
+  return { pickTracks, pickOpen, confirmReq, confirmOpen, promptReq, promptOpen, hidden, dragTracks, pick, confirm, answer, prompt, submitPrompt }
 })

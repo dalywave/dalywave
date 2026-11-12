@@ -91,3 +91,49 @@ export function slideColors(palette: (string | null | undefined)[] | null | unde
     soft: light ? 'rgba(11, 11, 16, 0.7)' : 'rgba(255, 255, 255, 0.74)',
   }
 }
+
+/**
+ * «Волна года»: палитра шейдера волны из цветов обложки — фон почти чёрный в тон, тело глубокое,
+ * гребень живой, свет светлый (тот же счёт, что в design/rewind/wave.js)
+ */
+export function waveColors(palette: (string | null | undefined)[] | null | undefined): [string, string, string, string] {
+  const list = (palette ?? []).map(c => (c ? hexToRgb(c) : null)).filter((c): c is [number, number, number] => !!c).map(rgbToHsl)
+  if (!list.length) return ['#020509', '#0a2a52', '#1d8cbc', '#aef0ff']
+  // Самый живой цвет — гребень, второй по живости — оттенок тела
+  const ranked = [...list].sort((a, b) => b[1] * (1 - Math.abs(b[2] - 0.5)) - a[1] * (1 - Math.abs(a[2] - 0.5)))
+  const v = ranked[0]!
+  const d = ranked[1] ?? v
+  const grey = v[1] < 0.18
+  const s = grey ? 0.2 : clamp(v[1], 0.6, 0.95)
+  // Тон тела — между двумя цветами по короткой дуге
+  let dh = d[0] - v[0]
+  if (dh > 0.5) dh -= 1
+  if (dh < -0.5) dh += 1
+  const wrap = (h: number) => ((h % 1) + 1) % 1
+  return [
+    hslToHex([v[0], grey ? 0.1 : 0.5, 0.025]),
+    hslToHex([wrap(v[0] + dh * 0.3), s * 0.85, 0.2]),
+    hslToHex([v[0], s, 0.55]),
+    hslToHex([wrap(v[0] + 0.03), Math.min(1, s + 0.1), 0.86]),
+  ]
+}
+
+export interface RecordColors {
+  /** Тёмный фон в тон обложки */
+  bg: string
+  /** Цвет предметов: кассета, головка иглы, эмаль значка */
+  obj: string
+  objDeep: string
+}
+
+/** «Пластинка»: тёмный фон в тон обложки и цвет предметов из неё (как в design/rewind/c.js) */
+export function recordColors(palette: (string | null | undefined)[] | null | undefined): RecordColors {
+  const list = (palette ?? []).map(c => (c ? hexToRgb(c) : null)).filter((c): c is [number, number, number] => !!c).map(rgbToHsl)
+  if (!list.length) return { bg: '#15110d', obj: '#c4572f', objDeep: '#5a2414' }
+  const v = [...list].sort((a, b) => b[1] * (1 - Math.abs(b[2] - 0.5)) - a[1] * (1 - Math.abs(a[2] - 0.5)))[0]!
+  return {
+    bg: hslToHex([v[0], Math.min(v[1], 0.32), 0.085]),
+    obj: hslToHex([v[0], clamp(v[1], 0.5, 0.8), 0.52]),
+    objDeep: hslToHex([v[0], clamp(v[1], 0.45, 0.7), 0.3]),
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, user_id, code, guests_can_add, approval, guests_can_listen, created_at, last_activity_at\n         FROM jam_sessions WHERE user_id = $1 AND ended_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "guests_can_add",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "guests_can_add"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "approval",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "approval"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "guests_can_listen",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "guests_can_listen"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "last_activity_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "last_activity_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e69f0f18b19b7bc5d8e03a0385fbc57babff6b6439c4e5ad5bd47109deba0a02"
+}

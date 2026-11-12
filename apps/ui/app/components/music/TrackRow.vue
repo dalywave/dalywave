@@ -34,6 +34,9 @@ const liked = computed(() => library.isLiked(props.track))
 const status = computed(() => library.statusOf(props.track))
 const remote = computed(() => !props.plain && (status.value === 'none' || status.value === 'queued'))
 const unavailable = computed(() => status.value === 'unavailable')
+// «Без нецензурного»: explicit без чистой версии — серым; нажатие скажет «Скрыто фильтром»
+const account = useAccountSettings()
+const filtered = computed(() => account.hides(props.track))
 const artists = computed(() => props.track.artists.map(a => a.name).join(', '))
 // «Remix», «(Live)» — приглушённо после названия, в скобках
 const version = computed(() => {
@@ -61,7 +64,7 @@ function onKey(e: KeyboardEvent) {
 <template>
   <div
     class="tr"
-    :class="[`tr--${variant}`, { 'is-current': isCurrent, 'is-remote': remote, 'is-unavailable': unavailable, 'is-hover': forceHover, 'is-menu': menuOpen, 'is-selected': selected }]"
+    :class="[`tr--${variant}`, { 'is-current': isCurrent, 'is-remote': remote, 'is-unavailable': unavailable, 'is-filtered': filtered, 'is-hover': forceHover, 'is-menu': menuOpen, 'is-selected': selected }]"
     role="row"
     tabindex="0"
     :aria-current="isCurrent ? 'true' : undefined"
@@ -109,6 +112,8 @@ function onKey(e: KeyboardEvent) {
           <span class="tr__state tr__state--warn" role="img" :aria-label="t(`track.status.${status}`)"><Icon name="ph:warning-circle" /></span>
         </UiTooltip>
       </span>
+      <!-- Действия места: «Добавить в плейлист» и «Убрать» у подобранного в очереди -->
+      <slot name="actions" />
       <UiIconButton
         class="tr__like"
         :class="{ 'is-liked': liked }"
@@ -198,6 +203,7 @@ function onKey(e: KeyboardEvent) {
 .tr.is-remote :deep(.art) { filter: saturate(0.45) brightness(0.82); }
 .tr.is-remote:not(.is-current) .tr__title { color: var(--text-2); }
 .tr.is-unavailable { opacity: 0.45; }
+.tr.is-filtered { opacity: 0.4; }
 
 /* Очередь и узкие колонки: без сердца; «ещё» заменяет длительность при наведении */
 .tr--queue :deep(.tr__like) { display: none; }

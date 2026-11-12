@@ -27,8 +27,10 @@ onMounted(() => {
     <div v-if="offline" class="offline" role="status"><Icon name="ph:wifi-slash" />{{ t('common.offline') }}</div>
     <UiToaster />
     <MusicPlaylistPicker />
+    <MusicReportRecording />
     <MusicSharedLink />
     <UiConfirm />
+    <UiPrompt />
   </TooltipProvider>
 </template>
 

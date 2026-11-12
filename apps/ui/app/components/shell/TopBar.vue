@@ -57,6 +57,7 @@ async function logout() {
 
 const accountMenu = computed<MenuEntry[]>(() => [
   { kind: 'heading', label: auth.user?.name ?? '', hint: auth.user?.email ?? undefined },
+  { label: t('nav.history'), icon: 'ph:clock-counter-clockwise', onSelect: () => navigateTo('/history') },
   { label: t('nav.settings'), icon: 'ph:gear-six', onSelect: () => navigateTo('/settings') },
   ...(auth.isAdmin ? [{ label: t('nav.admin'), icon: 'ph:shield-check', onSelect: () => navigateTo('/admin') }] : []),
   { kind: 'separator' },

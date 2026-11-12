@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM audio_renditions x USING audio_files f JOIN recordings r ON r.id = f.recording_id\n         WHERE x.source_file_id = f.id AND r.primary_file_id IS DISTINCT FROM f.id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c2f8daaafa6bed55aef3348e5d4f02508bdf328b3460f847d16a45020212b2f4"
+}

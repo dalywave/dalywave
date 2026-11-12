@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import type { QueueEntry } from '~/stores/player'
 import type { MenuEntry } from '~/types/ui'
 
 // Очередь: что играет, что добавлено вручную (можно перетаскивать) и что дальше по волне или списку.
 // Строки без значков загрузки: в очереди важно только, что сыграет дальше
 const player = usePlayerStore()
+const jam = useJamStore()
 const library = useLibraryStore()
 const bridge = useBridge()
 const toast = useToast()
 const { menuFor } = useTrackActions()
+const pla = usePlaylistActions()
+const pui = usePlaylistUi()
 const lang = useLang()
 const { t } = useI18n()
 
@@ -41,6 +45,15 @@ async function saveAsPlaylist() {
   finally {
     saving.value = false
   }
+}
+
+// «Умное перемешивание»: подобранное — в плейлист, который играет (если он свой), иначе выбор плейлиста
+async function addSuggestion(e: QueueEntry) {
+  const ctx = player.context
+  const own = ctx?.type === 'playlist' ? pla.own.value.find(p => p.id === ctx.id) : undefined
+  if (!own) return pui.pick([e.track])
+  await pla.addTo(own, [e.track])
+  player.keepSuggestion(e.uid)
 }
 
 // Правый клик по строке — то же меню, что у «⋯»
@@ -105,7 +118,7 @@ function onDrop(i: number) {
             @drop.prevent="onDrop(i)"
             @dragend="dragFrom = null; dropAt = null"
           >
-            <MusicTrackRow :track="e.track" variant="queue" :queue-uid="e.uid" plain @play="player.jumpTo(e.uid)" />
+            <MusicTrackRow :track="e.track" variant="queue" :queue-uid="e.uid" :reason="jam.addedLabel(e.track.id)" plain @play="player.jumpTo(e.uid)" />
           </div>
         </section>
 
@@ -116,7 +129,12 @@ function onDrop(i: number) {
               <Icon name="ph:plus" />{{ t('queue.saveAsPlaylist') }}
             </button>
           </header>
-          <MusicTrackRow v-for="e in upcomingShown" :key="e.uid" :track="e.track" variant="queue" :reason="e.reason" :queue-uid="e.uid" :data-uid="e.uid" plain @play="player.jumpTo(e.uid)" />
+          <MusicTrackRow v-for="e in upcomingShown" :key="e.uid" :track="e.track" variant="queue" :reason="e.reason" :queue-uid="e.uid" :data-uid="e.uid" :class="{ 'is-suggested': e.suggested }" plain @play="player.jumpTo(e.uid)">
+            <template v-if="e.suggested" #actions>
+              <UiIconButton class="qsug" icon="ph:plus-circle" :label="t('player.suggestAdd')" size="sm" @click.stop="addSuggestion(e)" />
+              <UiIconButton class="qsug" icon="ph:minus-circle" :label="t('player.suggestRemove')" size="sm" @click.stop="player.dropSuggestion(e.uid)" />
+            </template>
+          </MusicTrackRow>
           <div v-if="player.waveLoading" class="qsec__loading">
             <div v-for="n in 2" :key="n" class="qsec__skel"><UiSkeleton width="40px" height="40px" /><div class="qsec__skel-lines"><UiSkeleton variant="line" width="60%" /><UiSkeleton variant="line" width="38%" /></div></div>
           </div>
@@ -145,4 +163,13 @@ function onDrop(i: number) {
 .qsec__skel { display: flex; align-items: center; gap: 12px; padding: 8px; }
 .qsec__skel-lines { display: flex; flex: 1; flex-direction: column; gap: 8px; }
 .qsec__more { margin: 8px; font-size: var(--fs-caption); color: var(--text-3); }
+/* Подобранное умным перемешиванием: подпись акцентом, быстрые действия видны всегда */
+.queue :deep(.is-suggested .tr__reason) { flex: none; color: var(--accent); }
+/* Подпись «Подобрано» не уезжает за край: длинные имена артистов обрезаются раньше */
+.queue :deep(.is-suggested .tr__sub) { display: flex; align-items: baseline; }
+.queue :deep(.is-suggested .tr__artist) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.queue :deep(.is-suggested .tr__sep) { flex: none; }
+.queue :deep(.is-suggested .tr__like) { display: none; }
+.queue :deep(.qsug) { color: var(--text-2); }
+.queue :deep(.qsug:hover) { color: var(--text-1); }
 </style>

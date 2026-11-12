@@ -303,6 +303,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/rewind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["event_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_event"];
+        trace?: never;
+    };
     "/api/admin/sessions": {
         parameters: {
             query?: never;
@@ -975,6 +991,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jam": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jam_overview"];
+        put?: never;
+        post: operations["jam_start"];
+        delete: operations["jam_end"];
+        options?: never;
+        head?: never;
+        patch: operations["jam_update"];
+        trace?: never;
+    };
+    "/api/jam/guest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jam_guest_view"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["jam_leave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["jam_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/react": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["jam_react"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jam_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["jam_skip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/stream/{trackId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jam_stream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guest/ws": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jam_guest_ws"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/guests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["jam_remove_guest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/join/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jam_invite"];
+        put?: never;
+        post: operations["jam_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["jam_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jam/requests/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["jam_decline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library": {
         parameters: {
             query?: never;
@@ -1145,7 +1369,39 @@ export interface paths {
         get: operations["history"];
         put?: never;
         post?: never;
+        delete: operations["clear_history"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/history/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["history_days"];
+        put?: never;
+        post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/history/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["hide_play"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1167,6 +1423,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/playlist-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlist-folders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_delete_playlist_folders_id_"];
+        options?: never;
+        head?: never;
+        patch: operations["update"];
+        trace?: never;
+    };
+    "/api/playlist-folders/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["move_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/playlists": {
         parameters: {
             query?: never;
@@ -1176,7 +1480,7 @@ export interface paths {
         };
         get: operations["list_get_playlists"];
         put?: never;
-        post: operations["create"];
+        post: operations["create_post_playlists"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1196,7 +1500,7 @@ export interface paths {
         delete: operations["remove_delete_playlists_id_"];
         options?: never;
         head?: never;
-        patch: operations["update"];
+        patch: operations["update_patch_playlists_id_"];
         trace?: never;
     };
     "/api/playlists/{id}/cover": {
@@ -1289,6 +1593,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["move_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["move_playlist"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1439,6 +1759,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rewind/{year}/more": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["more"];
+        put?: never;
+        post: operations["save_more"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rewind/{year}/playlist": {
         parameters: {
             query?: never;
@@ -1449,6 +1785,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["playlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rewind/{year}/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rewind/{year}/soundtrack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["soundtrack"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1485,6 +1853,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_patch_settings"];
         trace?: never;
     };
     "/api/share/{kind}/{id}": {
@@ -1599,6 +1983,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tracks/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suggest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/{id}": {
         parameters: {
             query?: never;
@@ -1673,6 +2073,22 @@ export interface paths {
         get: operations["stream"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tracks/{id}/wrong-recording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["report_wrong_recording"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1847,6 +2263,11 @@ export interface components {
             preferVideoIds?: string[];
             /** Format: uuid */
             recordingId: string;
+            /**
+             * @description Слушатель отметил основной файл как «Неверная запись»: новый файл заменяет его, даже если
+             *     прежний «лучше» по качеству.
+             */
+            replace?: boolean;
             /** Format: uuid */
             trackId: string;
         };
@@ -2363,6 +2784,11 @@ export interface components {
             type: "track";
         });
         /**
+         * @description Качество по сотовой сети: «Обычное» или «Экономия» — Opus 64 кбит/с.
+         * @enum {string}
+         */
+        CellularQuality: "normal" | "saver";
+        /**
          * @description Запрос задания. Пока заданий нет, сервер держит запрос до ~25 секунд, затем отвечает 204
          *     с `Retry-After` — через сколько секунд спросить снова.
          */
@@ -2611,6 +3037,11 @@ export interface components {
             live: boolean;
             singles: boolean;
         };
+        /**
+         * @description Качество загрузок на устройство.
+         * @enum {string}
+         */
+        DownloadQuality: "high" | "normal";
         /** @description Домашний загрузчик в разделе «Источники». */
         Downloader: {
             capabilities: components["schemas"]["Capabilities"];
@@ -2882,12 +3313,26 @@ export interface components {
             /** Format: uuid */
             userId: string;
         };
+        HistoryDay: {
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            plays: number;
+        };
+        /** @description Дни с прослушиваниями, новые первыми. */
+        HistoryDays: {
+            days: components["schemas"]["HistoryDay"][];
+        };
         HistoryItem: {
             contextId: string | null;
+            /** @description Название источника: альбом, плейлист, артист; у волны, радио и поиска — нет. */
+            contextTitle: string | null;
             contextType: components["schemas"]["ContextType"] | null;
             endReason: components["schemas"]["EndReason"];
             /** Format: uuid */
             id: string;
+            /** @description Из истории Spotify (импорт архива). */
+            imported?: boolean;
             /** Format: int32 */
             playedMs: number;
             /** Format: date-time */
@@ -3193,6 +3638,211 @@ export interface components {
              * @description Анализов по превью — это и есть индекс каталога.
              */
             size: number;
+        };
+        /** @description Сессия глазами хозяина. */
+        Jam: {
+            code: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Закроется сама, если до этого времени ничего не произойдёт.
+             */
+            expiresAt: string;
+            guests: components["schemas"]["JamGuest"][];
+            /** Format: uuid */
+            id: string;
+            /** @description Ждущие одобрения и добавленные (для подписи «добавил Миша» в очереди), новые первыми. */
+            requests: components["schemas"]["JamRequest"][];
+            settings: components["schemas"]["JamSettings"];
+            /** @description Ссылка для гостей (и QR-кода). */
+            url: string;
+        };
+        /** @description `POST /api/jam/guest/queue`. */
+        JamAdd: {
+            /** Format: uuid */
+            trackId: string;
+        };
+        /**
+         * @description `jam.changed`: участники, настройки или треки гостей изменились — перечитать. `ended` — сессия
+         *     закрыта; `removed` — этого гостя убрал хозяин.
+         */
+        JamChanged: {
+            ended?: boolean;
+            /** Format: uuid */
+            jamId: string;
+            /** Format: uuid */
+            removed: string | null;
+        };
+        /** @description Участник сессии. */
+        JamGuest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            joinedAt: string;
+            /** @description Вошёл со своим аккаунтом DalyWave. */
+            member: boolean;
+            name: string;
+            /** @description Страница гостя открыта (был на связи последние 2 минуты). */
+            online: boolean;
+        };
+        /** @description `GET /api/jam/guest`: всё для страницы гостя. */
+        JamGuestView: {
+            /** Format: date-time */
+            expiresAt: string;
+            guests: components["schemas"]["JamGuest"][];
+            hostName: string;
+            /** Format: uuid */
+            jamId: string;
+            me: components["schemas"]["JamGuest"];
+            /** @description Свои треки (ждут одобрения, добавлены, отклонены), новые первыми. */
+            mine: components["schemas"]["JamRequest"][];
+            now: components["schemas"]["JamNow"] | null;
+            settings: components["schemas"]["JamSettings"];
+            /** @description Сколько голосов «пропустить» уже за текущий трек и сколько нужно. */
+            skip: components["schemas"]["JamSkip"];
+        };
+        /** @description `GET /api/jam/join/{code}`: что показать на странице входа гостя. */
+        JamInvite: {
+            current: components["schemas"]["JamTrack"] | null;
+            /** Format: int32 */
+            guests: number;
+            hostAvatar: string | null;
+            hostName: string;
+            /** @description Ссылку открыл человек со своим аккаунтом: имя возьмётся оттуда. */
+            memberName: string | null;
+        };
+        /** @description `POST /api/jam/join/{code}`. */
+        JamJoin: {
+            /** @description Имя гостя, 1–32 символа. Со своим аккаунтом можно не указывать. */
+            name?: string | null;
+        };
+        /** @description Гость вошёл. Токен показывается один раз: на сервере только его хеш. */
+        JamJoined: {
+            guest: components["schemas"]["JamGuest"];
+            /** @description `dwj_…` для `Authorization: Bearer` на `/api/jam/guest/*`. */
+            token: string;
+        };
+        /** @description Что играет у хозяина: трек, позиция и ближайшая очередь — без остального его состояния. */
+        JamNow: {
+            /**
+             * Format: date-time
+             * @description Время сервера, к которому относится позиция.
+             */
+            at: string;
+            current: components["schemas"]["JamQueueItem"] | null;
+            /** Format: int32 */
+            durationMs: number;
+            /** @description Активное устройство хозяина на связи. */
+            live: boolean;
+            playing: boolean;
+            /**
+             * Format: int32
+             * @description Позиция на момент `at`.
+             */
+            positionMs: number;
+            /** @description Ближайшие треки: добавленные вручную, затем остальное (до 30). */
+            queue: components["schemas"]["JamQueueItem"][];
+        };
+        /** @description `jam.now` — гостям: что играет у хозяина (при каждом снимке его активного устройства). */
+        JamNowEvent: {
+            /** Format: uuid */
+            jamId: string;
+            now: components["schemas"]["JamNow"];
+        };
+        /** @description `GET /api/jam`: открытая сессия хозяина или `null`. */
+        JamOverview: {
+            jam: components["schemas"]["Jam"] | null;
+        };
+        /** @description `PATCH /api/jam`. */
+        JamPatch: {
+            approval?: boolean | null;
+            guestsCanAdd?: boolean | null;
+            guestsCanListen?: boolean | null;
+        };
+        /** @description Элемент очереди для гостя. */
+        JamQueueItem: {
+            /** @description Имя гостя, который добавил трек. */
+            addedBy: string | null;
+            track: components["schemas"]["JamTrack"];
+        };
+        /** @description `POST /api/jam/guest/react`. */
+        JamReact: {
+            kind: components["schemas"]["JamReactionKind"];
+        };
+        /** @description `jam.reaction` — всем в сессии: кто-то поставил ❤ текущему треку. */
+        JamReaction: {
+            guestName: string;
+            /** Format: uuid */
+            jamId: string;
+            kind: components["schemas"]["JamReactionKind"];
+            /** Format: uuid */
+            trackId: string | null;
+        };
+        /** @enum {string} */
+        JamReactionKind: "heart";
+        /** @description Трек от гостя. */
+        JamRequest: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            guestId: string;
+            guestName: string;
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["JamRequestStatus"];
+            track: components["schemas"]["JamTrack"];
+        };
+        /** @enum {string} */
+        JamRequestStatus: "pending" | "added" | "declined";
+        JamSearchResults: {
+            items: components["schemas"]["JamTrack"][];
+        };
+        /** @description Настройки сессии. */
+        JamSettings: {
+            /** @description Добавленное гостями ждёт одобрения хозяина. */
+            approval: boolean;
+            /** @description «Гости могут добавлять». */
+            guestsCanAdd: boolean;
+            /** @description Гости могут слушать у себя. */
+            guestsCanListen: boolean;
+        };
+        JamSkip: {
+            /** Format: int32 */
+            needed: number;
+            /** @description Этот гость уже голосовал за текущий трек. */
+            voted: boolean;
+            /** Format: int32 */
+            votes: number;
+        };
+        /** @description Ссылка на аудио для «Слушать у себя»: только текущий и следующий трек хозяина. */
+        JamStream: {
+            /** Format: int32 */
+            durationMs: number;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: float */
+            loudnessLufs: number | null;
+            mimeType: string;
+            /** Format: uuid */
+            trackId: string;
+            /** Format: float */
+            truePeakDb: number | null;
+            url: string;
+        };
+        /** @description Трек для гостя: только то, что видно на экране (без медиатеки хозяина). */
+        JamTrack: {
+            album: string | null;
+            artists: string[];
+            /** Format: int32 */
+            durationMs: number;
+            explicit: boolean;
+            /** Format: uuid */
+            id: string;
+            image: components["schemas"]["ImageSet"] | null;
+            title: string;
+            /** @description «Slowed», «Remastered 2011»; пустая строка, если версии нет. */
+            version: string;
         };
         Job: {
             /** Format: int32 */
@@ -3539,6 +4189,23 @@ export interface components {
             trainRows: number | null;
             version: string;
         };
+        /**
+         * @description Переложить плейлист: в папку (`folderId`) или из неё (`null`) и на место среди соседей. Сосед
+         *     `afterId` — плейлист или (вне папок) папка; без него — в конец, при `atStart` — в начало.
+         */
+        MovePlaylist: {
+            /** Format: uuid */
+            afterId?: string | null;
+            atStart?: boolean;
+            /** Format: uuid */
+            folderId?: string | null;
+        };
+        /** @description Переставить папку среди папок и плейлистов вне папок. */
+        MovePlaylistFolder: {
+            /** Format: uuid */
+            afterId?: string | null;
+            atStart?: boolean;
+        };
         /** @description Переставить позицию: после другой или в начало (`afterItemId: null`). */
         MovePlaylistItem: {
             /** Format: uuid */
@@ -3552,6 +4219,11 @@ export interface components {
             /** @description Позиции остальных треков пересчитаны: интерфейсу стоит перечитать плейлист. */
             rebalanced: boolean;
         };
+        /**
+         * @description Сеть, по которой играет устройство: качество тогда берётся из настроек слушателя.
+         * @enum {string}
+         */
+        NetworkKind: "wifi" | "cellular";
         /** @description Закрепить на этом устройстве. `refId` — у всех, кроме `liked`. */
         NewDeviceDownload: {
             kind: components["schemas"]["DownloadKind"];
@@ -3567,6 +4239,11 @@ export interface components {
             title: string;
             /** @description Треки в этом порядке. */
             trackIds?: string[];
+        };
+        /** @description Новая папка; названные плейлисты сразу переезжают в неё. */
+        NewPlaylistFolder: {
+            playlistIds?: string[];
+            title: string;
         };
         /** @description Новое сочетание — в конец ряда. */
         NewWavePreset: {
@@ -3680,6 +4357,27 @@ export interface components {
             items: components["schemas"]["PlaylistItem"][];
             playlist: components["schemas"]["PlaylistSummary"];
         };
+        /** @description Папка плейлистов в медиатеке и боковой панели. Вложенных папок нет. */
+        PlaylistFolder: {
+            /** @description Свёрнута ли — общее для всех устройств. */
+            collapsed: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: double
+             * @description Место в «Своём порядке» среди папок и плейлистов вне папок.
+             */
+            position: number;
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PlaylistFolderPatch: {
+            collapsed?: boolean | null;
+            title?: string | null;
+        };
         PlaylistItem: {
             /** Format: date-time */
             addedAt: string;
@@ -3695,12 +4393,19 @@ export interface components {
         /** @enum {string} */
         PlaylistKind: "user" | "smart" | "mix" | "system";
         PlaylistList: {
+            /** @description Папки по «Своему порядку»; плейлисты ссылаются на них `folderId`. */
+            folders?: components["schemas"]["PlaylistFolder"][];
             items: components["schemas"]["PlaylistSummary"][];
         };
         PlaylistPatch: {
             description?: string | null;
             title?: string | null;
         };
+        /**
+         * @description Порядок плейлистов в медиатеке и боковой панели. Закреплённые — всегда первыми.
+         * @enum {string}
+         */
+        PlaylistSort: "recent" | "title" | "custom";
         PlaylistSummary: {
             /** @description Обложки первых альбомов плейлиста (до четырёх) — для мозаики. */
             covers: components["schemas"]["ImageSet"][];
@@ -3709,11 +4414,28 @@ export interface components {
             description: string;
             /** Format: int64 */
             durationMs: number;
+            /**
+             * Format: uuid
+             * @description Папка, в которой лежит плейлист; `null` — вне папок.
+             */
+            folderId?: string | null;
+            /** @description Кто собрал плейлист вида `mix`: `daily_mix`, `discover_weekly`, `on_repeat`, `repeat_rewind`, `rewind`… */
+            generator?: string | null;
             /** Format: uuid */
             id: string;
             image?: components["schemas"]["ImageSet"] | null;
             kind: components["schemas"]["PlaylistKind"];
             pinned: boolean;
+            /**
+             * Format: date-time
+             * @description Когда плейлист в последний раз играл — для порядка «Недавние».
+             */
+            playedAt?: string | null;
+            /**
+             * Format: double
+             * @description Место в «Своём порядке» (дробное, по возрастанию): вне папок — общая шкала с папками.
+             */
+            position?: number;
             title: string;
             /** Format: int64 */
             tracksCount: number;
@@ -4196,6 +4918,22 @@ export interface components {
             /** Format: int64 */
             plays: number;
         };
+        /** @description Звук слайда историй: что играет и с какого места. */
+        RewindCue: {
+            /**
+             * @description Слайд: `intro`, `minutes`, `days`, `first`, `tracks`, `toy`, `artists`, `albums`, `sound`,
+             *     `discoveries`, `personality`, `summary`. Слайда нет в списке — играет прежний трек.
+             */
+            slide: string;
+            /** @description Откуда место: `analysis` — по кривой энергии полного анализа, `estimate` — 30 % трека. */
+            startFrom: string;
+            /**
+             * Format: int64
+             * @description С какого места играть: припев или самая энергичная часть.
+             */
+            startMs: number;
+            track: components["schemas"]["Track"];
+        };
         /** @description День, когда слушали больше всего. */
         RewindDay: {
             /**
@@ -4230,6 +4968,45 @@ export interface components {
             /** Format: int64 */
             plays: number;
         };
+        /** @description `GET /api/admin/rewind`: «Итоги года» как событие сервера. */
+        RewindEvent: {
+            /**
+             * Format: date-time
+             * @description Когда закроется само (режим «Автоматически», пока открыто).
+             */
+            closesAt: string | null;
+            mode: components["schemas"]["RewindMode"];
+            /**
+             * Format: int32
+             * @description Какой год открыт прямо сейчас; `null` — закрыто.
+             */
+            openYear: number | null;
+            /**
+             * Format: date-time
+             * @description Ближайшее автоматическое открытие (режим «Автоматически», пока закрыто).
+             */
+            opensAt: string | null;
+            style: components["schemas"]["RewindStyleSetting"];
+            /** Format: date-time */
+            updatedAt: string;
+            /**
+             * Format: int32
+             * @description Год для режима «Открыто сейчас».
+             */
+            year: number | null;
+            /** @description Годы с прослушиваниями на сервере — для выбора года (новые первыми). */
+            years: number[];
+        };
+        /** @description `PATCH /api/admin/rewind`. */
+        RewindEventPatch: {
+            mode?: components["schemas"]["RewindMode"] | null;
+            style?: components["schemas"]["RewindStyleSetting"] | null;
+            /**
+             * Format: int32
+             * @description Год для «Открыто сейчас»; без него — текущий.
+             */
+            year?: number | null;
+        };
         RewindFirst: {
             /** Format: date-time */
             at: string;
@@ -4247,6 +5024,12 @@ export interface components {
              */
             share: number;
         };
+        /**
+         * @description Когда итоги открыты: `auto` — с 1 декабря по 15 января (в декабре — за этот год, в январе — за
+         *     прошлый), `open` — открыты сейчас за выбранный год, `closed` — закрыты.
+         * @enum {string}
+         */
+        RewindMode: "auto" | "open" | "closed";
         RewindMonth: {
             /** Format: int64 */
             minutes: number;
@@ -4265,11 +5048,22 @@ export interface components {
              */
             score: number;
         };
+        /** @description `GET /api/rewind/{year}/more`: «Ещё послушать» — новое для слушателя, похожее на любимое за год. */
+        RewindMore: {
+            items: components["schemas"]["Track"][];
+            /**
+             * Format: uuid
+             * @description Плейлист «Ещё послушать {год}», если уже сохранён.
+             */
+            playlistId: string | null;
+        };
         /**
          * @description Характер слушателя: `night_owl` (ночной слушатель), `early_bird` (утро), `explorer` (много нового),
          *     `loyal` (переслушивает любимое), `wave_rider` (слушает волну), `balanced` (всего понемногу).
          */
         RewindPersonality: {
+            /** @description Доля времени по часам суток (24 значения, 0 — с полуночи до часа), по времени слушателя. */
+            hours: number[];
             id: string;
             /**
              * Format: float
@@ -4286,6 +5080,11 @@ export interface components {
              * @description Доля треков года, которые до этого года не играли.
              */
             noveltyShare: number;
+            /**
+             * Format: int32
+             * @description Час, когда слушали больше всего, 0..23.
+             */
+            peakHour: number;
             /** @description Время суток с наибольшей долей: `morning`, `day`, `evening`, `night`. */
             peakPart: string;
             /**
@@ -4299,6 +5098,16 @@ export interface components {
              */
             waveShare: number;
         };
+        /**
+         * @description `GET /api/rewind/{year}/soundtrack`: музыка историй. Треки, которых ещё нет на сервере, ставятся
+         *     на скачивание вне очереди — к своему слайду они успевают.
+         */
+        RewindSoundtrack: {
+            /** @description По порядку слайдов. */
+            cues: components["schemas"]["RewindCue"][];
+            /** Format: int32 */
+            year: number;
+        };
         RewindStreak: {
             /**
              * Format: int64
@@ -4310,6 +5119,16 @@ export interface components {
             /** Format: date */
             to: string;
         };
+        /**
+         * @description Стиль историй: `wave` — «Волна года», `spread` — «Разворот», `record` — «Пластинка».
+         * @enum {string}
+         */
+        RewindStyle: "wave" | "spread" | "record";
+        /**
+         * @description Стиль в настройках сервера: один для всех или `random` — случайный для каждого слушателя.
+         * @enum {string}
+         */
+        RewindStyleSetting: "wave" | "spread" | "record" | "random";
         RewindTrack: {
             /** Format: int64 */
             minutes: number;
@@ -4346,10 +5165,24 @@ export interface components {
         };
         /** @description `GET /api/rewind`: годы, за которые есть прослушивания (новые первыми), и текущий год слушателя. */
         RewindYears: {
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Год итогов: открытый событием, а у администратора при закрытом — текущий.
+             */
             current: number;
+            /** @description Итоги открыты: карточки и истории видны. Закрытые видит только администратор (предпросмотр). */
+            open: boolean;
+            /**
+             * Format: date-time
+             * @description Когда итоги откроются сами (режим «Автоматически», пока закрыто) — для напоминания в приложении.
+             */
+            opensAt: string | null;
             /** @description Сезон итогов текущего года (с 1 декабря). */
             season: boolean;
+            /** @description Итоги года `current` уже посмотрены: карточка «Твои итоги готовы» больше не нужна. */
+            seen: boolean;
+            /** @description Стиль историй этого слушателя. */
+            style: components["schemas"]["RewindStyle"];
             years: components["schemas"]["RewindYear"][];
         };
         /**
@@ -4357,6 +5190,11 @@ export interface components {
          * @enum {string}
          */
         Role: "admin" | "listener";
+        /** @description `POST /api/rewind/{year}/more`: сохранить показанное плейлистом. */
+        SaveRewindMore: {
+            /** @description Треки по порядку, до 100. */
+            trackIds: string[];
+        };
         SavedAlbum: {
             album: components["schemas"]["AlbumSummary"];
             /** Format: date-time */
@@ -4393,7 +5231,7 @@ export interface components {
          * @description От чего радио.
          * @enum {string}
          */
-        SeedKind: "track" | "artist" | "album" | "playlist" | "text";
+        SeedKind: "track" | "artist" | "album" | "playlist" | "text" | "year";
         /** @description Сообщение сервера. */
         ServerEvent: (components["schemas"]["Hello"] & {
             /** @enum {string} */
@@ -4428,6 +5266,15 @@ export interface components {
         }) | (components["schemas"]["ConnectAck"] & {
             /** @enum {string} */
             type: "connect.ack";
+        }) | (components["schemas"]["JamChanged"] & {
+            /** @enum {string} */
+            type: "jam.changed";
+        }) | (components["schemas"]["JamNowEvent"] & {
+            /** @enum {string} */
+            type: "jam.now";
+        }) | (components["schemas"]["JamReaction"] & {
+            /** @enum {string} */
+            type: "jam.reaction";
         });
         /** @description Серверный fetcher — второй исполнитель (`DALYWAVE_FETCHER_MODE` с `server`). */
         ServerFetcher: {
@@ -4684,6 +5531,11 @@ export interface components {
              */
             queuePosition: number;
         };
+        /**
+         * @description Какой файл записи отдать.
+         * @enum {string}
+         */
+        StreamQuality: "high" | "normal" | "saver";
         /** @description Аудио готово: ссылка на файл и всё, что нужно плееру без лишних запросов. */
         StreamReady: {
             /** Format: int32 */
@@ -4699,6 +5551,7 @@ export interface components {
             expiresAt: string;
             /** Format: uuid */
             fileId: string;
+            lossless?: boolean;
             /**
              * Format: float
              * @description Интегральная громкость (EBU R128) — для выравнивания.
@@ -4706,12 +5559,26 @@ export interface components {
             loudnessLufs: number | null;
             /** @description Для `<audio>` и `MediaSource`: `audio/mp4; codecs="opus"`. */
             mimeType: string;
+            /** @description Какое качество отдано: при `saver` до готовности копии — `normal`. */
+            quality?: components["schemas"]["StreamQuality"];
             /** Format: float */
             truePeakDb: number | null;
             /** @description Подписанная ссылка на файл в хранилище. */
             url: string;
             /** @description Огибающая для полосы прокрутки: 512 точек, 0..1000. */
             waveform: number[] | null;
+        };
+        /** @description «Умное перемешивание»: похожее на весь список (альбом, плейлист), чтобы подмешать в очередь. */
+        SuggestRequest: {
+            /** @description Что ещё не предлагать: уже подмешанное и убранное из очереди, до 500. */
+            exclude?: string[];
+            /**
+             * Format: int32
+             * @description 1–50, по умолчанию 20.
+             */
+            limit?: number | null;
+            /** @description Треки списка, до 500: по их звучанию ищется похожее, сами они не предлагаются. */
+            trackIds: string[];
         };
         SyncAlbum: {
             /** Format: uuid */
@@ -4787,7 +5654,7 @@ export interface components {
          * @description Таблица локальной базы.
          * @enum {string}
          */
-        SyncEntity: "artists" | "albums" | "tracks" | "recordings" | "likedTracks" | "savedAlbums" | "followedArtists" | "blockedItems" | "playlists" | "playlistItems" | "deviceDownloads" | "deviceSets" | "trackFeatures" | "wavePresets";
+        SyncEntity: "artists" | "albums" | "tracks" | "recordings" | "likedTracks" | "savedAlbums" | "followedArtists" | "blockedItems" | "playlists" | "playlistItems" | "deviceDownloads" | "deviceSets" | "trackFeatures" | "wavePresets" | "playlistFolders" | "settings";
         SyncFollowedArtist: {
             /** Format: uuid */
             artistId: string;
@@ -4819,10 +5686,12 @@ export interface components {
             /** @description Есть ещё изменения: запросить следующую страницу сразу. */
             hasMore: boolean;
             likedTracks: components["schemas"]["SyncLikedTrack"][];
+            playlistFolders?: components["schemas"]["SyncPlaylistFolder"][];
             playlistItems: components["schemas"]["SyncPlaylistItem"][];
             playlists: components["schemas"]["SyncPlaylist"][];
             recordings: components["schemas"]["SyncRecording"][];
             savedAlbums: components["schemas"]["SyncSavedAlbum"][];
+            settings?: components["schemas"]["SyncSettings"] | null;
             tombstones: components["schemas"]["SyncTombstone"][];
             trackFeatures?: components["schemas"]["SyncTrackFeatures"][];
             tracks: components["schemas"]["SyncTrack"][];
@@ -4833,9 +5702,28 @@ export interface components {
             createdAt: string;
             description: string;
             /** Format: uuid */
+            folderId?: string | null;
+            /** Format: uuid */
             id: string;
             kind: components["schemas"]["PlaylistKind"];
             pinned: boolean;
+            /** Format: double */
+            position?: number;
+            /** Format: int64 */
+            rev: number;
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description Папка плейлистов. */
+        SyncPlaylistFolder: {
+            collapsed: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: double */
+            position: number;
             /** Format: int64 */
             rev: number;
             title: string;
@@ -4875,6 +5763,11 @@ export interface components {
             rev: number;
             /** Format: date-time */
             savedAt: string;
+        };
+        /** @description Настройки в синхронизации приложений: одна строка, `rev` — как у строк медиатеки. */
+        SyncSettings: components["schemas"]["UserSettings"] & {
+            /** Format: int64 */
+            rev: number;
         };
         /** @description Удаление строки. `key` — ключ строки в camelCase, например `{ "trackId": … }` у `likedTracks`. */
         SyncTombstone: {
@@ -5077,6 +5970,11 @@ export interface components {
             /** @description Сначала основные артисты, затем приглашённые. */
             artists: components["schemas"]["TrackArtist"][];
             audioStatus: components["schemas"]["AudioStatus"];
+            /**
+             * Format: uuid
+             * @description У explicit-трека — чистая версия той же песни в каталоге: её играет фильтр «Без нецензурного».
+             */
+            cleanId?: string | null;
             /** Format: int64 */
             deezerId: number | null;
             /** Format: int32 */
@@ -5236,6 +6134,30 @@ export interface components {
             /** @description Полный новый список ролей. */
             roles?: components["schemas"]["Role"][] | null;
         };
+        UserSettings: {
+            /**
+             * @description «Без нецензурного»: explicit-треки не играют в волне, миксах и автопродолжении, в списках — серым;
+             *     если в каталоге есть чистая версия, играет она.
+             */
+            hideExplicit: boolean;
+            playlistSort: components["schemas"]["PlaylistSort"];
+            qualityCellular: components["schemas"]["CellularQuality"];
+            qualityDownload: components["schemas"]["DownloadQuality"];
+            qualityWifi: components["schemas"]["WifiQuality"];
+            /**
+             * Format: date-time
+             * @description `null` — ни разу не меняли (всё по умолчанию).
+             */
+            updatedAt: string | null;
+        };
+        /** @description Изменить часть настроек; не названные поля остаются как были. */
+        UserSettingsPatch: {
+            hideExplicit?: boolean | null;
+            playlistSort?: components["schemas"]["PlaylistSort"] | null;
+            qualityCellular?: components["schemas"]["CellularQuality"] | null;
+            qualityDownload?: components["schemas"]["DownloadQuality"] | null;
+            qualityWifi?: components["schemas"]["WifiQuality"] | null;
+        };
         /**
          * @description Занятие: задаёт границы энергии и темпа и ход сессии («Засыпаю» снижает энергию, «Просыпаюсь» — поднимает).
          * @enum {string}
@@ -5336,7 +6258,7 @@ export interface components {
             name?: string | null;
             settings?: components["schemas"]["WaveSettings"] | null;
         };
-        /** @description Затравка: `id` — для трека, артиста, альбома и плейлиста, `text` — для описания словами. */
+        /** @description Затравка: `id` — для трека, артиста, альбома и плейлиста, `text` — для описания словами и года. */
         WaveSeed: {
             /** Format: uuid */
             id?: string | null;
@@ -5410,6 +6332,35 @@ export interface components {
              * @description Темп бега, шагов в минуту (140–200), для «Тренируюсь»: темп треков подстраивается под него.
              */
             tempo?: number | null;
+        };
+        /**
+         * @description Качество по Wi-Fi: «Высокое» — lossless, если он есть у записи, иначе лучший файл; «Обычное» — Opus
+         *     130–160 кбит/с.
+         * @enum {string}
+         */
+        WifiQuality: "high" | "normal";
+        /**
+         * @description «Неверная запись»: что не так с тем, что играет.
+         * @enum {string}
+         */
+        WrongRecordingReason: "wrong_song" | "wrong_version" | "bad_quality" | "cut";
+        WrongRecordingReport: {
+            /** @description Необязательный комментарий, до 500 символов. */
+            comment?: string | null;
+            reason: components["schemas"]["WrongRecordingReason"];
+        };
+        /** @description Жалоба принята: спорная запись в админке и новое скачивание без этой записи. */
+        WrongRecordingResult: {
+            /**
+             * Format: uuid
+             * @description Новое скачивание; нет — у записи уже идёт скачивание или её не скачать заново.
+             */
+            acquisitionId: string | null;
+            /**
+             * Format: uuid
+             * @description Скачивание со статусом `disputed` — в разделе «Спорные».
+             */
+            disputeId: string;
         };
         /** @description Схемы нет в OpenAPI сервера — заглушка scripts/api-types.mjs */
         DeezerKind: string;
@@ -6162,6 +7113,77 @@ export interface operations {
             };
             /** @description Скачивание записи уже идёт (`acquisition_active`) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    event_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description «Итоги года» как событие: стиль, режим, что открыто сейчас */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewindEvent"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_event: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewindEventPatch"];
+            };
+        };
+        responses: {
+            /** @description Событие после изменения */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewindEvent"];
+                };
+            };
+            /** @description Год — от 2000 до текущего */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7770,6 +8792,619 @@ export interface operations {
             };
         };
     };
+    jam_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Открытая сессия «Слушать вместе» или `jam: null` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamOverview"];
+                };
+            };
+        };
+    };
+    jam_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сессия уже открыта — она же */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Jam"];
+                };
+            };
+            /** @description Новая сессия: код, ссылка для гостей */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Jam"];
+                };
+            };
+        };
+    };
+    jam_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сессия закончена: токены гостей больше не действуют */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    jam_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JamPatch"];
+            };
+        };
+        responses: {
+            /** @description Сессия с новыми настройками */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Jam"];
+                };
+            };
+            /** @description Открытой сессии нет (`jam_ended`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_guest_view: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница гостя: что играет, очередь, участники, свои треки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamGuestView"];
+                };
+            };
+            /** @description Нет токена гостя */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Сессия закончилась (`jam_ended`) или хозяин убрал гостя (`jam_removed`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_leave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Гость вышел: токен больше не действует */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    jam_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JamAdd"];
+            };
+        };
+        responses: {
+            /** @description Трек в очереди (`added`) или ждёт одобрения хозяина (`pending`) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamRequest"];
+                };
+            };
+            /** @description Хозяин выключил добавление гостями */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `already_queued` — уже в очереди; `too_many_pending` — пять треков уже ждут; `nothing_playing` — у хозяина ничего не на связи */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 10 треков в минуту */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_react: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JamReact"];
+            };
+        };
+        responses: {
+            /** @description ❤ ушло всем в сессии */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Больше 30 реакций в минуту */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_search: {
+        parameters: {
+            query: {
+                /** @description Запрос, 1–100 символов. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Треки каталога (до 20) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamSearchResults"];
+                };
+            };
+            /** @description Больше 30 поисков в минуту */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Deezer не ответил */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_skip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Голос учтён; набралось больше половины гостей на связи — трек пропущен */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamSkip"];
+                };
+            };
+            /** @description Ничего не играет (`nothing_playing`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком часто */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_stream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Текущий или следующий трек хозяина */
+                trackId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Подписанная ссылка на аудио (45 минут) для «Слушать у себя» */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamStream"];
+                };
+            };
+            /** @description Хозяин выключил «Слушать у себя» или трек не текущий и не следующий */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Файла трека ещё нет на сервере (`audio_unavailable`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком часто */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_guest_ws: {
+        parameters: {
+            query: {
+                /** @description Токен гостя `dwj_…`. */
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WebSocket гостя: `jam.now`, `jam.changed`, `jam.reaction`, `pong` */
+            101: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Неверный токен */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Сессия закончилась (`jam_ended`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_remove_guest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id гостя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Гость убран: его токен больше не действует */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого гостя в открытой сессии */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код из ссылки */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Кто приглашает и что играет */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamInvite"];
+                };
+            };
+            /** @description Нет такой открытой сессии (`jam_ended`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком часто с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код из ссылки */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JamJoin"];
+            };
+        };
+        responses: {
+            /** @description Гость в сессии: токен `dwj_…` (показывается один раз) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JamJoined"];
+                };
+            };
+            /** @description Нет имени */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такой открытой сессии (`jam_ended`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком много входов с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека гостя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Трек ушёл в очередь активного устройства */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Jam"];
+                };
+            };
+            /** @description Нет такого ждущего трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Активного устройства нет на связи (`nothing_playing`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    jam_decline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека гостя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Трек отклонён */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Jam"];
+                };
+            };
+            /** @description Нет такого ждущего трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     overview_get_library: {
         parameters: {
             query?: never;
@@ -8168,6 +9803,10 @@ export interface operations {
                 cursor?: string;
                 /** @description Сколько вернуть: 1–200, по умолчанию 50. */
                 limit?: number;
+                /** @description Поиск по названию трека, артисту и альбому (без регистра и диакритики). */
+                q?: string;
+                /** @description Переход к дате: прослушивания раньше этого момента. С `cursor` не сочетается — курсор главнее. */
+                before?: string;
             };
             header?: never;
             path?: never;
@@ -8175,7 +9814,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Прослушивания, новые первыми */
+            /** @description Прослушивания, новые первыми, с названием источника; история из архива Spotify (`imported`) — тоже. Убранное из истории не приходит */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8186,6 +9825,86 @@ export interface operations {
             };
             /** @description Неверный cursor или limit */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    clear_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description История очищена: прослушивания больше не видны в истории, но вкус, миксы и «Итоги года» их по-прежнему учитывают */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    history_days: {
+        parameters: {
+            query?: {
+                /** @description Часовой пояс слушателя: минуты к востоку от UTC (Москва — 180), от −840 до 840. */
+                offsetMin?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Дни с прослушиваниями по часовому поясу слушателя, новые первыми — для календаря */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryDays"];
+                };
+            };
+            /** @description offsetMin вне −840…840 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    hide_play: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id прослушивания из истории */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Прослушивание убрано из истории */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого прослушивания в истории */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8215,6 +9934,170 @@ export interface operations {
             };
         };
     };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewPlaylistFolder"];
+            };
+        };
+        responses: {
+            /** @description Папка создана первой вне папок; названные плейлисты уже в ней */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistList"];
+                };
+            };
+            /** @description Пустое или длинное название, папок уже 100 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove_delete_playlist_folders_id_: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id папки */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Папка удалена, её плейлисты встали на её место */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistList"];
+                };
+            };
+            /** @description Нет такой папки */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id папки */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaylistFolderPatch"];
+            };
+        };
+        responses: {
+            /** @description Папка после правки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistFolder"];
+                };
+            };
+            /** @description Пустое или длинное название */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такой папки */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    move_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id папки */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MovePlaylistFolder"];
+            };
+        };
+        responses: {
+            /** @description Папка на новом месте */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistList"];
+                };
+            };
+            /** @description Соседа нет вне папок */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такой папки */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     list_get_playlists: {
         parameters: {
             query?: never;
@@ -8224,7 +10107,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Плейлисты: закреплённые, затем недавно изменённые */
+            /** @description Плейлисты (закреплённые, затем недавно изменённые) и папки */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8235,7 +10118,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_post_playlists: {
         parameters: {
             query?: never;
             header?: never;
@@ -8330,7 +10213,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_patch_playlists_id_: {
         parameters: {
             query?: never;
             header?: never;
@@ -8683,6 +10566,51 @@ export interface operations {
             };
         };
     };
+    move_playlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MovePlaylist"];
+            };
+        };
+        responses: {
+            /** @description Плейлист в папке (или вне папок) на новом месте */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistList"];
+                };
+            };
+            /** @description Соседа нет на этом уровне */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста или папки */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     pin: {
         parameters: {
             query?: never;
@@ -9002,13 +10930,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Годы с прослушиваниями (новые первыми); текущий — всегда */
+            /** @description Годы с прослушиваниями (новые первыми), открытый год, стиль историй и посмотрены ли они */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["RewindYears"];
+                };
+            };
+            /** @description `not_open` — итоги сейчас закрыты (администратору видно всегда) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -9034,7 +10971,93 @@ export interface operations {
                     "application/json": components["schemas"]["Rewind"];
                 };
             };
-            /** @description Год ещё не наступил */
+            /** @description Год ещё не наступил; `not_open` — итоги закрыты */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    more: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Год по времени слушателя */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description «Ещё послушать»: новое, похожее на любимое за год */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewindMore"];
+                };
+            };
+            /** @description Год ещё не наступил; `not_open` — итоги закрыты */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    save_more: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Год по времени слушателя */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRewindMore"];
+            };
+        };
+        responses: {
+            /** @description Уже был — заменён показанной подборкой */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Плейлист «Ещё послушать {год}» создан */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Нет треков или больше 100 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Год ещё не наступил; `not_open` — итоги закрыты */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9084,7 +11107,69 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Год ещё не наступил */
+            /** @description Год ещё не наступил; `not_open` — итоги закрыты */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Год по времени слушателя */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Отмечено: истории открывали — карточка «Твои итоги готовы» больше не зовёт */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Год ещё не наступил; `not_open` — итоги закрыты */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    soundtrack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Год по времени слушателя */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Музыка историй: трек и место начала у слайдов. Треки не на сервере ставятся на скачивание вне очереди */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewindSoundtrack"];
+                };
+            };
+            /** @description Год ещё не наступил; `not_open` — итоги закрыты */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9175,6 +11260,59 @@ export interface operations {
             };
             /** @description Сервис анализа не ответил */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Настройки слушателя (общие для всех устройств) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettings"];
+                };
+            };
+        };
+    };
+    update_patch_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Настройки после правки; другие устройства получат `library.changed` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettings"];
+                };
+            };
+            /** @description Неизвестное поле или значение */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9389,6 +11527,39 @@ export interface operations {
             };
         };
     };
+    suggest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestRequest"];
+            };
+        };
+        responses: {
+            /** @description «Умное перемешивание»: похожее по звучанию на весь список, не из него и не из `exclude`, не больше двух у артиста; подпись — «Подобрано» */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveItems"];
+                };
+            };
+            /** @description Пустой список, больше 500 треков или limit вне 1–50 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     track: {
         parameters: {
             query?: never;
@@ -9553,7 +11724,12 @@ export interface operations {
     };
     stream: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Явное качество; без него — по `network` и настройкам слушателя. */
+                quality?: components["schemas"]["StreamQuality"];
+                /** @description Сеть устройства; без неё — Wi-Fi (сайт). */
+                network?: components["schemas"]["NetworkKind"];
+            };
             header?: never;
             path: {
                 /** @description id трека */
@@ -9563,7 +11739,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `status: ready` — подписанная ссылка на файл (6 часов), формат, громкость, форма волны */
+            /** @description `status: ready` — подписанная ссылка на файл (6 часов), формат, громкость, форма волны. Файл — под качество: явное `quality` или по `network` и настройкам слушателя; «Экономия» до готовности копии отдаёт обычный файл (`quality: normal`) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9601,6 +11777,60 @@ export interface operations {
             };
             /** @description Deezer не ответил (запись трека ещё неизвестна) или хранилище недоступно */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    report_wrong_recording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WrongRecordingReport"];
+            };
+        };
+        responses: {
+            /** @description Жалоба принята: спорная запись в «Спорных» админки и новое скачивание вне очереди без видео этой и прежних жалоб; новый файл заменит основной */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WrongRecordingResult"];
+                };
+            };
+            /** @description Комментарий длиннее 500 символов */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description У трека ещё нет файла на сервере (`not_ready`) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,94 +1,95 @@
 <script setup lang="ts">
-import type { Rewind, Track } from '~/api/types'
-import type { SlideKind } from '~/components/rewind/Slide.vue'
-import { type SlideColors, slideColors } from '~/utils/rewind-colors'
-import { renderShareCard, shareOrDownload } from '~/utils/rewind-share'
+import type { Rewind, RewindCue, RewindMore, RewindStyle, RewindYears } from '~/api/types'
+import { ApiError } from '~/api/types'
+import { recordColors, slideColors } from '~/utils/rewind-colors'
+import { shareOrDownload } from '~/utils/rewind-share'
+import { parseRewindStyle, rewindSlides, type RewindSlide } from '~/utils/rewind-slides'
 
 // «Итоги года» историями: полосы прогресса сверху, нажатие справа — дальше, слева — назад, удержание —
 // пауза, свайп вниз — закрыть. На компьютере — рамка телефона над затемнённым экраном и стрелки.
-// На слайдах звучит кусок подходящего трека через тот же плеер — как превью, без записи в историю
+// Три стиля — «Волна года», «Разворот», «Пластинка» (components/rewind/Story*.vue): какой — решает
+// сервер (настройка события в админке), администратор смотрит любой (?preview=1&style=…&year=…).
+// Итоги — событие: пока оно закрыто, слушателя возвращает на главную.
+// На слайдах звучит музыка года с припева (useRewindAudio): наложение между слайдами, на паузе тише.
 const route = useRoute()
 const router = useRouter()
 const bridge = useBridge()
 const player = usePlayerStore()
 const ui = useUiStore()
+const auth = useAuthStore()
 const toast = useToast()
-const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 
-interface SlideDef {
-  kind: SlideKind
-  ms: number
-  /** Что звучит на слайде; нет — продолжает прежнее */
-  track: Track | null
-  /** Откуда цвет: палитра альбома с сервера или картинка */
-  palette?: string[] | null
-  image?: string | null
-  shift?: number
-}
+interface StoryApi { shareCard: () => Promise<Blob> }
 
 const data = shallowRef<Rewind | null>(null)
+const cues = shallowRef<RewindCue[]>([])
+const more = shallowRef<RewindMore | null>(null)
 const state = ref<'loading' | 'error' | 'ready'>('loading')
 const year = ref<number | null>(null)
-const colors = ref<SlideColors[]>([])
+const style = ref<RewindStyle>('wave')
+const slides = shallowRef<RewindSlide[]>([])
+const story = ref<StoryApi | null>(null)
+// Предпросмотр администратора: любой год и стиль, без отметки «посмотрено»
+const preview = computed(() => route.query.preview !== undefined && auth.isAdmin)
 useHead({ title: () => (year.value ? t('title', { year: year.value }) : t('titleShort')) })
 
-const ready = (tr: Track | null | undefined) => (tr?.audioStatus === 'ready' ? tr : null)
-
-const slides = computed<SlideDef[]>(() => {
-  const r = data.value
-  if (!r) return []
-  if (r.plays === 0) return [{ kind: 'empty', ms: 8000, track: null }]
-  const top = r.topTracks.map(x => x.track)
-  const al = r.topAlbums.map(a => a.album)
-  const toy = r.trackOfYear?.track ?? null
-  const byArtist = (id?: string) => top.find(tr => tr.artists.some(a => a.id === id)) ?? null
-  const byAlbum = (id?: string) => top.find(tr => tr.album?.id === id) ?? null
-  // Палитры нескольких обложек: поле берёт самый живой цвет из них
-  const pal = (from: number) => [...al.slice(from), ...al.slice(0, from)].flatMap(a => a.palette ?? [])
-  const list: (SlideDef | false)[] = [
-    { kind: 'intro', ms: 6000, track: ready(toy), palette: pal(0), image: al[0]?.image?.small },
-    { kind: 'minutes', ms: 8000, track: ready(top[1]) ?? ready(toy), palette: pal(1), shift: 1, image: al[1]?.image?.small },
-    { kind: 'days', ms: 8000, track: ready(r.topDay?.track), image: r.topDay?.track?.album?.image?.small ?? al[2]?.image?.small, palette: r.topDay?.track ? null : pal(2) },
-    !!r.firstTrack && { kind: 'first', ms: 7000, track: ready(r.firstTrack.track), image: r.firstTrack.track.album?.image?.small },
-    top.length > 0 && { kind: 'tracks', ms: 9000, track: ready(top[0]), image: top[0]?.album?.image?.small },
-    !!toy && { kind: 'toy', ms: 8000, track: ready(toy), image: toy.album?.image?.small, shift: 1 },
-    r.topArtists.length > 0 && { kind: 'artists', ms: 9000, track: ready(byArtist(r.topArtists[0]?.artist.id)), image: r.topArtists[0]?.artist.image?.small },
-    al.length > 0 && { kind: 'albums', ms: 8000, track: ready(byAlbum(al[0]?.id)), palette: al[0]?.palette, image: al[0]?.image?.small, shift: 1 },
-    { kind: 'sound', ms: 8000, track: ready(top[2]), palette: pal(3), shift: 2 },
-    { kind: 'discoveries', ms: 8000, track: null, image: r.discoveries[0]?.artist.image?.small ?? al[4]?.image?.small, palette: r.discoveries[0] ? null : al[4]?.palette },
-    { kind: 'personality', ms: 8000, track: ready(top[3]), image: r.topArtists[1]?.artist.image?.small, palette: r.topArtists[1] ? null : al[1]?.palette, shift: 1 },
-    { kind: 'summary', ms: 12_000, track: ready(toy), image: r.topArtists[0]?.artist.image?.small, palette: r.topArtists[0] ? null : al[0]?.palette },
-  ]
-  return list.filter((s): s is SlideDef => !!s)
-})
-
-async function resolveColors(list: SlideDef[]) {
-  const out = await Promise.all(list.map(async (s) => {
-    if (s.palette?.length) return slideColors(s.palette, s.shift)
-    const c = s.image ? await coverColors(bridge.resolveUrl(s.image)) : null
-    return slideColors(c ? [c.vivid, c.second, c.deep] : null, s.shift)
+/** Палитры слайдов: с сервера, а для картинок — посчитанные по обложке */
+async function resolveSlides(r: Rewind): Promise<RewindSlide[]> {
+  return Promise.all(rewindSlides(r).map(async (s) => {
+    let palette = s.palette?.filter(Boolean) ?? []
+    if (!palette.length && s.image) {
+      const c = await coverColors(bridge.resolveUrl(s.image)).catch(() => null)
+      if (c) palette = [c.vivid, c.second, c.deep]
+    }
+    return { kind: s.kind, ms: s.ms, palette, shift: s.shift ?? 0 }
   }))
-  colors.value = out
 }
 
 async function load() {
   state.value = 'loading'
+  let years: RewindYears
+  try {
+    years = await bridge.rewind.years()
+  }
+  catch (e) {
+    // Итоги закрыты: заходить некуда
+    if (e instanceof ApiError && e.code === 'not_open') return void navigateTo('/', { replace: true })
+    state.value = 'error'
+    return
+  }
   try {
     const q = Number(route.query.year)
-    year.value = Number.isInteger(q) && q > 1999 ? q : (await bridge.rewind.years()).current
-    data.value = await bridge.rewind.get(year.value)
-    await resolveColors(slides.value)
+    year.value = Number.isInteger(q) && q > 1999 ? q : years.current
+    style.value = (preview.value ? parseRewindStyle(route.query.style) : null) ?? years.style
+    const y = year.value
+    // Музыку сервер собирает вместе с итогами; не вышло — истории идут без звука
+    const [r, track] = await Promise.all([bridge.rewind.get(y), bridge.rewind.soundtrack(y).catch(() => null)])
+    data.value = r
+    cues.value = track?.cues ?? []
+    slides.value = await resolveSlides(r)
     const start = Number(route.query.slide)
     index.value = Number.isInteger(start) ? Math.min(Math.max(0, start), slides.value.length - 1) : 0
     elapsed.value = 0
     state.value = 'ready'
+    if (r.plays > 0) void loadMore(y)
+    // Посмотрел — карточка «Твои итоги готовы» на главной больше не зовёт
+    if (!preview.value && years.open && y === years.current && !years.seen) {
+      void bridge.rewind.seen(y).catch(() => {})
+      void bridge.notify?.cancel(`rewind-${y}`)
+    }
   }
-  catch {
+  catch (e) {
+    if (e instanceof ApiError && e.code === 'not_open') return void navigateTo('/', { replace: true })
     state.value = 'error'
   }
 }
 onMounted(load)
+
+/** «Ещё послушать» — к концу историй; отдельным запросом, чтобы не задерживать начало */
+async function loadMore(y: number) {
+  more.value = await bridge.rewind.more(y).catch(() => null)
+}
 
 // ---------- Ход историй ----------
 
@@ -100,13 +101,26 @@ const hidden = ref(false)
 // Разработка: стоять на слайде (?hold) — для скриншотов
 const frozen = import.meta.dev && route.query.hold !== undefined
 const slide = computed(() => slides.value[index.value] ?? null)
-const current = computed(() => colors.value[index.value] ?? slideColors(null))
+/** Направление последнего перехода: от него зависят шторка «Разворота» и плёнка «Пластинки» */
+const dir = ref<1 | -1>(1)
+// Цвет полос, кнопок и поля под слайдом — по стилю: волна тёмная, разворот — цвет слайда, пластинка — тёмная в тон
+const chrome = computed(() => {
+  const s = slide.value
+  if (style.value === 'spread') {
+    const c = slideColors(s?.palette, s?.shift)
+    return { bg: c.bg, ink: c.ink }
+  }
+  if (style.value === 'record') return { bg: recordColors(s?.palette).bg, ink: '#f3ecdf' }
+  return { bg: '#030406', ink: '#ffffff' }
+})
 const paused = computed(() => holding.value || keyPaused.value || hidden.value || frozen || state.value !== 'ready')
 const progress = computed(() => (frozen ? 0.5 : slide.value ? Math.min(1, elapsed.value / slide.value.ms) : 0))
 const last = computed(() => index.value >= slides.value.length - 1)
 
 function go(i: number) {
-  index.value = Math.min(Math.max(0, i), Math.max(0, slides.value.length - 1))
+  const to = Math.min(Math.max(0, i), Math.max(0, slides.value.length - 1))
+  dir.value = to < index.value ? -1 : 1
+  index.value = to
   elapsed.value = 0
   bridge.haptic('selection')
 }
@@ -135,7 +149,7 @@ function onVisibility() {
 }
 
 function close() {
-  player.stopPreview()
+  sound.close()
   if (window.history.state?.back) router.back()
   else void navigateTo('/')
 }
@@ -159,7 +173,6 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(raf)
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('visibilitychange', onVisibility)
-  player.stopPreview()
 })
 
 // ---------- Касания: нажатие, удержание, свайп вниз ----------
@@ -216,43 +229,36 @@ function onCancel() {
   dragY.value = 0
 }
 
-// ---------- Звук: кусок трека слайда через плеер, без истории ----------
+// ---------- Звук: музыка года с припева, наложение между слайдами ----------
 
-// Без звука, когда страницу снимает автомат (скриншоты)
+// Без звука, когда страницу снимает автомат (скриншоты, проверки)
 const silent = import.meta.client && navigator.webdriver
-const hasSound = computed(() => slides.value.some(s => s.track))
-watch([index, () => state.value], () => {
-  const tr = slide.value?.track
-  if (silent || state.value !== 'ready' || !tr || player.previewing?.id === tr.id) return
-  void player.startPreview(tr, Math.min(45_000, tr.durationMs * 0.3))
+const sound = useRewindAudio()
+/** Звук «Ещё послушать»: первый готовый трек подборки с трети */
+const moreCue = computed<RewindCue | null>(() => {
+  const tr = more.value?.items.find(x => x.audioStatus === 'ready')
+  return tr ? { slide: 'more', track: tr, startMs: Math.round(tr.durationMs * 0.3), startFrom: 'estimate' } : null
 })
+const hasSound = computed(() => cues.value.length > 0 || !!moreCue.value)
+watch([slides, cues, moreCue], () => {
+  sound.audio.setCues(slides.value.map(x => x.kind), moreCue.value ? [...cues.value, moreCue.value] : cues.value)
+}, { immediate: true })
+watch([index, () => state.value], () => {
+  if (!silent && state.value === 'ready') void sound.audio.show(index.value)
+})
+watch(() => holding.value || keyPaused.value, d => sound.audio.setDucked(d))
+watch(hidden, h => sound.audio.setHidden(h))
 
 // ---------- Поделиться и плейлист ----------
 
-const busy = ref<'share' | 'playlist' | null>(null)
+const busy = ref<'share' | 'playlist' | 'more' | null>(null)
 
 async function share() {
   const r = data.value
-  if (!r || busy.value) return
+  if (!r || busy.value || !story.value) return
   busy.value = 'share'
   try {
-    const persona = r.personality.id
-    const blob = await renderShareCard({
-      year: r.year,
-      kicker: r.complete ? t('kicker') : t('kickerSoFar'),
-      colors: current.value,
-      photo: r.topArtists[0]?.artist.image?.large ? bridge.resolveUrl(r.topArtists[0].artist.image.large) : null,
-      artistsLabel: t('artists'),
-      artists: r.topArtists.map(a => a.artist.name),
-      tracksLabel: t('tracks'),
-      tracks: r.topTracks.map(x => x.track.title),
-      stats: [
-        { label: t('minutes'), value: formatNumber(r.minutes, lang.value) },
-        ...(r.genres[0] ? [{ label: t('genre'), value: r.genres[0].name }] : []),
-      ],
-      personaLabel: t('persona'),
-      persona: t(`personaTitle.${persona}`),
-    })
+    const blob = await story.value.shareCard()
     const how = await shareOrDownload(blob, `dalywave-${r.year}.png`, t('title', { year: r.year }))
     if (how === 'downloaded') toast.show({ text: t('saved'), icon: 'ph:download-simple' })
   }
@@ -267,10 +273,7 @@ async function share() {
 async function playlist() {
   const r = data.value
   if (!r || busy.value) return
-  if (r.playlistId) {
-    player.stopPreview()
-    return void navigateTo(`/playlist/${r.playlistId}`)
-  }
+  if (r.playlistId) return openPlaylist(r.playlistId)
   busy.value = 'playlist'
   try {
     const id = await bridge.rewind.savePlaylist(r.year)
@@ -278,10 +281,7 @@ async function playlist() {
     toast.show({
       text: t('playlistSaved', { year: r.year }),
       icon: 'ph:playlist-fill',
-      action: { label: t('open'), onClick: () => {
-        player.stopPreview()
-        void navigateTo(`/playlist/${id}`)
-      } },
+      action: { label: t('open'), onClick: () => openPlaylist(id) },
     })
   }
   catch {
@@ -292,18 +292,67 @@ async function playlist() {
   }
 }
 
+function openPlaylist(id: string) {
+  sound.close()
+  void navigateTo(`/playlist/${id}`)
+}
+
+// ---------- Подобрать ещё ----------
+
+/** Волна из итогов года: звучание самого слушаемого. Истории закрываются, играет волна */
+function startWave() {
+  const y = data.value?.year
+  if (!y) return
+  sound.close(false)
+  void player.startWave(undefined, { seed: { type: 'year', text: String(y) }, title: t('waveTitle', { year: y }) })
+  close()
+}
+
+function playMore() {
+  const list = more.value?.items
+  const y = data.value?.year
+  if (!list?.length || !y) return
+  sound.close(false)
+  void player.playTracks(list, 0, { type: 'mix', id: null, title: t('moreTitle', { year: y }) })
+  close()
+}
+
+async function saveMore() {
+  const m = more.value
+  const y = data.value?.year
+  if (!m || !y || busy.value) return
+  if (m.playlistId) return openPlaylist(m.playlistId)
+  busy.value = 'more'
+  try {
+    const id = await bridge.rewind.saveMore(y, m.items.map(x => x.id))
+    more.value = { ...m, playlistId: id }
+    toast.show({ text: t('moreSaved', { year: y }), icon: 'ph:playlist-fill', action: { label: t('open'), onClick: () => openPlaylist(id) } })
+  }
+  catch {
+    toast.error(t('playlistFailed'))
+  }
+  finally {
+    busy.value = null
+  }
+}
+
 const framed = computed(() => !ui.isPhone)
+const STORIES = {
+  wave: resolveComponent('RewindStoryWave'),
+  spread: resolveComponent('RewindStorySpread'),
+  record: resolveComponent('RewindStoryRecord'),
+}
 </script>
 
 <template>
   <Teleport to="body">
     <div
       class="rw"
-      :class="{ 'rw--framed': framed }"
+      :class="[`rw--${style}`, { 'rw--framed': framed }]"
       role="dialog"
       aria-modal="true"
       :aria-label="year ? t('title', { year }) : t('titleShort')"
-      :style="{ '--bg': current.bg, '--ink': current.ink, '--soft': current.soft }"
+      :style="{ '--bg': chrome.bg, '--ink': chrome.ink }"
     >
       <div v-if="framed" class="rw__backdrop" @click="close" />
 
@@ -314,7 +363,7 @@ const framed = computed(() => !ui.isPhone)
       <div
         ref="stage"
         class="rw__stage"
-        :class="{ 'is-dragging': dragY > 0 }"
+        :class="{ 'is-dragging': dragY > 0, 'is-held': holding }"
         :style="dragY ? { transform: `translateY(${dragY}px) scale(${1 - Math.min(0.08, dragY / 3000)})` } : undefined"
         @pointerdown="onDown"
         @pointermove="onMove"
@@ -322,18 +371,23 @@ const framed = computed(() => !ui.isPhone)
         @pointercancel="onCancel"
         @contextmenu.prevent
       >
-        <template v-if="state === 'ready' && data && slide">
-          <RewindSlide
-            :key="`${slide.kind}-${index}`"
-            :kind="slide.kind"
-            :r="data"
-            :colors="current"
-            :active="true"
-            :busy="busy"
-            @share="share"
-            @playlist="playlist"
-          />
-        </template>
+        <component
+          :is="STORIES[style]"
+          v-if="state === 'ready' && data && slide"
+          ref="story"
+          :slides="slides"
+          :index="index"
+          :dir="dir"
+          :r="data"
+          :more="more"
+          :busy="busy"
+          :frozen="frozen"
+          @share="share"
+          @playlist="playlist"
+          @wave="startWave"
+          @play-more="playMore"
+          @save-more="saveMore"
+        />
         <div v-else class="rw__state">
           <template v-if="state === 'loading'">
             <Icon name="ph:circle-notch" class="rw__spin" />
@@ -352,8 +406,8 @@ const framed = computed(() => !ui.isPhone)
             </span>
           </div>
           <div class="rw__tools" @pointerdown.stop @pointerup.stop>
-            <button v-if="hasSound && !silent" type="button" class="rw__tool" :aria-label="player.muted ? t('soundOn') : t('soundOff')" @click="player.toggleMute()">
-              <Icon :name="player.muted ? 'ph:speaker-slash' : 'ph:speaker-high'" />
+            <button v-if="hasSound && !silent" type="button" class="rw__tool" :aria-label="sound.muted.value ? t('soundOn') : t('soundOff')" @click="sound.toggleMute()">
+              <Icon :name="sound.muted.value ? 'ph:speaker-slash' : 'ph:speaker-high'" />
             </button>
             <button type="button" class="rw__tool" :aria-label="t('close')" @click="close">
               <Icon name="ph:x-bold" />
@@ -404,6 +458,7 @@ const framed = computed(() => !ui.isPhone)
   height: min(calc(100dvh - 64px), 900px);
   aspect-ratio: 9 / 16;
   border-radius: 28px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
   --rw-top: 0px;
   --rw-bottom: 0px;
 }
@@ -415,6 +470,7 @@ const framed = computed(() => !ui.isPhone)
   padding: calc(var(--rw-top) + 10px) 10px 0;
   pointer-events: none;
 }
+.is-held .rw__top { opacity: 0.4; transition: opacity var(--dur-2); }
 .rw__bars { display: flex; gap: 4px; }
 .rw__bar { position: relative; flex: 1; height: 3px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 28%, transparent); overflow: hidden; }
 .rw__bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; }
@@ -469,18 +525,13 @@ const framed = computed(() => !ui.isPhone)
   "ru": {
     "title": "Итоги {year}",
     "titleShort": "Итоги года",
-    "kicker": "Итоги года",
-    "kickerSoFar": "Итоги по сей день",
-    "artists": "Артисты",
-    "tracks": "Треки",
-    "minutes": "Минут",
-    "genre": "Жанр",
-    "persona": "Характер",
-    "personaTitle": { "night_owl": "Ночной слушатель", "early_bird": "Ранняя пташка", "explorer": "Исследователь", "loyal": "Верный слушатель", "wave_rider": "На волне", "balanced": "Меломан" },
     "saved": "Картинка сохранена",
     "shareFailed": "Не получилось собрать картинку",
     "playlistSaved": "«Твои лучшие треки {year}» — в медиатеке",
     "playlistFailed": "Не получилось сохранить плейлист",
+    "moreSaved": "«Ещё послушать {year}» — в\u00a0медиатеке",
+    "moreTitle": "Ещё послушать {year}",
+    "waveTitle": "Волна {year}",
     "open": "Открыть",
     "failed": "Итоги не загрузились",
     "retry": "Ещё раз",
@@ -494,18 +545,13 @@ const framed = computed(() => !ui.isPhone)
   "en": {
     "title": "Your {year}",
     "titleShort": "Year in review",
-    "kicker": "Year in review",
-    "kickerSoFar": "Your year so far",
-    "artists": "Artists",
-    "tracks": "Tracks",
-    "minutes": "Minutes",
-    "genre": "Genre",
-    "persona": "Listening type",
-    "personaTitle": { "night_owl": "Night owl", "early_bird": "Early bird", "explorer": "Explorer", "loyal": "Loyal listener", "wave_rider": "Wave rider", "balanced": "Music lover" },
     "saved": "Image saved",
     "shareFailed": "Couldn’t make the image",
     "playlistSaved": "“Your top tracks {year}” is in your library",
     "playlistFailed": "Couldn’t save the playlist",
+    "moreSaved": "“More to hear {year}” is in your library",
+    "moreTitle": "More to hear {year}",
+    "waveTitle": "Your {year} wave",
     "open": "Open",
     "failed": "Couldn’t load your review",
     "retry": "Try again",

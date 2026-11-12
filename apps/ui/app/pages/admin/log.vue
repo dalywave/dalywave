@@ -67,6 +67,7 @@ const KNOWN = new Set([
   'auth.sign_in', 'auth.sign_in_failed', 'auth.sign_in_denied', 'auth.logout', 'auth.app_code_reused', 'user.created', 'user.roles_changed',
   'user.disabled', 'user.enabled', 'session.revoked', 'job.retried', 'job.cancelled', 'lane.changed', 'downloader.created', 'downloader.revoked',
   'acquisition.resolved', 'reco.settings_changed', 'reco.run', 'settings.changed', 'recording.reacquire', 'source.check', 'device.created',
+  'recording.reported',
 ])
 const kindLabel = (k: string) => (KNOWN.has(k) ? t(`kind.${k.replace('.', '_')}`) : k)
 const BAD = new Set(['auth.sign_in_failed', 'auth.sign_in_denied', 'auth.app_code_reused'])
@@ -220,6 +221,7 @@ const days = computed(() => {
       "reco_run": "Запуск вне расписания",
       "settings_changed": "Настройки сервера",
       "recording_reacquire": "Запись скачивается заново",
+      "recording_reported": "Жалоба «Неверная запись»",
       "source_check": "Проверка скачивания",
       "device_created": "Новое устройство"
     },
@@ -270,6 +272,7 @@ const days = computed(() => {
       "reco_run": "Run out of schedule",
       "settings_changed": "Server settings",
       "recording_reacquire": "Recording re-downloading",
+      "recording_reported": "Wrong recording reported",
       "source_check": "Download test",
       "device_created": "New device"
     },

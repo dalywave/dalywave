@@ -19,12 +19,13 @@ watch(() => ui.sheetTab, (v) => {
   if (v === 'devices') void player.loadDevices()
 })
 watch(() => route.path, () => (ui.sheetTab = null))
-const title = computed(() => (tab.value ? t(`player.${tab.value}`) : ''))
+const title = computed(() => (tab.value === 'jam' ? t('jam.title') : tab.value ? t(`player.${tab.value}`) : ''))
 </script>
 
 <template>
   <UiSheet v-model:open="open" :title="title" detents="expand">
     <MusicDeviceList v-if="tab === 'devices'" :devices="player.devices" :playing="player.playing" variant="sheet" @select="player.selectDevice" />
+    <MusicJamPanel v-else-if="tab === 'jam'" variant="sheet" />
     <div v-else class="pad">
       <MusicQueuePanel v-if="tab === 'queue'" />
       <MusicLyricsView v-else-if="tab === 'lyrics'" variant="sheet" />

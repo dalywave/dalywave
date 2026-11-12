@@ -3,6 +3,8 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   // Мини-плеер приложения — только вид плеера из движка: входа и данных сервера ему не нужно
   if (isMiniWindow()) return to.path === '/mini' ? undefined : navigateTo('/mini')
+  // «Слушать вместе»: страница гостя открыта без входа — у гостя свой токен этой сессии
+  if (to.path.startsWith('/jam/')) return
   const auth = useAuthStore()
   const bridge = useBridge()
   const isAuthPage = to.path === '/login' || to.path === '/waiting'

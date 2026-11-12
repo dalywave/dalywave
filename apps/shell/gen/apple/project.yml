@@ -1,7 +1,8 @@
 # Xcode-проект DalyWave для iPhone и iPad. Создан `cargo tauri ios init` и доработан руками:
 #   - своя фаза «Build Rust Code» (scripts/build-ios.sh) — Run в Xcode работает без Tauri CLI;
 #   - фреймворки аудиодвижка и входа — статическая библиотека Rust не передаёт их линковщику;
-#   - фоновый звук, ссылки dalywave://, тёмная тема системных окон, значок с темами.
+#   - фоновый звук, ссылки dalywave://, тёмная тема системных окон, значок с темами;
+#   - Siri: App Intents (Swift в Sources, фразы — ru.lproj) и расширение SiriKit dalywave-siri.
 # Пересобрать проект: `make ios` (или `xcodegen generate` здесь). `cargo tauri ios init` заново
 # не запускать: он перезапишет файл и вернёт штатную фазу, которой нужен запущенный CLI.
 name: dalywave-shell
@@ -85,8 +86,19 @@ targets:
           - UIApplicationShortcutItemType: rest.daly.wave.recognize
             UIApplicationShortcutItemTitle: Распознать
             UIApplicationShortcutItemIconSymbolName: shazam.logo
+        # Siri (src/siri.rs, Sources/dalywave-shell/DalyWaveIntents.swift, SiriExtension): окно
+        # разрешения SiriKit; как ещё Siri может услышать название по-русски
+        NSSiriUsageDescription: Чтобы включать музыку голосом — и на HomePod
+        INAlternativeAppNames:
+          - INAlternativeAppName: Дейли Вейв
+            INAlternativeAppNamePronunciationHint: дейли вейв
+          - INAlternativeAppName: Дейливейв
+            INAlternativeAppNamePronunciationHint: дейливейв
     entitlements:
       path: dalywave-shell_iOS/dalywave-shell_iOS.entitlements
+      properties:
+        # SiriKit (INPlayMediaIntent от HomePod): служба Siri у App ID rest.daly.wave (IOS.md)
+        com.apple.developer.siri: true
     settings:
       base:
         ENABLE_BITCODE: false
@@ -96,10 +108,14 @@ targets:
         LIBRARY_SEARCH_PATHS[arch=arm64]: $(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true
         EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+        # App Intents (DalyWaveIntents.swift) — Swift рядом с main.mm
+        SWIFT_VERSION: "5.0"
       groups: [app]
     dependencies:
       # «Поделиться → DalyWave» — расширение встраивается в приложение (PlugIns)
       - target: dalywave-share
+      # Siri: запросы музыки SiriKit (HomePod) — расширение в PlugIns
+      - target: dalywave-siri
       - framework: libapp.a
         embed: false
       - sdk: CoreGraphics.framework
@@ -121,6 +137,10 @@ targets:
       # «Распознать»: ShazamKit, микрофон через AVAudioEngine, доступ — AVCaptureDevice
       - sdk: ShazamKit.framework
       - sdk: AVFoundation.framework
+      # Буферизованный вывод AirPlay 2 (AVSampleBufferAudioRenderer): CMSampleBuffer
+      - sdk: CoreMedia.framework
+      # Siri: INPlayMediaIntent в приложении (src/siri.rs), INPreferences, INMediaUserContext
+      - sdk: Intents.framework
     preBuildScripts:
       # Своя фаза вместо `cargo tauri ios xcode-script`: работает из Xcode без запущенного CLI
       - script: |
@@ -154,6 +174,40 @@ targets:
       base:
         PRODUCT_NAME: DalyWaveShare
         PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.share
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        ARCHS: [arm64]
+        APPLICATION_EXTENSION_API_ONLY: YES
+  # Siri, запросы музыки (INPlayMediaIntent): «Включи … в DalyWave» на iPhone и на HomePod. Без
+  # сети и токена — превращает запрос в команду и отвечает .handleInApp (SiriExtension/IntentHandler.swift)
+  dalywave-siri:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: SiriExtension
+    info:
+      path: SiriExtension/Info.plist
+      properties:
+        CFBundleDisplayName: DalyWave
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.intents-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).IntentHandler
+          NSExtensionAttributes:
+            IntentsSupported: [INPlayMediaIntent]
+            IntentsRestrictedWhileLocked: []
+            SupportedMediaCategories: [INMediaCategoryMusic]
+    dependencies:
+      - sdk: Intents.framework
+    settings:
+      base:
+        PRODUCT_NAME: DalyWaveSiri
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.siri
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"

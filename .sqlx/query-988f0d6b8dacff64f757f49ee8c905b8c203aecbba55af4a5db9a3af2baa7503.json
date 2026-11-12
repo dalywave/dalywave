@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlists SET position = $2 WHERE id = $1 AND position <> $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "988f0d6b8dacff64f757f49ee8c905b8c203aecbba55af4a5db9a3af2baa7503"
+}

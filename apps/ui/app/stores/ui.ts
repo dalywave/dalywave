@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-export type PanelTab = 'queue' | 'lyrics' | 'devices' | 'about'
+export type PanelTab = 'queue' | 'lyrics' | 'devices' | 'about' | 'jam'
 
 // Состояние оболочки: правая панель, полноэкранный плеер, ширина экрана
 export const useUiStore = defineStore('ui', () => {

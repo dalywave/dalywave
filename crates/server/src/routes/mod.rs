@@ -10,14 +10,17 @@ pub mod fetcher;
 pub mod home;
 pub mod images;
 pub mod imports;
+pub mod jam;
 pub mod library;
 pub mod lyrics;
 pub mod offline;
+pub mod playlist_folders;
 pub mod playlists;
 pub mod queue;
 pub mod reco;
 pub mod recognize;
 pub mod rewind;
+pub mod settings;
 pub mod share;
 pub mod sources;
 pub mod stream;
@@ -75,6 +78,7 @@ pub fn router(state: AppState) -> Router {
         .merge(sources::routes())
         .merge(reco::routes())
         .merge(admin_catalog::routes())
+        .merge(rewind::admin_routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
     let catalog = catalog::routes()
         .merge(wave::catalog_routes())
@@ -83,11 +87,13 @@ pub fn router(state: AppState) -> Router {
         .route_layer(from_fn_with_state(state.clone(), require_access));
     let library = library::routes()
         .merge(playlists::routes())
+        .merge(playlist_folders::routes())
         .merge(home::routes())
         .merge(taste::routes())
         .merge(rewind::routes())
         .merge(recognize::routes())
         .merge(sync::routes())
+        .merge(settings::routes())
         .merge(imports::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
     let play = events::routes()
@@ -97,12 +103,15 @@ pub fn router(state: AppState) -> Router {
         .merge(wave_presets::routes())
         .merge(connect::routes())
         .merge(offline::routes())
+        .merge(jam::host_routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())
         .merge(updates::routes())
         .merge(images::routes())
         .merge(ws::routes())
+        // «Слушать вместе»: гости без аккаунта — свой токен `dwj_…`, проверка в каждом обработчике
+        .merge(jam::guest_routes())
         .merge(catalog)
         .merge(library)
         .merge(play)

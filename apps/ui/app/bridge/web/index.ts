@@ -1,14 +1,15 @@
 // Мост сайта: HTTP к нашему API, звук — WebAudioEngine, события — пачками, живые события — WebSocket.
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
-import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, PlaylistSummary, Track, WaveSession } from '~/api/types'
+import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, LocalNotify, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
 import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
+import { createJam } from './jam'
 import { createLive } from './live'
 import { devOutputs, safariOutputs } from './outputs'
 import { devRecognizer } from '../mock/recognize'
@@ -62,6 +63,8 @@ export interface WebBridgeOptions extends HttpOptions {
   offline?: OfflineBridge | null
   /** Тактильный отклик (приложение на iPhone) */
   haptic?: (kind: HapticKind) => void
+  /** Локальные уведомления (приложение на iPhone и iPad) */
+  notify?: LocalNotify | null
 }
 
 /** Только разработка: загрузчик изображает мок — `?downloader=idle|working|paused|offline|…` */
@@ -305,6 +308,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
     offline: opts.offline !== undefined ? opts.offline : devOffline(),
     haptic: opts.haptic ?? (() => {}),
+    notify: opts.notify ?? null,
 
     auth: {
       providers: () => unwrap(api.GET('/api/auth/providers')),
@@ -344,6 +348,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       lyrics: trackId => unwrap(api.GET('/api/tracks/{id}/lyrics', { params: { path: { id: trackId } } })),
       searchLyrics: (q, limit = 20) => unwrap(api.GET('/api/lyrics/search', { params: { query: { q, limit } } })),
       similar: (id, limit = 20) => unwrap(api.GET('/api/tracks/{id}/similar', { params: { path: { id }, query: { limit } } })),
+      suggest: (trackIds, exclude = [], limit = 20) => unwrap(api.POST('/api/tracks/suggest', { body: { trackIds: trackIds.slice(0, 500), exclude: exclude.slice(0, 500), limit } })),
       resolveLink: url => unwrap(api.POST('/api/resolve-link', { body: { url } })),
     },
 
@@ -360,6 +365,10 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       years: () => unwrap(api.GET('/api/rewind')),
       get: year => unwrap(api.GET('/api/rewind/{year}', { params: { path: { year } } })),
       savePlaylist: async year => (await unwrap(api.POST('/api/rewind/{year}/playlist', { params: { path: { year } } }))).id,
+      soundtrack: year => unwrap(api.GET('/api/rewind/{year}/soundtrack', { params: { path: { year } } })),
+      more: year => unwrap(api.GET('/api/rewind/{year}/more', { params: { path: { year } } })),
+      saveMore: async (year, trackIds) => (await unwrap(api.POST('/api/rewind/{year}/more', { params: { path: { year } }, body: { trackIds } }))).id,
+      seen: year => done(api.POST('/api/rewind/{year}/seen', { params: { path: { year } } })),
     },
 
     // Распознать песню умеют только приложения (bridge.recognizer); трек и история — везде
@@ -384,7 +393,11 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       blocked: () => unwrap(api.GET('/api/library/blocked')),
       block: (kind, id) => done(api.PUT('/api/library/blocked/{kind}/{id}', { params: { path: { kind, id } } })),
       unblock: (kind, id) => done(api.DELETE('/api/library/blocked/{kind}/{id}', { params: { path: { kind, id } } })),
-      history: cursor => unwrap(api.GET('/api/me/history', { params: { query: { cursor: cursor ?? undefined } } })),
+      history: (cursor, opts = {}) => unwrap(api.GET('/api/me/history', { params: { query: { cursor: cursor ?? undefined, q: opts.q || undefined, before: opts.before, limit: opts.limit } } })),
+      historyDays: () => unwrap(api.GET('/api/me/history/days', { params: { query: { offsetMin: -new Date().getTimezoneOffset() } } })),
+      hidePlay: id => done(api.DELETE('/api/me/history/{id}', { params: { path: { id } } })),
+      clearHistory: () => done(api.DELETE('/api/me/history')),
+      reportRecording: (trackId, report) => unwrap(api.POST('/api/tracks/{id}/wrong-recording', { params: { path: { id: trackId } }, body: report })),
     },
 
     imports: {
@@ -398,6 +411,11 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       startFiles: title => unwrap(api.POST('/api/imports/files', { body: { title } })),
       file: (id, file, onProgress, signal) => upload<ImportItem>('PUT', `/api/imports/${encodeURIComponent(id)}/files${query({ name: file.name })}`, file, file.type || 'application/octet-stream', onProgress, signal),
       finish: id => unwrap(api.POST('/api/imports/{id}/finish', { params: { path: { id } } })),
+    },
+
+    settings: {
+      get: () => unwrap(api.GET('/api/settings')),
+      update: patch => unwrap(api.PATCH('/api/settings', { body: patch })),
     },
 
     playlists: {
@@ -414,6 +432,11 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       setCover: (id, file) => upload<PlaylistSummary>('PUT', `/api/playlists/${encodeURIComponent(id)}/cover`, file, file.type || 'image/jpeg'),
       removeCover: id => unwrap(api.DELETE('/api/playlists/{id}/cover', { params: { path: { id } } })),
       duplicate: (id, title) => unwrap(api.POST('/api/playlists/{id}/duplicate', { params: { path: { id } }, body: title ? { title } : {} })),
+      move: (id, body) => unwrap(api.POST('/api/playlists/{id}/move', { params: { path: { id } }, body })),
+      createFolder: body => unwrap(api.POST('/api/playlist-folders', { body })),
+      updateFolder: (id, patch) => unwrap(api.PATCH('/api/playlist-folders/{id}', { params: { path: { id } }, body: patch })),
+      removeFolder: id => unwrap(api.DELETE('/api/playlist-folders/{id}', { params: { path: { id } } })),
+      moveFolder: (id, body) => unwrap(api.POST('/api/playlist-folders/{id}/move', { params: { path: { id } }, body })),
       removeItem: (id, itemId) => done(api.DELETE('/api/playlists/{id}/items/{itemId}', { params: { path: { id, itemId } } })),
       moveItem: (id, itemId, afterItemId) => done(api.POST('/api/playlists/{id}/items/{itemId}/move', { params: { path: { id, itemId } }, body: { afterItemId } })),
       pin: (id, pinned) => (pinned
@@ -466,11 +489,12 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
 
     media: {
-      async source(track: Track): Promise<SourceResult> {
+      async source(track: Track, network?: NetworkKind): Promise<SourceResult> {
         await ready()
         if (mock && mocked('stream')) return mock.source(track)
         if (track.audioStatus === 'unavailable') return { kind: 'unavailable' }
-        const res = await http.raw('GET', `/api/tracks/${track.id}/stream`)
+        // Качество выбирает сервер по сети и настройкам слушателя; сайт считается подключённым по Wi-Fi
+        const res = await http.raw('GET', `/api/tracks/${track.id}/stream${network ? `?network=${network}` : ''}`)
         const body = await res.json().catch(() => null) as StreamResponse | null
         if (res.status === 404 || !body) return { kind: 'unavailable' }
         if (!res.ok) throw toApiError(res.status, body)
@@ -520,6 +544,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       return [{ id: 'this', name: opts.kind === 'tauri' ? 'Это устройство' : 'Этот браузер', kind: opts.isDesktopApp ? 'laptop' : 'web', current: true, online: true, lastSeenAt: new Date().toISOString() }]
     },
 
+    jam: createJam(http),
+
     admin: {
       health: () => unwrap(api.GET('/api/healthz')),
       overview: () => unwrap(api.GET('/api/admin/overview')),
@@ -548,6 +574,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       imports: () => unwrap(api.GET('/api/admin/imports')),
       settings: () => unwrap(api.GET('/api/admin/settings')),
       updateSettings: patch => unwrap(api.PATCH('/api/admin/settings', { body: patch })),
+      rewindEvent: () => unwrap(api.GET('/api/admin/rewind')),
+      updateRewindEvent: patch => unwrap(api.PATCH('/api/admin/rewind', { body: patch })),
       reco: userId => unwrap(api.GET('/api/admin/reco', { params: { query: { userId: userId || undefined } } })),
       updateReco: patch => unwrap(api.PATCH('/api/admin/reco/settings', { body: patch })),
       runReco: (task, userId) => unwrap(api.POST('/api/admin/reco/run', { body: { task, userId: userId || undefined } })),

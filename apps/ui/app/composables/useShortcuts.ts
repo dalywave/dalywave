@@ -40,8 +40,8 @@ export function useShortcuts() {
     else if (e.key.toLowerCase() === 'l' && !e.shiftKey && player.current) {
       void player.toggleLike()
     }
-    // S и R — по месту клавиши, чтобы работали и в русской раскладке
-    else if ((e.code === 'KeyS' || e.code === 'KeyR') && !e.shiftKey && player.current && player.modesAvailable) {
+    // S и R — по месту клавиши, чтобы работали и в русской раскладке; в волне — только повтор трека
+    else if ((e.code === 'KeyS' || e.code === 'KeyR') && !e.shiftKey && player.current && (player.modesAvailable || e.code === 'KeyR')) {
       e.preventDefault()
       if (e.code === 'KeyS') player.toggleShuffle()
       else player.cycleRepeat()

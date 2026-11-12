@@ -22,11 +22,15 @@ mod macos;
 mod media;
 #[cfg(desktop)]
 mod mini;
+// Локальные уведомления iPhone и iPad: «Итоги года готовы»
+mod notify;
 mod offline;
 mod platform;
 mod player;
 mod recognize;
 mod settings;
+// Siri и «Команды» (iPhone, iPad): App Intents и SiriKit в Swift зовут сюда
+mod siri;
 #[cfg(windows)]
 mod snap;
 #[cfg(desktop)]
@@ -216,9 +220,12 @@ pub fn run() {
             offline::offline_wave_react,
             offline::offline_played,
             haptics::haptic,
+            notify::notify_schedule,
+            notify::notify_cancel,
             recognize::recognize_listen,
             recognize::recognize_cancel,
             recognize::recognize_take_pending,
+            siri::siri_take,
             audio::audio_outputs,
             audio::audio_set_output,
             audio::audio_show_picker,
@@ -252,6 +259,8 @@ pub fn run() {
         .expect("failed to build DalyWave");
     // Быстрое действие «Распознать» на значке iPhone: до запуска цикла приложения
     recognize::install(app.handle());
+    // Siri: SiriKit будит приложение `application:handleIntent:…` — метод нужен до запуска цикла
+    siri::install(app.handle());
 
     app.run(|app, event| {
         match event {

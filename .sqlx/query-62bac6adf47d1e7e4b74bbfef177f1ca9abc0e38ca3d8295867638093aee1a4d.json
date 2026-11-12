@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jam_guests SET removed_at = now() WHERE id = $1 AND jam_id = $2 AND removed_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "62bac6adf47d1e7e4b74bbfef177f1ca9abc0e38ca3d8295867638093aee1a4d"
+}

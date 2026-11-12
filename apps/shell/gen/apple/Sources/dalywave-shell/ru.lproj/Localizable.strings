@@ -1,0 +1,51 @@
+/* Siri и «Команды» (DalyWaveIntents.swift): названия действий, параметров и значений */
+
+"Play My Wave" = "Включить «Мою волну»";
+"Starts My Wave in DalyWave, with a mood or an activity if you like." = "Включает «Мою волну» в DalyWave — можно с настроением или занятием.";
+"Mood" = "Настроение";
+"Activity" = "Занятие";
+
+/* Настроение — в фразе «Включи ___ волну» */
+"energetic" = "бодрую";
+"upbeat" = "энергичную";
+"happy" = "весёлую";
+"cheerful" = "радостную";
+"calm" = "спокойную";
+"chill" = "расслабленную";
+"sad" = "грустную";
+"melancholic" = "печальную";
+
+/* Занятие — в фразе «Включи волну для ___» */
+"waking up" = "пробуждения";
+"the road" = "дороги";
+"work" = "работы";
+"a workout" = "тренировки";
+"rest" = "отдыха";
+"sleep" = "сна";
+"a party" = "вечеринки";
+
+"Music" = "Музыка";
+"Play in DalyWave" = "Включить в DalyWave";
+"Plays a playlist, an album or an artist from DalyWave." = "Включает плейлист, альбом или артиста из DalyWave.";
+"Shuffle" = "Вперемешку";
+"Find and Play in DalyWave" = "Найти и включить в DalyWave";
+"Finds a playlist, an artist, an album or a song in DalyWave and plays it." = "Находит в DalyWave плейлист, артиста, альбом или песню и включает.";
+"Search" = "Что найти";
+"Pause DalyWave" = "Пауза в DalyWave";
+"Resume DalyWave" = "Продолжить в DalyWave";
+"Next Track" = "Следующий трек";
+"Previous Track" = "Предыдущий трек";
+"Like This Song" = "Нравится";
+"Adds the song that is playing in DalyWave to your likes." = "Добавляет то, что играет в DalyWave, в «Мне нравится».";
+"Added to your likes" = "Добавлено в «Мне нравится»";
+"DalyWave is still starting. Try again in a moment." = "DalyWave ещё запускается — повторите через секунду.";
+"DalyWave couldn't do that." = "DalyWave не смог это сделать.";
+
+/* Короткие названия в «Командах» и Spotlight */
+"My Wave" = "Моя волна";
+"Play" = "Включить";
+"Pause" = "Пауза";
+"Resume" = "Продолжить";
+"Next" = "Дальше";
+"Previous" = "Назад";
+"Like" = "Нравится";

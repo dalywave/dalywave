@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM playlists\n         WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' IN ('daily_mix', 'on_repeat', 'repeat_rewind')\n         ORDER BY CASE rules ->> 'generator' WHEN 'daily_mix' THEN 0 WHEN 'on_repeat' THEN 1 ELSE 2 END,\n                  (rules ->> 'slot')::int, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6cec4bba8f076f1dd28a4a89cd682441e6e76518b55ddd27dde2a8d5bfc60c95"
+}

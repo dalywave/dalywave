@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT video_id AS \"video_id!\" FROM recording_reports\n           WHERE recording_id = $1 AND video_id IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "video_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recording_reports",
+            "name": "video_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "795ad45b3f13a9f06338a05aa6defbaf9524e5e24f1ee2a2aebfcd08f4359f98"
+}

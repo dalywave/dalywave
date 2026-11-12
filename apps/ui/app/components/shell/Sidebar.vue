@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { PlaylistSummary } from '~/api/types'
+import type { PlaylistFolder, PlaylistSummary } from '~/api/types'
+import type { TreeNode } from '~/composables/usePlaylistTree'
 import type { MenuEntry } from '~/types/ui'
 
 // Боковая панель: знак, разделы, закреплённое, подписки и состояние загрузки подписок.
@@ -30,37 +31,70 @@ onMounted(() => {
 
 const pui = usePlaylistUi()
 const pla = usePlaylistActions()
+const tree = usePlaylistTree()
 const playlists = computed(() => (library.playlists ?? library.overview?.pinnedPlaylists ?? []).filter(p => !pui.hidden.has(p.id)))
+
+// Папки и плейлисты одной лентой: развёрнутая папка — со своими плейлистами под ней
+type Row = { key: string, node: TreeNode, depth: 0 | 1 }
+const rows = computed<Row[]>(() => {
+  // Пока полный список не пришёл — закреплённые из обзора, без папок
+  if (!library.playlists) return playlists.value.map(p => ({ key: p.id, node: { kind: 'playlist', id: p.id, playlist: p }, depth: 0 }))
+  const out: Row[] = []
+  for (const n of tree.tree.value) {
+    out.push({ key: n.id, node: n, depth: 0 })
+    if (n.kind === 'folder' && !n.folder.collapsed) {
+      for (const p of n.children) out.push({ key: p.id, node: { kind: 'playlist', id: p.id, playlist: p }, depth: 1 })
+    }
+  }
+  return out
+})
+const folderMeta = (n: { folder: PlaylistFolder, children: PlaylistSummary[] }) => (n.children.length ? formatCount(n.children.length, 'playlist', lang.value) : t('folder.empty'))
 
 // Меню элемента: пункты собираются для того, по которому щёлкнули
 const menuItems = ref<MenuEntry[]>([])
 function onContext(target: EventTarget | null) {
   const key = (target as HTMLElement | null)?.closest<HTMLElement>('[data-pl]')?.dataset.pl
   if (key === 'liked') menuItems.value = pla.likedMenu()
+  else if (key?.startsWith('folder:')) {
+    const f = tree.folderOf(key.slice(7))
+    menuItems.value = f ? tree.folderMenu(f) : []
+  }
   else {
     const p = playlists.value.find(x => x.id === key)
     menuItems.value = p ? pla.menuFor(p) : []
   }
 }
 
-// Треки тянут из списка: свой плейлист подсвечивается и принимает их
+// Треки тянут из списка: свой плейлист подсвечивается и принимает их. Сами строки (плейлисты и папки)
+// тоже тянутся: в папку, из неё и — в «Своём порядке» — на новое место
 const dropOn = ref<string | null>(null)
-function onDragOver(p: PlaylistSummary, e: DragEvent) {
-  if (!pui.dragTracks || p.kind !== 'user') return
+function onDragOver(n: TreeNode, e: DragEvent) {
+  if (!pui.dragTracks) return tree.onDragOver(n, e)
+  if (n.kind !== 'playlist' || n.playlist.kind !== 'user') return
   e.preventDefault()
   if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
-  dropOn.value = p.id
+  dropOn.value = n.id
 }
-function onDragLeave(p: PlaylistSummary) {
-  if (dropOn.value === p.id) dropOn.value = null
+function onDragLeave(n: TreeNode) {
+  if (dropOn.value === n.id) dropOn.value = null
+  tree.onDragLeave(n)
 }
-function onDrop(p: PlaylistSummary, e: DragEvent) {
+function onDrop(n: TreeNode, e: DragEvent) {
+  if (!pui.dragTracks) return void tree.onDrop(n, e)
   e.preventDefault()
   dropOn.value = null
   const tracks = pui.dragTracks
   pui.dragTracks = null
-  if (tracks?.length) void pla.addTo(p, tracks)
+  if (tracks?.length && n.kind === 'playlist') void pla.addTo(n.playlist, tracks)
 }
+
+// Порядок плейлистов и новая папка — меню у заголовка раздела
+const listMenu = computed<MenuEntry[]>(() => [
+  { kind: 'heading', label: t('plSort.heading') },
+  ...tree.sortItems.value,
+  { kind: 'separator' },
+  { label: t('folder.new'), icon: 'ph:folder-simple-plus', onSelect: () => void tree.createFolder() },
+])
 const followed = computed(() => library.overview?.followedArtists ?? [])
 const loaded = computed(() => !!library.overview)
 
@@ -115,7 +149,11 @@ async function createPlaylist() {
       <section class="sec">
         <header class="sec__head">
           <span class="sec__title">{{ t('nav.pinned') }}</span>
-          <UiPopover v-if="!rail" v-model:open="createOpen" :title="t('nav.newPlaylist')" side="right" align="start" :width="300">
+          <span v-if="!rail" class="sec__actions">
+          <UiMenu :items="listMenu" align="start">
+            <UiIconButton icon="ph:sliders-horizontal" :label="t('plSort.options')" size="xs" />
+          </UiMenu>
+          <UiPopover v-model:open="createOpen" :title="t('nav.newPlaylist')" side="right" align="start" :width="300">
             <template #trigger>
               <UiIconButton icon="ph:plus" :label="t('nav.newPlaylist')" size="xs" />
             </template>
@@ -124,6 +162,7 @@ async function createPlaylist() {
               <UiButton type="submit" variant="primary" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('nav.create') }}</UiButton>
             </form>
           </UiPopover>
+          </span>
         </header>
         <UiContextMenu :items="menuItems" @open="onContext">
           <div class="sec__list">
@@ -137,23 +176,51 @@ async function createPlaylist() {
               </NuxtLink>
             </UiTooltip>
             <template v-if="loaded || playlists.length">
-              <UiTooltip v-for="p in playlists" :key="p.id" :text="rail ? p.title : undefined" side="right">
-                <NuxtLink
-                  :to="`/playlist/${p.id}`"
-                  :data-pl="p.id"
-                  class="item"
-                  :class="{ 'is-active': route.path === `/playlist/${p.id}`, 'is-current': player.context?.type === 'playlist' && player.context.id === p.id, 'is-drop': dropOn === p.id }"
-                  @dragover="onDragOver(p, $event)"
-                  @dragleave="onDragLeave(p)"
-                  @drop="onDrop(p, $event)"
-                >
-                  <MusicPlaylistCover :id="p.id" :title="p.title" :covers="p.covers" :image="p.image" :kind="p.kind" :show-title="false" class="item__art" />
-                  <span class="item__text">
-                    <span class="item__title">{{ p.title }}</span>
-                    <span class="item__meta"><Icon v-if="p.pinned" name="ph:push-pin-fill" class="item__pin" /><span class="item__sub">{{ pla.subOf(p) }}</span></span>
-                  </span>
-                </NuxtLink>
-              </UiTooltip>
+              <template v-for="r in rows" :key="r.key">
+                <UiTooltip v-if="r.node.kind === 'folder'" :text="rail ? r.node.folder.title : undefined" side="right">
+                  <button
+                    type="button"
+                    :data-pl="`folder:${r.node.id}`"
+                    class="item item--folder"
+                    :class="tree.dropClass(r.node.id)"
+                    :draggable="!rail"
+                    :aria-expanded="!r.node.folder.collapsed"
+                    @click="tree.toggleFolder(r.node.folder)"
+                    @dragstart="tree.onDragStart('folder', r.node.id, $event)"
+                    @dragend="tree.onDragEnd()"
+                    @dragover="onDragOver(r.node, $event)"
+                    @dragleave="onDragLeave(r.node)"
+                    @drop="onDrop(r.node, $event)"
+                  >
+                    <span class="item__art item__art--folder"><Icon name="ph:folder-simple" /></span>
+                    <span class="item__text">
+                      <span class="item__title">{{ r.node.folder.title }}</span>
+                      <span class="item__meta"><span class="item__sub">{{ folderMeta(r.node) }}</span></span>
+                    </span>
+                    <Icon name="ph:caret-down" class="item__caret" :class="{ 'is-collapsed': r.node.folder.collapsed }" aria-hidden="true" />
+                  </button>
+                </UiTooltip>
+                <UiTooltip v-else :text="rail ? r.node.playlist.title : undefined" side="right">
+                  <NuxtLink
+                    :to="`/playlist/${r.node.id}`"
+                    :data-pl="r.node.id"
+                    class="item"
+                    :class="[{ 'item--nested': r.depth === 1, 'is-active': route.path === `/playlist/${r.node.id}`, 'is-current': player.context?.type === 'playlist' && player.context.id === r.node.id, 'is-drop': dropOn === r.node.id }, tree.dropClass(r.node.id)]"
+                    :draggable="!rail"
+                    @dragstart="tree.onDragStart('playlist', r.node.id, $event)"
+                    @dragend="tree.onDragEnd()"
+                    @dragover="onDragOver(r.node, $event)"
+                    @dragleave="onDragLeave(r.node)"
+                    @drop="onDrop(r.node, $event)"
+                  >
+                    <MusicPlaylistCover :id="r.node.id" :title="r.node.playlist.title" :covers="r.node.playlist.covers" :image="r.node.playlist.image" :kind="r.node.playlist.kind" :show-title="false" class="item__art" />
+                    <span class="item__text">
+                      <span class="item__title">{{ r.node.playlist.title }}</span>
+                      <span class="item__meta"><Icon v-if="r.node.playlist.pinned" name="ph:push-pin-fill" class="item__pin" /><span class="item__sub">{{ pla.subOf(r.node.playlist) }}</span></span>
+                    </span>
+                  </NuxtLink>
+                </UiTooltip>
+              </template>
             </template>
             <template v-else>
               <div v-for="n in 3" :key="n" class="item item--skel"><UiSkeleton width="36px" height="36px" /><span class="item__text"><UiSkeleton variant="line" width="70%" /><UiSkeleton variant="line" width="40%" /></span></div>
@@ -226,6 +293,18 @@ async function createPlaylist() {
 .item__pin { flex: none; font-size: 12px; color: var(--accent); }
 .item.is-current .item__title { color: var(--accent); }
 .item.is-drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent-line); }
+/* Перетаскивание строк: линия места — сверху или снизу строки */
+.item.is-drop-before { box-shadow: inset 0 2px 0 var(--accent); border-radius: 0 0 var(--r-3) var(--r-3); }
+.item.is-drop-after { box-shadow: inset 0 -2px 0 var(--accent); border-radius: var(--r-3) var(--r-3) 0 0; }
+.item[draggable='true'] { -webkit-user-drag: element; }
+.item--folder { width: 100%; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.item--folder:focus-visible, .item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.item__art--folder { display: grid; place-items: center; background: var(--fill-2); color: var(--text-2); font-size: 18px; }
+.item__caret { flex: none; margin-right: 4px; font-size: 14px; color: var(--text-3); transition: transform var(--dur-1); }
+.item__caret.is-collapsed { transform: rotate(-90deg); }
+/* Плейлист в папке — с отступом под значок папки */
+.item--nested { padding-left: 24px; }
+.sec__actions { display: inline-flex; align-items: center; gap: 2px; }
 .item__sub { overflow: hidden; text-overflow: ellipsis; }
 .item--artist { min-height: 40px; padding-top: 4px; padding-bottom: 4px; }
 .item--artist .item__art { width: 28px; height: 28px; margin: 0 4px; border-radius: 50%; }
@@ -254,6 +333,9 @@ async function createPlaylist() {
 .side--rail .sec__title { display: none; }
 .side--rail .item { justify-content: center; padding: 6px 0; }
 .side--rail .item__text { display: none; }
+.side--rail .item__caret { display: none; }
+.side--rail .item--nested { padding-left: 0; }
+.side--rail .item--nested .item__art { width: 30px; height: 30px; }
 .side--rail .item--artist .item__art { width: 32px; height: 32px; margin: 0; }
 .side--rail .side__foot { padding: 10px; }
 .side--rail .sync { justify-content: center; padding: 8px 0; }

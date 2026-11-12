@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE audio_renditions SET last_used_at = CASE\n             WHEN last_used_at < now() - $3::text::interval THEN now() ELSE last_used_at END\n         WHERE source_file_id = $1 AND kind = $2\n         RETURNING id, storage_key, codec, container, bitrate_kbps, duration_ms",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_renditions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "storage_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_renditions",
+            "name": "storage_key"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "codec",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_renditions",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "container",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_renditions",
+            "name": "container"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "bitrate_kbps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_renditions",
+            "name": "bitrate_kbps"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_renditions",
+            "name": "duration_ms"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ae6cad2813670cdd90634377766c73b5c14523f8fd4e8699661a7eeaf63d1161"
+}

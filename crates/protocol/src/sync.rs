@@ -14,6 +14,7 @@ use uuid::Uuid;
 use crate::{
     catalog::{ArtistRole, AudioStatus, ImageSet, RecordType},
     library::{BlockedKind, DownloadPolicy, PlaylistKind},
+    settings::SyncSettings,
     wave::WaveSettings,
 };
 
@@ -48,6 +49,10 @@ pub enum SyncEntity {
     TrackFeatures,
     /// Сохранённые сочетания настроек волны.
     WavePresets,
+    /// Папки плейлистов.
+    PlaylistFolders,
+    /// Настройки слушателя (одна строка).
+    Settings,
 }
 
 names!(SyncEntity {
@@ -65,6 +70,8 @@ names!(SyncEntity {
     DeviceSets => "deviceSets",
     TrackFeatures => "trackFeatures",
     WavePresets => "wavePresets",
+    PlaylistFolders => "playlistFolders",
+    Settings => "settings",
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -184,7 +191,7 @@ pub struct SyncBlockedItem {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncPlaylist {
     pub id: Uuid,
@@ -193,6 +200,23 @@ pub struct SyncPlaylist {
     pub description: String,
     pub kind: PlaylistKind,
     pub pinned: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    pub folder_id: Option<Uuid>,
+    #[serde(default)]
+    pub position: f64,
+}
+
+/// Папка плейлистов.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncPlaylistFolder {
+    pub id: Uuid,
+    pub rev: i64,
+    pub title: String,
+    pub position: f64,
+    pub collapsed: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -308,6 +332,11 @@ pub struct SyncPage {
     pub track_features: Vec<SyncTrackFeatures>,
     #[serde(default)]
     pub wave_presets: Vec<SyncWavePreset>,
+    #[serde(default)]
+    pub playlist_folders: Vec<SyncPlaylistFolder>,
+    /// Настройки слушателя, если изменились после курсора.
+    #[serde(default)]
+    pub settings: Option<SyncSettings>,
     pub tombstones: Vec<SyncTombstone>,
 }
 

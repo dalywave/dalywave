@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { AlbumSummary, ArtistSummary, AudioStatus, LibraryOverview, PlaylistSummary, Track } from '~/api/types'
+import type { AlbumSummary, ArtistSummary, AudioStatus, LibraryOverview, PlaylistFolder, PlaylistList, PlaylistSummary, Track } from '~/api/types'
 
 // Медиатека: действие применяется сразу, при ошибке откатывается; у удалений есть «Отменить».
 // Живые события сервера поправляют состояние треков и подтягивают изменения с других устройств
@@ -8,6 +8,8 @@ export const useLibraryStore = defineStore('library', () => {
   const toast = useToast()
   const overview = ref<LibraryOverview | null>(null)
   const playlists = ref<PlaylistSummary[] | null>(null)
+  /** Папки плейлистов по «Своему порядку» */
+  const folders = ref<PlaylistFolder[]>([])
   const likedOverride = ref(new Map<string, boolean>())
   const savedOverride = ref(new Map<string, boolean>())
   const followOverride = ref(new Map<string, boolean>())
@@ -23,12 +25,17 @@ export const useLibraryStore = defineStore('library', () => {
     return overview.value
   }
 
-  /** Все плейлисты: закреплённые первыми */
+  /** Все плейлисты: закреплённые первыми; и папки */
   async function loadPlaylists(force = false) {
     if (playlists.value && !force) return playlists.value
-    const list = await bridge.playlists.list()
+    applyList(await bridge.playlists.list())
+    return playlists.value!
+  }
+
+  /** Плейлисты и папки из ответа сервера (перекладка, папки отвечают списком целиком) */
+  function applyList(list: PlaylistList) {
     playlists.value = [...list.items].sort((a, b) => Number(b.pinned) - Number(a.pinned))
-    return playlists.value
+    folders.value = list.folders ?? []
   }
 
   const likedCount = computed(() => (overview.value?.counts.likedTracks ?? 0) + likedDelta.value)
@@ -143,7 +150,7 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   return {
-    overview, playlists, likedCount, revision, loadOverview, loadPlaylists, isLiked, isSaved, isFollowed, statusOf,
+    overview, playlists, folders, likedCount, revision, loadOverview, loadPlaylists, applyList, isLiked, isSaved, isFollowed, statusOf,
     setAudioStatus, setLiked, toggleLike, setSaved, setFollowed, setPinned,
   }
 })

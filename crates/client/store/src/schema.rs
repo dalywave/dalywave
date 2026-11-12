@@ -98,6 +98,7 @@ DELETE FROM artists; DELETE FROM albums; DELETE FROM tracks; DELETE FROM track_a
 DELETE FROM recordings; DELETE FROM liked_tracks; DELETE FROM saved_albums; DELETE FROM followed_artists;
 DELETE FROM blocked_items; DELETE FROM playlists; DELETE FROM playlist_items; DELETE FROM device_downloads;
 DELETE FROM device_sets; DELETE FROM track_features; DELETE FROM wave_presets;
+DELETE FROM playlist_folders; DELETE FROM user_settings;
 DELETE FROM meta WHERE key LIKE 'sync.%';
 ";
 
@@ -111,7 +112,23 @@ CREATE TABLE wave_presets (
 DELETE FROM meta WHERE key = 'sync.cursor';
 ";
 
-const MIGRATIONS: &[&str] = &[V1, V2];
+/// Папки плейлистов, «Свой порядок» и настройки слушателя (фильтр нецензурного, качество, порядок
+/// плейлистов). Курсор сбрасывается: папки и позиции придут полной синхронизацией.
+const V3: &str = "
+ALTER TABLE playlists ADD COLUMN folder_id TEXT;
+ALTER TABLE playlists ADD COLUMN position REAL NOT NULL DEFAULT 0;
+CREATE TABLE playlist_folders (
+    id TEXT PRIMARY KEY, rev INTEGER NOT NULL, title TEXT NOT NULL, position REAL NOT NULL,
+    collapsed INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+-- Одна строка: настройки слушателя целиком (JSON в типах API)
+CREATE TABLE user_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1), rev INTEGER NOT NULL, settings TEXT NOT NULL
+);
+DELETE FROM meta WHERE key = 'sync.cursor';
+";
+
+const MIGRATIONS: &[&str] = &[V1, V2, V3];
 
 pub fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;

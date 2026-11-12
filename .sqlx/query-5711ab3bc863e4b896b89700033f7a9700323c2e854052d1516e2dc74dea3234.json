@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jam_sessions SET last_activity_at = now()\n         WHERE id = $1 AND ended_at IS NULL AND last_activity_at < now() - interval '1 minute'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5711ab3bc863e4b896b89700033f7a9700323c2e854052d1516e2dc74dea3234"
+}

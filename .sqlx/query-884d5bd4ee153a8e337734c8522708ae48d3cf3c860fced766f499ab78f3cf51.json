@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE play_events SET hidden_at = now() WHERE user_id = $1 AND hidden_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "884d5bd4ee153a8e337734c8522708ae48d3cf3c860fced766f499ab78f3cf51"
+}

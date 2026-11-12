@@ -10,7 +10,7 @@ import type {
   SavedAlbumPage, SearchResults, Track,
 } from '~/api/types'
 import type {
-  Bridge, DownloadKind, HapticKind, OfflineBridge, OfflineReserve, OfflineSettings, OfflineStatus, SourceResult, TrackDownload,
+  Bridge, DownloadKind, HapticKind, LocalNotify, OfflineBridge, OfflineReserve, OfflineSettings, OfflineStatus, SourceResult, TrackDownload,
   WaveSettings, WaveStart, WaveTrack,
 } from '../types'
 import { gainFor } from '../web'
@@ -64,6 +64,14 @@ export function createOfflineBridge(): OfflineBridge {
 /** iPhone: тактильный отклик; на компьютере оболочка ничего не делает */
 export function haptic(kind: HapticKind) {
   void call('haptic', { kind }).catch(() => {})
+}
+
+/** Локальные уведомления оболочки (apps/shell/src/notify.rs): на iPhone и iPad, на компьютере — false */
+export const notify: LocalNotify = {
+  schedule: n => call<boolean>('notify_schedule', { id: n.id, title: n.title, body: n.body, atMs: n.atMs ?? null }).catch(() => false),
+  cancel: async (id) => {
+    await call('notify_cancel', { id }).catch(() => {})
+  },
 }
 
 interface LocalSource {
@@ -179,6 +187,11 @@ export function withOffline(bridge: Bridge, offline: OfflineBridge): Bridge {
       duplicate: synced(pl.duplicate),
       moveItem: synced(pl.moveItem),
       pin: synced(pl.pin),
+      move: synced(pl.move),
+      createFolder: synced(pl.createFolder),
+      updateFolder: synced(pl.updateFolder),
+      removeFolder: synced(pl.removeFolder),
+      moveFolder: synced(pl.moveFolder),
     },
     wave: {
       ...wave,
@@ -238,7 +251,8 @@ export function withOffline(bridge: Bridge, offline: OfflineBridge): Bridge {
           }
         }
         if (isOffline()) return { kind: 'unavailable' }
-        return media.source(track)
+        // На сотовой — качество «По сотовой» (с «Экономией» — Opus 64 кбит/с)
+        return media.source(track, status?.network === 'cellular' ? 'cellular' : 'wifi')
       },
     },
     events: {

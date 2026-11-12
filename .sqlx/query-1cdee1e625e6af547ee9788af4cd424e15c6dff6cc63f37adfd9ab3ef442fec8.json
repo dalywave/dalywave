@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jam_requests SET status = 'added', decided_at = now() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1cdee1e625e6af547ee9788af4cd424e15c6dff6cc63f37adfd9ab3ef442fec8"
+}

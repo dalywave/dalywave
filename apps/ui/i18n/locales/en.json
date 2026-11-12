@@ -15,6 +15,7 @@
     "pinned": "Pinned",
     "artists": "Artists",
     "newPlaylist": "New playlist",
+    "history": "Recently played",
     "profile": "Profile",
     "logout": "Sign out",
     "newRelease": "New release",
@@ -115,6 +116,12 @@
     "readyLabel": "Ready to go"
   },
   "player": {
+    "shuffleSmart": "Smart shuffle",
+    "shuffleInWave": "Not needed in the wave",
+    "suggested": "Suggested",
+    "suggestAdd": "Add to playlist",
+    "suggestRemove": "Remove",
+    "suggestAdded": "Added to “{title}”",
     "shuffleOn": "Enable shuffle",
     "shuffleOff": "Disable shuffle",
     "repeatAll": "Enable repeat",
@@ -274,6 +281,7 @@
     "editEmpty": "No tracks yet"
   },
   "track": {
+    "wrongRecording": "Wrong recording",
     "playNext": "Play next",
     "enqueue": "Add to queue",
     "toPlaylist": "Add to playlist",
@@ -328,7 +336,7 @@
       "new-releases": "New from artists you follow",
       "recent-likes": "Recently liked",
       "top-artists": "Your artists",
-      "daily-mixes": "Daily mixes",
+      "daily-mixes": "Made for you",
       "discover-weekly": "Discover weekly",
       "release-radar": "Release radar",
       "forgotten-favorites": "Forgotten favorites"
@@ -515,5 +523,48 @@
     "action": "Share",
     "copied": "Link copied",
     "failed": "Couldn’t copy the link"
+  },
+  "jam": {
+    "title": "Listen together",
+    "addedBy": "added by {name}",
+    "reacted": "{name} likes this",
+    "nothingPlaying": "Start some music first",
+    "startFailed": "Couldn’t start — try again",
+    "failed": "Something went wrong — try again",
+    "hint": "Friends add tracks from their phones",
+    "running": "On — no guests yet",
+    "withGuests": "On · guests: {n}"
+  },
+  "folder": {
+    "new": "New folder",
+    "newName": "Folder name",
+    "create": "Create",
+    "rename": "Rename",
+    "renameTitle": "Rename folder",
+    "save": "Save",
+    "delete": "Delete folder",
+    "deleteTitle": "Delete folder “{title}”?",
+    "deleteText": "Its playlists stay in your library.",
+    "deleted": "Folder “{title}” deleted",
+    "moveTo": "Move to folder",
+    "moveOut": "Remove from folder",
+    "moved": "“{title}” moved to “{folder}”",
+    "movedOut": "“{title}” is out of folders",
+    "empty": "Empty folder",
+    "kind": "Folder",
+    "failed": "Something went wrong — try again",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "plSort": {
+    "heading": "Sort by",
+    "options": "Sort and folders",
+    "recent": "Recents",
+    "title": "Alphabetical",
+    "custom": "Custom order"
+  },
+  "settingsSync": {
+    "failed": "Couldn't save the setting — try again",
+    "hidden": "Hidden by the filter"
   }
 }

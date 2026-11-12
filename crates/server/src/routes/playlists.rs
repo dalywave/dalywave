@@ -151,6 +151,10 @@ pub async fn summaries(
 ) -> Result<Vec<PlaylistSummary>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"SELECT p.id, p.title, p.description, p.kind, p.pinned, p.cover_key, p.created_at, p.updated_at,
+                  p.folder_id, p.position, p.rules ->> 'generator' AS generator,
+                  (SELECT max(e.started_at) FROM play_events e
+                   WHERE e.user_id = p.user_id AND e.context_type IN ('playlist', 'mix')
+                     AND e.context_id = p.id::text) AS played_at,
                   (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS "tracks_count!",
                   (SELECT COALESCE(sum(t.duration_ms), 0) FROM playlist_items i JOIN tracks t ON t.id = i.track_id
                    WHERE i.playlist_id = p.id)::bigint AS "duration_ms!",
@@ -200,6 +204,10 @@ pub async fn summaries(
             duration_ms: r.duration_ms,
             created_at: r.created_at,
             updated_at: r.updated_at,
+            folder_id: r.folder_id,
+            position: r.position,
+            played_at: r.played_at,
+            generator: r.generator,
         })
         .collect())
 }
@@ -310,7 +318,7 @@ async fn insert_items(
     path = "/api/playlists",
     tag = "library",
     security(("session" = []), ("device" = [])),
-    responses((status = 200, description = "Плейлисты: закреплённые, затем недавно изменённые", body = PlaylistList)),
+    responses((status = 200, description = "Плейлисты (закреплённые, затем недавно изменённые) и папки", body = PlaylistList)),
 )]
 pub async fn list(
     State(st): State<AppState>,
@@ -318,6 +326,7 @@ pub async fn list(
 ) -> AppResult<Json<PlaylistList>> {
     Ok(Json(PlaylistList {
         items: summaries(&st.db, principal.user.id, None, false).await?,
+        folders: super::playlist_folders::folders(&st.db, principal.user.id).await?,
     }))
 }
 

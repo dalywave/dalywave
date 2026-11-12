@@ -42,6 +42,7 @@ pub async fn build(
            JOIN recordings r ON r.id = t.recording_id
            WHERE l.user_id = $1 AND r.audio_status = 'ready'
              AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = l.track_id)
+             AND NOT (t.explicit AND hide_explicit($1))
            ORDER BY
              (CASE WHEN EXISTS (SELECT 1 FROM device_sets s WHERE s.device_id = $2 AND s.track_id = l.track_id
                                   AND s.kind = 'favorite') THEN 0.4 ELSE 0 END)
@@ -68,6 +69,7 @@ pub async fn build(
                                AND p.started_at > s.created_at - interval '30 days')
              AND NOT EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $2 AND l.track_id = s.track_id)
              AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $2 AND b.kind = 'track' AND b.ref_id = s.track_id)
+             AND NOT (t.explicit AND hide_explicit($2))
            ORDER BY s.score DESC
            LIMIT $3"#,
         device,

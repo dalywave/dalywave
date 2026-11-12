@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH top AS (\n               SELECT DISTINCT ON (ta.artist_id) ta.artist_id, x.n\n               FROM unnest($1::uuid[]) WITH ORDINALITY AS x(t, n)\n               JOIN track_artists ta ON ta.track_id = x.t AND ta.role = 'main'\n               ORDER BY ta.artist_id, x.n\n           )\n           SELECT tt.track_id AS \"track_id!\" FROM top\n           JOIN artist_related r ON r.artist_id = top.artist_id\n           JOIN artist_top_tracks tt ON tt.artist_id = r.related_id\n           WHERE NOT EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = $2 AND p.track_id = tt.track_id)\n           ORDER BY tt.position, top.n, r.position\n           LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_top_tracks",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6d5f90e10ca830b0d09aa5a7cb714e2a9ae9856520752021527cfd4cad33728a"
+}

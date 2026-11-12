@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM jam_skip_votes WHERE jam_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e16b91056625d4ec7486d29f8a433f3d5e3beb876db88c1dda73d75f8ac222a7"
+}

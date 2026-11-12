@@ -990,6 +990,49 @@ impl Mixer {
     pub fn has_playing(&self) -> bool {
         !self.paused && self.slots.iter().any(|s| s.state == SlotState::Playing)
     }
+
+    /// Буферизованный вывод (renderer.rs): рендерить ли блок сейчас. Он берёт звук наперёд, на
+    /// секунды, поэтому тишину «пока дека готовится» класть нельзя — новый трек встал бы за ней.
+    /// Да — если звучащие деки (затихающие тоже) дают `frames` кадров или кончаются, либо ничего не
+    /// звучит, но дека «сейчас» набрала порог старта. Ждущие своей очереди деки (кроссфейд,
+    /// «Диджей») рендер не держат, как и `hold`: в реальном времени их готовят заранее.
+    pub fn can_feed(&self, frames: usize) -> bool {
+        if self.paused && !self.pause_env.active {
+            return false;
+        }
+        let mut playing = false;
+        for s in &self.slots {
+            if s.state == SlotState::Playing {
+                playing = true;
+                // Уходящая (затухает и снимается) рендер не держит: без данных — просто тишина
+                if s.remove_after_fade {
+                    continue;
+                }
+                // После недогрузки дека молчит до запаса побольше — иначе рендер клал бы тишину
+                let need = if s.starved {
+                    frames.max(self.resume_threshold)
+                } else {
+                    frames
+                };
+                if !(s.avail() >= need || s.finished()) {
+                    return false;
+                }
+            }
+        }
+        playing
+            || (0..MAX_DECKS)
+                .any(|i| self.slots[i].state == SlotState::Waiting(StartRule::Now) && self.ready(i))
+    }
+
+    /// Буферизованный вывод: принять команды контроллера, не рендеря звук (вывод ждёт данных или
+    /// стоит на паузе) — иначе новая дека так и не подключится.
+    pub fn poll(&mut self) {
+        self.drain_commands();
+        for i in 0..MAX_DECKS {
+            self.shared.frames_read[i].store(self.slots[i].frames_read, Ordering::Relaxed);
+        }
+        self.shared.main.store(self.main, Ordering::Relaxed);
+    }
 }
 
 #[cfg(test)]

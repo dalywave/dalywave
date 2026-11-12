@@ -31,6 +31,21 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Дейли Вейв</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>дейли вейв</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Дейливейв</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>дейливейв</string>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -42,6 +57,8 @@
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Чтобы узнать, какая песня играет рядом</string>
+	<key>NSSiriUsageDescription</key>
+	<string>Чтобы включать музыку голосом — и на HomePod</string>
 	<key>UIApplicationShortcutItems</key>
 	<array>
 		<dict>

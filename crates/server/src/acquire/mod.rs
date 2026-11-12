@@ -129,6 +129,8 @@ pub struct Request {
     pub direct_url: Option<String>,
     /// Ставить, даже если запись готова или ждёт решения в админке.
     pub force: bool,
+    /// Жалоба «Неверная запись»: новый файл заменяет основной, даже если тот «лучше».
+    pub replace: bool,
 }
 
 impl Request {
@@ -143,6 +145,7 @@ impl Request {
             exclude_video_ids: Vec::new(),
             direct_url: None,
             force: false,
+            replace: false,
         }
     }
 
@@ -267,6 +270,7 @@ pub async fn enqueue(db: &PgPool, req: Request) -> Result<Enqueue, sqlx::Error> 
         prefer_video_ids: req.prefer_video_ids,
         exclude_video_ids: req.exclude_video_ids,
         direct_url: req.direct_url,
+        replace: req.replace,
     };
     let new_job = NewJob::new(kind::ACQUIRE, req.lane, &payload)
         .dedupe(format!("acquire:{recording_id}"))
@@ -771,6 +775,7 @@ mod tests {
             prefer_video_ids: vec![],
             exclude_video_ids: vec![],
             direct_url: None,
+            replace: false,
         };
         assert_eq!(candidate_attempts(&p), CANDIDATE_ATTEMPTS);
         p.prefer_video_ids.push("dQw4w9WgXcQ".into());

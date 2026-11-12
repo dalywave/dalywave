@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT l.track_id AS \"track_id!\"\n           FROM liked_tracks l\n           JOIN tracks t ON t.id = l.track_id\n           JOIN recordings r ON r.id = t.recording_id\n           WHERE l.user_id = $1 AND r.audio_status = 'ready'\n             AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = l.track_id)\n             AND NOT (t.explicit AND hide_explicit($1))\n           ORDER BY\n             (CASE WHEN EXISTS (SELECT 1 FROM device_sets s WHERE s.device_id = $2 AND s.track_id = l.track_id\n                                  AND s.kind = 'favorite') THEN 0.4 ELSE 0 END)\n             + 0.5 * exp(-extract(epoch FROM now() - l.created_at) / 86400.0 / 180.0)\n             + 0.1 * ln(1 + (SELECT count(*) FROM play_events p WHERE p.user_id = $1 AND p.track_id = l.track_id\n                              AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)))\n             + 0.3 * random() DESC\n           LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "liked_tracks",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2a3efc306f5e2f21219fce7229b2f83402653a66f965ca5d8001efe2e567e471"
+}

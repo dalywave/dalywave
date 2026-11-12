@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH counted AS (\n               SELECT p.track_id, count(*) AS plays, max(p.started_at) AS last\n               FROM play_events p\n               WHERE p.user_id = $1 AND p.started_at > now() - interval '30 days'\n                 AND (p.end_reason = 'completed' OR p.played_ms >= $3)\n               GROUP BY p.track_id\n           ),\n           one_per_recording AS (\n               SELECT DISTINCT ON (COALESCE(t.recording_id, t.id)) c.track_id, c.plays, c.last\n               FROM counted c JOIN tracks t ON t.id = c.track_id\n               WHERE NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = c.track_id)\n                 AND NOT EXISTS (SELECT 1 FROM blocked_items b JOIN track_artists ta ON ta.artist_id = b.ref_id\n                                 WHERE b.user_id = $1 AND b.kind = 'artist' AND ta.track_id = c.track_id)\n                 AND NOT COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f\n                                   WHERE f.user_id = $1 AND f.track_id = c.track_id AND f.kind IN ('dislike', 'undislike')\n                                   ORDER BY f.at DESC LIMIT 1), false)\n               ORDER BY COALESCE(t.recording_id, t.id), c.plays DESC, c.last DESC\n           )\n           SELECT track_id AS \"track_id!\" FROM one_per_recording\n           WHERE plays >= 2\n           ORDER BY plays DESC, last DESC, track_id\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5827e8a17946d812af5884891b8b5da16d55895ffcb84efc4bc5b7dcd6a8cf24"
+}

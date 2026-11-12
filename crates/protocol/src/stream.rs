@@ -5,8 +5,42 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+
+/// Какой файл записи отдать.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum StreamQuality {
+    /// Lossless (загруженный FLAC), если он есть, иначе лучший файл.
+    High,
+    /// Обычный файл: Opus 130–160 кбит/с; lossless — только если другого нет.
+    Normal,
+    /// «Экономия»: Opus 64 кбит/с. Пока копия не готова — обычный файл, копия ставится в очередь.
+    Saver,
+}
+
+names!(StreamQuality { High => "high", Normal => "normal", Saver => "saver" });
+
+/// Сеть, по которой играет устройство: качество тогда берётся из настроек слушателя.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NetworkKind {
+    Wifi,
+    Cellular,
+}
+
+names!(NetworkKind { Wifi => "wifi", Cellular => "cellular" });
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+#[into_params(parameter_in = Query)]
+pub struct StreamQuery {
+    /// Явное качество; без него — по `network` и настройкам слушателя.
+    pub quality: Option<StreamQuality>,
+    /// Сеть устройства; без неё — Wi-Fi (сайт).
+    pub network: Option<NetworkKind>,
+}
 
 /// Кодек аудиофайла. Хранится в `audio_files.codec`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -106,6 +140,15 @@ pub struct StreamReady {
     /// Огибающая для полосы прокрутки: 512 точек, 0..1000.
     #[schema(required = true)]
     pub waveform: Option<Vec<i16>>,
+    /// Какое качество отдано: при `saver` до готовности копии — `normal`.
+    #[serde(default = "normal_quality")]
+    pub quality: StreamQuality,
+    #[serde(default)]
+    pub lossless: bool,
+}
+
+fn normal_quality() -> StreamQuality {
+    StreamQuality::Normal
 }
 
 /// Аудио ещё нет: скачивание стоит в очереди или идёт.

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id FROM tracks t\n           WHERE t.id = ANY($1) AND EXISTS (\n               SELECT 1 FROM track_artists a1\n               JOIN track_artists a2 ON a2.artist_id = a1.artist_id AND a2.role = 'main'\n               JOIN tracks t2 ON t2.id = a2.track_id AND t2.id <> t.id AND lower(t2.title) = lower(t.title)\n               WHERE a1.track_id = t.id AND a1.role = 'main'\n                 AND (EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = $2 AND p.track_id = t2.id)\n                      OR EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $2 AND l.track_id = t2.id)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "54d3e81f65d0b2f25a1afa5136926c2621b26bf0ad0fa1c4aff7ead118bc2a78"
+}

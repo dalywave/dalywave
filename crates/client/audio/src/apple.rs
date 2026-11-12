@@ -1,6 +1,7 @@
 //! Интеграция с системой на iOS и macOS через objc2, без Swift.
 //!
-//! - iOS: AVAudioSession (категория `.playback`, активация — не на главном потоке), прерывания
+//! - iOS: AVAudioSession (категория `.playback`, маршрут «длинное аудио» для AirPlay 2, активация —
+//!   не на главном потоке), прерывания
 //!   (звонок, Siri), смена маршрута (наушники, AirPlay), текущий маршрут, сброс медиасервисов.
 //! - iOS и macOS: «Сейчас играет» (MPNowPlayingInfoCenter) и команды с экрана блокировки,
 //!   гарнитуры, Пункта управления, медиаклавиш (MPRemoteCommandCenter).
@@ -132,25 +133,46 @@ impl Artwork {
     }
 }
 
-/// iOS: категория `.playback` и активация сессии. Звать до создания движка и не на главном
-/// потоке: активация занимает до 200 мс, и iOS 27 предупреждает о подвисании интерфейса.
+/// iOS: категория `.playback` с политикой маршрута «длинное аудио» (`longFormAudio`) и активация
+/// сессии. Звать до создания движка и не на главном потоке: активация занимает до 200 мс, и iOS 27
+/// предупреждает о подвисании интерфейса.
+///
+/// «Длинное аудио» — как у музыкальных приложений: окно AirPlay предлагает колонки AirPlay 2 и
+/// несколько HomePod сразу, звук уходит туда, куда выбрал человек (и Siri на HomePod), а не вслед
+/// за чужим маршрутом. Сам AirPlay 2 играет буферизованный вывод движка (renderer.rs).
 #[cfg(target_os = "ios")]
 pub fn activate_audio_session() -> Result<(f64, f64), String> {
     use objc2_avf_audio::{
         AVAudioSession, AVAudioSessionCategoryOptions, AVAudioSessionCategoryPlayback,
-        AVAudioSessionModeDefault,
+        AVAudioSessionModeDefault, AVAudioSessionRouteSharingPolicy,
     };
     unsafe {
         let session = AVAudioSession::sharedInstance();
         let category = AVAudioSessionCategoryPlayback.ok_or("нет категории playback")?;
         let mode = AVAudioSessionModeDefault.ok_or("нет режима default")?;
         session
-            .setCategory_mode_options_error(category, mode, AVAudioSessionCategoryOptions::empty())
+            .setCategory_mode_routeSharingPolicy_options_error(
+                category,
+                mode,
+                AVAudioSessionRouteSharingPolicy::LongFormAudio,
+                AVAudioSessionCategoryOptions::empty(),
+            )
             .map_err(|e| format!("setCategory: {}", e.localizedDescription()))?;
         session
             .setActive_error(true)
             .map_err(|e| format!("setActive: {}", e.localizedDescription()))?;
         Ok((session.sampleRate(), session.IOBufferDuration()))
+    }
+}
+
+/// iOS: политика маршрута сессии сейчас — для журнала (`long-form` или `default`).
+#[cfg(target_os = "ios")]
+pub fn route_sharing_policy() -> &'static str {
+    use objc2_avf_audio::{AVAudioSession, AVAudioSessionRouteSharingPolicy};
+    match unsafe { AVAudioSession::sharedInstance().routeSharingPolicy() } {
+        AVAudioSessionRouteSharingPolicy::LongFormAudio => "long-form",
+        AVAudioSessionRouteSharingPolicy::Default => "default",
+        _ => "other",
     }
 }
 

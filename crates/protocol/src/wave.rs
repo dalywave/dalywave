@@ -111,6 +111,8 @@ pub enum SeedKind {
     Playlist,
     /// Описание словами: «спокойный инструментал для работы».
     Text,
+    /// Год слушателя (`text` — «2026»): звучание его самых слушаемых треков.
+    Year,
 }
 
 names!(SeedKind {
@@ -119,9 +121,10 @@ names!(SeedKind {
     Album => "album",
     Playlist => "playlist",
     Text => "text",
+    Year => "year",
 });
 
-/// Затравка: `id` — для трека, артиста, альбома и плейлиста, `text` — для описания словами.
+/// Затравка: `id` — для трека, артиста, альбома и плейлиста, `text` — для описания словами и года.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WaveSeed {
@@ -315,6 +318,19 @@ pub struct WaveFeedback {
 #[serde(rename_all = "camelCase")]
 #[into_params(parameter_in = Query)]
 pub struct SimilarQuery {
+    /// 1–50, по умолчанию 20.
+    pub limit: Option<u32>,
+}
+
+/// «Умное перемешивание»: похожее на весь список (альбом, плейлист), чтобы подмешать в очередь.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SuggestRequest {
+    /// Треки списка, до 500: по их звучанию ищется похожее, сами они не предлагаются.
+    pub track_ids: Vec<Uuid>,
+    /// Что ещё не предлагать: уже подмешанное и убранное из очереди, до 500.
+    #[serde(default)]
+    pub exclude: Vec<Uuid>,
     /// 1–50, по умолчанию 20.
     pub limit: Option<u32>,
 }

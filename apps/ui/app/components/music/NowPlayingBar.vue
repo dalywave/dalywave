@@ -12,7 +12,7 @@ const { t } = useI18n()
 const entry = computed(() => player.current)
 const track = computed(() => entry.value?.track ?? null)
 const liked = computed(() => (track.value ? library.isLiked(track.value) : false))
-const nextAt = computed(() => (player.nextEntry && !player.pending && player.effectiveMode !== 'gapless' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
+const nextAt = computed(() => (player.nextEntry && !player.pending && player.effectiveMode !== 'gapless' && player.effectiveRepeat !== 'one' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
 const peaks = computed(() => (player.peaks.length ? player.peaks : FLAT))
 const FLAT = Array.from({ length: 120 }, () => 0.18)
 
@@ -73,11 +73,11 @@ const moreItems = computed<MenuEntry[]>(() => {
 
     <div class="bar__center">
       <div class="bar__transport">
-        <MusicPlayModeButton v-if="player.modesAvailable" kind="shuffle" kbd />
+        <MusicPlayModeButton kind="shuffle" kbd />
         <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" :kbd="['⇧', '←']" :disabled="!track" @click="player.prev()" />
         <MusicPlayButton :playing="player.playing" :loading="(player.waveLoading && !track) || !!player.pending" :size="36" :label="player.pending ? t('player.acquiring') : player.playing ? t('common.pause') : t('common.play')" @click="player.toggle()" />
         <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" :kbd="['⇧', '→']" :disabled="!track" @click="player.next('skipped')" />
-        <MusicPlayModeButton v-if="player.modesAvailable" kind="repeat" kbd />
+        <MusicPlayModeButton kind="repeat" kbd />
       </div>
       <MusicScrubber
         :peaks="peaks"

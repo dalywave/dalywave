@@ -169,6 +169,7 @@ const shell = createShell({ invoke, listen })
 | `recognize.listen()` | `recognize_listen` | `RecognizeMatch` — слушает до совпадения, не дольше 15 с (см. «Распознать») |
 | `recognize.cancel()` | `recognize_cancel` | `boolean` — шло ли распознавание |
 | `recognize.takePending()` | `recognize_take_pending` | `boolean` — просили открыть экран до загрузки страницы |
+| `siri.take()` | `siri_take` | `SiriCommand[]` — команды Siri, которые интерфейс ещё не выполнил (и забыть их), см. «Siri» |
 | `links.take()` | `links_take` | `string \| null` — последняя необработанная ссылка `dalywave://…` (и забыть её), см. «Поделиться» |
 | `discord.state()` | `discord_state` | `DiscordState` — `{ available, enabled, connected }`, macOS и Windows |
 | `discord.setEnabled(enabled)` | `discord_set_enabled { enabled }` | `DiscordState` — переключатель «Статус в Discord», запоминается |
@@ -283,7 +284,8 @@ interface PlayerItem {
 **Ссылки.** Если ссылки нет или она истекла посреди трека (подписанная ссылка R2 живёт 6 часов;
 хранилище отвечает 400/401/403/404/410), движок сам запрашивает `GET /api/tracks/{trackId}/stream`
 с токеном устройства и продолжает с той же позиции — уже скачанное не качается заново. Ответ 202
-(трек ещё скачивается) — `player:error` и следующий трек.
+(трек ещё скачивается) — `player:error` и следующий трек. В запросе — сеть устройства (`?network=wifi|cellular`): качество сервер
+выбирает по настройкам слушателя «По Wi-Fi» и «По сотовой» (на сотовой с «Экономией» — Opus 64 кбит/с).
 
 **Пульт системы.** Медиаклавиши, наушники, Пункт управления и экран блокировки (macOS, iOS —
 MediaPlayer; Windows — SMTC), трей: движок выполняет команду сам — в том числе «следующий» и
@@ -319,6 +321,14 @@ type MediaCommand =
 audio`. Звонок, Siri, будильник — пауза и продолжение, если iOS разрешит; наушники отключили —
 пауза. В фоне `player:position` и `player:level` в WebView не уходят; при возвращении приложения
 приходят свежие `player:state` и `player:position`.
+
+**AirPlay 2.** Когда звук идёт в AirPlay (iOS: маршрут аудиосессии `longFormAudio`; macOS: выбрана
+или стала устройством по умолчанию колонка AirPlay), движок выводит через AVSampleBufferAudioRenderer
+и отдаёт звук на секунды вперёд. Для интерфейса ничего не меняется: `player:position`, `player:track`
+(`reason: 'auto'`), `player:level`, `player:ended` и «Сейчас играет» приходят по тому, что слышно, —
+текст песни и строка прогресса идут вровень с колонкой. Пауза, перемотка, другой трек и громкость
+действуют сразу. Смена маршрута открывает вывод заново со слышимого места (`player:*` как при смене
+устройства). Проверка без колонок — `DALYWAVE_OUTPUT=buffered`.
 
 **Смена устройства вывода.** macOS сама переводит поток на новое устройство по умолчанию;
 устройство пропало — пауза; поток стал непригоден (другая частота, сброс медиасервисов iOS) —
@@ -469,6 +479,8 @@ WebSocket `/api/ws`, что и живые события, сообщениями
 | `offline_wave_react` | `session, trackId, kind, positionMs` | — реакция в волне без сети |
 | `offline_played` | `play: { trackId, playedMs, durationMs, endReason, wave }` | — в историю устройства |
 | `haptic` | `kind` | — тактильный отклик (ниже) |
+| `notify_schedule` | `id`, `title`, `body`, `atMs?` | `bool` — локальное уведомление iPhone/iPad (`atMs` в прошлом или `null` — сразу; тот же `id` заменяет прежнее); разрешение система спрашивает при первом вызове; `false` — запрещено или не iOS |
+| `notify_cancel` | `id` | — снять ещё не показанное уведомление |
 
 ```ts
 interface OfflineStatus {
@@ -542,6 +554,25 @@ interface RecognizeMatch {
 (`Название|Исполнитель|ISRC` — своё, `none` — «не узнали», `permission` — нет доступа);
 `DALYWAVE_RECOGNIZE_OPEN=1` вместе с ним — экран открывается сам при запуске. Сайт в разработке —
 `?recognize=match|none|listening`.
+
+## Siri
+
+iPhone и iPad, iOS 17+: фразы и действия «Команд» (App Intents) и запросы музыки SiriKit (в том числе
+с HomePod). Пауза, «продолжи», «дальше», «назад» выполняет движок сам (как пульт). Волну и подборки
+включает интерфейс: событие `siri:command` — сигнал забрать команды `siri_take` (после входа и на каждое
+событие; первый вызов ещё и спрашивает разрешение Siri). Не забрал за 3 с или приложение в фоне —
+оболочка включает сама (очередь с сервера прямо в движок), и команда из `siri_take` уже не придёт.
+«Нравится» оболочка ставит на сервере сама и сообщает `liked` — отметить сердечко.
+
+```ts
+type SiriCommand =
+  | { action: 'wave', mood?: WaveMood, activity?: WaveActivity }
+  | { action: 'play', kind: 'album' | 'artist' | 'playlist' | 'track' | 'liked', id: string, title?: string, shuffle?: boolean }
+  | { action: 'liked', trackId: string }
+```
+
+Подключено плагином `apps/ui/app/plugins/siri.client.ts`; устройство — `apps/shell/src/siri.rs`,
+Swift — `gen/apple/Sources/dalywave-shell/DalyWaveIntents.swift` и `gen/apple/SiriExtension`.
 
 ## Окно и приложение
 

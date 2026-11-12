@@ -6,10 +6,11 @@
 //! каскадном удалении сервер не пишет.
 
 use dalywave_protocol::{
+    settings::UserSettings,
     sync::{SyncEntity, SyncPage, SyncTombstone},
     wave::WavePreset,
 };
-use rusqlite::{Transaction, params};
+use rusqlite::{OptionalExtension, Transaction, params};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -65,6 +66,19 @@ impl Store {
 }
 
 impl Store {
+    /// Настройки слушателя из последней синхронизации; не приходили — по умолчанию.
+    pub fn settings(&self) -> StoreResult<UserSettings> {
+        let raw: Option<String> = self
+            .conn
+            .query_row("SELECT settings FROM user_settings WHERE id = 1", [], |r| {
+                r.get(0)
+            })
+            .optional()?;
+        Ok(raw
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default())
+    }
+
     /// Сохранённые сочетания волны по порядку карточек.
     pub fn wave_presets(&self) -> StoreResult<Vec<WavePreset>> {
         let mut stmt = self.conn.prepare(
@@ -261,11 +275,13 @@ fn apply_rows(
     }
     for r in &page.playlists {
         let n = tx.execute(
-            "INSERT INTO playlists (id, rev, title, description, kind, pinned, created_at, updated_at, search)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+            "INSERT INTO playlists (id, rev, title, description, kind, pinned, created_at, updated_at, search,
+                                   folder_id, position)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
              ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, title = excluded.title,
                description = excluded.description, kind = excluded.kind, pinned = excluded.pinned,
-               created_at = excluded.created_at, updated_at = excluded.updated_at, search = excluded.search
+               created_at = excluded.created_at, updated_at = excluded.updated_at, search = excluded.search,
+               folder_id = excluded.folder_id, position = excluded.position
              WHERE excluded.rev >= playlists.rev",
             params![
                 r.id.to_string(),
@@ -276,11 +292,42 @@ fn apply_rows(
                 r.pinned,
                 r.created_at.to_rfc3339(),
                 r.updated_at.to_rfc3339(),
-                normalize(&r.title)
+                normalize(&r.title),
+                r.folder_id.map(|f| f.to_string()),
+                r.position
             ],
         )?;
         a.library |= n > 0;
         a.rows += n;
+    }
+    for r in &page.playlist_folders {
+        let n = tx.execute(
+            "INSERT INTO playlist_folders (id, rev, title, position, collapsed, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, title = excluded.title,
+               position = excluded.position, collapsed = excluded.collapsed,
+               created_at = excluded.created_at, updated_at = excluded.updated_at
+             WHERE excluded.rev >= playlist_folders.rev",
+            params![
+                r.id.to_string(),
+                r.rev,
+                r.title,
+                r.position,
+                r.collapsed,
+                r.created_at.to_rfc3339(),
+                r.updated_at.to_rfc3339()
+            ],
+        )?;
+        a.library |= n > 0;
+        a.rows += n;
+    }
+    if let Some(r) = &page.settings {
+        a.rows += tx.execute(
+            "INSERT INTO user_settings (id, rev, settings) VALUES (1, ?1, ?2)
+             ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, settings = excluded.settings
+             WHERE excluded.rev >= user_settings.rev",
+            params![r.rev, json(&r.settings)?],
+        )?;
     }
     for r in &page.playlist_items {
         let n = tx.execute(
@@ -492,6 +539,23 @@ fn apply_tombstone(
             "DELETE FROM wave_presets WHERE id = ?1 AND rev < ?2",
             params![key_str(k, "id"), t.rev],
         )?,
+        SyncEntity::PlaylistFolders => {
+            let id = key_str(k, "id");
+            let n = tx.execute(
+                "DELETE FROM playlist_folders WHERE id = ?1 AND rev < ?2",
+                params![id, t.rev],
+            )?;
+            // Плейлисты папки сервер и так пришлёт вне папок; до них — не терять их из виду
+            if n > 0 {
+                tx.execute(
+                    "UPDATE playlists SET folder_id = NULL WHERE folder_id = ?1",
+                    [&id],
+                )?;
+            }
+            n
+        }
+        // Настройки не удаляются: строка живёт, пока жив слушатель
+        SyncEntity::Settings => 0,
     };
     if n > 0
         && matches!(
@@ -501,6 +565,7 @@ fn apply_tombstone(
                 | SyncEntity::FollowedArtists
                 | SyncEntity::Playlists
                 | SyncEntity::PlaylistItems
+                | SyncEntity::PlaylistFolders
         )
     {
         a.library = true;

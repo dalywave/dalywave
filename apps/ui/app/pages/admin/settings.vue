@@ -141,6 +141,9 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
         <AdminSelect :model-value="settings.utcOffsetMin" :options="offsetOptions" :label="t('tz.label')" align="end" @update:model-value="setOffset" />
       </SettingsRow>
     </SettingsGroup>
+
+    <!-- Итоги года: стиль историй и когда они открыты -->
+    <AdminRewindEvent />
   </div>
 </template>
 

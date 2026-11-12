@@ -11,6 +11,7 @@ export function useTrackActions() {
   const offline = useOfflineStore()
   const pui = usePlaylistUi()
   const share = useShare()
+  const report = useReportRecording()
   const t = useNuxtApp().$i18n.t
 
   /** «Не рекомендовать» трек или исполнителя — в список, который ведёт сам человек («Мой вкус»), с отменой */
@@ -53,7 +54,11 @@ export function useTrackActions() {
     if (artist) entries.push({ label: t('track.goArtist'), icon: 'ph:user', onSelect: () => void ui.navigate(`/artist/${artist.id}`) })
     if (track.album) entries.push({ label: t('track.goAlbum'), icon: 'ph:disc', onSelect: () => void ui.navigate(`/album/${track.album!.id}`) })
     if (opts.inQueue) entries.push({ label: t('track.removeFromQueue'), icon: 'ph:minus-circle', danger: true, onSelect: () => player.remove(opts.inQueue!) })
+    // Играющий трек — «Слушать вместе»: позвать друзей добавлять треки в эту очередь
+    if (opts.nowPlaying) entries.push({ label: t('jam.title'), icon: 'ph:users-three', onSelect: () => void useJamStore().open() })
     entries.push(share.entry('track', track.id, track.title))
+    // «Неверная запись» — только у того, что уже на сервере: жалуются на услышанное
+    if (opts.nowPlaying || library.statusOf(track) === 'ready') entries.push({ label: t('track.wrongRecording'), icon: 'ph:flag', onSelect: () => report.show(track) })
     if (opts.extra?.length) entries.push(...opts.extra)
     entries.push(
       { kind: 'separator' },

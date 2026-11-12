@@ -106,6 +106,7 @@ fn allowed(principal: &Principal, link: &Link, to: &Audience) -> bool {
         Audience::Admins => principal.roles.contains(&Role::Admin),
         Audience::All => true,
         Audience::Device { .. } => connect::addressed(link, principal.user.id, to),
+        Audience::Jam { host, .. } => *host == principal.user.id,
     }
 }
 

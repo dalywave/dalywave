@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO jam_requests (jam_id, guest_id, track_id, status, decided_at)\n         VALUES ($1, $2, $3, $4, CASE WHEN $4 = 'added' THEN now() END)\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jam_requests",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "be8d05ae09f318ba6324457d6cbaa293f6ef91db7fe10c1a68360be0617b9f93"
+}

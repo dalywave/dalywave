@@ -115,6 +115,8 @@ fn base_page() -> SyncPage {
             pinned: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            folder_id: None,
+            position: 1024.0,
         }],
         playlist_items: vec![
             SyncPlaylistItem {
@@ -450,6 +452,25 @@ fn features_and_plays_feed_the_offline_wave() {
     assert_eq!(f[0].skips_30d, 1);
     assert!(f[0].liked);
     assert_eq!(f[0].artist_names, vec!["Lowborn".to_string()]);
+    assert!(!f[0].blocked);
+    // «Без нецензурного»: explicit не играет и в волне без сети
+    let mut explicit = track(100, 900, 10, 1, "Devil", 1);
+    explicit.explicit = true;
+    store
+        .apply(&SyncPage {
+            cursor: "9".into(),
+            tracks: vec![explicit],
+            settings: Some(dalywave_protocol::settings::SyncSettings {
+                rev: 901,
+                settings: dalywave_protocol::settings::UserSettings {
+                    hide_explicit: true,
+                    ..Default::default()
+                },
+            }),
+            ..Default::default()
+        })
+        .unwrap();
+    assert!(store.playable_features().unwrap()[0].blocked);
     let u = store.usage().unwrap();
     assert_eq!(u.cache, 1000);
     store.add_pin("track", Some(id(100))).unwrap();
@@ -509,4 +530,77 @@ fn wave_presets_follow_rev_and_tombstones() {
         .map(|p| p.name)
         .collect();
     assert_eq!(names, vec!["Фокус"]);
+}
+
+#[test]
+fn folders_and_settings_follow_rev_and_tombstones() {
+    let mut store = Store::memory().unwrap();
+    let playlist = |n: u128, rev: i64, folder: Option<u128>, position: f64| SyncPlaylist {
+        id: id(n),
+        rev,
+        title: format!("P{n}"),
+        description: String::new(),
+        kind: PlaylistKind::User,
+        pinned: false,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        folder_id: folder.map(id),
+        position,
+    };
+    let folder = |rev: i64, title: &str, collapsed: bool| SyncPlaylistFolder {
+        id: id(70),
+        rev,
+        title: title.into(),
+        position: 512.0,
+        collapsed,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+    let settings = |rev: i64, hide: bool| dalywave_protocol::settings::SyncSettings {
+        rev,
+        settings: dalywave_protocol::settings::UserSettings {
+            hide_explicit: hide,
+            ..Default::default()
+        },
+    };
+    assert!(!store.settings().unwrap().hide_explicit, "по умолчанию");
+    let page = SyncPage {
+        cursor: "5".into(),
+        playlists: vec![
+            playlist(1, 3, Some(70), 1024.0),
+            playlist(2, 4, None, 2048.0),
+        ],
+        playlist_folders: vec![folder(5, "Бег", true)],
+        settings: Some(settings(6, true)),
+        ..Default::default()
+    };
+    store.apply(&page).unwrap();
+    let list = store.playlists().unwrap();
+    assert_eq!(list.folders.len(), 1);
+    assert_eq!(
+        (list.folders[0].title.as_str(), list.folders[0].collapsed),
+        ("Бег", true)
+    );
+    let p1 = list.items.iter().find(|p| p.id == id(1)).unwrap();
+    assert_eq!((p1.folder_id, p1.position), (Some(id(70)), 1024.0));
+    assert!(store.settings().unwrap().hide_explicit);
+
+    // Старые копии не затирают новое; удаление папки выпускает её плейлисты
+    let page = SyncPage {
+        cursor: "6".into(),
+        playlist_folders: vec![folder(2, "Старое", false)],
+        settings: Some(settings(1, false)),
+        tombstones: vec![SyncTombstone {
+            rev: 10,
+            entity: SyncEntity::PlaylistFolders,
+            key: json!({ "id": id(70) }),
+            deleted_at: Utc::now(),
+        }],
+        ..Default::default()
+    };
+    store.apply(&page).unwrap();
+    let list = store.playlists().unwrap();
+    assert!(list.folders.is_empty());
+    assert!(list.items.iter().all(|p| p.folder_id.is_none()));
+    assert!(store.settings().unwrap().hide_explicit);
 }

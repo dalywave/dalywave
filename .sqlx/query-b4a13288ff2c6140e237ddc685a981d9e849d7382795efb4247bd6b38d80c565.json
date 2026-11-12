@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n             EXISTS (SELECT 1 FROM jam_requests WHERE jam_id = $1 AND track_id = $2\n                     AND (status = 'pending' OR (status = 'added' AND created_at > now() - interval '1 hour'))) AS \"dup!\",\n             (SELECT count(*) FROM jam_requests WHERE guest_id = $3 AND status = 'pending') AS \"pending!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "dup!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "pending!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "b4a13288ff2c6140e237ddc685a981d9e849d7382795efb4247bd6b38d80c565"
+}

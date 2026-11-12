@@ -476,26 +476,23 @@ mod apple {
     /// не уходит в разговорный динамик), потом снова `.playback`, как у движка.
     #[cfg(target_os = "ios")]
     fn session_category(record: bool) -> ShellResult<()> {
+        // Обратно — `.playback` с маршрутом «длинное аудио», как у движка (AirPlay 2)
+        if !record {
+            return dalywave_audio::apple::activate_audio_session()
+                .map(|_| ())
+                .map_err(|e| ShellError::Internal(format!("audio session: {e}")));
+        }
         use objc2_avf_audio::{
             AVAudioSession, AVAudioSessionCategoryOptions, AVAudioSessionCategoryPlayAndRecord,
-            AVAudioSessionCategoryPlayback, AVAudioSessionModeDefault,
+            AVAudioSessionModeDefault,
         };
         // SAFETY: общая аудиосессия приложения; константы AVFAudio
         unsafe {
             let session = AVAudioSession::sharedInstance();
             let mode = AVAudioSessionModeDefault.ok_or_else(|| ShellError::internal("no mode"))?;
-            let (category, options) = if record {
-                (
-                    AVAudioSessionCategoryPlayAndRecord,
-                    AVAudioSessionCategoryOptions::DefaultToSpeaker
-                        | AVAudioSessionCategoryOptions::AllowBluetoothA2DP,
-                )
-            } else {
-                (
-                    AVAudioSessionCategoryPlayback,
-                    AVAudioSessionCategoryOptions::empty(),
-                )
-            };
+            let category = AVAudioSessionCategoryPlayAndRecord;
+            let options = AVAudioSessionCategoryOptions::DefaultToSpeaker
+                | AVAudioSessionCategoryOptions::AllowBluetoothA2DP;
             let category = category.ok_or_else(|| ShellError::internal("no category"))?;
             session
                 .setCategory_mode_options_error(category, mode, options)

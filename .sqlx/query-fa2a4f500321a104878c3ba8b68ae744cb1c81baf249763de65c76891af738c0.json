@@ -1,0 +1,117 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT pe.id, pe.track_id, pe.started_at, pe.played_ms, pe.end_reason, pe.context_type, pe.context_id,\n                  pe.source\n           FROM play_events pe\n           WHERE pe.user_id = $1 AND pe.hidden_at IS NULL\n             -- Время из будущего — сбой часов или архива: в истории ему не место\n             AND pe.started_at <= now() + interval '10 minutes'\n             AND ($2::timestamptz IS NULL OR (pe.started_at, pe.id) < ($2, $3))\n             AND ($5::timestamptz IS NULL OR pe.started_at < $5)\n             AND ($6::text IS NULL OR EXISTS (\n                 SELECT 1 FROM tracks t LEFT JOIN albums al ON al.id = t.album_id\n                 WHERE t.id = pe.track_id\n                   AND (search_norm(t.title) LIKE '%' || search_norm($6) || '%'\n                        OR search_norm(COALESCE(al.title, '')) LIKE '%' || search_norm($6) || '%'\n                        OR EXISTS (SELECT 1 FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                                   WHERE ta.track_id = t.id\n                                     AND search_norm(a.name) LIKE '%' || search_norm($6) || '%'))))\n           ORDER BY pe.started_at DESC, pe.id DESC\n           LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "played_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "played_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "end_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "end_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "context_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "context_type"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "context_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "source"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Uuid",
+        "Int8",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "fa2a4f500321a104878c3ba8b68ae744cb1c81baf249763de65c76891af738c0"
+}

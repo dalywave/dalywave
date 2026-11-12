@@ -279,8 +279,12 @@ fn ios_observers(app: &AppHandle) -> Vec<dalywave_audio::apple::SessionObservers
     let session = observe_session(move |ev| {
         log::info!("audio session: {ev:?}");
         if ev == SessionEvent::RouteChanged {
-            // AirPlay, наушники, Bluetooth — шторке «Устройства» новый маршрут
+            // AirPlay, наушники, Bluetooth — шторке «Устройства» новый маршрут, движку — выбор
+            // вывода: AirPlay (и несколько HomePod) — буферизованный, остальное — обычный
             crate::audio::changed(&handle);
+            if let Some(engine) = handle.state::<Player>().engine() {
+                engine.route_changed();
+            }
             return;
         }
         let Some(engine) = handle.state::<Player>().engine() else {

@@ -3,7 +3,7 @@ import type { ConnectQueueItem, ContextType, EndReason, PlaybackState, RemoteCom
 import type { EngineTrack, MediaCommand, RepeatMode, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveStart, WaveTrack } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { coverColors } from '~/utils/cover-colors'
-import { afterTrack, nextRepeat, previousAction, restoreQueue, roundsNeeded, shuffleQueue, shuffled } from '~/utils/queue-order'
+import { afterTrack, mixIn, nextRepeat, previousAction, restoreQueue, roundsNeeded, shuffleQueue, shuffled } from '~/utils/queue-order'
 import { resamplePeaks, syntheticRhythm } from '~/utils/peaks'
 import { sameSettings } from '~/utils/wave-options'
 
@@ -17,6 +17,8 @@ export interface QueueEntry {
   reason?: string
   /** Повтор всей очереди: какой это круг списка (первый — 0) */
   round?: number
+  /** «Подобрано» умным перемешиванием: не из списка, можно добавить в плейлист или убрать */
+  suggested?: boolean
 }
 
 export interface PlayContext {
@@ -392,6 +394,11 @@ export const usePlayerStore = defineStore('player', () => {
   /** Играть список (альбом, плейлист, подборку) с позиции */
   async function playTracks(tracks: Track[], index: number, ctx: PlayContext, opts: { shuffle?: boolean } = {}) {
     if (!tracks.length) return
+    // «Без нецензурного»: чистые версии вместо explicit, без них — мимо; нажатый скрытый — «Скрыто фильтром»
+    const allowed = await useAccountSettings().clean(tracks, index, { strict: !opts.shuffle })
+    if (!allowed) return
+    tracks = allowed.tracks
+    index = allowed.index
     if (routed(remotePlayTracks(tracks, index, ctx, opts))) return
     // «Перемешать» включает перемешивание насовсем, как в Spotify: со случайного трека
     if (opts.shuffle) shuffle.value = true
@@ -399,6 +406,7 @@ export const usePlayerStore = defineStore('player', () => {
     const start = opts.shuffle ? Math.floor(Math.random() * entries.length) : Math.min(Math.max(0, index), entries.length - 1)
     finishListen('skipped')
     if (current.value) history.value.push(current.value)
+    if (context.value?.type !== ctx.type || context.value?.id !== ctx.id) smartDropped.clear()
     context.value = ctx
     contextTracks = tracks.slice()
     round = 0
@@ -412,7 +420,9 @@ export const usePlayerStore = defineStore('player', () => {
       originalOrder = null
     }
     prefetched = null
+    smartRun++
     await startEntry(entries[start]!, { autoplay: true })
+    void mixInSuggestions()
   }
 
   // ---------- Подготовка волны ----------
@@ -534,6 +544,9 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function playNext(track: Track) {
+    // «Без нецензурного»: чистая версия вместо explicit, без неё — «Скрыто фильтром»
+    const account = useAccountSettings()
+    if (account.hideExplicit && track.explicit) return void account.clean([track], 0).then(r => r?.tracks[0] && playNext(r.tracks[0]))
     if (routed({ action: 'playNext', track }, () => playNext(track))) return
     manual.value.unshift(entryOf(track, 'manual'))
     prefetched = null
@@ -543,6 +556,8 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function enqueue(track: Track) {
+    const account = useAccountSettings()
+    if (account.hideExplicit && track.explicit) return void account.clean([track], 0).then(r => r?.tracks[0] && enqueue(r.tracks[0]))
     if (routed({ action: 'enqueue', track }, () => enqueue(track))) return
     manual.value.push(entryOf(track, 'manual'))
     bridge.events.feedback({ kind: 'queue_add', trackId: track.id })
@@ -551,6 +566,8 @@ export const usePlayerStore = defineStore('player', () => {
 
   /** Альбом или плейлист целиком — в конец очереди, одним уведомлением */
   function enqueueMany(tracks: Track[], title: string) {
+    const account = useAccountSettings()
+    if (account.hideExplicit && tracks.some(tr => tr.explicit)) return void account.clean(tracks, 0, { strict: false }).then(r => r && enqueueMany(r.tracks, title))
     if (tracks.length <= 1) {
       if (tracks[0]) enqueue(tracks[0])
       return
@@ -999,30 +1016,52 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   // ---------- Превью («Итоги года»): кусок трека через тот же движок, без истории ----------
+  // Музыка историй ведёт utils/rewind-audio.ts. Пока она звучит, плеер стоит: прослушивания не пишутся,
+  // очередь не меняется, события движка не трогают плеер. Пульт: звук только здесь, активное
+  // устройство на это время встаёт на паузу и продолжает после
 
   /** Трек, который звучит превью; плеер в это время стоит, прослушивания не пишутся */
   const previewing = ref<Track | null>(null)
-  let previewSaved: { entry: QueueEntry, positionMs: number } | null = null
+  /** Громкость превью поверх общей, 0…1: наложение в приложении, приглушение на паузе историй */
+  const previewGain = ref(1)
+  let previewSaved: { entry: QueueEntry, positionMs: number, playing: boolean } | null = null
+  /** Пульт: активное устройство играло — после превью оно продолжит */
+  let previewRemoteResume = false
   let previewRun = 0
 
-  /** Кусок готового на сервере трека с `startMs`: текущее прослушивание закрывается, очередь не меняется */
-  async function startPreview(track: Track, startMs = 0): Promise<boolean> {
-    if (mirrored.value) return false
+  /**
+   * Кусок готового на сервере трека с `startMs`: текущее прослушивание закрывается, очередь не меняется.
+   * `fadeMs` — сменить звучащее превью наложением (сайт); `resolved` — источник, найденный заранее
+   */
+  async function startPreview(track: Track, startMs = 0, opts: { fadeMs?: number, resolved?: SourceResult } = {}): Promise<boolean> {
     const run = ++previewRun
-    if (!previewing.value) {
-      finishListen('stopped')
-      previewSaved = current.value && !pending.value ? { entry: current.value, positionMs: positionMs.value } : null
-      engine.pause()
-      playing.value = false
-      visual()?.setPlaying(false)
+    const switching = !!previewing.value
+    if (!switching) {
+      if (mirrored.value) {
+        // Пульт: звук историй — на этом устройстве, активное ждёт на паузе
+        previewRemoteResume = playing.value
+        previewSaved = null
+        if (playing.value) pause()
+      }
+      else {
+        finishListen('stopped')
+        previewSaved = current.value && !pending.value ? { entry: current.value, positionMs: positionMs.value, playing: playing.value } : null
+        previewRemoteResume = false
+        engine.pause()
+        playing.value = false
+        visual()?.setPlaying(false)
+      }
+      previewGain.value = 1
     }
     previewing.value = track
-    let result: SourceResult
-    try {
-      result = await bridge.media.source(track)
-    }
-    catch {
-      result = { kind: 'unavailable' }
+    let result = opts.resolved
+    if (!result) {
+      try {
+        result = await bridge.media.source(track)
+      }
+      catch {
+        result = { kind: 'unavailable' }
+      }
     }
     if (run !== previewRun) return false
     if (result.kind !== 'ready' || !result.source) {
@@ -1030,25 +1069,47 @@ export const usePlayerStore = defineStore('player', () => {
       return false
     }
     const dur = result.source.durationMs ?? track.durationMs
+    const at = Math.max(0, Math.min(startMs, dur - 5000))
+    if (switching && opts.fadeMs && !native) {
+      engine.crossfade(withGain(result.source), { durationMs: dur, fadeMs: opts.fadeMs, startMs: at })
+      return true
+    }
     engine.load(withGain(result.source), {
       durationMs: dur,
-      startMs: Math.max(0, Math.min(startMs, dur - 5000)),
+      startMs: at,
       track: engineTrack({ uid: `preview:${track.id}`, track, source: 'manual' }, result.source),
     })
     await engine.play().catch(() => {})
     return true
   }
 
-  /** Превью кончилось: плеер возвращается к своему треку на том же месте, на паузе */
-  function stopPreview() {
+  /** Пауза и продолжение превью (страница историй скрыта) */
+  function pausePreview() {
+    if (previewing.value) engine.pause()
+  }
+  async function resumePreview() {
+    if (previewing.value) await engine.play().catch(() => {})
+  }
+
+  /**
+   * Превью кончилось: плеер возвращается к своему треку на том же месте и играет, если играл.
+   * `resume: false` — человек сразу включает другое (волну года, подборку): прежнее встаёт на паузе
+   */
+  function stopPreview(resume = true) {
     if (!previewing.value) return
     previewRun++
     previewing.value = null
+    previewGain.value = 1
     engine.pause()
     const saved = previewSaved
     previewSaved = null
-    if (saved) void startEntry(saved.entry, { startMs: saved.positionMs, autoplay: false })
+    if (mirrored.value) {
+      engine.load(null, { durationMs: 0 })
+      if (previewRemoteResume && resume) void play()
+    }
+    else if (saved) void startEntry(saved.entry, { startMs: saved.positionMs, autoplay: saved.playing && resume })
     else engine.load(null, { durationMs: 0 })
+    previewRemoteResume = false
   }
 
   // ---------- Перемешивание и повтор ----------
@@ -1068,16 +1129,94 @@ export const usePlayerStore = defineStore('player', () => {
   /** Повтор всей: сколько треков держать впереди — движок приложения доиграет их и в фоне */
   const REPEAT_AHEAD = 10
 
-  /** Режимы есть у альбома и плейлиста, у волны и радио — нет */
+  /** Перемешивание и повтор всей — у альбома и плейлиста; у волны и радио только повтор трека */
   const modesAvailable = computed(() => !waveActive.value)
   const shuffleOn = computed(() => (mirrored.value && remoteModes.value ? remoteModes.value.shuffle : shuffle.value))
-  const repeatMode = computed<RepeatMode>(() => (mirrored.value && remoteModes.value ? remoteModes.value.repeat : repeat.value))
-  const effectiveRepeat = computed<RepeatMode>(() => (waveActive.value ? 'off' : repeat.value))
+  const repeatMode = computed<RepeatMode>(() => {
+    const mode = mirrored.value && remoteModes.value ? remoteModes.value.repeat : repeat.value
+    // Волна бесконечна: «повторять всё» в ней — то же, что выключено
+    return waveActive.value && mode === 'all' ? 'off' : mode
+  })
+  const effectiveRepeat = computed<RepeatMode>(() => (waveActive.value ? (repeat.value === 'one' ? 'one' : 'off') : repeat.value))
+
+  // «Умное перемешивание» (как Smart Shuffle в Spotify): третье состояние кнопки у альбома и плейлиста —
+  // примерно через три трека списка подмешивается похожее на весь список, с подписью «Подобрано»
+  const smartShuffle = useLocalStorage('dw.smartShuffle', false)
+  const smartAvailable = computed(() => !mirrored.value && !waveActive.value && (context.value?.type === 'album' || context.value?.type === 'playlist'))
+  const shuffleMode = computed<'off' | 'on' | 'smart'>(() => (!shuffleOn.value ? 'off' : smartShuffle.value && smartAvailable.value ? 'smart' : 'on'))
+  /** Убранное из подобранного — больше не предлагать в этом списке */
+  const smartDropped = new Set<string>()
+  let smartRun = 0
+  const SMART_EVERY = 3
+
+  /** Подмешать подобранное: по одному на каждые три трека, что ещё впереди */
+  async function mixInSuggestions() {
+    if (shuffleMode.value !== 'smart' || !contextTracks.length) return
+    const run = ++smartRun
+    const ctxId = context.value?.id
+    const have = upcoming.value.filter(e => e.suggested).map(e => e.track.id)
+    const own = upcoming.value.filter(e => !e.suggested).length
+    const need = Math.min(30, Math.floor(own / SMART_EVERY) - have.length)
+    if (need <= 0) return
+    let picks: QueueEntry[]
+    try {
+      const r = await bridge.catalog.suggest(contextTracks.map(tr => tr.id), [...have, ...smartDropped], need)
+      picks = r.items.map(w => ({ ...entryOf(w.track, 'context', t('player.suggested')), suggested: true }))
+    }
+    catch {
+      return
+    }
+    if (run !== smartRun || shuffleMode.value !== 'smart' || context.value?.id !== ctxId || !picks.length) return
+    upcoming.value = mixIn(upcoming.value, picks, SMART_EVERY)
+    prefetched = null
+    prefetchNext()
+  }
+
+  function dropSuggestions() {
+    smartRun++
+    if (upcoming.value.some(e => e.suggested)) upcoming.value = upcoming.value.filter(e => !e.suggested)
+  }
+
+  /** Кнопка перемешивания по кругу: выключено → перемешивать → умное (у альбома и плейлиста) → выключено */
+  function cycleShuffle() {
+    if (waveActive.value) return
+    const mode = shuffleMode.value
+    if (mode === 'off') {
+      smartShuffle.value = false
+      return setShuffle(true)
+    }
+    if (mode === 'on' && smartAvailable.value) {
+      smartShuffle.value = true
+      void mixInSuggestions()
+      return
+    }
+    smartShuffle.value = false
+    setShuffle(false)
+  }
+
+  /** Подобранное оставить в очереди как обычный трек (его добавили в плейлист) */
+  function keepSuggestion(uid: string) {
+    const i = upcoming.value.findIndex(e => e.uid === uid)
+    if (i >= 0) upcoming.value.splice(i, 1, { ...upcoming.value[i]!, suggested: false, reason: undefined })
+    if (current.value?.uid === uid) current.value = { ...current.value, suggested: false, reason: undefined }
+  }
+
+  /** «Убрать» подобранное: из очереди и больше не предлагать в этом списке */
+  function dropSuggestion(uid: string) {
+    const i = upcoming.value.findIndex(e => e.uid === uid)
+    if (i < 0) return
+    const [e] = upcoming.value.splice(i, 1)
+    if (e) smartDropped.add(e.track.id)
+    prefetched = null
+    prefetchNext()
+  }
 
   function resetOrder() {
     originalOrder = null
     contextTracks = []
     round = 0
+    smartRun++
+    smartDropped.clear()
   }
 
   function setShuffle(on: boolean) {
@@ -1085,6 +1224,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (shuffle.value === on) return
     shuffle.value = on
     if (waveActive.value) return
+    if (!on) dropSuggestions()
     if (on) {
       const r = shuffleQueue(current.value, upcoming.value)
       upcoming.value = r.upcoming
@@ -1106,8 +1246,9 @@ export const usePlayerStore = defineStore('player', () => {
     else refillRepeat()
   }
 
-  const toggleShuffle = () => setShuffle(!shuffleOn.value)
-  const cycleRepeat = () => setRepeat(nextRepeat(repeatMode.value))
+  const toggleShuffle = () => cycleShuffle()
+  // В волне повтор — только трека: выключен ↔ один трек
+  const cycleRepeat = () => setRepeat(waveActive.value ? (repeatMode.value === 'one' ? 'off' : 'one') : nextRepeat(repeatMode.value))
 
   /** Новый круг списка в конец очереди (перемешанный, если перемешивание включено) */
   function appendRound() {
@@ -1206,9 +1347,11 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   if (import.meta.client) {
-    engine.setVolume(volume.value)
+    // Превью звучит со своей громкостью поверх общей: наложение в приложении, приглушение на паузе
+    const engineVolume = () => volume.value * (previewing.value ? previewGain.value : 1)
+    engine.setVolume(engineVolume())
     applyMood(wave.value.mood, true)
-    watch(volume, v => engine.setVolume(v))
+    watch(engineVolume, v => engine.setVolume(v))
     watch(muted, m => engine.setMuted(m))
     // Приложение: переход и выравнивание громкости делает движок; очередь он получает наперёд
     // «Диджей» (только приложения): сведение по долям в движке; выразительность — шагом 0,05, чтобы ползунок не дёргал движок
@@ -1287,9 +1430,10 @@ export const usePlayerStore = defineStore('player', () => {
     transitionAtMs, progress, nextEntry, peaks, devices,
     play, pause, toggle, next, prev, seek, playTracks, startWave, cancelWavePrep, playNext, enqueue, enqueueMany, remove, clearManual, moveManual,
     jumpTo, dislike, notNow, moreLikeThis, toggleLike, setWave, applyPreset, setVolume, toggleMute, loadDevices, selectDevice,
-    previewing, startPreview, stopPreview,
+    previewing, previewGain, startPreview, pausePreview, resumePreview, stopPreview,
     mirrored, setConnectRoute, connectSnapshot, connectYield, connectMirror, connectTakeOver, connectLeave,
     stopAtTrackEnd,
     shuffle, repeat, shuffleOn, repeatMode, effectiveRepeat, modesAvailable, setShuffle, toggleShuffle, setRepeat, cycleRepeat,
+    smartShuffle, smartAvailable, shuffleMode, cycleShuffle, keepSuggestion, dropSuggestion,
   }
 })

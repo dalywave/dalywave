@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM audio_renditions WHERE id IN (\n             SELECT id FROM (\n                 SELECT id, (sum(size_bytes) OVER (ORDER BY last_used_at DESC, id DESC))::bigint AS kept\n                 FROM audio_renditions) x\n             WHERE x.kept > $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "332c47ca1fabb2cc24ec6a980425d3618fdfd6360bd379a0e2f16117740ae0fc"
+}

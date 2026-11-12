@@ -31,6 +31,12 @@ use crate::{
     routes::playlists,
 };
 
+pub mod event;
+pub mod more;
+pub mod soundtrack;
+
+/// `rules.generator` плейлиста «Твои лучшие треки {год}».
+const GENERATOR: &str = "rewind";
 /// Сколько позиций в топах историй.
 pub const TOP: usize = 5;
 /// Треков в плейлисте «Твои лучшие треки».
@@ -40,7 +46,7 @@ pub const LISTEN_MS: i32 = 30_000;
 /// Самый ранний год итогов.
 pub const FIRST_YEAR: i32 = 2000;
 /// Меняется вместе с правилами подсчёта: старые строки кеша пересчитываются.
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 /// Стилей трека в жанрах года: верхние по вероятности.
 const STYLES_PER_TRACK: usize = 3;
 /// Открытие года: столько прослушиваний — уже любимый артист (или лайк, или подписка).
@@ -321,6 +327,7 @@ async fn compute(
     let mut by_day: BTreeMap<NaiveDate, (i64, i64)> = BTreeMap::new();
     let mut month_ms = [0i64; 12];
     let mut part_ms: HashMap<DayPart, i64> = HashMap::new();
+    let mut hour_ms = [0i64; 24];
     let mut artist_first: HashMap<Uuid, NaiveDate> = HashMap::new();
     let mut wave_ms = 0i64;
     let mut sessions: HashSet<Uuid> = HashSet::new();
@@ -330,6 +337,7 @@ async fn compute(
         let date = local.date_naive();
         month_ms[local.month0() as usize] += p.ms;
         *part_ms.entry(DayPart::of_hour(local.hour())).or_default() += p.ms;
+        hour_ms[local.hour() as usize] += p.ms;
         if p.wave {
             wave_ms += p.ms;
         }
@@ -578,6 +586,16 @@ async fn compute(
         repeat_share: traits.repeat,
         wave_share: traits.wave,
         peak_part: peak_part.as_str().into(),
+        hours: hour_ms.iter().map(|ms| share(*ms)).collect(),
+        // Ровно — раньше по суткам; пустой год — вечер, как и peak_part
+        peak_hour: (0..24u32)
+            .max_by(|a, b| {
+                hour_ms[*a as usize]
+                    .cmp(&hour_ms[*b as usize])
+                    .then(b.cmp(a))
+            })
+            .filter(|_| total_ms > 0)
+            .unwrap_or(21),
     };
 
     let top_tracks = top(by_track.clone(), TOP);
@@ -680,17 +698,6 @@ async fn cached(
     let data = compute(db, user_id, (since, until), settings.utc_offset_min).await?;
     let at = store(db, user_id, year, &fp, &data).await?;
     Ok((data, at))
-}
-
-async fn playlist_of(db: &PgPool, user_id: Uuid, year: i32) -> Result<Option<Uuid>, sqlx::Error> {
-    sqlx::query_scalar!(
-        "SELECT id FROM playlists WHERE user_id = $1 AND rules ->> 'generator' = 'rewind'
-           AND rules ->> 'year' = $2 ORDER BY created_at LIMIT 1",
-        user_id,
-        year.to_string(),
-    )
-    .fetch_optional(db)
-    .await
 }
 
 /// Итоги года слушателя. `None` — год ещё не наступил или раньше [`FIRST_YEAR`].
@@ -822,19 +829,29 @@ pub async fn get(
                 peak_month: t.peak_month,
             })
         }),
-        playlist_id: playlist_of(db, user_id, year).await?,
+        playlist_id: generated_playlist(db, user_id, GENERATOR, year).await?,
     }))
 }
 
-/// Годы с прослушиваниями (новые первыми) и текущий год слушателя — он есть всегда, итоги «по сей день».
+/// Годы итогов слушателя и событие: открыты ли итоги, какой год, стиль, посмотрены ли.
+/// `None` — итоги закрыты, а слушатель не администратор (ему их не видно вовсе).
+/// Администратор видит все годы и при закрытом событии — для предпросмотра.
 pub async fn years(
     db: &PgPool,
     user_id: Uuid,
     now: DateTime<Utc>,
-) -> Result<RewindYears, sqlx::Error> {
+    admin: bool,
+) -> Result<Option<RewindYears>, sqlx::Error> {
     let settings = Settings::load(db).await?;
     let off = settings.utc_offset_min;
-    let current = local_year(now, off);
+    let ev = event::load(db).await?;
+    let open = ev.open_year(local_date(now, off));
+    if open.is_none() && !admin {
+        return Ok(None);
+    }
+    let current = open.unwrap_or_else(|| local_year(now, off));
+    // Обычному слушателю — только открытый год и прошлые; администратору — все до сегодняшнего
+    let last = if admin { local_year(now, off) } else { current };
     let rows = sqlx::query!(
         r#"SELECT extract(year FROM started_at + make_interval(mins => $2))::int AS "year!",
                   (sum(played_ms) / 60000)::bigint AS "minutes!"
@@ -848,38 +865,77 @@ pub async fn years(
     .await?;
     let mut years: Vec<RewindYear> = rows
         .into_iter()
-        .filter(|r| (FIRST_YEAR..=current).contains(&r.year))
+        .filter(|r| (FIRST_YEAR..=last).contains(&r.year))
         .map(|r| RewindYear {
             year: r.year,
             minutes: r.minutes,
         })
         .collect();
-    if years.first().is_none_or(|y| y.year != current) {
+    if !years.iter().any(|y| y.year == current) {
+        let at = years
+            .iter()
+            .position(|y| y.year < current)
+            .unwrap_or(years.len());
         years.insert(
-            0,
+            at,
             RewindYear {
                 year: current,
                 minutes: 0,
             },
         );
     }
-    Ok(RewindYears {
+    Ok(Some(RewindYears {
         current,
         season: in_season(current, now, off),
         years,
+        open: open.is_some(),
+        style: event::style_for(ev.style, user_id, current),
+        seen: event::seen(db, user_id, current).await?,
+        opens_at: ev.opens_at(now, off),
+    }))
+}
+
+/// Может ли слушатель открыть итоги этого года. Администратор — любой прошедший или текущий год
+/// (предпросмотр); остальные — только пока событие открыто и не позже открытого года.
+pub async fn can_open(
+    db: &PgPool,
+    year: i32,
+    now: DateTime<Utc>,
+    admin: bool,
+) -> Result<Access, sqlx::Error> {
+    let off = Settings::load(db).await?.utc_offset_min;
+    if !(FIRST_YEAR..=local_year(now, off)).contains(&year) {
+        return Ok(Access::NoSuchYear);
+    }
+    if admin {
+        return Ok(Access::Open);
+    }
+    let ev = event::load(db).await?;
+    Ok(match ev.open_year(local_date(now, off)) {
+        Some(open) if year <= open => Access::Open,
+        _ => Access::NotOpen,
     })
 }
 
-/// «Твои лучшие треки {год}»: самое слушаемое за год, до [`PLAYLIST_SIZE`] треков. Повтор обновляет
-/// тот же плейлист. `None` — за год нечего собрать.
-pub async fn save_playlist(
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Access {
+    Open,
+    /// Итоги закрыты (событие не идёт) или год позже открытого.
+    NotOpen,
+    /// Год ещё не наступил или раньше [`FIRST_YEAR`].
+    NoSuchYear,
+}
+
+/// Самое слушаемое за год (по прослушиваниям, затем по времени), до `limit` треков.
+pub async fn top_track_ids(
     db: &PgPool,
     user_id: Uuid,
     year: i32,
-) -> Result<Option<(PlaylistSummary, bool)>, sqlx::Error> {
+    limit: i64,
+) -> Result<Vec<Uuid>, sqlx::Error> {
     let settings = Settings::load(db).await?;
     let (since, until) = range(year, Utc::now(), settings.utc_offset_min);
-    let tracks = sqlx::query_scalar!(
+    sqlx::query_scalar!(
         "SELECT track_id FROM play_events
          WHERE user_id = $1 AND started_at >= $2 AND started_at < $3 AND (played_ms >= $4 OR end_reason = 'completed')
          GROUP BY track_id ORDER BY count(*) DESC, sum(played_ms) DESC, track_id LIMIT $5",
@@ -887,21 +943,45 @@ pub async fn save_playlist(
         since,
         until,
         LISTEN_MS,
-        PLAYLIST_SIZE,
+        limit,
     )
     .fetch_all(db)
-    .await?;
-    if tracks.is_empty() {
-        return Ok(None);
-    }
-    let title = format!("Твои лучшие треки {year}");
-    let description = format!("Итоги {year}: что ты слушал больше всего");
-    let rules = json!({ "generator": "rewind", "year": year, "builtAt": Utc::now() });
+    .await
+}
+
+/// Плейлист итогов года (`rules.generator` + `rules.year`).
+pub async fn generated_playlist(
+    db: &PgPool,
+    user_id: Uuid,
+    generator: &str,
+    year: i32,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    sqlx::query_scalar!(
+        "SELECT id FROM playlists WHERE user_id = $1 AND rules ->> 'generator' = $2
+           AND rules ->> 'year' = $3 ORDER BY created_at LIMIT 1",
+        user_id,
+        generator,
+        year.to_string(),
+    )
+    .fetch_optional(db)
+    .await
+}
+
+/// Плейлист итогов года: создаётся или (тот же генератор и год) обновляется целиком. `(плейлист, создан)`.
+pub async fn write_playlist(
+    db: &PgPool,
+    user_id: Uuid,
+    (generator, year): (&str, i32),
+    (title, description): (&str, &str),
+    tracks: &[Uuid],
+) -> Result<Option<(PlaylistSummary, bool)>, sqlx::Error> {
+    let rules = json!({ "generator": generator, "year": year, "builtAt": Utc::now() });
     let mut tx = db.begin().await?;
     let existing = sqlx::query_scalar!(
-        "SELECT id FROM playlists WHERE user_id = $1 AND rules ->> 'generator' = 'rewind'
-           AND rules ->> 'year' = $2 ORDER BY created_at LIMIT 1 FOR UPDATE",
+        "SELECT id FROM playlists WHERE user_id = $1 AND rules ->> 'generator' = $2
+           AND rules ->> 'year' = $3 ORDER BY created_at LIMIT 1 FOR UPDATE",
         user_id,
+        generator,
         year.to_string(),
     )
     .fetch_optional(&mut *tx)
@@ -938,7 +1018,7 @@ pub async fn save_playlist(
         "INSERT INTO playlist_items (playlist_id, track_id, position)
          SELECT $1, t, p::double precision * $3::double precision FROM unnest($2::uuid[]) WITH ORDINALITY AS x(t, p)",
         id,
-        &tracks,
+        tracks,
         playlists::STEP,
     )
     .execute(&mut *tx)
@@ -959,8 +1039,31 @@ pub async fn save_playlist(
         .map(|s| (s, created)))
 }
 
+/// «Твои лучшие треки {год}»: самое слушаемое за год, до [`PLAYLIST_SIZE`] треков. Повтор обновляет
+/// тот же плейлист. `None` — за год нечего собрать.
+pub async fn save_playlist(
+    db: &PgPool,
+    user_id: Uuid,
+    year: i32,
+) -> Result<Option<(PlaylistSummary, bool)>, sqlx::Error> {
+    let tracks = top_track_ids(db, user_id, year, PLAYLIST_SIZE).await?;
+    if tracks.is_empty() {
+        return Ok(None);
+    }
+    let title = format!("Твои лучшие треки {year}");
+    let description = format!("Итоги {year}: что ты слушал больше всего");
+    write_playlist(
+        db,
+        user_id,
+        (GENERATOR, year),
+        (&title, &description),
+        &tracks,
+    )
+    .await
+}
+
 /// Декабрь, ночь (3–6 по времени слушателя): итоги текущего года пересчитываются заранее — тем, у кого
-/// они старше 20 часов. Раз в час из обслуживания воркера; вне окна — ничего.
+/// они старше 20 часов, — а их музыка ставится на скачивание. Раз в час из обслуживания воркера; вне окна — ничего.
 pub async fn warm(db: &PgPool, now: DateTime<Utc>) -> Result<usize, sqlx::Error> {
     let settings = Settings::load(db).await?;
     let local = now + offset(settings.utc_offset_min);
@@ -985,6 +1088,10 @@ pub async fn warm(db: &PgPool, now: DateTime<Utc>) -> Result<usize, sqlx::Error>
         let fp = fingerprint(db, *user, since, until).await?;
         let data = compute(db, *user, (since, until), settings.utc_offset_min).await?;
         store(db, *user, year, &fp, &data).await?;
+        // Музыка историй — на сервер заранее, чтобы утром она играла сразу
+        if let Some(st) = soundtrack::get(db, *user, year, now).await? {
+            soundtrack::prefetch(db, None, *user, &st.cues).await;
+        }
     }
     Ok(users.len())
 }

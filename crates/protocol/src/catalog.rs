@@ -125,6 +125,9 @@ pub struct Track {
     pub isrc: Option<String>,
     pub audio_status: AudioStatus,
     pub liked: bool,
+    /// У explicit-трека — чистая версия той же песни в каталоге: её играет фильтр «Без нецензурного».
+    #[serde(default)]
+    pub clean_id: Option<Uuid>,
 }
 
 /// Карточка артиста в списках.

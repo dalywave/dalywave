@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#040507">
+  <title>Итоги 2026 — история</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300..800&display=swap">
+  <link rel="icon" type="image/svg+xml" href="../brand/icon-rounded.svg">
+  <link rel="stylesheet" href="rewind.css">
+  <link rel="stylesheet" href="b.css">
+  <link rel="stylesheet" href="c.css">
+</head>
+<body>
+  <!-- Одна история на весь экран: ?v=a|b|c, ?slide=0…5, ?hold — стоять на слайде -->
+  <div id="story"></div>
+  <script src="rewind.js"></script>
+  <script src="wave.js"></script>
+  <script src="a.js"></script>
+  <script src="b.js"></script>
+  <script src="c.js"></script>
+  <script>document.fonts.ready.then(() => window.RW.boot(document.getElementById("story")));</script>
+</body>
+</html>

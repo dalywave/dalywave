@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT extract(year FROM started_at + make_interval(mins => $1))::int AS \"year!\"\n           FROM play_events ORDER BY 1 DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "year!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6c85f5ed4cc0f4f566554f27f43ac798cd77eabcf4afb88559a7e9a660543433"
+}

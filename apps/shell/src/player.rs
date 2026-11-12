@@ -118,6 +118,12 @@ impl Player {
         token
     }
 
+    /// iOS: приложение в фоне (WebView усыплён) — Siri включает музыку сама, не через интерфейс.
+    #[cfg_attr(not(target_os = "ios"), allow(dead_code))]
+    pub fn in_background(&self) -> bool {
+        self.background.load(Ordering::Relaxed)
+    }
+
     /// iOS: приложение ушло в фон или вернулось.
     #[cfg_attr(not(target_os = "ios"), allow(dead_code))]
     pub fn set_background(&self, app: &AppHandle, background: bool) {
@@ -146,8 +152,9 @@ fn start_engine(app: &AppHandle) {
     #[cfg(target_os = "ios")]
     match dalywave_audio::apple::activate_audio_session() {
         Ok((rate, io)) => log::info!(
-            "audio session active: {rate} Hz, IO buffer {:.1} ms",
-            io * 1000.0
+            "audio session active: {rate} Hz, IO buffer {:.1} ms, route policy {}",
+            io * 1000.0,
+            dalywave_audio::apple::route_sharing_policy()
         ),
         Err(e) => log::error!("audio session: {e}"),
     }
@@ -168,6 +175,10 @@ fn start_engine(app: &AppHandle) {
         analysis: Some(analysis_source(app)),
         // Эквалайзер этого устройства — с первого трека, ещё до интерфейса
         eq: app.state::<Settings>().eq().as_ref().and_then(eq_settings),
+        // AirPlay — буферизованный вывод (AirPlay 2); `DALYWAVE_OUTPUT=buffered` — он же без колонок
+        buffered: std::env::var("DALYWAVE_OUTPUT")
+            .map(|v| dalywave_audio::BufferedOutput::from_env_value(&v))
+            .unwrap_or_default(),
         ..EngineConfig::default()
     };
     let started = Instant::now();
@@ -181,10 +192,15 @@ fn start_engine(app: &AppHandle) {
     };
     let snap = engine.snapshot();
     log::info!(
-        "player: engine ready in {:.0} ms, output {} Hz {} ch{}",
+        "player: engine ready in {:.0} ms, output {} Hz {} ch{}{}",
         started.elapsed().as_secs_f64() * 1000.0,
         snap.device_rate,
         snap.device_channels,
+        if snap.output_buffered {
+            ", buffered (AirPlay 2)"
+        } else {
+            ""
+        },
         if player.volume_cap < 1.0 {
             format!(", volume ×{} (DW_VOLUME)", player.volume_cap)
         } else {
@@ -321,7 +337,11 @@ async fn stream_link(
     track_id: &str,
     token: Option<&str>,
 ) -> Result<Resolved, String> {
-    let mut req = http.get(format!("{server}/api/tracks/{track_id}/stream"));
+    // Качество — по сети устройства и настройкам слушателя: на сотовой с «Экономией» сервер даёт Opus 64
+    let network = crate::offline::network_param();
+    let mut req = http.get(format!(
+        "{server}/api/tracks/{track_id}/stream?network={network}"
+    ));
     if let Some(token) = token {
         req = req.bearer_auth(token);
     }

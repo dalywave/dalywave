@@ -12,6 +12,11 @@ const tabs = computed(() => [
   { value: 'devices' as PanelTab, label: t('player.devices') },
   { value: 'about' as PanelTab, label: t('player.about') },
 ])
+// «Слушать вместе» — внутри «Устройств», как Jam в списке устройств Spotify: вкладка та же
+const tab = computed({
+  get: () => (ui.panelTab === 'jam' ? 'devices' : ui.panelTab),
+  set: (v: PanelTab) => (ui.panelTab = v),
+})
 
 watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
   if (open && tab === 'devices') void player.loadDevices()
@@ -22,7 +27,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
   <aside class="panel" :class="{ 'is-open': ui.panelOpen }" :aria-hidden="!ui.panelOpen" :inert="!ui.panelOpen || undefined" :aria-label="t('player.panel')">
     <div class="panel__inner">
       <header class="panel__head">
-        <UiTabs v-model="ui.panelTab" :items="tabs" :label="t('player.panel')" class="panel__tabs" />
+        <UiTabs v-model="tab" :items="tabs" :label="t('player.panel')" class="panel__tabs" />
         <UiIconButton icon="ph:x" :label="t('common.close')" size="sm" side="left" @click="ui.panelOpen = false" />
       </header>
       <div class="panel__body no-scrollbar">
@@ -31,6 +36,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
         <div v-else-if="ui.panelTab === 'devices'" class="panel__devices">
           <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
         </div>
+        <MusicJamPanel v-else-if="ui.panelTab === 'jam'" back @back="ui.panelTab = 'devices'" />
         <MusicAboutTrack v-else :track="player.current?.track ?? null" />
       </div>
     </div>

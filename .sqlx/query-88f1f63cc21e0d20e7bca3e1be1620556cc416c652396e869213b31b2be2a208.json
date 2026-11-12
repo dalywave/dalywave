@@ -1,0 +1,161 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS track_id, r.id AS recording_id, f.id AS file_id, f.storage_key, f.codec, f.container,\n                  f.duration_ms, f.loudness_lufs, f.true_peak_db, f.waveform, f.size_bytes, f.sha256\n           FROM unnest($1::uuid[]) WITH ORDINALITY AS x(id, ord)\n           JOIN tracks t ON t.id = x.id\n           JOIN recordings r ON r.id = t.recording_id\n           JOIN audio_files f ON f.id = COALESCE(\n               -- «Загрузки: Обычное» — lossless основного файла заменяет лучший файл с потерями\n               CASE WHEN $2 = 'normal' AND (SELECT p.lossless FROM audio_files p WHERE p.id = r.primary_file_id)\n                    THEN (SELECT id FROM audio_files WHERE recording_id = r.id AND NOT lossless\n                          ORDER BY verified DESC, bitrate_kbps DESC NULLS LAST, created_at DESC LIMIT 1) END,\n               r.primary_file_id,\n               (SELECT id FROM audio_files WHERE recording_id = r.id ORDER BY created_at DESC LIMIT 1))\n           WHERE r.audio_status = 'ready'\n           ORDER BY x.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "storage_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "storage_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "codec",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "container",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "container"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "loudness_lufs",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "loudness_lufs"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "true_peak_db",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "true_peak_db"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "waveform",
+        "type_info": "Int2Array",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "waveform"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "size_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "sha256"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "88f1f63cc21e0d20e7bca3e1be1620556cc416c652396e869213b31b2be2a208"
+}

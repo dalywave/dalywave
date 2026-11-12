@@ -94,6 +94,69 @@ Identifiers & Profiles** → **Identifiers**):
 микрофона: `DALYWAVE_RECOGNIZE_MOCK=1 DALYWAVE_RECOGNIZE_OPEN=1` (BRIDGE.md, «Распознать»), снимки —
 `design/shots/shazam`.
 
+## AirPlay 2 и HomePod
+
+Ничего включать не нужно. Аудиосессия — «длинное аудио» (`longFormAudio`): в окне AirPlay (Пункт
+управления или «Устройства» в плеере) видны колонки AirPlay 2, можно отметить несколько HomePod сразу.
+Как только в маршруте AirPlay, движок переходит на буферизованный вывод (AVSampleBufferAudioRenderer):
+буфер на стороне колонки, мультирум, позиция и текст песни — по тому, что слышно. В журнале:
+`output reopened (route airplay: buffered output)`, обратно — `route builtin: realtime output`.
+
+| # | Действие | Ожидание |
+|---|---|---|
+| 1 | Играет на телефоне → AirPlay → HomePod | Пауза около секунды, дальше с того же места на колонке |
+| 2 | Отметить вторую колонку | Звучат обе синхронно; переключения вывода в журнале нет |
+| 3 | Пауза, перемотка, следующий на экране блокировки | Сразу, без «хвоста» в пару секунд |
+| 4 | Строка прогресса и текст песни | Идут вровень со звуком колонки, а не на 2 с впереди |
+| 5 | Громкость в приложении | Меняется сразу |
+| 6 | AirPlay → динамик телефона | Продолжает с того места, что звучало на колонке |
+
+Симулятор AirPlay не умеет: тот же путь без колонок — `SIMCTL_CHILD_DALYWAVE_OUTPUT=buffered` к
+`make ios-sim` (на Mac — `DALYWAVE_OUTPUT=buffered`), логика переключения — `tests/buffered.rs`
+(подставной маршрут). Эквалайзер и затухание таймера сна в AirPlay слышны с задержкой буфера.
+
+## Siri и «Команды»
+
+Фразы (iOS 17+, работают сразу после установки, без настроек): «Включи мою волну в DalyWave»,
+«Включи бодрую (весёлую, спокойную, грустную) волну в DalyWave», «Включи волну для дороги (работы,
+тренировки, сна…) в DalyWave», «Включи <плейлист, альбом или артист из медиатеки> в DalyWave»,
+«Пауза в DalyWave», «Дальше в DalyWave», «Предыдущий трек в DalyWave», «Продолжи DalyWave»,
+«Нравится в DalyWave»; по-английски — «Play my wave in DalyWave» и т. д. Все они — плитки в
+приложении «Команды» (раздел DalyWave), их можно собирать в свои команды. Произносить название
+можно и как «Дейли Вейв».
+
+Запрос музыки SiriKit — «Включи Lowborn в DalyWave», «Включи мою музыку в DalyWave», и он же на
+HomePod — идёт через расширение `dalywave-siri` (`gen/apple/SiriExtension`, Bundle ID
+`rest.daly.wave.siri`): приложение просыпается в фоне, ищет в каталоге и играет, звук на HomePod — по
+AirPlay 2. При первом запуске после входа iOS один раз спросит «Разрешить Siri» — «Разрешить».
+
+### Что включить в Apple Developer (один раз)
+
+developer.apple.com → Account → **Certificates, Identifiers & Profiles** → **Identifiers**:
+
+1. **rest.daly.wave** → вкладка Capabilities (App Services) → галочка **SiriKit** → **Save** → Confirm.
+2. **rest.daly.wave.siri** — если его нет: «+» → App IDs → App → Description «DalyWave Siri», Bundle
+   ID Explicit `rest.daly.wave.siri` → Continue → Register (служб не нужно). Xcode с вошедшим
+   аккаунтом создаёт его сам.
+3. **App Groups не нужны**: расширение не ходит в сеть и не читает токен.
+4. Xcode → Settings → Accounts: аккаунт Apple ID команды Y5KR5JPCRG должен быть добавлен (без него
+   `make ios-build` пишет «No Accounts» и «profile doesn't include the Siri capability»), затем
+   **Download Manual Profiles** и ⌘R / `make ios-build`. Автоподпись сама выпустит профили с Siri для
+   приложения и расширения.
+
+### Что заработает только из TestFlight / на телефоне
+
+- **HomePod.** «Привет, Siri, включи мою волну» без «в DalyWave» — после выбора сервиса по
+  умолчанию: «Дом» → Дом → Настройки дома → ваш профиль → **Медиасервисы** (Media Services) →
+  DalyWave → включить, затем там же **Сервис по умолчанию** → DalyWave. DalyWave появится в списке,
+  только когда приложение установлено через TestFlight или App Store (сборки из Xcode Siri на HomePod
+  не предлагает), а «Распознавать мой голос» на HomePod включён. HomePod отдаёт запрос iPhone рядом
+  (тот же Apple ID, iPhone разблокирован хотя бы раз после включения).
+- Если интерфейс спит (телефон заблокирован), волну включает сама оболочка: музыка играет сразу, а
+  интерфейс увидит её очередь, только когда приложение откроют.
+- Проверка без голоса: `make ios-test` — тест `SiriShortcutsTests` открывает «Команды», раздел DalyWave
+  и выполняет «Пауза» (снимки — `design/shots/siri`; нужен `make test-audio-server`).
+
 ## Журнал
 
 Xcode → Window → Devices and Simulators → iPhone → Installed Apps → DalyWave → «…» → Download

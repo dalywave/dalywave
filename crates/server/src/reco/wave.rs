@@ -386,6 +386,30 @@ async fn seed(
                 ..Default::default()
             })
         }
+        // Волна из итогов: звучание самых слушаемых треков года
+        SeedKind::Year => {
+            let year: i32 = seed
+                .text
+                .as_deref()
+                .and_then(|t| t.trim().parse().ok())
+                .ok_or_else(|| bad("для волны года нужен год"))?;
+            let tracks =
+                crate::rewind::top_track_ids(db, user_id, year, crate::rewind::PLAYLIST_SIZE)
+                    .await?;
+            if tracks.is_empty() {
+                return Err(bad("за этот год ещё нечего слушать"));
+            }
+            let sound = mean_sound(db, &tracks).await?;
+            if sound.is_none() {
+                analyze_soon(db, &tracks[..tracks.len().min(5)]).await;
+            }
+            Ok(Seeded {
+                sound,
+                label: format!("Итоги {year}"),
+                title: format!("Волна {year}"),
+                ..Default::default()
+            })
+        }
     }
 }
 
@@ -684,6 +708,9 @@ pub async fn select(
             ids.push(*track);
         }
     }
+    // «Без нецензурного»: чистая версия вместо explicit, если она есть в каталоге
+    let swaps = super::clean_swaps(db, user, &ids).await?;
+    let ids = super::apply_swaps(&ids, &swaps);
     let cands: HashMap<Uuid, Cand> = candidates(
         db,
         &ids,
@@ -699,7 +726,7 @@ pub async fn select(
         raw.into_iter()
             .filter_map(|(track, origin, sim)| {
                 Some(Entry {
-                    cand: cands.get(&track)?.clone(),
+                    cand: cands.get(swaps.get(&track).unwrap_or(&track))?.clone(),
                     origin,
                     sim,
                 })

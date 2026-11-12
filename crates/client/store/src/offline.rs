@@ -601,6 +601,9 @@ impl Store {
                     EXISTS (SELECT 1 FROM blocked_items WHERE kind = 'track' AND ref_id = t.id)
                       OR EXISTS (SELECT 1 FROM blocked_items b JOIN track_artists ta ON ta.artist_id = b.ref_id
                                  WHERE b.kind = 'artist' AND ta.track_id = t.id)
+                      -- «Без нецензурного» действует и в волне без сети
+                      OR (t.explicit AND COALESCE((SELECT json_extract(settings, '$.hideExplicit')
+                                                   FROM user_settings WHERE id = 1), 0))
              FROM files fl
              JOIN tracks t ON t.id = fl.track_id
              LEFT JOIN track_features f ON f.recording_id = t.recording_id

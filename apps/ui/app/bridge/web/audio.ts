@@ -341,10 +341,10 @@ export class WebAudioEngine implements AudioEngine {
     this.applyVolume()
   }
 
-  crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number }) {
+  crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number, startMs?: number }) {
     const from = this.current
     const to = this.other
-    to.load(next, opts.durationMs, 0)
+    to.load(next, opts.durationMs, opts.startMs ?? 0)
     const ctx = this.ctx
     const fade = Math.max(0, opts.fadeMs) / 1000
     this.fading = true
@@ -365,7 +365,7 @@ export class WebAudioEngine implements AudioEngine {
       this.fading = false
     }, opts.fadeMs + 50)
     this.startTicker()
-    this.emit('time', 0)
+    this.emit('time', opts.startMs ?? 0)
   }
 
   on<E extends keyof AudioEngineEvents>(event: E, cb: AudioEngineEvents[E]): () => void {

@@ -9,6 +9,8 @@ const auth = useAuthStore()
 const player = usePlayerStore()
 const prefs = usePrefsStore()
 const sound = useSoundStore()
+const account = useAccountSettings()
+const offline = useOfflineStore()
 const ui = useUiStore()
 const bridge = useBridge()
 const toast = useToast()
@@ -45,6 +47,26 @@ async function logout() {
 const MODES: TransitionMode[] = ['gapless', 'smooth', 'smart', 'dj']
 const hasExpressiveness = (m: TransitionMode) => m === 'smart' || m === 'dj'
 const exprLabel = computed(() => (player.expressiveness < 0.34 ? tg('transition.subtle') : player.expressiveness < 0.67 ? tg('transition.set') : tg('transition.bold')))
+
+// ---------- Без нецензурного и качество — общие для всех устройств слушателя ----------
+
+const hideExplicit = computed({
+  get: () => account.settings.hideExplicit,
+  set: (v: boolean) => void account.update({ hideExplicit: v }),
+})
+const qualityWifi = computed({
+  get: () => account.settings.qualityWifi,
+  set: (v: 'high' | 'normal') => void account.update({ qualityWifi: v }),
+})
+const qualityCellular = computed({
+  get: () => account.settings.qualityCellular,
+  set: (v: 'normal' | 'saver') => void account.update({ qualityCellular: v }),
+})
+const qualityDownload = computed({
+  get: () => account.settings.qualityDownload,
+  set: (v: 'high' | 'normal') => void account.update({ qualityDownload: v }),
+})
+const segSize = computed(() => (ui.isPhone ? 'sm' : 'md'))
 
 // ---------- Волна ----------
 
@@ -101,6 +123,21 @@ const language = computed({
       <MusicEqPicker v-if="sound.eqSupported" />
       <SettingsRow :title="t('scrubber')" stack>
         <MusicScrubberStylePicker v-model="prefs.scrubber" :label="t('scrubber')" />
+      </SettingsRow>
+      <SettingsRow :title="t('explicit')" :description="t('explicitDesc')">
+        <UiSwitch v-model="hideExplicit" :label="t('explicit')" hide-label />
+      </SettingsRow>
+    </SettingsGroup>
+
+    <SettingsGroup :title="t('quality')">
+      <SettingsRow :title="t('qualityWifi')">
+        <UiSegmentedControl v-model="qualityWifi" :options="[{ value: 'high', label: t('q.high') }, { value: 'normal', label: t('q.normal') }]" :label="t('qualityWifi')" :size="segSize" />
+      </SettingsRow>
+      <SettingsRow :title="t('qualityCellular')">
+        <UiSegmentedControl v-model="qualityCellular" :options="[{ value: 'normal', label: t('q.normal') }, { value: 'saver', label: t('q.saver') }]" :label="t('qualityCellular')" :size="segSize" />
+      </SettingsRow>
+      <SettingsRow v-if="offline.available" :title="t('qualityDownload')">
+        <UiSegmentedControl v-model="qualityDownload" :options="[{ value: 'high', label: t('q.high') }, { value: 'normal', label: t('q.normal') }]" :label="t('qualityDownload')" :size="segSize" />
       </SettingsRow>
     </SettingsGroup>
 
@@ -221,6 +258,13 @@ const language = computed({
     "playback": "Воспроизведение",
     "normalize": "Выравнивать громкость",
     "scrubber": "Полоса прокрутки",
+    "explicit": "Без нецензурного",
+    "explicitDesc": "Треки с пометкой «E» не играют",
+    "quality": "Качество",
+    "qualityWifi": "По Wi-Fi",
+    "qualityCellular": "По сотовой",
+    "qualityDownload": "Загрузки",
+    "q": { "high": "Высокое", "normal": "Обычное", "saver": "Экономия" },
     "transitions": "Переходы между треками",
     "wave": "Моя волна",
     "taste": "Мой вкус",
@@ -247,6 +291,13 @@ const language = computed({
     "playback": "Playback",
     "normalize": "Normalize volume",
     "scrubber": "Progress bar",
+    "explicit": "No explicit content",
+    "explicitDesc": "Tracks marked “E” won't play",
+    "quality": "Audio quality",
+    "qualityWifi": "On Wi-Fi",
+    "qualityCellular": "On cellular",
+    "qualityDownload": "Downloads",
+    "q": { "high": "High", "normal": "Normal", "saver": "Data saver" },
     "transitions": "Transitions",
     "wave": "My Wave",
     "taste": "My taste",

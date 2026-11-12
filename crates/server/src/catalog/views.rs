@@ -74,6 +74,7 @@ struct TrackRow {
     artist_ids: Vec<Uuid>,
     artist_names: Vec<String>,
     artist_roles: Vec<String>,
+    clean_id: Option<Uuid>,
 }
 
 /// Треки по id в том же порядке; неизвестные id пропускаются.
@@ -93,7 +94,8 @@ pub async fn tracks(db: &PgPool, ids: &[Uuid], user_id: Uuid) -> Result<Vec<Trac
                   ARRAY(SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
                         WHERE ta.track_id = t.id ORDER BY ta.position, ta.artist_id) AS "artist_names!",
                   ARRAY(SELECT ta.role FROM track_artists ta WHERE ta.track_id = t.id
-                        ORDER BY ta.position, ta.artist_id) AS "artist_roles!"
+                        ORDER BY ta.position, ta.artist_id) AS "artist_roles!",
+                  CASE WHEN t.explicit THEN clean_version(t.id) END AS clean_id
            FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)
            JOIN tracks t ON t.id = ids.id
            LEFT JOIN recordings r ON r.id = t.recording_id
@@ -146,6 +148,7 @@ pub async fn tracks(db: &PgPool, ids: &[Uuid], user_id: Uuid) -> Result<Vec<Trac
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(AudioStatus::None),
                 liked: r.liked,
+                clean_id: r.clean_id,
             }
         })
         .collect())

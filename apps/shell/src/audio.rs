@@ -126,6 +126,12 @@ fn watch_loop(app: &AppHandle, rx: &crossbeam_channel::Receiver<()>) {
         }
         std::thread::sleep(DEBOUNCE);
         while rx.try_recv().is_ok() {}
+        // macOS: устройство по умолчанию могло стать колонкой AirPlay (или перестать) — движок сам
+        // решит, нужен ли буферизованный вывод
+        #[cfg(target_os = "macos")]
+        if let Some(engine) = app.state::<player::Player>().engine() {
+            engine.route_changed();
+        }
         match current(app) {
             Ok(outputs) => publish(app, outputs),
             Err(e) => log::debug!("audio outputs: {e}"),

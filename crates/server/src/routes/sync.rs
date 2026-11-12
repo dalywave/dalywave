@@ -14,11 +14,12 @@ use dalywave_protocol::{
     ErrorBody,
     catalog::{ArtistRole, AudioStatus, RecordType},
     library::{BlockedKind, PlaylistKind},
+    settings::SyncSettings,
     sync::{
         SyncAlbum, SyncArtist, SyncBlockedItem, SyncDeviceDownload, SyncDeviceSetItem, SyncEntity,
-        SyncFollowedArtist, SyncLikedTrack, SyncPage, SyncPlaylist, SyncPlaylistItem, SyncQuery,
-        SyncRecording, SyncSavedAlbum, SyncTombstone, SyncTrack, SyncTrackArtist,
-        SyncTrackFeatures, SyncWavePreset,
+        SyncFollowedArtist, SyncLikedTrack, SyncPage, SyncPlaylist, SyncPlaylistFolder,
+        SyncPlaylistItem, SyncQuery, SyncRecording, SyncSavedAlbum, SyncTombstone, SyncTrack,
+        SyncTrackArtist, SyncTrackFeatures, SyncWavePreset,
     },
 };
 use serde_json::{Map, Value};
@@ -90,6 +91,8 @@ enum Change {
     Set(SyncDeviceSetItem),
     Features(SyncTrackFeatures),
     Preset(SyncWavePreset),
+    Folder(SyncPlaylistFolder),
+    Settings(SyncSettings),
     Tombstone(SyncTombstone),
 }
 
@@ -110,6 +113,8 @@ impl Change {
             Self::Set(r) => r.rev,
             Self::Features(r) => r.rev,
             Self::Preset(r) => r.rev,
+            Self::Folder(r) => r.rev,
+            Self::Settings(r) => r.rev,
             Self::Tombstone(r) => r.rev,
         }
     }
@@ -302,6 +307,7 @@ fn tombstone(
         "device_downloads" => SyncEntity::DeviceDownloads,
         "device_sets" => SyncEntity::DeviceSets,
         "wave_presets" => SyncEntity::WavePresets,
+        "playlist_folders" => SyncEntity::PlaylistFolders,
         "artists" => SyncEntity::Artists,
         "albums" => SyncEntity::Albums,
         "tracks" => SyncEntity::Tracks,
@@ -423,6 +429,8 @@ pub async fn sync(
             Change::Set(r) => page.device_sets.push(r),
             Change::Features(r) => page.track_features.push(r),
             Change::Preset(r) => page.wave_presets.push(r),
+            Change::Folder(r) => page.playlist_folders.push(r),
+            Change::Settings(r) => page.settings = Some(r),
             Change::Tombstone(r) => page.tombstones.push(r),
         }
     }
@@ -526,7 +534,8 @@ async fn collect(
     );
     out.extend(
         sqlx::query!(
-            "SELECT id, title, description, kind, pinned, created_at, updated_at, rev FROM playlists
+            "SELECT id, title, description, kind, pinned, created_at, updated_at, folder_id, position, rev
+             FROM playlists
              WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
             user, w, after, fetch,
         )
@@ -543,9 +552,40 @@ async fn collect(
                 pinned: r.pinned,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
+                folder_id: r.folder_id,
+                position: r.position,
             })
         }),
     );
+    out.extend(
+        sqlx::query_as!(
+            SyncPlaylistFolder,
+            "SELECT id, rev, title, position, collapsed, created_at, updated_at FROM playlist_folders
+             WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
+            user,
+            w,
+            after,
+            fetch,
+        )
+        .fetch_all(&mut *conn)
+        .await?
+        .into_iter()
+        .map(Change::Folder),
+    );
+    if let Some(rev) = sqlx::query_scalar!(
+        "SELECT rev FROM user_settings WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3",
+        user,
+        w,
+        after,
+    )
+    .fetch_optional(&mut *conn)
+    .await?
+    {
+        out.push(Change::Settings(SyncSettings {
+            rev,
+            settings: crate::routes::settings::of(&mut *conn, user).await?,
+        }));
+    }
     out.extend(
         sqlx::query!(
             "SELECT i.id, i.playlist_id, i.track_id, i.position, i.added_at, i.rev

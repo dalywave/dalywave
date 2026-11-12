@@ -36,6 +36,8 @@ pub const RECORDING_REACQUIRE: &str = "recording.reacquire";
 pub const SOURCE_CHECK: &str = "source.check";
 /// Слушатель сбросил свой вкус («Мой вкус» → «Сбросить вкус»)
 pub const TASTE_RESET: &str = "taste.reset";
+/// Слушатель отметил основной файл записи как «Неверная запись»
+pub const RECORDING_REPORTED: &str = "recording.reported";
 
 pub async fn record(
     db: impl PgExecutor<'_>,

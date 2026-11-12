@@ -766,8 +766,12 @@ async fn record_final(
             )
             .execute(&mut *conn)
             .await?;
-            // Выбор человека заменяет файл, даже если прежний «лучше»: прежний — не та запись
-            if payload.is_manual() || better_than_primary(conn, payload.recording_id, file).await? {
+            // Выбор человека и жалоба «Неверная запись» заменяют файл, даже если прежний «лучше»:
+            // прежний — не та запись
+            if payload.is_manual()
+                || payload.replace
+                || better_than_primary(conn, payload.recording_id, file).await?
+            {
                 sqlx::query!(
                     "UPDATE recordings SET primary_file_id = $2 WHERE id = $1",
                     payload.recording_id,
@@ -1017,6 +1021,7 @@ mod tests {
             prefer_video_ids: vec![],
             exclude_video_ids: vec![],
             direct_url: None,
+            replace: false,
         }
     }
 

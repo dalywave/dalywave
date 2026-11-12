@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE rewind_event SET style = $1, mode = $2, year = $3, updated_at = now() WHERE id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e69976cdf77f7a5e2f95d99a1cac81b206277d1e7e10fd84fbb414feefe097f1"
+}

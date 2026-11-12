@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jam_requests SET status = 'declined', decided_at = now() WHERE guest_id = $1 AND status = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "26c622b1cbeddfb21fd38c0f73f7c93f3ec1aaee8fcf1cc32949766eecbc5cf3"
+}

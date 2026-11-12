@@ -484,6 +484,15 @@ pub fn prefer_local(app: &AppHandle, mut spec: TrackSpec) -> TrackSpec {
     spec
 }
 
+/// Сеть для качества звука (`network` у `/stream`): сотовая — по настройке «По сотовой», иначе Wi-Fi.
+pub fn network_param() -> &'static str {
+    if net::kind() == net::Kind::Cellular {
+        "cellular"
+    } else {
+        "wifi"
+    }
+}
+
 /// Ссылку у сервера спрашивать бессмысленно: «Без сети» или сети нет.
 pub fn offline_now(app: &AppHandle) -> bool {
     app.try_state::<Offline>().is_some_and(|o| o.offline_now())

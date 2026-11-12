@@ -56,3 +56,25 @@ export function roundsNeeded(upcoming: number, listLength: number, ahead: number
 export function previousAction(positionMs: number, hasHistory: boolean): 'restart' | 'previous' {
   return positionMs > 3000 || !hasHistory ? 'restart' : 'previous'
 }
+
+/** «Умное перемешивание»: подобранное — после каждых `every` треков списка, где его ещё нет.
+ *  Уже подмешанное (`suggested`) начинает отсчёт заново; лишнее подобранное не вставляется */
+export function mixIn<T extends Entry & { suggested?: boolean }>(upcoming: readonly T[], picks: readonly T[], every = 3): T[] {
+  const out: T[] = []
+  let left = picks.slice()
+  let run = 0
+  for (const e of upcoming) {
+    out.push(e)
+    if (e.suggested) {
+      run = 0
+      continue
+    }
+    run++
+    if (run >= every && left.length) {
+      out.push(left[0]!)
+      left = left.slice(1)
+      run = 0
+    }
+  }
+  return out
+}

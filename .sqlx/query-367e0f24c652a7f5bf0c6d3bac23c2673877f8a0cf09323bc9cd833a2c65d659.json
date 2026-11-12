@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT hide_explicit($1) AS \"hide!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hide!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "367e0f24c652a7f5bf0c6d3bac23c2673877f8a0cf09323bc9cd833a2c65d659"
+}

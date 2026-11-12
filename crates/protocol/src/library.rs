@@ -146,7 +146,7 @@ pub enum PlaylistKind {
 
 names!(PlaylistKind { User => "user", Smart => "smart", Mix => "mix", System => "system" });
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistSummary {
     pub id: Uuid,
@@ -163,12 +163,82 @@ pub struct PlaylistSummary {
     pub image: Option<ImageSet>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Папка, в которой лежит плейлист; `null` — вне папок.
+    #[serde(default)]
+    pub folder_id: Option<Uuid>,
+    /// Место в «Своём порядке» (дробное, по возрастанию): вне папок — общая шкала с папками.
+    #[serde(default)]
+    pub position: f64,
+    /// Когда плейлист в последний раз играл — для порядка «Недавние».
+    #[serde(default)]
+    pub played_at: Option<DateTime<Utc>>,
+    /// Кто собрал плейлист вида `mix`: `daily_mix`, `discover_weekly`, `on_repeat`, `repeat_rewind`, `rewind`…
+    #[serde(default)]
+    pub generator: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+/// Папка плейлистов в медиатеке и боковой панели. Вложенных папок нет.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistFolder {
+    pub id: Uuid,
+    pub title: String,
+    /// Место в «Своём порядке» среди папок и плейлистов вне папок.
+    pub position: f64,
+    /// Свёрнута ли — общее для всех устройств.
+    pub collapsed: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistList {
     pub items: Vec<PlaylistSummary>,
+    /// Папки по «Своему порядку»; плейлисты ссылаются на них `folderId`.
+    #[serde(default)]
+    pub folders: Vec<PlaylistFolder>,
+}
+
+/// Новая папка; названные плейлисты сразу переезжают в неё.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NewPlaylistFolder {
+    pub title: String,
+    #[serde(default)]
+    pub playlist_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlaylistFolderPatch {
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub collapsed: Option<bool>,
+}
+
+/// Переложить плейлист: в папку (`folderId`) или из неё (`null`) и на место среди соседей. Сосед
+/// `afterId` — плейлист или (вне папок) папка; без него — в конец, при `atStart` — в начало.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MovePlaylist {
+    #[serde(default)]
+    pub folder_id: Option<Uuid>,
+    #[serde(default)]
+    pub after_id: Option<Uuid>,
+    #[serde(default)]
+    pub at_start: bool,
+}
+
+/// Переставить папку среди папок и плейлистов вне папок.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MovePlaylistFolder {
+    #[serde(default)]
+    pub after_id: Option<Uuid>,
+    #[serde(default)]
+    pub at_start: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -273,7 +343,7 @@ pub struct LibraryCounts {
 }
 
 /// Начальный экран медиатеки.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryOverview {
     pub counts: LibraryCounts,

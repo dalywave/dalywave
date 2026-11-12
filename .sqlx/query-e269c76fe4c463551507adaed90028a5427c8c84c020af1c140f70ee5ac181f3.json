@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO acquisitions (recording_id, track_id, status, reason, lane, requested_by, candidates, chosen,\n                                   error, finished_at)\n         VALUES ($1, $2, 'disputed', 'manual', $3, $4, $5, $6, $7, now())\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "acquisitions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Jsonb",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e269c76fe4c463551507adaed90028a5427c8c84c020af1c140f70ee5ac181f3"
+}

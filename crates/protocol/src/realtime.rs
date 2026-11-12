@@ -14,6 +14,7 @@ use crate::{
         ConnectAck, ConnectActive, ConnectCommand, ConnectDevices, ConnectEmpty, ConnectHello,
         ConnectPublish, ConnectSend, ConnectState, ConnectTransfer,
     },
+    jam::{JamChanged, JamNowEvent, JamReaction},
     jobs::{AcquisitionStatus, JobStatus},
     sync::SyncEntity,
 };
@@ -55,6 +56,15 @@ pub enum ServerEvent {
     /// Ответ устройства на команду этого пульта.
     #[serde(rename = "connect.ack")]
     ConnectAck(ConnectAck),
+    /// «Слушать вместе»: участники, настройки или треки гостей изменились (хозяину и гостям).
+    #[serde(rename = "jam.changed")]
+    JamChanged(JamChanged),
+    /// «Слушать вместе»: что играет у хозяина — только гостям.
+    #[serde(rename = "jam.now")]
+    JamNow(JamNowEvent),
+    /// «Слушать вместе»: ❤ от участника (хозяину и гостям).
+    #[serde(rename = "jam.reaction")]
+    JamReaction(JamReaction),
 }
 
 /// Сообщение клиента.

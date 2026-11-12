@@ -78,10 +78,13 @@ function playLiked(list: Track[], i: number) {
       </NuxtLink>
     </header>
 
+    <!-- Итоги года открылись, а слушатель их ещё не видел — «Твои итоги готовы» первым делом -->
+    <RewindCard launch />
+
     <MusicWaveHero :greeting="ui.isPhone ? undefined : greeting" />
 
-    <!-- Итоги года — в декабре -->
-    <RewindCard season-only />
+    <!-- Итоги года — плиткой, пока событие открыто и истории уже посмотрены -->
+    <RewindCard home />
 
     <template v-if="home">
       <template v-for="s in home.shelves" :key="s.id">

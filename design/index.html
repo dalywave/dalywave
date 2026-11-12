@@ -74,6 +74,17 @@
         ${rows}
       </section>`);
   }
+  // Итоги года: три варианта историй
+  nav.insertAdjacentHTML('beforeend', '<a href="#rewind">Итоги года</a>');
+  main.insertAdjacentHTML('beforeend', `
+    <section id="rewind">
+      <div class="head"><h2>Итоги года · три варианта</h2><a class="open" href="rewind/">Открыть живые истории →</a></div>
+      <p class="concept">А «Волна года» — живая волна перетекает между слайдами и становится графиком минут. Б «Разворот» — журнальный постер: плоский цвет обложки, огромные цифры, шторки. В «Пластинка» — конверт, кассета, полароиды, пластинка под иглой, значок и чек итогов. Все скриншоты — в shots/rewind-options/.</p>
+      <div class="row" style="grid-template-columns: repeat(3, 1fr)">
+        ${['a', 'b', 'c'].map(v => `<figure><img src="shots/rewind-options/${v}-3-track-phone.png" alt="Трек года, вариант ${v}" loading="lazy"><figcaption><span>Трек года · ${{ a: 'А', b: 'Б', c: 'В' }[v]}</span><a href="rewind/story.html?v=${v}">вживую</a></figcaption></figure>`).join('')}
+      </div>
+      <figure><img src="shots/rewind-options/overview-desktop.png" alt="Три варианта рядом" loading="lazy"><figcaption><span>Все варианты и рамка на компьютере</span><a href="rewind/">вживую</a></figcaption></figure>
+    </section>`);
   function shot(dir, s, size) {
     const src = `shots/${dir}/${s.route}-${size}.png`;
     const label = `${s.title} · ${size === 'phone' ? 'телефон' : 'десктоп'}`;

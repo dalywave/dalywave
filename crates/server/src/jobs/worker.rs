@@ -587,6 +587,11 @@ impl Worker {
                         Ok(n) => tracing::info!(users = n, "year in review warmed up"),
                         Err(e) => tracing::warn!(error = %e, "could not warm up year in review"),
                     }
+                    match crate::renditions::trim(&self.ctx.db, &self.ctx.storage, crate::renditions::limit_bytes()).await {
+                        Ok(t) if t == crate::renditions::Trimmed::default() => {}
+                        Ok(t) => tracing::info!(stale = t.stale, evicted = t.evicted, deleted = t.deleted, "renditions trimmed"),
+                        Err(e) => tracing::warn!(error = %e, "could not trim renditions"),
+                    }
                     match jobs::cleanup(&self.ctx.db).await {
                         Ok(0) => {}
                         Ok(n) => tracing::info!(deleted = n, "old jobs cleaned up"),

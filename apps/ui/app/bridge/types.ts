@@ -10,11 +10,14 @@ import type {
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
-  SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
+  SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest,
   LyricsSearchResults, TrackLyrics,
+  HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
+  MovePlaylist, MovePlaylistFolder, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
+  Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -225,8 +228,8 @@ export interface AudioEngine {
   seek(ms: number): void
   setVolume(volume: number): void
   setMuted(muted: boolean): void
-  /** Следующий трек входит, текущий уходит за fadeMs (сайт) */
-  crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number }): void
+  /** Следующий трек входит с `startMs` (по умолчанию с начала), текущий уходит за fadeMs (сайт) */
+  crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number, startMs?: number }): void
   /** Что играть после текущего (приложение): движок готовит заранее и переходит сам */
   setUpcoming(tracks: EngineTrack[]): void
   /** Переход и выравнивание громкости (приложение) */
@@ -434,6 +437,38 @@ export interface Recognizer {
   onOpen(cb: () => void): () => void
 }
 
+/** «Слушать вместе» глазами гостя: свой токен `dwj_…` — только эта сессия */
+export interface JamGuestClient {
+  view(): Promise<JamGuestView>
+  /** Треки каталога (до 20) */
+  search(q: string): Promise<JamTrack[]>
+  /** В очередь хозяина (или на одобрение) */
+  add(trackId: string): Promise<JamRequest>
+  react(): Promise<void>
+  skip(): Promise<JamSkip>
+  /** «Слушать у себя»: ссылка на аудио текущего или следующего трека */
+  stream(trackId: string): Promise<JamStream>
+  leave(): Promise<void>
+  /** `jam.now`, `jam.changed`, `jam.reaction` */
+  live: Pick<Bridge['live'], 'connect' | 'disconnect' | 'on' | 'onReconnect'>
+}
+
+/** «Слушать вместе», как Jam у Spotify: сессия хозяина, гости по ссылке без аккаунта */
+export interface JamBridge {
+  get(): Promise<Jam | null>
+  start(): Promise<Jam>
+  update(patch: JamPatch): Promise<Jam>
+  end(): Promise<void>
+  removeGuest(id: string): Promise<void>
+  approve(requestId: string): Promise<Jam>
+  decline(requestId: string): Promise<Jam>
+  /** Приглашение по коду из ссылки (у вошедшего — его имя) */
+  invite(code: string): Promise<JamInvite>
+  /** Войти гостем: имя (у вошедшего можно не указывать) → токен */
+  join(code: string, name: string | null): Promise<JamJoined>
+  guest(token: string): JamGuestClient
+}
+
 export interface Bridge {
   readonly kind: 'web' | 'tauri'
   readonly platform: Platform
@@ -486,6 +521,9 @@ export interface Bridge {
   /** Тактильный отклик (iPhone); на остальных — ничего */
   haptic(kind: HapticKind): void
 
+  /** Локальные уведомления (iPhone, iPad); на остальных — null */
+  readonly notify: LocalNotify | null
+
   auth: {
     providers(): Promise<AuthProviders>
     /** null — сессии нет */
@@ -519,6 +557,8 @@ export interface Bridge {
     searchLyrics(q: string, limit?: number): Promise<LyricsSearchResults>
     /** Похожие по звучанию на трек (не больше двух у артиста) — «Подходит к плейлисту» */
     similar(trackId: string, limit?: number): Promise<WaveItems>
+    /** «Умное перемешивание»: похожее на весь список (не из него и не из `exclude`) — подпись «Подобрано» */
+    suggest(trackIds: string[], exclude?: string[], limit?: number): Promise<WaveItems>
     /** «Поделиться → DalyWave»: ссылка Deezer, Spotify, Apple Music, YouTube, SoundCloud, Bandcamp → трек,
      *  альбом или артист каталога. Ошибки: `unsupported_link` (422), `not_found` (404) */
     resolveLink(url: string): Promise<ResolvedLink>
@@ -543,6 +583,14 @@ export interface Bridge {
     get(year: number): Promise<Rewind>
     /** «Твои лучшие треки {год}»: создать или обновить; id плейлиста */
     savePlaylist(year: number): Promise<string>
+    /** Музыка историй: трек и место начала у слайдов; чего нет на сервере, сервер ставит на скачивание */
+    soundtrack(year: number): Promise<RewindSoundtrack>
+    /** «Ещё послушать»: новое, похожее на любимое за год */
+    more(year: number): Promise<RewindMore>
+    /** Сохранить показанную подборку плейлистом «Ещё послушать {год}»; id плейлиста */
+    saveMore(year: number, trackIds: string[]): Promise<string>
+    /** Истории открывали: карточка «Твои итоги готовы» больше не зовёт */
+    seen(year: number): Promise<void>
   }
 
   library: {
@@ -559,7 +607,16 @@ export interface Bridge {
     blocked(): Promise<BlockedList>
     block(kind: BlockedKind, id: string): Promise<void>
     unblock(kind: BlockedKind, id: string): Promise<void>
-    history(cursor?: string | null): Promise<HistoryPage>
+    /** «Недавно прослушанное», новые первыми: `q` — поиск по треку, артисту и альбому, `before` — переход к дате */
+    history(cursor?: string | null, opts?: { q?: string, before?: string, limit?: number }): Promise<HistoryPage>
+    /** Дни с прослушиваниями по часовому поясу устройства — для календаря */
+    historyDays(): Promise<HistoryDays>
+    /** Убрать прослушивание из истории */
+    hidePlay(id: string): Promise<void>
+    /** Очистить историю: вкус и миксы её по-прежнему учитывают */
+    clearHistory(): Promise<void>
+    /** «Неверная запись»: спорная запись в админке и новое скачивание без этого видео */
+    reportRecording(trackId: string, report: WrongRecordingReport): Promise<WrongRecordingResult>
   }
 
   /** Перенос музыки: архив Spotify, списки и свои файлы. Сопоставление идёт на сервере в фоне */
@@ -600,6 +657,20 @@ export interface Bridge {
     removeCover(id: string): Promise<PlaylistSummary>
     /** Копия плейлиста или микса — обычный плейлист человека */
     duplicate(id: string, title?: string): Promise<PlaylistSummary>
+    /** Переложить плейлист в папку (или из неё, `folderId: null`) и на место среди соседей */
+    move(id: string, body: MovePlaylist): Promise<PlaylistList>
+    /** Папки: новая встаёт первой, названные плейлисты сразу в ней */
+    createFolder(body: NewPlaylistFolder): Promise<PlaylistList>
+    updateFolder(id: string, patch: PlaylistFolderPatch): Promise<PlaylistFolder>
+    /** Плейлисты удалённой папки встают на её место */
+    removeFolder(id: string): Promise<PlaylistList>
+    moveFolder(id: string, body: MovePlaylistFolder): Promise<PlaylistList>
+  }
+
+  /** Настройки слушателя — общие для всех его устройств */
+  settings: {
+    get(): Promise<UserSettings>
+    update(patch: UserSettingsPatch): Promise<UserSettings>
   }
 
   /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */
@@ -626,7 +697,8 @@ export interface Bridge {
   }
 
   media: {
-    source(track: Track): Promise<SourceResult>
+    /** `network` — сеть устройства: качество по настройкам «По Wi-Fi» / «По сотовой» (сайт — Wi-Fi) */
+    source(track: Track, network?: NetworkKind): Promise<SourceResult>
     waveform(track: Track, bars: number): Promise<number[]>
     /** Сказать системе, что играет (экран блокировки, медиаклавиши) */
     nowPlaying(info: NowPlayingInfo | null): void
@@ -653,6 +725,9 @@ export interface Bridge {
   }
 
   devices(): Promise<PlaybackDevice[]>
+
+  /** «Слушать вместе» */
+  jam: JamBridge
 
   admin: {
     health(): Promise<Health>
@@ -681,6 +756,9 @@ export interface Bridge {
     imports(): Promise<AdminImportList>
     settings(): Promise<ServerSettings>
     updateSettings(patch: ServerSettingsPatch): Promise<ServerSettings>
+    /** «Итоги года» как событие: стиль, режим, что открыто сейчас */
+    rewindEvent(): Promise<RewindEvent>
+    updateRewindEvent(patch: RewindEventPatch): Promise<RewindEvent>
     /** Вкус слушателя (по умолчанию — свой) и общий индекс каталога */
     reco(userId?: string | null): Promise<RecoOverview>
     updateReco(patch: RecoSettingsPatch): Promise<RecoSettings>
@@ -703,3 +781,10 @@ export interface Bridge {
 }
 
 export type { DeviceInfo, Track }
+
+/** Локальное уведомление приложения: разрешение система спрашивает при первом */
+export interface LocalNotify {
+  /** Поставить (тот же id заменяет прежнее); `atMs` в прошлом или null — сразу. false — запрещено */
+  schedule(n: { id: string, title: string, body: string, atMs?: number | null }): Promise<boolean>
+  cancel(id: string): Promise<void>
+}

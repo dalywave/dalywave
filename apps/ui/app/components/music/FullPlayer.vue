@@ -20,7 +20,7 @@ const track = computed(() => entry.value?.track ?? null)
 const liked = computed(() => (track.value ? library.isLiked(track.value) : false))
 const art = ref<HTMLElement | null>(null)
 // Переход запланирован, если есть следующий трек — или играет волна: она продолжится сама
-const nextAt = computed(() => ((player.nextEntry || player.waveActive) && !player.pending && player.effectiveMode !== 'gapless' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
+const nextAt = computed(() => ((player.nextEntry || player.waveActive) && !player.pending && player.effectiveMode !== 'gapless' && player.effectiveRepeat !== 'one' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
 const phonePeaks = computed(() => (player.peaks.length ? resamplePeaks(player.peaks, 56) : Array.from({ length: 56 }, () => 0.18)))
 const menuOpen = ref(false)
 const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
@@ -296,8 +296,11 @@ onBeforeUnmount(() => {
                   <div class="pp__artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</div>
                 </div>
                 <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
-                <!-- Альбом и плейлист: сердце у названия, как в Spotify; в ряду кнопок — перемешивание и повтор -->
-                <span v-if="player.modesAvailable" class="pp__like"><UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="lg" :tone="liked ? 'liked' : 'solid'" :pressed="liked" :tooltip="false" @click="player.toggleLike()" /></span>
+                <!-- Сердце у названия, как в Spotify; в волне рядом — «не нравится». В ряду кнопок — перемешивание и повтор -->
+                <span class="pp__like">
+                  <UiIconButton v-if="!player.modesAvailable" icon="ph:thumbs-down" :label="t('player.dislike')" size="lg" tone="solid" :tooltip="false" @click="player.dislike()" />
+                  <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="lg" :tone="liked ? 'liked' : 'solid'" :pressed="liked" :tooltip="false" @click="player.toggleLike()" />
+                </span>
               </div>
               <div v-if="entry?.reason" class="pp__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
             </div>
@@ -315,8 +318,7 @@ onBeforeUnmount(() => {
             />
 
             <div class="pp__controls">
-              <MusicPlayModeButton v-if="player.modesAvailable" kind="shuffle" size="lg" />
-              <UiIconButton v-else icon="ph:thumbs-down" :label="t('player.dislike')" size="xl" tone="solid" :tooltip="false" @click="player.dislike()" />
+              <MusicPlayModeButton kind="shuffle" size="lg" />
               <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
               <MusicWavePlayButton
                 variant="soft"
@@ -328,8 +330,7 @@ onBeforeUnmount(() => {
                 @click="player.toggle()"
               />
               <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
-              <MusicPlayModeButton v-if="player.modesAvailable" kind="repeat" size="lg" />
-              <UiIconButton v-else :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="xl" :tone="liked ? 'liked' : 'solid'" :tooltip="false" @click="player.toggleLike()" />
+              <MusicPlayModeButton kind="repeat" size="lg" />
             </div>
 
             <MusicConnectChip class="pp__connect" />
@@ -491,7 +492,7 @@ onBeforeUnmount(() => {
 .pp__controls :deep(.ib__icon) { font-size: 28px; }
 /* Перемешивание и повтор — тише главных кнопок, как в Spotify и Apple Music */
 .pp__controls :deep(.ib--lg .ib__icon) { font-size: 24px; }
-.pp__like { display: inline-grid; flex: none; margin: -7px -8px 0 -4px; }
+.pp__like { display: inline-flex; flex: none; margin: -7px -8px 0 -4px; }
 /* С сердцем значок качества прижат к нему, а не висит посередине */
 .pp__titlerow:has(.pp__like) .pp__titles { flex: 1; }
 .pp__connect { justify-content: center; margin-top: clamp(8px, 1.6vh, 14px); flex: none; }

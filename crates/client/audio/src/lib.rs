@@ -21,6 +21,11 @@
 //! Эквалайзер (10 полос, [`EqSettings`]) и таймер сна ([`SleepTimer`], затухание и пауза) — на
 //! общем выходе микшера.
 //!
+//! Вывод — cpal, а на Apple, когда звук идёт в AirPlay, — буферизованный вывод
+//! (AVSampleBufferAudioRenderer, `renderer.rs`): AirPlay 2 с буфером на стороне колонки и
+//! несколькими колонками сразу. Он берёт звук на секунды вперёд, поэтому позиция, смена трека и
+//! уровень в событиях — по тому, что слышно, а не по тому, что отдал микшер ([`route`]).
+//!
 //! Ссылки на файлы — подписанные и живут несколько часов. Если ссылка перестала работать посреди
 //! трека или её ещё нет ([`SourceSpec::Deferred`]), движок просит новую у [`Resolver`] вызывающего
 //! и продолжает с той же позиции. Кэш — в памяти (текущий, следующий и предыдущий треки);
@@ -37,7 +42,10 @@ mod meter;
 mod mixer;
 mod mp4;
 mod output;
+#[cfg(target_vendor = "apple")]
+mod renderer;
 mod resample;
+pub mod route;
 pub mod source;
 mod stretch;
 pub mod testkit;
@@ -57,6 +65,7 @@ pub use dalywave_transitions::Analysis;
 pub use eq::{EQ_BANDS, EQ_BANDS_HZ, EQ_MAX_DB, EqPreset, EqSettings};
 pub use error::AudioError;
 pub use mixer::equal_power;
+pub use route::{BufferedOutput, RouteProbe};
 
 /// Куда выводится звук.
 #[derive(Clone, Debug)]
@@ -174,6 +183,17 @@ pub struct EngineConfig {
     pub eq: Option<EqSettings>,
     /// Таймер сна: за сколько до конца звук затухает, мс.
     pub sleep_fade_ms: u32,
+    /// Apple: когда выводить буферизованно (AirPlay 2). `Auto` — по маршруту: iOS — маршрут
+    /// аудиосессии, macOS — тип выбранного устройства. Смена маршрута — [`Engine::route_changed`].
+    pub buffered: BufferedOutput,
+    /// Маршрут звука вместо системного (проверки — подставной). Для захвата без него маршрута нет.
+    pub route: Option<RouteProbe>,
+    /// Проверки: захват на буферизованном пути ведёт себя как он — слышно на столько позже, мс.
+    #[doc(hidden)]
+    pub capture_latency_ms: u32,
+    /// Проверки: захват не быстрее стольких скоростей реального времени; 0 — как успевают деки.
+    #[doc(hidden)]
+    pub capture_speed: f32,
 }
 
 /// Какая дека слышна во время перехода (только для проверок).
@@ -206,6 +226,10 @@ impl Default for EngineConfig {
             dj_solo: DjSolo::Both,
             eq: None,
             sleep_fade_ms: 15_000,
+            buffered: BufferedOutput::Auto,
+            route: None,
+            capture_latency_ms: 2000,
+            capture_speed: 0.0,
         }
     }
 }
@@ -394,6 +418,8 @@ pub struct Snapshot {
     pub state: PlaybackState,
     pub index: Option<usize>,
     pub id: Option<String>,
+    /// [`TrackSpec::stream_id`] того, что слышно (id трека на сервере): «Нравится» голосом
+    pub stream_id: Option<String>,
     pub position_ms: u64,
     pub duration_ms: Option<u64>,
     pub volume: f32,
@@ -422,6 +448,10 @@ pub struct Snapshot {
     /// Есть куда перейти командой «следующий» / «предыдущий» по очереди движка (повтор не в счёт).
     pub has_next: bool,
     pub has_previous: bool,
+    /// Вывод буферизованный (AirPlay 2): позиция и смена трека — по тому, что слышно.
+    pub output_buffered: bool,
+    /// Сколько звука отдано наперёд и ещё не слышно, мс (у cpal — 0).
+    pub output_ahead_ms: u32,
 }
 
 pub(crate) enum Command {
@@ -451,6 +481,7 @@ pub(crate) enum Command {
     SetEq(Option<EqSettings>),
     SetSleep(Option<SleepTimer>),
     SetRepeatOne(bool),
+    RouteChanged,
     Stop,
     Shutdown,
 }
@@ -489,6 +520,7 @@ impl Engine {
             state: PlaybackState::Idle,
             index: None,
             id: None,
+            stream_id: None,
             position_ms: 0,
             duration_ms: None,
             volume: config.volume,
@@ -509,6 +541,8 @@ impl Engine {
             repeat_one: false,
             has_next: false,
             has_previous: false,
+            output_buffered: false,
+            output_ahead_ms: 0,
         }));
         let capture = Arc::new(Mutex::new(Vec::new()));
         // Устройство открывается в потоке контроллера (cpal::Stream не везде Send),
@@ -643,6 +677,13 @@ impl Engine {
     /// «Следующий» и «предыдущий» с пульта повтор пропускают.
     pub fn set_repeat_one(&self, on: bool) {
         self.send(Command::SetRepeatOne(on));
+    }
+
+    /// Маршрут звука сменился (iOS — уведомление аудиосессии, macOS — устройство по умолчанию):
+    /// движок сам решает, нужен ли буферизованный вывод (AirPlay), и при смене открывает вывод
+    /// заново с той же слышимой позиции.
+    pub fn route_changed(&self) {
+        self.send(Command::RouteChanged);
     }
 
     pub fn snapshot(&self) -> Snapshot {

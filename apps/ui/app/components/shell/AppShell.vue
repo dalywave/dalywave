@@ -13,6 +13,10 @@ useShortcuts()
 onMounted(() => bridge.live.connect())
 // Управление между устройствами: это окно — устройство в списке «Где играть»
 onMounted(() => useConnectStore().start())
+// «Слушать вместе»: живые события сессии и её состояние после перезагрузки
+onMounted(() => useJamStore().init())
+// Настройки слушателя (фильтр нецензурного, качество, порядок плейлистов) — общие для устройств
+onMounted(() => void useAccountSettings().load())
 
 // Окно приложения: во весь экран «светофора» нет, без фокуса заголовок приглушён
 const win = reactive({ maximized: false, focused: true, fullscreen: false })

@@ -34,6 +34,11 @@ pub enum Audience {
         user: Uuid,
         device: String,
     },
+    /// «Слушать вместе»: хозяину сессии (все его соединения) и гостям этой сессии.
+    Jam {
+        host: Uuid,
+        jam: Uuid,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

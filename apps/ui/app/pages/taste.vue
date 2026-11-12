@@ -199,10 +199,8 @@ const analyzedShare = computed(() => {
       </section>
       <UiEmptyState v-else icon="ph:fingerprint" :title="t('emptyTitle')" :text="t('emptyText')" />
 
-      <!-- Итоги года: всегда, с прошлыми годами -->
-      <section class="sec">
-        <RewindCard past-years />
-      </section>
+      <!-- Итоги года с прошлыми годами — пока событие открыто -->
+      <RewindCard past-years class="sec" />
 
       <!-- Месяц в цифрах -->
       <section v-if="stats" class="sec">

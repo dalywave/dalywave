@@ -219,8 +219,8 @@ export class NativeAudioEngine implements AudioEngine {
   }
 
   // Наложение движок делает сам по очереди; сюда попадают только треки без очереди
-  crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number }) {
-    this.load(next, { durationMs: opts.durationMs })
+  crossfade(next: TrackSource | null, opts: { durationMs: number, fadeMs: number, startMs?: number }) {
+    this.load(next, { durationMs: opts.durationMs, startMs: opts.startMs })
     void this.play()
   }
 

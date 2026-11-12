@@ -1,0 +1,199 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT g.id, g.name, g.user_id IS NOT NULL AS \"member!\", g.joined_at, g.removed_at,\n                  j.id AS jam_id, j.user_id, j.code, j.guests_can_add, j.approval, j.guests_can_listen,\n                  j.created_at, j.last_activity_at, j.ended_at,\n                  (j.ended_at IS NULL AND j.last_activity_at > now() - make_interval(hours => $2)\n                   AND NOT u.disabled AND cardinality(u.roles) > 0) AS \"open!\",\n                  u.name AS host_name\n           FROM jam_guests g JOIN jam_sessions j ON j.id = g.jam_id JOIN users u ON u.id = j.user_id\n           WHERE g.token_hash = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jam_guests",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jam_guests",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "member!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "joined_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_guests",
+            "name": "joined_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "removed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_guests",
+            "name": "removed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "jam_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "guests_can_add",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "guests_can_add"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "approval",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "approval"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "guests_can_listen",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "guests_can_listen"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "last_activity_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "last_activity_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "ended_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jam_sessions",
+            "name": "ended_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "open!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "host_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null,
+      false
+    ]
+  },
+  "hash": "cbd30ba4bcb57922fd98ec828d21a3f6dc3308bf54f3345828c57d653ea988f6"
+}

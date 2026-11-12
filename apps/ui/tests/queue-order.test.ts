@@ -1,6 +1,6 @@
 // Перемешивание и повтор очереди плеера: bun test (из apps/ui)
 import { describe, expect, test } from 'bun:test'
-import { afterTrack, nextRepeat, previousAction, restoreQueue, roundsNeeded, shuffleQueue, shuffled } from '../app/utils/queue-order'
+import { afterTrack, mixIn, nextRepeat, previousAction, restoreQueue, roundsNeeded, shuffleQueue, shuffled } from '../app/utils/queue-order'
 
 const e = (uid: string) => ({ uid })
 const uids = (list: { uid: string }[]) => list.map(x => x.uid)
@@ -107,5 +107,18 @@ describe('repeat', () => {
     expect(previousAction(3001, true)).toBe('restart')
     expect(previousAction(3000, true)).toBe('previous')
     expect(previousAction(500, false)).toBe('restart')
+  })
+})
+
+describe('mixIn', () => {
+  const s = (uid: string) => ({ uid, suggested: true })
+  test('one suggestion after every three tracks of the list', () => {
+    const list = Array.from({ length: 7 }, (_, i) => e(`t${i}`))
+    expect(uids(mixIn(list, [s('a'), s('b'), s('c')]))).toEqual(['t0', 't1', 't2', 'a', 't3', 't4', 't5', 'b', 't6'])
+  })
+  test('already mixed-in suggestions restart the count and extras are dropped', () => {
+    const list = [e('t0'), s('x'), e('t1'), e('t2'), e('t3'), e('t4')]
+    expect(uids(mixIn(list, [s('a'), s('b')]))).toEqual(['t0', 'x', 't1', 't2', 't3', 'a', 't4'])
+    expect(uids(mixIn([], [s('a')]))).toEqual([])
   })
 })

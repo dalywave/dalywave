@@ -355,17 +355,26 @@ pub async fn files(
     if body.track_ids.len() > MAX_FILES {
         return Err(bad(format!("не больше {MAX_FILES} треков за раз")));
     }
+    let quality = crate::routes::settings::of(&st.db, principal.user.id)
+        .await?
+        .quality_download;
     let rows = sqlx::query!(
         r#"SELECT t.id AS track_id, r.id AS recording_id, f.id AS file_id, f.storage_key, f.codec, f.container,
                   f.duration_ms, f.loudness_lufs, f.true_peak_db, f.waveform, f.size_bytes, f.sha256
            FROM unnest($1::uuid[]) WITH ORDINALITY AS x(id, ord)
            JOIN tracks t ON t.id = x.id
            JOIN recordings r ON r.id = t.recording_id
-           JOIN audio_files f ON f.id = COALESCE(r.primary_file_id,
+           JOIN audio_files f ON f.id = COALESCE(
+               -- «Загрузки: Обычное» — lossless основного файла заменяет лучший файл с потерями
+               CASE WHEN $2 = 'normal' AND (SELECT p.lossless FROM audio_files p WHERE p.id = r.primary_file_id)
+                    THEN (SELECT id FROM audio_files WHERE recording_id = r.id AND NOT lossless
+                          ORDER BY verified DESC, bitrate_kbps DESC NULLS LAST, created_at DESC LIMIT 1) END,
+               r.primary_file_id,
                (SELECT id FROM audio_files WHERE recording_id = r.id ORDER BY created_at DESC LIMIT 1))
            WHERE r.audio_status = 'ready'
            ORDER BY x.ord"#,
         &body.track_ids,
+        quality.as_str(),
     )
     .fetch_all(&st.db)
     .await?;

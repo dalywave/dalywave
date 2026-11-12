@@ -10,8 +10,8 @@ use axum::{
 use dalywave_protocol::{
     ErrorBody,
     wave::{
-        NewWaveSession, NextQuery, SimilarQuery, SoundSearch, SoundSearchResults, WaveFeedback,
-        WaveItems, WaveSession,
+        NewWaveSession, NextQuery, SimilarQuery, SoundSearch, SoundSearchResults, SuggestRequest,
+        WaveFeedback, WaveItems, WaveSession,
     },
 };
 use uuid::Uuid;
@@ -21,7 +21,7 @@ use crate::{
     cursor,
     error::AppResult,
     extract::{Json, Path, Query},
-    reco::{prep, wave},
+    reco::{prep, suggest, wave},
     state::AppState,
 };
 
@@ -38,6 +38,7 @@ pub fn routes() -> Router<AppState> {
 pub fn catalog_routes() -> Router<AppState> {
     Router::new()
         .route("/tracks/{id}/similar", get(similar))
+        .route("/tracks/suggest", post(suggest))
         .route("/search/sound", post(sound_search))
 }
 
@@ -166,6 +167,35 @@ pub async fn similar(
 ) -> AppResult<Json<WaveItems>> {
     let limit = cursor::limit(q.limit, 20, 50)?;
     let items = wave::similar(&st, principal.user.id, id, limit as usize).await?;
+    Ok(Json(WaveItems { items }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/tracks/suggest",
+    tag = "catalog",
+    security(("session" = []), ("device" = [])),
+    request_body = SuggestRequest,
+    responses(
+        (status = 200, description = "«Умное перемешивание»: похожее по звучанию на весь список, не из него и не из \
+                                      `exclude`, не больше двух у артиста; подпись — «Подобрано»", body = WaveItems),
+        (status = 400, description = "Пустой список, больше 500 треков или limit вне 1–50", body = ErrorBody),
+    ),
+)]
+pub async fn suggest(
+    State(st): State<AppState>,
+    principal: Principal,
+    Json(body): Json<SuggestRequest>,
+) -> AppResult<Json<WaveItems>> {
+    let limit = cursor::limit(body.limit, 20, 50)?;
+    let items = suggest::for_list(
+        &st,
+        principal.user.id,
+        &body.track_ids,
+        &body.exclude,
+        limit as usize,
+    )
+    .await?;
     Ok(Json(WaveItems { items }))
 }
 

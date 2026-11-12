@@ -1,28 +1,24 @@
-// Картинка итогового слайда «Итогов года» 1080×1920 для историй в соцсетях: то же, что на экране, —
-// плоское поле цвета обложки, фото артиста года, топ-5 артистов и треков, минуты, жанр и характер.
-// Делится через системное «Поделиться» (сайт и iPhone), иначе скачивается файлом.
-import type { SlideColors } from './rewind-colors'
+// Картинки «Итогов года» 1080×1920 для историй в соцсетях: у каждого стиля своя (lib/rewind/share-*.ts),
+// здесь — общие кирпичи холста. Делится через системное «Поделиться» (сайт и iPhone), иначе скачивается.
 
-export interface ShareCard {
-  year: number
-  /** «Итоги года» или «Итоги по сей день» */
-  kicker: string
-  colors: SlideColors
-  photo: string | null
-  artistsLabel: string
-  artists: string[]
-  tracksLabel: string
-  tracks: string[]
-  stats: { label: string, value: string }[]
-  personaLabel: string
-  persona: string
+export const CARD_W = 1080
+export const CARD_H = 1920
+export const CARD_FONT = '"Onest Variable", ui-sans-serif, system-ui, sans-serif'
+
+/** Холст карточки; шрифт подгружается заранее, иначе первая картинка выйдет системным */
+export async function newCard(): Promise<{ canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D }> {
+  await Promise.all([500, 600, 700, 800].map(w => document.fonts?.load(`${w} 64px "Onest Variable"`).catch(() => null)))
+  const canvas = document.createElement('canvas')
+  canvas.width = CARD_W
+  canvas.height = CARD_H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('canvas')
+  ctx.textBaseline = 'alphabetic'
+  return { canvas, ctx }
 }
 
-const W = 1080
-const H = 1920
-const FONT = '"Onest Variable", ui-sans-serif, system-ui, sans-serif'
-
-function loadImage(url: string): Promise<HTMLImageElement | null> {
+export function loadCardImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
+  if (!url) return Promise.resolve(null)
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -33,110 +29,40 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
   })
 }
 
-function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
+/** Строка, обрезанная многоточием по ширине */
+export function fitText(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   if (ctx.measureText(text).width <= max) return text
   let s = text
   while (s.length > 1 && ctx.measureText(`${s}…`).width > max) s = s.slice(0, -1)
   return `${s.trimEnd()}…`
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+/** Картинка «cover» в прямоугольник со скруглением (radius = половина — круг) */
+export function drawCardImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, radius = 0, focusY = 0.5) {
+  ctx.save()
   ctx.beginPath()
-  ctx.roundRect(x, y, w, h, r)
+  ctx.roundRect(x, y, w, h, radius)
+  ctx.clip()
+  const s = Math.max(w / img.width, h / img.height)
+  const dw = img.width * s
+  const dh = img.height * s
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) * focusY, dw, dh)
+  ctx.restore()
 }
 
-/** PNG итогового слайда */
-export async function renderShareCard(card: ShareCard): Promise<Blob> {
-  await Promise.all([800, 600].map(w => document.fonts?.load(`${w} 64px "Onest Variable"`).catch(() => null)))
-  const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('canvas')
-  const { bg, ink, soft, accent } = card.colors
-  const pad = 84
-
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, W, H)
-  // Одна простая фигура цвета обложки — как на слайдах
-  ctx.fillStyle = accent
+/** Волосок-разделитель */
+export function cardHairline(ctx: CanvasRenderingContext2D, x1: number, y: number, x2: number, color: string, width = 2) {
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.lineWidth = width
   ctx.beginPath()
-  ctx.arc(W - 30, H - 70, 230, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Фото артиста года и год
-  const photoSize = 380
-  const photo = card.photo ? await loadImage(card.photo) : null
-  let y = 150
-  if (photo) {
-    ctx.save()
-    roundRect(ctx, pad, y, photoSize, photoSize, 24)
-    ctx.clip()
-    const s = Math.max(photoSize / photo.width, photoSize / photo.height)
-    ctx.drawImage(photo, pad + (photoSize - photo.width * s) / 2, y + (photoSize - photo.height * s) / 2, photo.width * s, photo.height * s)
-    ctx.restore()
-  }
-  const textX = photo ? pad + photoSize + 48 : pad
-  ctx.fillStyle = soft
-  ctx.font = `700 40px ${FONT}`
-  ctx.textBaseline = 'alphabetic'
-  ctx.fillText(fit(ctx, card.kicker, W - textX - pad), textX, y + photoSize - 190)
-  ctx.fillStyle = ink
-  ctx.font = `800 196px ${FONT}`
-  ctx.fillText(String(card.year), textX - 8, y + photoSize - 8)
-
-  // Две колонки: артисты и треки
-  y += photoSize + 120
-  const colW = (W - pad * 2 - 60) / 2
-  const column = (x: number, label: string, items: string[]) => {
-    ctx.fillStyle = soft
-    ctx.font = `700 36px ${FONT}`
-    ctx.fillText(label, x, y)
-    items.slice(0, 5).forEach((item, i) => {
-      const ly = y + 84 + i * 72
-      ctx.fillStyle = soft
-      ctx.font = `800 44px ${FONT}`
-      ctx.fillText(String(i + 1), x, ly)
-      ctx.fillStyle = ink
-      ctx.fillText(fit(ctx, item, colW - 52), x + 52, ly)
-    })
-  }
-  column(pad, card.artistsLabel, card.artists)
-  column(pad + colW + 60, card.tracksLabel, card.tracks)
-
-  // Минуты, жанр, характер
-  y += 84 + 5 * 72 + 70
-  ctx.strokeStyle = ink
-  ctx.globalAlpha = 0.22
-  ctx.lineWidth = 3
-  ctx.beginPath()
-  ctx.moveTo(pad, y)
-  ctx.lineTo(W - pad, y)
+  ctx.moveTo(x1, y)
+  ctx.lineTo(x2, y)
   ctx.stroke()
-  ctx.globalAlpha = 1
-  y += 90
-  card.stats.slice(0, 2).forEach((s, i) => {
-    const x = pad + i * (colW + 60)
-    ctx.fillStyle = soft
-    ctx.font = `700 36px ${FONT}`
-    ctx.fillText(s.label, x, y)
-    ctx.fillStyle = ink
-    ctx.font = `800 76px ${FONT}`
-    ctx.fillText(fit(ctx, s.value, colW), x, y + 92)
-  })
-  y += 210
-  ctx.fillStyle = soft
-  ctx.font = `700 36px ${FONT}`
-  ctx.fillText(card.personaLabel, pad, y)
-  ctx.fillStyle = ink
-  ctx.font = `800 96px ${FONT}`
-  ctx.fillText(fit(ctx, card.persona, W - pad * 2), pad, y + 110)
+  ctx.restore()
+}
 
-  // Подпись сервиса
-  ctx.fillStyle = ink
-  ctx.font = `800 44px ${FONT}`
-  ctx.fillText('DalyWave', pad, H - 110)
-
+export async function cardPng(canvas: HTMLCanvasElement): Promise<Blob> {
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
   if (!blob) throw new Error('png')
   return blob

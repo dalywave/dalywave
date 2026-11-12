@@ -10,7 +10,9 @@ pub mod model;
 pub mod prep;
 pub mod profile;
 pub mod rank;
+pub mod repeat;
 pub mod scout;
+pub mod suggest;
 pub mod taste;
 pub mod vectors;
 pub mod wave;
@@ -397,6 +399,44 @@ impl Cand {
     }
 }
 
+/// Включён ли у слушателя фильтр «Без нецензурного».
+pub async fn hide_explicit(db: &PgPool, user_id: Uuid) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar!(r#"SELECT hide_explicit($1) AS "hide!""#, user_id)
+        .fetch_one(db)
+        .await
+}
+
+/// С фильтром «Без нецензурного» — чистые версии explicit-треков из списка, что есть в каталоге:
+/// подбор ставит их вместо explicit (а explicit без чистой версии отсеивает [`candidates`]).
+pub async fn clean_swaps(
+    db: &PgPool,
+    user_id: Uuid,
+    ids: &[Uuid],
+) -> Result<std::collections::HashMap<Uuid, Uuid>, sqlx::Error> {
+    if ids.is_empty() || !hide_explicit(db, user_id).await? {
+        return Ok(Default::default());
+    }
+    Ok(sqlx::query!(
+        r#"SELECT id, clean_version(id) AS "clean!" FROM tracks
+           WHERE id = ANY($1) AND explicit AND clean_version(id) IS NOT NULL"#,
+        ids
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(|r| (r.id, r.clean))
+    .collect())
+}
+
+/// Список id с чистыми версиями вместо explicit, без повторов (чистая могла быть в списке и сама).
+pub fn apply_swaps(ids: &[Uuid], swaps: &std::collections::HashMap<Uuid, Uuid>) -> Vec<Uuid> {
+    let mut seen = std::collections::HashSet::new();
+    ids.iter()
+        .map(|id| *swaps.get(id).unwrap_or(id))
+        .filter(|id| seen.insert(*id))
+        .collect()
+}
+
 /// Кандидаты по id в том же порядке; неизвестные пропускаются. `hits` и `misses` — векторы сессии:
 /// сходство с ними считает база, а не приложение — векторы треков не гоняются по сети.
 pub async fn candidates(
@@ -409,6 +449,7 @@ pub async fn candidates(
     if ids.is_empty() {
         return Ok(Vec::new());
     }
+    let hide_explicit = hide_explicit(db, user_id).await?;
     let rows = sqlx::query!(
         r#"WITH fam AS (
                SELECT DISTINCT ta.artist_id FROM track_artists ta
@@ -445,6 +486,8 @@ pub async fn candidates(
                                               WHERE f.user_id = $2 AND f.artist_id = ta.artist_id AND f.track_id IS NULL
                                                 AND f.kind IN ('dislike', 'undislike')
                                               ORDER BY f.at DESC LIMIT 1), false))
+                   -- «Без нецензурного»: explicit без чистой версии не играет
+                   OR (t.explicit AND $5)
                   ) AS "excluded!",
                   EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.role = 'main'
                             AND ta.artist_id IN (SELECT artist_id FROM fam)) AS "artist_familiar!",
@@ -469,6 +512,7 @@ pub async fn candidates(
         user_id,
         hits,
         misses,
+        hide_explicit,
     )
     .fetch_all(db)
     .await?;

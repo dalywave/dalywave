@@ -18,6 +18,7 @@ export function usePlaylistActions() {
   const toast = useToast()
   const route = useRoute()
   const { playPlaylist } = usePlayActions()
+  const tree = usePlaylistTree()
   const t = useNuxtApp().$i18n.t
   const lang = useLang()
 
@@ -147,6 +148,7 @@ export function usePlaylistActions() {
     if (mine) entries.push({ label: t('pl.edit'), icon: 'ph:pencil-simple', onSelect: () => void edit(p) })
     else entries.push({ label: t('pl.saveAs'), icon: 'ph:plus-circle', onSelect: () => void duplicate(p) })
     entries.push({ label: p.pinned ? t('pl.unpin') : t('pl.pin'), icon: p.pinned ? 'ph:push-pin-slash' : 'ph:push-pin', onSelect: () => void library.setPinned(p, !p.pinned) })
+    entries.push(tree.moveMenu(p))
     if (offline.available && p.tracksCount) {
       entries.push(offline.isPinned('playlist', p.id)
         ? { label: t('offline.remove'), icon: 'ph:x-circle', onSelect: () => void offline.unpin('playlist', p.id, p.title) }

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jam_guests SET last_seen_at = now()\n             WHERE id = $1 AND last_seen_at < now() - interval '30 seconds'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8a3d2b230697729be7ffc373eaf30838d861eea582350d075b6a79be5b80748d"
+}

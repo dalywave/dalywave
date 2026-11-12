@@ -643,7 +643,11 @@ pub async fn run(ctx: Arc<Context>, job: jobs::JobRow) -> JobResult {
     let p: TastePayload = job.payload()?;
     let settings = Settings::load(&ctx.db).await?;
     let report = rebuild(&ctx.db, p.user_id, &settings, p.refresh_discovery).await?;
-    Ok(serde_json::to_value(report)?.into())
+    // «На повторе» и «Старые хиты на повторе» — по истории, им грани не нужны
+    let repeat = super::repeat::refresh(&ctx.db, p.user_id).await?;
+    let mut out = serde_json::to_value(report)?;
+    out["repeat"] = serde_json::to_value(repeat)?;
+    Ok(out.into())
 }
 
 // ───────────── Миксы ─────────────
@@ -692,7 +696,13 @@ async fn around(
     let near = nearest_sound(&mut tx, centroid, limit, user_id).await?;
     tx.commit().await?;
     let ids: Vec<Uuid> = near.iter().map(|n| n.track_id).collect();
-    let sims: HashMap<Uuid, f32> = near.iter().map(|n| (n.track_id, n.similarity)).collect();
+    // «Без нецензурного»: чистая версия встаёт на место explicit с его близостью
+    let swaps = super::clean_swaps(db, user_id, &ids).await?;
+    let sims: HashMap<Uuid, f32> = near
+        .iter()
+        .map(|n| (*swaps.get(&n.track_id).unwrap_or(&n.track_id), n.similarity))
+        .collect();
+    let ids = super::apply_swaps(&ids, &swaps);
     Ok(candidates(db, &ids, user_id, None, None)
         .await?
         .into_iter()
@@ -759,7 +769,7 @@ async fn daily_mix(db: &PgPool, user_id: Uuid, facet: &Facet) -> Result<Vec<Uuid
 
 /// Записывает сгенерированный плейлист вида `mix`: тот же генератор и номер — тот же плейлист,
 /// новые треки. Возвращает id плейлиста.
-async fn save_mix(
+pub(super) async fn save_mix(
     db: &PgPool,
     user_id: Uuid,
     generator: &str,
@@ -822,7 +832,7 @@ async fn save_mix(
     Ok(id)
 }
 
-async fn changed(conn: &mut sqlx::PgConnection, user_id: Uuid) {
+pub(super) async fn changed(conn: &mut sqlx::PgConnection, user_id: Uuid) {
     realtime::publish(
         conn,
         Audience::User(user_id),

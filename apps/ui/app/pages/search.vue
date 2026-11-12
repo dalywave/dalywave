@@ -150,6 +150,8 @@ const descriptive = computed(() => {
     })
   return !strong
 })
+// Запрос похож на строчку песни: в кавычках или от четырёх слов — «По словам песни»
+const lyricLike = computed(() => /^\s*["«“„']/.test(q.value) || q.value.split(/\s+/).filter(Boolean).length >= 4)
 const soundLink = computed(() => filterLink('sound'))
 const ctx = computed(() => ({ type: 'search' as const, id: q.value, title: t('resultsFor', { q: q.value }) }))
 const { playArtist, playAlbum, isPlayingContext } = usePlayActions()
@@ -309,7 +311,10 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       <UiButton icon="ph:arrow-clockwise" @click="run(true)">{{ tg('common.retry') }}</UiButton>
     </UiEmptyState>
 
-    <SearchSoundResults v-else-if="empty && scope === 'catalog' && words >= 2" :text="q" />
+    <div v-else-if="empty && scope === 'catalog' && words >= 2" class="results">
+      <SearchLyricsResults v-if="lyricLike" :text="q" />
+      <SearchSoundResults :text="q" />
+    </div>
 
     <UiEmptyState v-else-if="empty" icon="ph:magnifying-glass" :title="scope === 'library' ? t('nothingMine') : t('nothing')" :text="t('nothingFor', { q })">
       <UiButton v-if="scope === 'library'" variant="secondary" @click="libraryModel = false">{{ t('searchEverywhere') }}</UiButton>
@@ -359,6 +364,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
           </section>
         </div>
 
+        <SearchLyricsResults v-if="lyricLike && scope === 'catalog'" :text="q" />
         <SearchSoundResults v-if="descriptive" :text="q" compact :all-link="soundLink" />
 
         <MusicShelf v-if="results.artists.length" :title="t('artists')" :cols="6" phone-width="104px" :to="results.artists.length > 6 ? filterLink('artists') : undefined">

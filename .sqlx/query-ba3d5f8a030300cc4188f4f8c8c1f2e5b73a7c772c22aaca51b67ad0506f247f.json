@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT candidates, chosen FROM acquisitions\n         WHERE recording_id = $1 AND status = 'ready'\n         ORDER BY finished_at DESC NULLS LAST, id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "candidates",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "acquisitions",
+            "name": "candidates"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "chosen",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "acquisitions",
+            "name": "chosen"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "ba3d5f8a030300cc4188f4f8c8c1f2e5b73a7c772c22aaca51b67ad0506f247f"
+}

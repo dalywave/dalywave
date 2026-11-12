@@ -2,10 +2,17 @@
 //! повторное открытие вывода.
 //!
 //! Аудиоколбэк он не трогает: общается с микшером через кольца команд и событий.
+//!
+//! Буферизованный вывод (AirPlay 2) отдаёт звук наперёд, на секунды: что отдал микшер, слышно
+//! позже. Поэтому контроллер раз в тик помечает, что звучит на каком кадре часов микшера
+//! ([`HeardAt`]), и сообщает позицию по слышимому кадру вывода; события о том, что слышно (смена
+//! трека сама собой, уровень, конец очереди), ждут своего кадра. Команды человека (перемотка,
+//! другой трек) сбрасывают поставленное наперёд и относятся к слышимому треку.
 //! Тяжёлое (ссылка у сервера, открытие источника, разбор контейнера, перемотка) идёт в отдельных
 //! потоках подготовки, чтобы команды обрабатывались сразу.
 
-use std::collections::{HashMap, HashSet};
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -15,9 +22,11 @@ use dalywave_transitions::{Analysis, Plan, PlanInput, TempoMap};
 
 use crate::deck::{self, DeckCmd, DeckHandle, PreparedTrack};
 use crate::decode::TrackDecoder;
+use crate::devices::OutputKind;
 use crate::eq::EqTarget;
 use crate::mixer::{MAX_DECKS, Mixer, MixerCmd, MixerEvent, MixerPorts, SleepCmd, StartRule};
 use crate::output::{self, LoadStats, Output, OutputIssue};
+use crate::route;
 use crate::source::SourceCache;
 use crate::{
     AudioError, ChangeReason, Command, DjSolo, EngineConfig, EqSettings, Event, OutputConfig,
@@ -53,6 +62,23 @@ fn item_id(id: &str) -> &str {
 fn same_item(a: &str, b: &str) -> bool {
     item_id(a) == item_id(b)
 }
+
+/// Что звучало на кадре часов микшера: по этим отметкам буферизованный вывод сообщает, что
+/// слышно сейчас.
+#[derive(Clone, Debug)]
+struct HeardAt {
+    clock: u64,
+    index: usize,
+    /// id элемента очереди как есть (с хвостом копии повтора)
+    id: String,
+    position_ms: u64,
+    duration_ms: Option<u64>,
+    /// Позиция шла: играло, не перемотка
+    moving: bool,
+}
+
+/// Отметок не больше этого (тик — 20 мс: минуты отставания с запасом).
+const HEARD_MAX: usize = 20_000;
 
 /// Идущий таймер сна.
 struct SleepRun {
@@ -225,6 +251,13 @@ struct Controller {
     /// Повтор одного трека: следом за текущим стоит его копия
     repeat_one: bool,
     repeat_seq: u64,
+    /// Открывать буферизованный вывод (AirPlay на маршруте)
+    buffered_want: bool,
+    /// Буферизованный вывод отказал: до ухода с AirPlay — обычный
+    buffered_failed: bool,
+    heard: VecDeque<HeardAt>,
+    /// События о слышимом ждут своего кадра часов микшера
+    deferred: RefCell<VecDeque<(u64, Event)>>,
 }
 
 pub(crate) fn run(
@@ -249,6 +282,59 @@ pub(crate) fn run(
     ctl.run(rx);
 }
 
+/// Маршрут звука сейчас: подставной (проверки) или системный; у захвата без подставного — пусто.
+fn route_kinds(cfg: &EngineConfig, device: Option<&str>) -> Vec<OutputKind> {
+    if let Some(p) = &cfg.route {
+        return p.kinds();
+    }
+    if matches!(cfg.output, OutputConfig::Capture { .. }) {
+        return Vec::new();
+    }
+    platform_route(device)
+}
+
+/// iOS: выходы маршрута аудиосессии (несколько HomePod — несколько выходов AirPlay).
+#[cfg(target_os = "ios")]
+fn platform_route(_device: Option<&str>) -> Vec<OutputKind> {
+    crate::apple::current_route()
+        .into_iter()
+        .map(|p| p.kind)
+        .collect()
+}
+
+/// macOS: тип выбранного устройства или устройства по умолчанию (колонка AirPlay — `AirPlay`).
+#[cfg(target_os = "macos")]
+fn platform_route(device: Option<&str>) -> Vec<OutputKind> {
+    let Ok(list) = crate::devices::output_devices() else {
+        return Vec::new();
+    };
+    list.iter()
+        .find(|d| device.is_some_and(|id| d.id == id))
+        .or_else(|| list.iter().find(|d| d.is_default))
+        .map(|d| vec![d.kind])
+        .unwrap_or_default()
+}
+
+#[cfg(not(any(target_os = "ios", target_os = "macos")))]
+fn platform_route(_device: Option<&str>) -> Vec<OutputKind> {
+    Vec::new()
+}
+
+/// Сообщения вывода живут в чужом потоке: помечаем их номером потока.
+fn forward_issues(rx: Receiver<OutputIssue>, issues: &Sender<Issue>, generation: u32) {
+    let issues = issues.clone();
+    let _ = std::thread::Builder::new()
+        .name("dw-audio-issues".into())
+        .spawn(move || {
+            for issue in rx.iter() {
+                if issues.send((generation, issue)).is_err() {
+                    return;
+                }
+            }
+        });
+}
+
+#[allow(clippy::too_many_arguments)]
 fn open_output(
     cfg: &EngineConfig,
     device: Option<&str>,
@@ -257,27 +343,40 @@ fn open_output(
     capture: &Arc<Mutex<Vec<f32>>>,
     issues: &Sender<Issue>,
     generation: u32,
+    buffered: bool,
 ) -> Result<OutputParts, AudioError> {
     let load = Arc::new(LoadStats::default());
     match cfg.output {
         OutputConfig::Device { buffer_frames, .. } => {
+            #[cfg(target_vendor = "apple")]
+            if buffered {
+                // Громкость — у рендерера: в микшере её было бы слышно через секунды очереди
+                let rate = crate::renderer::RATE;
+                let (mixer, ports) = Mixer::new(rate, cfg.start_threshold_ms, 1.0);
+                let (tx, rx) = crossbeam_channel::unbounded::<OutputIssue>();
+                let uid = device
+                    .and_then(|id| id.strip_prefix("coreaudio:"))
+                    .map(str::to_string);
+                let output = Output::open_buffered(mixer, rate, volume, uid, load.clone(), tx)?;
+                forward_issues(rx, issues, generation);
+                return Ok(OutputParts {
+                    output,
+                    rate,
+                    channels: 2,
+                    ports,
+                    load,
+                    device: device.map(str::to_string),
+                });
+            }
+            #[cfg(not(target_vendor = "apple"))]
+            let _ = buffered;
             let (device, supported, device_id) = output::query_device(device)?;
             let rate = supported.sample_rate();
             let (mixer, ports) = Mixer::new(rate, cfg.start_threshold_ms, volume);
             let (tx, rx) = crossbeam_channel::unbounded::<OutputIssue>();
             let (output, info) =
                 Output::open_device(device, supported, buffer_frames, mixer, load.clone(), tx)?;
-            // Колбэк ошибок cpal живёт в чужом потоке: помечаем его сообщения номером потока
-            let issues = issues.clone();
-            let _ = std::thread::Builder::new()
-                .name("dw-audio-issues".into())
-                .spawn(move || {
-                    for issue in rx.iter() {
-                        if issues.send((generation, issue)).is_err() {
-                            return;
-                        }
-                    }
-                });
+            forward_issues(rx, issues, generation);
             Ok(OutputParts {
                 output,
                 rate: info.sample_rate,
@@ -290,8 +389,19 @@ fn open_output(
         OutputConfig::Capture { sample_rate } => {
             let rate = capture_rate.unwrap_or(sample_rate);
             let (mixer, ports) = Mixer::new(rate, cfg.start_threshold_ms, volume);
+            let latency = if buffered {
+                u64::from(cfg.capture_latency_ms) * u64::from(rate) / 1000
+            } else {
+                0
+            };
             Ok(OutputParts {
-                output: Output::open_capture(mixer, capture.clone()),
+                output: Output::open_capture(
+                    mixer,
+                    capture.clone(),
+                    latency,
+                    rate,
+                    cfg.capture_speed,
+                ),
                 rate,
                 channels: 2,
                 ports,
@@ -314,7 +424,9 @@ impl Controller {
             OutputConfig::Device { device, .. } => device.clone(),
             OutputConfig::Capture { .. } => None,
         };
-        let parts = open_output(
+        let kinds = route_kinds(&cfg, device_pref.as_deref());
+        let buffered_want = route::wants_buffered(cfg.buffered, &kinds).unwrap_or(false);
+        let parts = match open_output(
             &cfg,
             device_pref.as_deref(),
             None,
@@ -322,12 +434,36 @@ impl Controller {
             &capture,
             &issues_tx,
             0,
-        )?;
+            buffered_want,
+        ) {
+            Ok(p) => p,
+            // Буферизованный не открылся — обычный, звук важнее
+            Err(e) if buffered_want => {
+                log::warn!("buffered output failed to open: {e}; using realtime");
+                open_output(
+                    &cfg,
+                    device_pref.as_deref(),
+                    None,
+                    cfg.volume,
+                    &capture,
+                    &issues_tx,
+                    0,
+                    false,
+                )?
+            }
+            Err(e) => return Err(e),
+        };
         log::info!(
-            "output: {} Hz, {} ch, {}",
+            "output: {} Hz, {} ch, {}, {} (route {})",
             parts.rate,
             parts.channels,
-            parts.device.as_deref().unwrap_or("system default")
+            parts.device.as_deref().unwrap_or("system default"),
+            if parts.output.is_buffered() {
+                "buffered"
+            } else {
+                "realtime"
+            },
+            route::describe(&kinds)
         );
         let (prep_tx, prep_rx) = crossbeam_channel::unbounded();
         let (analysis_tx, analysis_rx) = crossbeam_channel::unbounded();
@@ -398,6 +534,10 @@ impl Controller {
             dj_plan: None,
             repeat_one: false,
             repeat_seq: 0,
+            buffered_want,
+            buffered_failed: false,
+            heard: VecDeque::new(),
+            deferred: RefCell::new(VecDeque::new()),
         })
     }
 
@@ -414,7 +554,170 @@ impl Controller {
             }
             _ => {}
         }
+        if self.output.is_buffered() && Self::heard_later(&e) {
+            let clock = self.clock();
+            let pending = !self.deferred.borrow().is_empty();
+            if pending || self.output.audible(clock) < clock {
+                self.deferred.borrow_mut().push_back((clock, e));
+                return;
+            }
+        }
         let _ = self.ev.send(e);
+    }
+
+    /// Событие о том, что слышно: у буферизованного вывода ждёт, пока это зазвучит.
+    fn heard_later(e: &Event) -> bool {
+        matches!(
+            e,
+            Event::TrackChanged {
+                reason: ChangeReason::Auto,
+                ..
+            } | Event::TrackInfo { .. }
+                | Event::Level(_)
+                | Event::QueueEnded
+                | Event::State(PlaybackState::Ended)
+        )
+    }
+
+    fn clock(&self) -> u64 {
+        self.ports.shared.clock.load(Ordering::Relaxed)
+    }
+
+    /// Отложенные события, кадр которых уже слышен.
+    fn release_heard(&self) {
+        if self.deferred.borrow().is_empty() {
+            return;
+        }
+        let ready: Vec<Event> = {
+            let mut d = self.deferred.borrow_mut();
+            let n = if self.output.is_buffered() {
+                let audible = self.output.audible(self.clock());
+                d.iter().take_while(|(c, _)| *c <= audible).count()
+            } else {
+                d.len()
+            };
+            d.drain(..n).map(|(_, e)| e).collect()
+        };
+        for e in ready {
+            let _ = self.ev.send(e);
+        }
+    }
+
+    /// Отметка «что звучит на этом кадре часов микшера» (только буферизованный вывод).
+    fn record_heard(&mut self) {
+        if !self.output.is_buffered() {
+            self.heard.clear();
+            return;
+        }
+        let clock = self.clock();
+        let (Some(index), Some(id)) = (self.index, self.index.and_then(|i| self.id_at(i))) else {
+            return;
+        };
+        let at = HeardAt {
+            clock,
+            index,
+            id,
+            position_ms: self.position_ms(),
+            duration_ms: self.duration_ms(),
+            moving: self.state == PlaybackState::Playing && self.seek_target_ms.is_none(),
+        };
+        match self.heard.back_mut() {
+            Some(last) if last.clock == clock => *last = at,
+            _ => self.heard.push_back(at),
+        }
+        let audible = self.output.audible(clock);
+        while self.heard.len() > 1 && self.heard[1].clock <= audible {
+            self.heard.pop_front();
+        }
+        while self.heard.len() > HEARD_MAX {
+            self.heard.pop_front();
+        }
+    }
+
+    /// Что слышно сейчас, если вывод отстаёт от микшера; None — слышно то же, что играет микшер.
+    fn heard_now(&self) -> Option<HeardAt> {
+        if self.seek_target_ms.is_some() || self.heard.is_empty() || !self.output.is_buffered() {
+            return None;
+        }
+        let clock = self.clock();
+        let audible = self.output.audible(clock);
+        if audible >= clock {
+            return None;
+        }
+        let at = self
+            .heard
+            .iter()
+            .rev()
+            .find(|h| h.clock <= audible)
+            .or_else(|| self.heard.front())?;
+        let mut h = at.clone();
+        if h.moving && audible > h.clock {
+            h.position_ms += (audible - h.clock) * 1000 / u64::from(self.device_rate.max(1));
+            if let Some(d) = h.duration_ms {
+                h.position_ms = h.position_ms.min(d);
+            }
+        }
+        Some(h)
+    }
+
+    /// Номер, id, позиция и длина того, что слышно (для событий и снимка).
+    fn reported(&self) -> (Option<usize>, Option<String>, u64, Option<u64>) {
+        match self.heard_now() {
+            Some(h) => (Some(h.index), Some(h.id), h.position_ms, h.duration_ms),
+            None => (
+                self.index,
+                self.index.and_then(|i| self.id_at(i)),
+                self.position_ms(),
+                self.duration_ms(),
+            ),
+        }
+    }
+
+    /// Команда человека относится к тому, что он слышит: буферизованный вывод мог уже перейти к
+    /// следующему треку, который ещё не звучит (о нём и не сообщали) — такой переход отменяется.
+    fn sync_heard(&mut self) {
+        if let Some(h) = self.heard_now()
+            && self.index != Some(h.index)
+            && self.queue.get(h.index).is_some_and(|t| t.id == h.id)
+        {
+            log::info!(
+                "command for the heard track #{} (engine is already at #{:?})",
+                h.index,
+                self.index
+            );
+            self.index = Some(h.index);
+        }
+    }
+
+    /// Сбросить поставленное наперёд: следующее, что прозвучит, — новое.
+    fn flush_output(&mut self) {
+        self.output.flush();
+        self.heard.clear();
+        self.deferred.borrow_mut().clear();
+    }
+
+    /// Маршрут звука сменился: нужен ли теперь буферизованный вывод (AirPlay) или обычный.
+    fn route_changed(&mut self) {
+        let kinds = route_kinds(&self.cfg, self.device_pref.as_deref());
+        let wants = route::wants_buffered(self.cfg.buffered, &kinds);
+        if wants == Some(false) {
+            self.buffered_failed = false;
+        }
+        let Some(want) = route::switch_to(self.cfg.buffered, self.output.is_buffered(), &kinds)
+        else {
+            log::debug!("route {}: output stays", route::describe(&kinds));
+            return;
+        };
+        if want && self.buffered_failed {
+            return;
+        }
+        self.buffered_want = want;
+        let reason = format!(
+            "route {}: {} output",
+            route::describe(&kinds),
+            if want { "buffered" } else { "realtime" }
+        );
+        self.reopen_output(None, &reason);
     }
 
     fn set_state(&mut self, s: PlaybackState) {
@@ -487,6 +790,8 @@ impl Controller {
         self.maybe_plan();
         self.maybe_preload();
         self.sleep_tick();
+        self.record_heard();
+        self.release_heard();
         self.emit_position(false);
         self.emit_level();
         let has_next = self.index.and_then(|i| self.next_index(i)).is_some();
@@ -517,8 +822,10 @@ impl Controller {
 
     /// Сторож вывода: должно звучать, а устройство не берёт ни кадра.
     fn watch_output(&mut self) {
+        // Буферизованный вывод берёт звук рывками и ждёт данных сам — сторож только у cpal
         let active = self.want_play
             && matches!(self.cfg.output, OutputConfig::Device { .. })
+            && !self.output.is_buffered()
             && self.output.is_running()
             && matches!(self.state, PlaybackState::Loading | PlaybackState::Playing);
         let clock = self.ports.shared.clock.load(Ordering::Relaxed);
@@ -587,10 +894,12 @@ impl Controller {
             }
             Command::Seek(ms) => {
                 self.sleep_rearm();
+                self.sync_heard();
                 self.seek(ms)
             }
             Command::Next => {
                 self.sleep_rearm();
+                self.sync_heard();
                 if let Some(i) = self.index
                     && let Some(j) = self.user_next_index(i)
                 {
@@ -599,17 +908,21 @@ impl Controller {
             }
             Command::Previous => {
                 self.sleep_rearm();
+                self.sync_heard();
                 if let Some(i) = self.index {
+                    let heard_ms = self.reported().2;
                     match self.user_previous_index(i) {
-                        Some(j) if self.position_ms() <= 3000 => self.go_to(j, ChangeReason::User),
+                        Some(j) if heard_ms <= 3000 => self.go_to(j, ChangeReason::User),
                         _ => self.seek(0),
                     }
                 }
             }
             Command::SetVolume(v) => {
                 self.volume = v;
-                let ramp = (self.device_rate / 50).max(1);
-                self.mixer(MixerCmd::Volume { gain: v, ramp });
+                if !self.output.set_volume(v) {
+                    let ramp = (self.device_rate / 50).max(1);
+                    self.mixer(MixerCmd::Volume { gain: v, ramp });
+                }
             }
             Command::SetTransition(t) => {
                 if t != self.transition {
@@ -638,10 +951,12 @@ impl Controller {
                 self.repeat_one = on;
                 self.ensure_repeat();
             }
+            Command::RouteChanged => self.route_changed(),
             Command::Stop => {
                 self.reset_all();
                 self.want_play = false;
                 self.pause_mixer();
+                self.flush_output();
                 self.set_state(PlaybackState::Idle);
             }
             Command::Shutdown => self.shutdown = true,
@@ -680,11 +995,28 @@ impl Controller {
             // Без автозапуска новая дека не должна зазвучать сама
             self.pause_mixer();
         }
+        self.flush_output();
         self.emit_position(true);
     }
 
     /// Всё после текущего трека — новое. Подготовленный следующий остаётся, если он тот же.
-    fn set_upcoming(&mut self, tracks: Vec<TrackSpec>) {
+    fn set_upcoming(&mut self, mut tracks: Vec<TrackSpec>) {
+        // Буферизованный вывод уже начал следующие треки, а слышно ещё прежний: интерфейс шлёт «что
+        // после слышимого» — уже начатое движком из начала списка не повторяем
+        if let (Some(i), Some(h)) = (self.index, self.heard_now())
+            && h.index < i
+        {
+            let started: Vec<&str> = ((h.index + 1)..=i)
+                .filter_map(|j| self.queue.get(j))
+                .map(|t| item_id(&t.id))
+                .collect();
+            let skip = tracks
+                .iter()
+                .zip(&started)
+                .take_while(|(t, s)| item_id(&t.id) == **s)
+                .count();
+            tracks.drain(..skip);
+        }
         let Some(i) = self.index else {
             self.queue = tracks;
             self.failed.clear();
@@ -738,6 +1070,10 @@ impl Controller {
             }
             return;
         }
+        if self.state == PlaybackState::Ended {
+            // Хвост прошлой очереди (и отложенный конец) больше не нужен
+            self.flush_output();
+        }
         if self.state == PlaybackState::Ended
             || self.main_slot().is_none() && self.pending_slot().is_none() && !self.has_main_prep()
         {
@@ -776,6 +1112,10 @@ impl Controller {
         let fade = self.declick() * 2;
         self.mixer(MixerCmd::Pause { fade });
         self.paused_since = Some(Instant::now());
+        // Буферизованный: время синхронизатора стоит сразу, поставленное доиграет после паузы
+        if self.output.is_buffered() {
+            self.output.stop();
+        }
     }
 
     fn pause(&mut self) {
@@ -815,6 +1155,7 @@ impl Controller {
         }
         self.seek_target_ms = Some(ms);
         self.start_prep(i, ms, Purpose::Main);
+        self.flush_output();
         self.emit_position(true);
     }
 
@@ -826,6 +1167,9 @@ impl Controller {
             // Следующий уже в буфере (ждал кроссфейда) — стартуем сразу.
             self.mixer(MixerCmd::StartNow { slot, fade_in: 0 });
             self.index = Some(i);
+            if reason == ChangeReason::User {
+                self.flush_output();
+            }
             self.emit(Event::TrackChanged {
                 index: i,
                 track: self.queue[i].clone(),
@@ -848,6 +1192,10 @@ impl Controller {
             self.set_state(PlaybackState::Loading);
         }
         self.start_prep(i, 0, Purpose::Main);
+        // По команде — сразу новое; сам (прошлый трек кончился) — после того, что ещё звучит
+        if reason == ChangeReason::User {
+            self.flush_output();
+        }
     }
 
     fn next_index(&self, i: usize) -> Option<usize> {
@@ -930,6 +1278,7 @@ impl Controller {
 
     fn poll_output_issues(&mut self) {
         let mut reopen: Option<String> = None;
+        let mut rerouted = false;
         while let Ok((generation, issue)) = self.issues_rx.try_recv() {
             if generation != self.output_gen {
                 continue;
@@ -943,6 +1292,14 @@ impl Controller {
                         channels: self.device_channels,
                         reason: format!("rerouted: {msg}"),
                     });
+                    rerouted = true;
+                }
+                OutputIssue::BufferedFailed(msg) => {
+                    // AirPlay через рендерер не идёт — обычный вывод, пока не уйдём с AirPlay
+                    log::warn!("buffered output failed: {msg}; switching to realtime");
+                    self.buffered_failed = true;
+                    self.buffered_want = false;
+                    reopen = Some(format!("buffered output failed: {msg}"));
                 }
                 OutputIssue::Lost(msg) => {
                     // Звук не должен внезапно пойти из другого устройства: пауза, как при
@@ -968,6 +1325,9 @@ impl Controller {
         }
         if let Some(reason) = reopen {
             self.reopen_output(None, &reason);
+        } else if rerouted {
+            // Устройство по умолчанию сменилось само (macOS: выбрали колонку AirPlay в строке меню)
+            self.route_changed();
         }
     }
 
@@ -984,6 +1344,9 @@ impl Controller {
             Some(id) => format!("output device selected: {id}"),
             None => "output follows the system default".to_string(),
         };
+        let kinds = route_kinds(&self.cfg, self.device_pref.as_deref());
+        self.buffered_want = !self.buffered_failed
+            && route::wants_buffered(self.cfg.buffered, &kinds).unwrap_or(false);
         self.reopen_output(None, &reason);
     }
 
@@ -991,8 +1354,17 @@ impl Controller {
     /// с той же позиции на новой частоте: старые деки писали в кольца со старой частотой,
     /// поэтому текущий трек готовится заново — как перемотка.
     fn reopen_output(&mut self, capture_rate: Option<u32>, reason: &str) {
+        // Буферизованный вывод отдал звук наперёд: продолжаем с того, что слышно
+        let position = match self.heard_now() {
+            Some(h) if self.queue.get(h.index).is_some_and(|t| t.id == h.id) => {
+                self.index = Some(h.index);
+                h.position_ms
+            }
+            _ => self.position_ms(),
+        };
         self.output.halt();
-        let position = self.position_ms();
+        self.heard.clear();
+        self.deferred.borrow_mut().clear();
         for slot in 0..MAX_DECKS {
             if let Some(mut d) = self.decks[slot].take() {
                 d.handle.stop();
@@ -1004,7 +1376,7 @@ impl Controller {
         self.level_seq = 0;
         let capture_rate = capture_rate.or(self.capture_rate);
         let generation = self.output_gen.wrapping_add(1);
-        match open_output(
+        let mut opened = open_output(
             &self.cfg,
             self.device_pref.as_deref(),
             capture_rate,
@@ -1012,7 +1384,27 @@ impl Controller {
             &self.capture,
             &self.issues_tx,
             generation,
-        ) {
+            self.buffered_want,
+        );
+        if self.buffered_want
+            && let Err(e) = &opened
+        {
+            // Буферизованный не открылся — обычный, звук важнее
+            log::warn!("buffered output failed to open: {e}; using realtime");
+            self.buffered_failed = true;
+            self.buffered_want = false;
+            opened = open_output(
+                &self.cfg,
+                self.device_pref.as_deref(),
+                capture_rate,
+                self.volume,
+                &self.capture,
+                &self.issues_tx,
+                generation,
+                false,
+            );
+        }
+        match opened {
             Ok(parts) => {
                 self.output_gen = generation;
                 // Старый поток закрывается здесь: вместе с ним уходят микшер и кольца старых дек
@@ -1040,10 +1432,15 @@ impl Controller {
                     run.fade_sent = false;
                 }
                 log::info!(
-                    "output reopened ({reason}): {} Hz, {} ch, {}, position {position} ms",
+                    "output reopened ({reason}): {} Hz, {} ch, {}, {}, position {position} ms",
                     self.device_rate,
                     self.device_channels,
-                    self.output_device.as_deref().unwrap_or("system default")
+                    self.output_device.as_deref().unwrap_or("system default"),
+                    if self.output.is_buffered() {
+                        "buffered"
+                    } else {
+                        "realtime"
+                    }
                 );
                 self.emit(Event::Output {
                     sample_rate: self.device_rate,
@@ -1836,14 +2233,15 @@ impl Controller {
         if !force && (!playing || self.last_pos_emit.elapsed() < POSITION_EVERY) {
             return;
         }
-        let Some(index) = self.index else { return };
-        let Some(id) = self.id_at(index) else { return };
+        let (Some(index), Some(id), position_ms, duration_ms) = self.reported() else {
+            return;
+        };
         self.last_pos_emit = Instant::now();
         self.emit(Event::Position {
             index,
             id,
-            position_ms: self.position_ms(),
-            duration_ms: self.duration_ms(),
+            position_ms,
+            duration_ms,
         });
     }
 
@@ -2027,15 +2425,18 @@ impl Controller {
 
     fn update_snapshot(&self) {
         let (avg, max) = self.load.get();
+        let (index, id, position_ms, duration_ms) = self.reported();
+        let clock = self.clock();
+        let ahead = clock - self.output.audible(clock);
         let snap = Snapshot {
             state: self.state,
-            index: self.index,
-            id: self
-                .index
-                .and_then(|i| self.id_at(i))
-                .map(|id| item_id(&id).to_string()),
-            position_ms: self.position_ms(),
-            duration_ms: self.duration_ms(),
+            index,
+            stream_id: index
+                .and_then(|i| self.queue.get(i))
+                .and_then(|t| t.stream_id.clone()),
+            id: id.map(|id| item_id(&id).to_string()),
+            position_ms,
+            duration_ms,
             volume: self.volume,
             transition: self.transition,
             queue_len: self.queue.len(),
@@ -2057,6 +2458,8 @@ impl Controller {
                 .index
                 .and_then(|i| self.user_previous_index(i))
                 .is_some(),
+            output_buffered: self.output.is_buffered(),
+            output_ahead_ms: (ahead * 1000 / u64::from(self.device_rate.max(1))) as u32,
         };
         if let Ok(mut s) = self.snap.lock() {
             *s = snap;

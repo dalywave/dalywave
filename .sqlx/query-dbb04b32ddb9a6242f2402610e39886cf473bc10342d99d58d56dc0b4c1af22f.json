@@ -1,0 +1,105 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH p AS (\n               SELECT p.track_id, p.played_ms, p.wave_session_id, p.context_type,\n                      (p.played_ms >= $4 OR p.end_reason = 'completed') AS listened,\n                      extract(hour FROM p.started_at + make_interval(mins => $5))::int AS hour\n               FROM play_events p\n               WHERE p.user_id = $1 AND p.started_at >= $2 AND p.started_at < $3\n           )\n           SELECT p.track_id AS \"track_id!\",\n                  count(*) FILTER (WHERE p.listened) AS \"plays!\",\n                  COALESCE(sum(p.played_ms), 0)::bigint AS \"ms!\",\n                  count(*) FILTER (WHERE p.listened AND (p.hour >= 23 OR p.hour < 5)) AS \"night!\",\n                  count(*) FILTER (WHERE p.listened AND p.hour BETWEEN 5 AND 11) AS \"morning!\",\n                  count(*) FILTER (WHERE p.listened AND (p.wave_session_id IS NOT NULL\n                                                         OR p.context_type IN ('wave', 'radio'))) AS \"wave!\",\n                  t.album_id,\n                  (SELECT ta.artist_id FROM track_artists ta\n                   WHERE ta.track_id = p.track_id AND ta.role = 'main' ORDER BY ta.position LIMIT 1) AS \"artist_id?\",\n                  NOT EXISTS (SELECT 1 FROM play_events e\n                              WHERE e.user_id = $1 AND e.track_id = p.track_id AND e.started_at < $2) AS \"new!\",\n                  r.audio_status AS \"audio_status?\"\n           FROM p JOIN tracks t ON t.id = p.track_id\n           LEFT JOIN recordings r ON r.id = t.recording_id\n           GROUP BY p.track_id, t.album_id, r.audio_status\n           HAVING count(*) FILTER (WHERE p.listened) > 0\n           ORDER BY 2 DESC, 3 DESC, 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "plays!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "ms!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "night!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "morning!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "wave!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "album_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "artist_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "new!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "audio_status?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      true,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "dbb04b32ddb9a6242f2402610e39886cf473bc10342d99d58d56dc0b4c1af22f"
+}

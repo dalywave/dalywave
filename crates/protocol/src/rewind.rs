@@ -80,6 +80,10 @@ pub struct RewindPersonality {
     pub wave_share: f32,
     /// Время суток с наибольшей долей: `morning`, `day`, `evening`, `night`.
     pub peak_part: String,
+    /// Доля времени по часам суток (24 значения, 0 — с полуночи до часа), по времени слушателя.
+    pub hours: Vec<f32>,
+    /// Час, когда слушали больше всего, 0..23.
+    pub peak_hour: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -196,8 +200,125 @@ pub struct RewindYear {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RewindYears {
+    /// Год итогов: открытый событием, а у администратора при закрытом — текущий.
     pub current: i32,
     /// Сезон итогов текущего года (с 1 декабря).
     pub season: bool,
     pub years: Vec<RewindYear>,
+    /// Итоги открыты: карточки и истории видны. Закрытые видит только администратор (предпросмотр).
+    pub open: bool,
+    /// Стиль историй этого слушателя.
+    pub style: RewindStyle,
+    /// Итоги года `current` уже посмотрены: карточка «Твои итоги готовы» больше не нужна.
+    pub seen: bool,
+    /// Когда итоги откроются сами (режим «Автоматически», пока закрыто) — для напоминания в приложении.
+    #[schema(required = true)]
+    pub opens_at: Option<DateTime<Utc>>,
+}
+
+/// Стиль историй: `wave` — «Волна года», `spread` — «Разворот», `record` — «Пластинка».
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RewindStyle {
+    Wave,
+    Spread,
+    Record,
+}
+
+/// Стиль в настройках сервера: один для всех или `random` — случайный для каждого слушателя.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RewindStyleSetting {
+    Wave,
+    Spread,
+    Record,
+    Random,
+}
+
+/// Когда итоги открыты: `auto` — с 1 декабря по 15 января (в декабре — за этот год, в январе — за
+/// прошлый), `open` — открыты сейчас за выбранный год, `closed` — закрыты.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RewindMode {
+    Auto,
+    Open,
+    Closed,
+}
+
+/// `GET /api/admin/rewind`: «Итоги года» как событие сервера.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RewindEvent {
+    pub style: RewindStyleSetting,
+    pub mode: RewindMode,
+    /// Год для режима «Открыто сейчас».
+    #[schema(required = true)]
+    pub year: Option<i32>,
+    /// Какой год открыт прямо сейчас; `null` — закрыто.
+    #[schema(required = true)]
+    pub open_year: Option<i32>,
+    /// Ближайшее автоматическое открытие (режим «Автоматически», пока закрыто).
+    #[schema(required = true)]
+    pub opens_at: Option<DateTime<Utc>>,
+    /// Когда закроется само (режим «Автоматически», пока открыто).
+    #[schema(required = true)]
+    pub closes_at: Option<DateTime<Utc>>,
+    /// Годы с прослушиваниями на сервере — для выбора года (новые первыми).
+    pub years: Vec<i32>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// `PATCH /api/admin/rewind`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RewindEventPatch {
+    #[serde(default)]
+    pub style: Option<RewindStyleSetting>,
+    #[serde(default)]
+    pub mode: Option<RewindMode>,
+    /// Год для «Открыто сейчас»; без него — текущий.
+    #[serde(default)]
+    pub year: Option<i32>,
+}
+
+/// Звук слайда историй: что играет и с какого места.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RewindCue {
+    /// Слайд: `intro`, `minutes`, `days`, `first`, `tracks`, `toy`, `artists`, `albums`, `sound`,
+    /// `discoveries`, `personality`, `summary`. Слайда нет в списке — играет прежний трек.
+    pub slide: String,
+    pub track: Track,
+    /// С какого места играть: припев или самая энергичная часть.
+    pub start_ms: i64,
+    /// Откуда место: `analysis` — по кривой энергии полного анализа, `estimate` — 30 % трека.
+    pub start_from: String,
+}
+
+/// `GET /api/rewind/{year}/soundtrack`: музыка историй. Треки, которых ещё нет на сервере, ставятся
+/// на скачивание вне очереди — к своему слайду они успевают.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RewindSoundtrack {
+    pub year: i32,
+    /// По порядку слайдов.
+    pub cues: Vec<RewindCue>,
+}
+
+/// `GET /api/rewind/{year}/more`: «Ещё послушать» — новое для слушателя, похожее на любимое за год.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RewindMore {
+    pub items: Vec<Track>,
+    /// Плейлист «Ещё послушать {год}», если уже сохранён.
+    #[schema(required = true)]
+    pub playlist_id: Option<uuid::Uuid>,
+}
+
+/// `POST /api/rewind/{year}/more`: сохранить показанное плейлистом.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SaveRewindMore {
+    /// Треки по порядку, до 100.
+    pub track_ids: Vec<uuid::Uuid>,
 }

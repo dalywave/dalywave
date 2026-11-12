@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jam_sessions SET guests_can_add = coalesce($2, guests_can_add),\n             approval = coalesce($3, approval), guests_can_listen = coalesce($4, guests_can_listen),\n             last_activity_at = now()\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b9b7922805b7f94180caa0dde572690cbf0adf21e6da61e1774e3a7e3326257b"
+}

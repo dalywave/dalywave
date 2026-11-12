@@ -42,6 +42,8 @@ pub mod kind {
     pub const IMPORT_FILE: &str = "import_file";
     /// Взять текст трека у LRCLIB заранее, пока трек ещё в очереди (полоса «Тексты»).
     pub const LYRICS: &str = "lyrics";
+    /// Облегчённая копия файла для сотовой сети: Opus 64 кбит/с (полоса «Сжатие для сотовой»).
+    pub const TRANSCODE: &str = "transcode";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -273,6 +275,13 @@ pub struct LyricsPayload {
     pub track_id: Uuid,
 }
 
+/// Сделать облегчённую копию файла записи.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TranscodePayload {
+    pub file_id: Uuid,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyzeFullPayload {
@@ -388,6 +397,10 @@ pub struct AcquirePayload {
     /// Ссылка, вставленная в «Спорных» (SoundCloud, Bandcamp, …): качается она, без поиска.
     #[serde(default)]
     pub direct_url: Option<String>,
+    /// Слушатель отметил основной файл как «Неверная запись»: новый файл заменяет его, даже если
+    /// прежний «лучше» по качеству.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub replace: bool,
 }
 
 impl AcquirePayload {
@@ -628,6 +641,7 @@ mod tests {
             prefer_video_ids: vec![],
             exclude_video_ids: vec![],
             direct_url: None,
+            replace: false,
         };
         let json = serde_json::to_value(&p).unwrap();
         assert_eq!(json["deezerTrackId"], 3040222091i64);

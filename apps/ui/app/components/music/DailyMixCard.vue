@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { PlaylistSummary } from '~/api/types'
 
-// «Микс дня»: настоящие обложки грани вкуса под цветной вуалью, крупный номер микса и артисты под ним
+// «Микс дня»: настоящие обложки грани вкуса под цветной вуалью, крупный номер микса и артисты под ним.
+// «На повторе» и «Старые хиты на повторе» — та же карточка, вместо номера — своё название на полосе
 const props = defineProps<{
   playlist: PlaylistSummary
   /** Номер микса с 1 — от него цвет вуали */
@@ -15,6 +16,7 @@ const { playPlaylist, isPlayingContext, loading } = usePlayActions()
 const tint = computed(() => TINTS[(props.index - 1) % TINTS.length]!)
 const covers = computed(() => props.playlist.covers ?? [])
 const sub = computed(() => props.playlist.description || props.playlist.title)
+const special = computed(() => (props.playlist.generator === 'on_repeat' || props.playlist.generator === 'repeat_rewind' ? props.playlist.generator : null))
 </script>
 
 <template>
@@ -25,8 +27,8 @@ const sub = computed(() => props.playlist.description || props.playlist.title)
       <MusicCoverArt v-else :image="covers[0] ?? null" size="medium" />
       <span class="mix__veil" aria-hidden="true" />
       <span class="mix__label" aria-hidden="true">
-        <span class="mix__num tnum">{{ index }}</span>
-        <span class="mix__kicker">{{ tl('kicker') }}</span>
+        <span v-if="!special" class="mix__num tnum">{{ index }}</span>
+        <span class="mix__kicker">{{ special ? tl(`kind.${special}`) : tl('kicker') }}</span>
       </span>
       <MusicPlayButton class="card__play" :playing="isPlayingContext('playlist', playlist.id)" :loading="loading === `playlist:${playlist.id}`" :size="44" :label="`${t('common.play')}: ${playlist.title}`" @click="playPlaylist(playlist.id)" />
     </div>
@@ -56,7 +58,7 @@ const sub = computed(() => props.playlist.description || props.playlist.title)
 
 <i18n lang="json">
 {
-  "ru": { "kicker": "Микс дня" },
-  "en": { "kicker": "Daily mix" }
+  "ru": { "kicker": "Микс дня", "kind": { "on_repeat": "На повторе", "repeat_rewind": "Старые хиты" } },
+  "en": { "kicker": "Daily mix", "kind": { "on_repeat": "On repeat", "repeat_rewind": "Repeat rewind" } }
 }
 </i18n>

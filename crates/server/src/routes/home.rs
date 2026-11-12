@@ -230,9 +230,12 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
     )
     .fetch_all(&st.db)
     .await?;
+    // Миксы дня, за ними «На повторе» и «Старые хиты на повторе» — одной полкой, как «Собрано для вас»
     let mix_ids = sqlx::query_scalar!(
-        "SELECT id FROM playlists WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' = 'daily_mix'
-         ORDER BY (rules ->> 'slot')::int, id",
+        "SELECT id FROM playlists
+         WHERE user_id = $1 AND kind = 'mix' AND rules ->> 'generator' IN ('daily_mix', 'on_repeat', 'repeat_rewind')
+         ORDER BY CASE rules ->> 'generator' WHEN 'daily_mix' THEN 0 WHEN 'on_repeat' THEN 1 ELSE 2 END,
+                  (rules ->> 'slot')::int, id",
         user,
     )
     .fetch_all(&st.db)
@@ -261,7 +264,7 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
         ),
         shelf(
             "daily-mixes",
-            "Миксы дня",
+            "Собрано для вас",
             ShelfKind::DailyMixes,
             mix_ids
                 .iter()
