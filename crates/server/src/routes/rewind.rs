@@ -348,5 +348,20 @@ pub async fn update_event(
     )
     .await?;
     tx.commit().await?;
+    // Итоги открыли — музыку историй на сервер сразу, а не ночью: иначе первый просмотр тянет
+    // через все слайды единственный готовый трек
+    if let (RewindMode::Open, Some(year)) = (mode, year)
+        && (was.mode != RewindMode::Open || was.year != Some(year))
+    {
+        let bg = st.clone();
+        tokio::spawn(async move {
+            match rewind::soundtrack::prefetch_year(&bg.db, &bg.deezer, year, Utc::now()).await {
+                Ok(n) => tracing::info!(year, queued = n, "year-in-review music prefetched"),
+                Err(e) => {
+                    tracing::warn!(year, error = %e, "could not prefetch year-in-review music")
+                }
+            }
+        });
+    }
     Ok(Json(load_event(&st).await?))
 }

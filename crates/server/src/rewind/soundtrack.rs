@@ -142,6 +142,8 @@ pub struct Stat {
     pub new: bool,
     /// Главное настроение по анализу.
     pub mood: Option<&'static str>,
+    /// Звук уже на сервере — заиграет сразу, без ожидания скачивания.
+    pub ready: bool,
 }
 
 /// Что историям известно о годе.
@@ -175,7 +177,8 @@ impl Facts {
 }
 
 /// Трек каждого слайда. Трек года держит свой слайд и финал; остальные не повторяются — слайд без
-/// своего трека продолжает прежний. `stats` — по убыванию прослушиваний.
+/// своего трека продолжает прежний. Из нескольких подходящих сначала тот, чей звук уже на сервере:
+/// иначе история ждёт скачивания и до тех пор тянет прежний трек. `stats` — по убыванию прослушиваний.
 pub fn pick(facts: &Facts, stats: &[Stat]) -> Vec<(&'static str, Uuid)> {
     let toy = facts
         .track_of_year
@@ -189,6 +192,7 @@ pub fn pick(facts: &Facts, stats: &[Stat]) -> Vec<(&'static str, Uuid)> {
         v.into_iter().map(|s| s.id).collect()
     };
     let all = by(&|_| true);
+    let ready: HashSet<Uuid> = by(&|s| s.ready).into_iter().collect();
     let mut used: HashSet<Uuid> = toy.into_iter().collect();
     let mut out = Vec::new();
     for slide in SLIDES {
@@ -236,9 +240,13 @@ pub fn pick(facts: &Facts, stats: &[Stat]) -> Vec<(&'static str, Uuid)> {
             ),
             _ => (Vec::new(), false),
         };
+        let free = |id: &&Uuid| reserved || !used.contains(*id);
         let chosen = candidates
-            .into_iter()
-            .find(|id| reserved || !used.contains(id));
+            .iter()
+            .filter(free)
+            .find(|id| ready.contains(*id))
+            .or_else(|| candidates.iter().find(free))
+            .copied();
         if let Some(id) = chosen {
             used.insert(id);
             out.push((slide, id));
@@ -325,6 +333,7 @@ async fn stats(
             wave: r.wave,
             new: r.new,
             mood: moods.get(&r.track_id).copied(),
+            ready: r.audio_status.as_deref() == Some("ready"),
         })
         .collect())
 }
@@ -402,6 +411,35 @@ pub async fn get(
         })
         .collect();
     Ok(Some(RewindSoundtrack { year, cues }))
+}
+
+/// Музыка историй года — на сервер для всех, кто слушал в этом году: зовётся, когда итоги открывают
+/// из админки, чтобы к первому просмотру звук был, а не догонял. Сколько треков поставлено.
+pub async fn prefetch_year(
+    db: &PgPool,
+    deezer: &Deezer,
+    year: i32,
+    now: DateTime<Utc>,
+) -> Result<usize, sqlx::Error> {
+    let off = Settings::load(db).await?.utc_offset_min;
+    let (since, until) = range(year, now, off);
+    let users = sqlx::query_scalar!(
+        "SELECT u.id FROM users u
+         WHERE NOT u.disabled
+           AND EXISTS (SELECT 1 FROM play_events p
+                       WHERE p.user_id = u.id AND p.started_at >= $1 AND p.started_at < $2)",
+        since,
+        until,
+    )
+    .fetch_all(db)
+    .await?;
+    let mut queued = 0;
+    for user in users {
+        if let Some(st) = get(db, user, year, now).await? {
+            queued += prefetch(db, Some(deezer), user, &st.cues).await;
+        }
+    }
+    Ok(queued)
 }
 
 /// Треки музыки историй, которых нет на сервере, — на скачивание в полосу «сейчас», первые слайды
@@ -581,6 +619,34 @@ mod tests {
         let mut sorted = order.clone();
         sorted.sort_by_key(|s| SLIDES.iter().position(|x| x == s));
         assert_eq!(order, sorted);
+    }
+
+    #[test]
+    fn a_slide_prefers_a_track_already_on_the_server() {
+        let mut stats: Vec<Stat> = (1..=6).map(|n| stat(n, 100 - n as i64)).collect();
+        // Альбом года: самый слушаемый трек ещё не скачан, второй — на сервере
+        stats[3].album = Some(id(200));
+        stats[4].album = Some(id(200));
+        // На сервере — треки 2, 3 и 5: «Вступлению» и «Минутам» хватает своих
+        for i in [1, 2, 4] {
+            stats[i].ready = true;
+        }
+        let facts = Facts {
+            top_tracks: (1..=3).map(id).collect(),
+            track_of_year: Some(id(1)),
+            first: Some(id(6)),
+            top_album: Some(id(200)),
+            personality: "balanced".into(),
+            ..Default::default()
+        };
+        let picks = pick(&facts, &stats);
+        let get = |slide: &str| picks.iter().find(|p| p.0 == slide).map(|p| p.1);
+        assert_eq!(get("albums"), Some(id(5)));
+        assert_eq!(get("intro"), Some(id(2)));
+        assert_eq!(get("minutes"), Some(id(3)));
+        // Единственный подходящий трек остаётся, даже не скачанный: слайд о нём
+        assert_eq!(get("first"), Some(id(6)));
+        assert_eq!(get("toy"), Some(id(1)));
     }
 
     #[test]
