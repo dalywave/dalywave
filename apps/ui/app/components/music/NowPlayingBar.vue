@@ -115,8 +115,9 @@ const moreItems = computed<MenuEntry[]>(() => {
   grid-template-columns: minmax(220px, 1fr) minmax(360px, 640px) minmax(220px, 1fr);
   align-items: center;
   gap: 24px;
-  height: var(--bar-h);
-  padding: 0 16px 0 14px;
+  /* iPad: над полоской «домой» */
+  height: calc(var(--bar-h) + var(--safe-bottom));
+  padding: 0 calc(16px + var(--safe-right)) var(--safe-bottom) calc(14px + var(--safe-left));
   background: var(--glass-bar);
   -webkit-backdrop-filter: blur(30px) saturate(1.4);
   backdrop-filter: blur(30px) saturate(1.4);

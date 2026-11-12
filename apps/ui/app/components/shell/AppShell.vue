@@ -121,10 +121,11 @@ const phoneMain = ref<HTMLElement | null>(null)
   z-index: 1;
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) var(--bar-h);
+  grid-template-rows: minmax(0, 1fr) calc(var(--bar-h) + var(--safe-bottom));
   height: 100vh;
   height: 100dvh;
-  padding-top: var(--titlebar-h);
+  /* iPad: под строкой состояния; на компьютере отступов нет */
+  padding-top: calc(var(--titlebar-h) + var(--safe-top));
 }
 .app.is-rail { --sidebar-w: 76px; }
 .app.is-titlebar-mac-inset { --titlebar-inset: var(--titlebar-size, 48px); }
