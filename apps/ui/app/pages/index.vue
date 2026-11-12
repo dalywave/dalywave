@@ -2,7 +2,9 @@
 import type { AlbumSummary, ArtistSummary, Home, PlaylistSummary, Shelf, ShelfItem, Track } from '~/api/types'
 
 // Главная: «Моя волна» и полки с сервера в порядке, который сервер выбрал по времени суток: продолжить,
-// миксы дня, радар новинок, новинки подписок, открытия недели, недавно понравилось, забытые, ваши артисты
+// миксы дня, радар новинок, новинки подписок, открытия недели, недавно понравилось, забытые, ваши артисты.
+// Планшет под пальцем (как Spotify на iPad): сверху аватар и приветствие, под ними плитки быстрого
+// доступа 4×2 (любимые, волна, то, что слушали, миксы) — «Продолжить» уходит в них
 const bridge = useBridge()
 const auth = useAuthStore()
 const ui = useUiStore()
@@ -58,6 +60,48 @@ function shelfTitle(s: Shelf) {
 // «Недавно понравилось» — превью, а не весь список: на телефоне пять строк, на большом экране две колонки по пять
 const likesShown = computed(() => (ui.isPhone ? 5 : 10))
 
+// ---------- Плитки быстрого доступа (планшет) ----------
+const library = useLibraryStore()
+const { isContext, isPlayingContext } = usePlayActions()
+type Quick = { key: string, title: string, to: string, item: ShelfItem, ctx: 'album' | 'artist' | 'playlist' | null }
+const QUICK_MAX = 8
+const quick = computed<Quick[]>(() => {
+  const shelves = home.value?.shelves ?? []
+  const pool = [
+    ...shelves.filter(s => s.kind === 'continue').flatMap(s => s.items),
+    ...shelves.filter(s => s.kind === 'daily_mixes').flatMap(s => s.items),
+  ]
+  const out: Quick[] = []
+  const seen = new Set<string>()
+  for (const it of pool) {
+    const key = `${it.type}:${it.id}`
+    if (seen.has(key) || out.length >= QUICK_MAX - 2) continue
+    seen.add(key)
+    if (it.type === 'album') out.push({ key, title: it.title, to: `/album/${it.id}`, item: it, ctx: 'album' })
+    else if (it.type === 'artist') out.push({ key, title: it.name, to: `/artist/${it.id}`, item: it, ctx: 'artist' })
+    else if (it.type === 'playlist') out.push({ key, title: it.title, to: `/playlist/${it.id}`, item: it, ctx: 'playlist' })
+    else if (it.album) out.push({ key, title: it.title, to: `/album/${it.album.id}`, item: it, ctx: null })
+  }
+  return out
+})
+const waveOn = computed(() => player.waveActive && player.playing)
+function onWave() {
+  if (player.waveActive && player.current) return player.toggle()
+  return player.startWave()
+}
+const pla = usePlaylistActions()
+const quickMenu = ref<ReturnType<typeof pla.menuFor>>([])
+function onQuickContext(target: EventTarget | null) {
+  const key = (target as HTMLElement | null)?.closest<HTMLElement>('[data-quick]')?.dataset.quick
+  if (key === 'liked') {
+    quickMenu.value = pla.likedMenu()
+    return
+  }
+  const q = quick.value.find(x => x.key === key)
+  const p = q?.item.type === 'playlist' ? library.playlists?.find(x => x.id === q.item.id) : undefined
+  quickMenu.value = p ? pla.menuFor(p) : []
+}
+
 function playLiked(list: Track[], i: number) {
   const tr = list[i]
   if (tr && player.current?.track.id === tr.id) return player.toggle()
@@ -67,6 +111,40 @@ function playLiked(list: Track[], i: number) {
 
 <template>
   <div class="home">
+    <!-- Планшет: аватар слева вверху, как у Spotify; под ним — плитки быстрого доступа -->
+    <header v-if="ui.isTouch" class="thead">
+      <NuxtLink to="/settings" class="phead__avatar thead__avatar" :aria-label="t('settings')">
+        <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="" class="phead__avatar-img">
+        <template v-else>{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</template>
+      </NuxtLink>
+      <h1 class="thead__hello">{{ greeting }}</h1>
+    </header>
+    <UiContextMenu v-if="ui.isTouch" :items="quickMenu" @open="onQuickContext">
+      <nav class="quick" :aria-label="t('quick')">
+        <MusicQuickTile data-quick="liked" :title="tg('nav.liked')" to="/liked" :current="player.context?.type === 'library'" :playing="player.playing">
+          <template #art><span class="quick__liked"><Icon name="ph:heart-fill" /></span></template>
+        </MusicQuickTile>
+        <MusicQuickTile :title="tg('wave.title')" :current="player.waveActive" :playing="waveOn" @click="onWave">
+          <template #art><span class="quick__wave"><BrandGlyph class="quick__glyph" /></span></template>
+        </MusicQuickTile>
+        <MusicQuickTile
+          v-for="q in quick"
+          :key="q.key"
+          :data-quick="q.key"
+          :title="q.title"
+          :to="q.to"
+          :current="q.ctx ? isContext(q.ctx, q.item.id) : player.current?.track.id === q.item.id"
+          :playing="q.ctx ? isPlayingContext(q.ctx, q.item.id) : player.playing"
+        >
+          <template #art>
+            <MusicPlaylistCover v-if="q.item.type === 'playlist'" :id="q.item.id" :title="q.item.title" :covers="q.item.covers" :kind="q.item.kind" :show-title="false" />
+            <MusicCoverArt v-else-if="q.item.type === 'album' || q.item.type === 'artist'" :image="q.item.image" size="small" :alt="q.title" />
+            <MusicCoverArt v-else :image="q.item.album?.image ?? null" size="small" :alt="q.title" />
+          </template>
+        </MusicQuickTile>
+      </nav>
+    </UiContextMenu>
+
     <header v-if="ui.isPhone" class="phead">
       <div>
         <div class="phead__date">{{ today.charAt(0).toUpperCase() + today.slice(1) }}</div>
@@ -81,14 +159,14 @@ function playLiked(list: Track[], i: number) {
     <!-- Итоги года открылись, а слушатель их ещё не видел — «Твои итоги готовы» первым делом -->
     <RewindCard launch />
 
-    <MusicWaveHero :greeting="ui.isPhone ? undefined : greeting" />
+    <MusicWaveHero :greeting="ui.isTouchUi ? undefined : greeting" />
 
     <!-- Итоги года — плиткой, пока событие открыто и истории уже посмотрены -->
     <RewindCard home />
 
     <template v-if="home">
       <template v-for="s in home.shelves" :key="s.id">
-        <MusicShelf v-if="s.kind === 'continue'" :title="shelfTitle(s)" :cols="3" :rows="s.items.length > 3 ? 2 : 1" phone-width="82%">
+        <MusicShelf v-if="s.kind === 'continue' && !ui.isTouch" :title="shelfTitle(s)" :cols="3" :rows="s.items.length > 3 ? 2 : 1" phone-width="82%">
           <MusicResumeCard v-for="it in s.items" :key="`${it.type}:${it.id}`" :item="it" />
         </MusicShelf>
 
@@ -160,6 +238,19 @@ function playLiked(list: Track[], i: number) {
 .phead__hello { margin: 0; font-size: 28px; font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }
 .phead__avatar { display: grid; place-items: center; width: 44px; height: 44px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--hair); font-weight: 700; }
 .phead__avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.thead { display: flex; align-items: center; gap: 14px; margin-bottom: -24px; }
+.thead__avatar { width: 40px; height: 40px; }
+.thead__hello { margin: 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }
+/* Плитки быстрого доступа: четыре в ряд, две строки — как у Spotify на iPad */
+.quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.quick__liked, .quick__wave { display: grid; place-items: center; width: 100%; height: 100%; color: #fff; }
+/* Единственная плитка с градиентом по смыслу — «Любимые», как в боковой панели; волна — знак бренда */
+.quick__liked { background: radial-gradient(110% 110% at 25% 15%, var(--m3), var(--m2) 45%, var(--m1)); font-size: 22px; }
+.quick__wave { background: var(--brand-gradient); }
+.quick__glyph { width: 28px; height: 28px; }
+@container main (max-width: 760px) {
+  .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .likes { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .likes__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .likes__title { margin: 0; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); line-height: 1.2; }
@@ -208,6 +299,7 @@ function playLiked(list: Track[], i: number) {
     },
     "allLiked": "Все любимые",
     "settings": "Настройки",
+    "quick": "Быстрый доступ",
     "failed": "Главная не загрузилась",
     "failedText": "Проверьте соединение и попробуйте ещё раз",
     "emptyTitle": "Здесь появятся ваши подборки",
@@ -239,6 +331,7 @@ function playLiked(list: Track[], i: number) {
     },
     "allLiked": "All liked",
     "settings": "Settings",
+    "quick": "Quick access",
     "failed": "Home didn't load",
     "failedText": "Check your connection and try again",
     "emptyTitle": "Your picks will show up here",

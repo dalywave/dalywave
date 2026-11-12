@@ -223,6 +223,25 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
+@media (pointer: coarse) and (min-width: 700px) {
+  /* Планшет под пальцем: строка 56 pt, «⋯» видна всегда и 44 pt, без кнопки «играть» по наведению
+     (нажатие на строку и так играет). Сердце — только у любимых; место под него держится,
+     чтобы длительности стояли столбцом. Долгое нажатие — меню, а не выделение текста */
+  .tr { min-height: 56px; -webkit-touch-callout: none; user-select: none; }
+  .tr:hover:not(.is-menu, .is-selected) { background: transparent; }
+  .tr:active { background: var(--fill-1); }
+  .tr__play { display: none; }
+  .tr:hover .tr__idx, .tr:focus-within .tr__idx { opacity: 1; }
+  .tr.is-current .tr__idx, .tr.is-current:hover .tr__idx { opacity: 0; }
+  .tr.is-current:hover .tr__eq { opacity: 1; }
+  .tr :deep(.tr__like) { visibility: hidden; opacity: 1; --size: 44px; }
+  .tr :deep(.tr__like.is-liked) { visibility: visible; }
+  .tr :deep(.tr__more) { opacity: 1; --size: 44px; margin-right: -6px; color: var(--text-2); }
+  .tr :deep(.tr__more .ib__icon) { font-size: 22px; }
+  .tr--queue :deep(.tr__more) { display: inline-grid; }
+  .tr--queue .tr__dur { display: none; }
+}
+
 @media (max-width: 699px) {
   .tr { min-height: 60px; }
   .tr--wide { grid-template-columns: var(--cover) minmax(0, 1fr) auto; }

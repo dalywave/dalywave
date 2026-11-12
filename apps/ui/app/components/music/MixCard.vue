@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlaylistSummary } from '~/api/types'
+import type { MenuEntry } from '~/types/ui'
 
 // Карточка плейлиста или микса: настоящие обложки, как в медиатеке и боковой панели (собранная —
 // только когда обложек нет), название, сколько треков
@@ -14,9 +15,14 @@ const lang = useLang()
 const { playPlaylist, isPlayingContext, loading } = usePlayActions()
 const sub = computed(() => props.meta ?? props.playlist.description ?? '')
 const count = computed(() => formatCount(props.playlist.tracksCount, 'track', lang.value))
+// Правый щелчок (под пальцем — долгое нажатие) — то же меню плейлиста, что в медиатеке
+const pla = usePlaylistActions()
+const menu = ref<MenuEntry[]>([])
+const onMenu = () => (menu.value = pla.menuFor(props.playlist))
 </script>
 
 <template>
+  <UiContextMenu :items="menu" @open="onMenu">
   <div class="card" :class="{ 'is-hover': forceHover }">
     <NuxtLink :to="`/playlist/${playlist.id}`" class="card__link" :aria-label="playlist.title" />
     <div class="card__art">
@@ -28,4 +34,5 @@ const count = computed(() => formatCount(props.playlist.tracksCount, 'track', la
       <div class="card__sub">{{ sub || count }}</div>
     </div>
   </div>
+  </UiContextMenu>
 </template>

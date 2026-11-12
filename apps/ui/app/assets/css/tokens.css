@@ -47,6 +47,8 @@
   --topbar-h: 56px;
   --tabbar-h: 56px;
   --mini-h: 60px;
+  /* Плавающие вкладки и карточка плеера на планшете */
+  --dock-h: 64px;
   --titlebar-h: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

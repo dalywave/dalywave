@@ -272,7 +272,7 @@ const analyzedShare = computed(() => {
               <span class="brow__name ellipsis">{{ b.kind === 'artist' ? b.artist?.name : b.track?.title }}</span>
               <span class="brow__meta ellipsis">{{ b.kind === 'artist' ? t('artist') : (b.track?.artists.map(a => a.name).join(', ') ?? t('track')) }}</span>
             </span>
-            <UiIconButton icon="ph:x" :label="t('unblock')" :size="ui.isPhone ? 'md' : 'sm'" @click="unblock(b)" />
+            <UiIconButton icon="ph:x" :label="t('unblock')" :size="ui.isTouchUi ? 'md' : 'sm'" @click="unblock(b)" />
           </div>
         </div>
         <p v-else-if="blocked" class="quiet">{{ t('blockedEmpty') }}</p>

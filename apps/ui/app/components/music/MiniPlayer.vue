@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // Мини-плеер телефона над вкладками: нажатие раскрывает плеер, справа — пауза и следующий.
 // Внизу — тонкая сплошная линия прогресса. Пульт: вместо исполнителя — где играет; активное
-// устройство пропало — тихое «Было на: …», а ▶ продолжает здесь с того же места
+// устройство пропало — тихое «Было на: …», а ▶ продолжает здесь с того же места.
+// dock — карточка в нижней линии планшета рядом с вкладками: цвет — из обложки, справа «Где играть» и ▶
 import type { ConnectKind } from '~/api/types'
 
-withDefaults(defineProps<{ inline?: boolean }>(), {})
+withDefaults(defineProps<{ inline?: boolean, dock?: boolean }>(), {})
 
 const player = usePlayerStore()
 const connect = useConnectStore()
@@ -84,7 +85,7 @@ function onCancel() {
   <div
     v-if="track"
     class="mini"
-    :class="{ 'mini--inline': inline, 'is-lifting': lift }"
+    :class="{ 'mini--inline': inline, 'mini--dock': dock, 'is-lifting': lift }"
     :style="lift ? { transform: `translate3d(0, ${lift}px, 0)` } : undefined"
     @click.capture="open"
     @pointerdown="onDown"
@@ -102,8 +103,9 @@ function onCancel() {
       <span v-else class="mini__sub ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</span>
     </button>
     <div class="mini__actions">
+      <UiIconButton v-if="dock" icon="ph:devices" :label="t('player.devices')" size="lg" tone="solid" :active="connect.remote" :tooltip="false" @click="ui.openPanel('devices')" />
       <UiIconButton :icon="player.playing ? 'ph:pause-fill' : 'ph:play-fill'" :label="player.playing ? t('common.pause') : connect.orphaned ? t('connect.continueHere') : t('common.play')" size="lg" tone="solid" :tooltip="false" @click="player.toggle()" />
-      <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="lg" tone="solid" :tooltip="false" @click="player.next('skipped')" />
+      <UiIconButton v-if="!dock" icon="ph:skip-forward-fill" :label="t('player.next')" size="lg" tone="solid" :tooltip="false" @click="player.next('skipped')" />
     </div>
     <span class="mini__progress" aria-hidden="true"><i :style="{ transform: `scaleX(${player.progress})` }" /></span>
   </div>
@@ -150,4 +152,25 @@ function onCancel() {
 /* Прогресс — тонкая сплошная линия по нижнему краю: пройденное акцентом, остальное — заливкой */
 .mini__progress { position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; overflow: hidden; border-radius: 1px; background: var(--fill-3); }
 .mini__progress i { position: absolute; inset: 0; background: var(--accent); transform-origin: left; }
+
+/* Планшет: карточка в линии с вкладками. Фон — приглушённый цвет обложки (как у Spotify):
+   цвет говорит, что играет, и не спорит с белым текстом */
+.mini--dock {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  height: var(--dock-h);
+  padding: 0 8px 0 8px;
+  border-radius: 22px;
+  background: color-mix(in oklab, var(--amb-1) 46%, var(--ink-1));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 36px -14px rgba(0, 0, 0, 0.9);
+  transition: background-color var(--dur-mood) var(--ease-in-out), transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mini--dock :deep(.art) { width: 48px; border-radius: 10px; }
+.mini--dock .mini__sub { color: rgba(255, 255, 255, 0.72); font-size: var(--fs-small); }
+.mini--dock .mini__progress { left: 16px; right: 16px; bottom: 0; background: rgba(255, 255, 255, 0.16); }
+.mini--dock .mini__progress i { background: #fff; }
 </style>

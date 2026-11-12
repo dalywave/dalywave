@@ -30,8 +30,8 @@ onBeforeUnmount(() => io?.disconnect())
 </script>
 
 <template>
-  <MusicPhoneNav v-if="ui.isPhone" :title="title" :condensed="condensed" :fallback="back">
-    <slot name="tools" />
+  <MusicPhoneNav v-if="ui.isTouchUi" :title="title" :condensed="condensed" :fallback="back">
+    <slot v-if="ui.isPhone" name="tools" />
   </MusicPhoneNav>
   <header class="ph" :class="{ 'ph--round': round }">
     <div class="ph__art"><slot name="art" /></div>

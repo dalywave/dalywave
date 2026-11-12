@@ -53,6 +53,12 @@ const emit = defineEmits<{ click: [], remove: [] }>()
   transition: background-color var(--dur-1), color var(--dur-1), box-shadow var(--dur-1);
 }
 .chip__icon { font-size: 16px; }
+@media (pointer: coarse) and (min-width: 700px) {
+  .chip { height: 40px; padding: 0 16px; font-size: var(--fs-body); }
+  .chip--remove { padding: 0 6px 0 0; }
+  .chip__x { width: 32px; height: 32px; }
+  .chip:hover:not(.is-selected) { background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line); }
+}
 .chip:hover, .chip.is-hover { color: var(--text-1); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .chip.is-selected { background: var(--text-1); color: var(--on-light); box-shadow: none; }
 .chip:disabled, .chip.is-disabled { color: var(--text-4); box-shadow: inset 0 0 0 1px var(--hair); pointer-events: none; }

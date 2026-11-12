@@ -2,7 +2,9 @@
 // Оболочка приложения.
 // Большой экран: боковая панель | содержимое (+ сцена плеера поверх) | правая панель; внизу — панель плеера.
 // Планшет: боковая панель сжимается в полосу значков, правая панель ложится поверх.
-// Телефон: документ прокручивается сам, внизу вкладки и мини-плеер, плеер и очередь — шторками
+// Телефон: документ прокручивается сам, внизу вкладки и мини-плеер, плеер и очередь — шторками.
+// Планшет под пальцем (iPad), как Spotify на iPad: то же, что на телефоне, но содержимое — в колонке
+// большого экрана, а внизу плавающие стеклянные вкладки и рядом карточка плеера; плеер — на весь экран
 const ui = useUiStore()
 const bridge = useBridge()
 const route = useRoute()
@@ -40,15 +42,15 @@ watch(() => route.fullPath, (to, from) => {
   const restore = popped ? positions.get(to) ?? 0 : 0
   popped = false
   void nextTick(() => {
-    if (!main.value || ui.isPhone) return
+    if (!main.value || ui.isTouchUi) return
     main.value.scrollTop = restore
     onScroll()
   })
 })
 
-// Плеер закрывается при переходе на другую страницу; на телефоне — уезжает вниз
+// Плеер закрывается при переходе на другую страницу; под пальцем — уезжает вниз
 watch(() => route.path, () => {
-  if (!ui.isPhone) ui.playerOpen = false
+  if (!ui.isTouchUi) ui.playerOpen = false
   else if (ui.playerOpen) void ui.collapsePlayer()
 })
 
@@ -59,7 +61,7 @@ watch(() => route.path, () => {
   if (ui.reducedMotion) return
   void nextTick(() => {
     // На телефоне — только прозрачность: transform на <main> сломал бы закреплённые шапки страниц
-    if (ui.isPhone) phoneMain.value?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })
+    if (ui.isTouchUi) phoneMain.value?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })
     else page.value?.animate?.([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' })
   })
 })
@@ -70,7 +72,8 @@ const phoneMain = ref<HTMLElement | null>(null)
   <div
     class="app"
     :class="{
-      'is-panel': ui.panelOpen && !ui.isPhone,
+      'is-panel': ui.panelOpen && !ui.isTouchUi,
+      'is-touch': ui.isTouch,
       'is-rail': ui.isRail,
       'is-player': ui.playerOpen,
       [`is-titlebar-${titlebar}`]: !!titlebar,
@@ -78,7 +81,7 @@ const phoneMain = ref<HTMLElement | null>(null)
     :style="titlebarStyle"
   >
     <ShellTitleBar v-if="titlebar" :focused="win.focused" :maximized="win.maximized" />
-    <template v-if="!ui.isPhone">
+    <template v-if="!ui.isTouchUi">
       <ShellSidebar class="app__side" :rail="ui.isRail" />
       <div class="app__center">
         <div class="app__stage">
@@ -96,11 +99,16 @@ const phoneMain = ref<HTMLElement | null>(null)
     </template>
     <template v-else>
       <main ref="phoneMain" class="app__main app__main--phone">
-        <slot />
+        <!-- Планшет: колонка большого экрана — страницы раскладываются по ней через @container main -->
+        <div v-if="ui.isTouch" class="page page--touch"><slot /></div>
+        <slot v-else />
       </main>
-      <MusicMiniPlayer />
-      <ShellTabBar />
-      <MusicFullPlayer variant="phone" />
+      <ShellDock v-if="ui.isTouch" />
+      <template v-else>
+        <MusicMiniPlayer />
+        <ShellTabBar />
+      </template>
+      <MusicFullPlayer :variant="ui.isTouch ? 'tablet' : 'phone'" />
       <ShellPhoneSheets />
     </template>
     <!-- «Распознать»: экран прослушивания и лист результата (приложение для iPhone и Mac) -->
@@ -139,6 +147,13 @@ const phoneMain = ref<HTMLElement | null>(null)
 @media (max-width: 1023px) {
   .page { padding: calc(var(--topbar-h) + 8px) 20px 48px; }
 }
+
+/* Планшет под пальцем: документ прокручивается сам, низ — под плавающими вкладками и плеером */
+.app.is-touch { display: block; height: auto; min-height: 100dvh; padding-top: 0; }
+.app.is-touch .app__main--phone { display: block; overflow: visible; padding: var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + var(--dock-h) + 40px) var(--safe-left); }
+.page--touch { min-height: 0; padding: 20px 32px 0; }
+/* Под строкой состояния содержимое не просвечивает: тихая полоса фона, как у Spotify */
+.app.is-touch::before { content: ''; position: fixed; inset: 0 0 auto; z-index: 25; height: var(--safe-top); background: rgba(8, 9, 12, 0.86); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); pointer-events: none; }
 
 /* Телефон: документ прокручивается сам */
 @media (max-width: 699px) {

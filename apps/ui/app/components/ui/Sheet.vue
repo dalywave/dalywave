@@ -384,6 +384,13 @@ watch(frame, (el, old) => {
 .uis__body.is-scroll { touch-action: pan-y; }
 .uis__body::-webkit-scrollbar { display: none; }
 .uis__foot { flex: none; }
+/* Планшет под пальцем: лист не тянется на всю ширину экрана — колонкой по центру, как листы iPadOS */
+@media (pointer: coarse) and (min-width: 700px) {
+  .uis, .uis--inset { left: max(16px, calc(50% - 300px)); right: max(16px, calc(50% - 300px)); }
+  .uis--expand { height: min(calc(100dvh - var(--safe-top) - 8px), 88dvh); }
+  .uis__card { border-radius: 24px 24px 0 0; }
+  .uis--inset .uis__card { border-radius: 20px; }
+}
 .uis__foot-card {
   flex: none;
   overflow: hidden;

@@ -21,6 +21,7 @@ const SIZES = {
   // Размеры скриншотов App Store: iPhone 6,9″ — 1320×2868, iPad 13″ — 2064×2752
   iphone69: { viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
   ipad13: { viewport: { width: 1032, height: 1376 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  ipad13l: { viewport: { width: 1376, height: 1032 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 };
 
 function parse(argv) {
@@ -54,7 +55,7 @@ mkdirSync(opts.out, { recursive: true });
 const browser = await chromium.launch({
   channel: "chrome",
   headless: true,
-  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--autoplay-policy=no-user-gesture-required"],
+  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--autoplay-policy=no-user-gesture-required", "--mute-audio"],
 });
 
 let problems = 0;

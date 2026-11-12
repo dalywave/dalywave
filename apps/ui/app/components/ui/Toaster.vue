@@ -9,6 +9,8 @@ const player = usePlayerStore()
 // Над тем, что внизу экрана: на телефоне — над мини-плеером и вкладками (или над нижним рядом
 // раскрытого плеера), на большом экране — над панелью плеера
 const bottom = computed(() => {
+  // Планшет: над плавающими вкладками и карточкой плеера
+  if (ui.isTouch) return ui.playerOpen ? 'calc(var(--safe-bottom) + 24px)' : 'calc(var(--safe-bottom) + var(--dock-h) + 28px)'
   if (!ui.isPhone) return 'calc(var(--bar-h) + 16px)'
   if (ui.playerOpen) return '76px'
   return player.current ? 'calc(var(--tabbar-h) + var(--mini-h) + 18px)' : 'calc(var(--tabbar-h) + 12px)'

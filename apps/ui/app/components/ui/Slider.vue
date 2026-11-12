@@ -65,4 +65,9 @@ const value = computed({
 .sl:hover .sl__range, .sl.is-hover .sl__range { background: var(--accent); }
 .sl__thumb:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
 .sl[data-disabled] { opacity: 0.4; pointer-events: none; }
+@media (pointer: coarse) and (min-width: 700px) {
+  .sl { height: 44px; }
+  .sl__track { height: 6px; }
+  .sl__thumb { width: 22px; height: 22px; transform: none; }
+}
 </style>

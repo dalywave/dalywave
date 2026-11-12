@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// Нижние вкладки телефона
+// Нижние вкладки телефона. dock — плавающая стеклянная панель планшета (рядом — карточка плеера)
+withDefaults(defineProps<{ dock?: boolean }>(), {})
 const route = useRoute()
 const { t } = useI18n()
 
@@ -13,7 +14,7 @@ const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.s
 </script>
 
 <template>
-  <nav class="tabbar" :aria-label="t('nav.main')">
+  <nav class="tabbar" :class="{ 'tabbar--dock': dock }" :aria-label="t('nav.main')">
     <NuxtLink v-for="tab in TABS" :key="tab.to" :to="tab.to" class="tabbar__item" :class="{ 'is-active': isActive(tab.to) }" :aria-current="isActive(tab.to) ? 'page' : undefined">
       <Icon :name="isActive(tab.to) ? tab.iconOn : tab.icon" class="tabbar__icon" />
       <span>{{ t(tab.key) }}</span>
@@ -41,4 +42,23 @@ const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.s
 .tabbar__icon { font-size: 24px; }
 .tabbar__item.is-active { color: var(--text-1); }
 .tabbar__item:active { opacity: 0.7; }
+
+/* Планшет: плавающая скруглённая панель над содержимым */
+.tabbar--dock {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  height: var(--dock-h);
+  padding: 0 8px;
+  border: 0;
+  border-radius: 22px;
+  background: rgba(22, 24, 31, 0.72);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  backdrop-filter: blur(30px) saturate(1.6);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 18px 36px -14px rgba(0, 0, 0, 0.9);
+}
+.tabbar--dock .tabbar__item { gap: 3px; padding-top: 0; font-size: 11.5px; }
+.tabbar--dock .tabbar__icon { font-size: 25px; }
 </style>

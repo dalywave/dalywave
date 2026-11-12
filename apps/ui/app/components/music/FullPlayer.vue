@@ -5,8 +5,11 @@ import { getWaveEngine } from '~/lib/wave/engine'
 import { resamplePeaks } from '~/utils/peaks'
 
 // Плеер на весь экран. Большой экран — сцена поверх содержимого (боковая панель и панель плеера
-// остаются), волна обнимает обложку. Телефон — отдельный слой с управлением под большим пальцем
-const props = withDefaults(defineProps<{ variant?: 'stage' | 'phone' }>(), { variant: 'stage' })
+// остаются), волна обнимает обложку. Телефон — отдельный слой с управлением под большим пальцем.
+// Планшет под пальцем (iPad) — тот же слой на весь экран и то же смахивание вниз, но горизонтально
+// обложка с управлением слева, а справа «Текст / Очередь»; вертикально — обложка сверху, а текст
+// и очередь — листом в нижней части экрана
+const props = withDefaults(defineProps<{ variant?: 'stage' | 'phone' | 'tablet' }>(), { variant: 'stage' })
 
 const player = usePlayerStore()
 const connect = useConnectStore()
@@ -23,6 +26,12 @@ const art = ref<HTMLElement | null>(null)
 const nextAt = computed(() => ((player.nextEntry || player.waveActive) && !player.pending && player.effectiveMode !== 'gapless' && player.effectiveRepeat !== 'one' && player.durationMs ? formatDuration(player.transitionAtMs) : null))
 const phonePeaks = computed(() => (player.peaks.length ? resamplePeaks(player.peaks, 56) : Array.from({ length: 56 }, () => 0.18)))
 const menuOpen = ref(false)
+/** Планшет: что открыто рядом с плеером */
+const pane = ref<'lyrics' | 'queue'>('lyrics')
+const paneOptions = computed(() => [
+  { value: 'lyrics' as const, label: t('player.lyrics') },
+  { value: 'queue' as const, label: t('player.queue') },
+])
 const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
 
 const CONTEXT_KEY: Record<string, string> = { album: 'record.album', playlist: 'record.playlist', artist: 'record.artist', radio: 'record.radio' }
@@ -180,7 +189,7 @@ function onSheetCancel() {
 }
 
 // Переход из меню над плеером: сначала плеер уезжает вниз, потом открывается страница
-const offCollapse = props.variant === 'phone'
+const offCollapse = props.variant !== 'stage'
   ? ui.onCollapsePlayer(() => new Promise<void>((resolve) => {
       const h = sheet.value?.clientHeight
       if (!h || !open.value) return resolve()
@@ -254,7 +263,7 @@ onBeforeUnmount(() => {
       <DialogContent
         v-if="track"
         class="pp"
-        :class="{ 'is-dragging': dragging, 'is-settling': settling }"
+        :class="{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet' }"
         :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
         :aria-describedby="undefined"
         @open-auto-focus.prevent
@@ -268,8 +277,96 @@ onBeforeUnmount(() => {
           <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
           <div class="pp__ambient" aria-hidden="true" />
-          <div class="pp__wave"><MusicWaveCanvas layout="stage-phone" :box="art" /></div>
-          <div class="pp__body">
+          <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" /></div>
+
+          <!-- Планшет -->
+          <div v-if="variant === 'tablet'" class="tp">
+            <header class="tp__head">
+              <UiIconButton icon="ph:caret-down" :label="t('player.collapse')" size="lg" tone="solid" :tooltip="false" @click="close" />
+              <div class="pp__ctx">
+                <div class="pp__kicker">{{ kicker }}</div>
+                <div class="pp__ctx-title ellipsis">{{ phoneTitle }}</div>
+              </div>
+              <UiMenu v-model:open="menuOpen" :items="menuItems">
+                <UiIconButton icon="ph:dots-three" :label="t('common.more')" size="lg" tone="solid" :tooltip="false" />
+              </UiMenu>
+            </header>
+
+            <div class="tp__main">
+              <div class="tp__player">
+                <div ref="art" class="tp__art">
+                  <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
+                  <div v-if="player.pending" class="fp__pending">
+                    <MusicPendingNote :pending="player.pending" long />
+                    <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
+                  </div>
+                </div>
+
+                <div class="tp__info">
+                  <div class="pp__titlerow">
+                    <div class="pp__titles">
+                      <div class="pp__title tp__title ellipsis">{{ track.title }}</div>
+                      <div class="pp__artist ellipsis">
+                        <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`" @click="close">{{ a.name }}</NuxtLink></template>
+                      </div>
+                    </div>
+                    <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
+                    <span class="pp__like">
+                      <UiIconButton v-if="!player.modesAvailable" icon="ph:thumbs-down" :label="t('player.dislike')" size="lg" tone="solid" :tooltip="false" @click="player.dislike()" />
+                      <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="lg" :tone="liked ? 'liked' : 'solid'" :pressed="liked" :tooltip="false" @click="player.toggleLike()" />
+                    </span>
+                  </div>
+                  <div v-if="entry?.reason" class="pp__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
+                </div>
+
+                <MusicScrubber
+                  class="tp__scrub"
+                  :peaks="phonePeaks"
+                  :position-ms="player.positionMs"
+                  :duration-ms="player.durationMs || track.durationMs"
+                  :transition-ms="nextAt ? player.transitionAtMs : null"
+                  size="lg"
+                  times="below"
+                  :label="t('player.seek')"
+                  @seek="player.seek"
+                />
+
+                <div class="pp__controls tp__controls">
+                  <MusicPlayModeButton kind="shuffle" size="lg" />
+                  <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
+                  <MusicWavePlayButton
+                    variant="soft"
+                    :playing="player.playing"
+                    :loading="!!player.pending"
+                    :beat="audible"
+                    :size="76"
+                    :label="player.playing ? t('common.pause') : t('common.play')"
+                    @click="player.toggle()"
+                  />
+                  <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
+                  <MusicPlayModeButton kind="repeat" size="lg" />
+                </div>
+
+                <MusicConnectChip class="pp__connect" />
+                <div class="tp__secondary">
+                  <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
+                  <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
+                  <MusicSleepTimerButton />
+                </div>
+              </div>
+
+              <!-- Текст и очередь: свой жест (прокрутка, перетаскивание) — плеер отсюда не смахивается -->
+              <section class="tp__pane" data-no-dismiss>
+                <UiSegmentedControl v-model="pane" :options="paneOptions" :label="t('player.panel')" block class="tp__tabs" />
+                <div class="tp__pane-body no-scrollbar">
+                  <MusicLyricsView v-if="pane === 'lyrics'" />
+                  <MusicQueuePanel v-else />
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div v-else class="pp__body">
             <header class="pp__head">
               <UiIconButton icon="ph:caret-down" :label="t('player.collapse')" size="lg" tone="solid" :tooltip="false" @click="close" />
               <div class="pp__ctx">
@@ -497,6 +594,54 @@ onBeforeUnmount(() => {
 .pp__titlerow:has(.pp__like) .pp__titles { flex: 1; }
 .pp__connect { justify-content: center; margin-top: clamp(8px, 1.6vh, 14px); flex: none; }
 .pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 10px; flex: none; }
+/* ---------- Планшет ---------- */
+.pp--tablet .pp__wave { height: 100%; opacity: 0.55; -webkit-mask-image: none; mask-image: none; }
+.pp--tablet .pp__ambient { height: 100%; }
+.tp {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--safe-top) calc(32px + var(--safe-right)) calc(var(--safe-bottom) + 16px) calc(32px + var(--safe-left));
+}
+.tp__head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; height: 64px; margin: 0 -8px; flex: none; }
+.tp__main { display: flex; flex: 1; flex-direction: column; gap: 20px; min-height: 0; }
+.tp__player { display: flex; flex-direction: column; align-items: stretch; width: min(560px, 100%); margin: 0 auto; flex: none; }
+.tp__art { position: relative; width: min(100%, 38vh, 440px); margin: 8px auto 0; flex: none; border-radius: var(--r-4); }
+.tp__art :deep(.art) { width: 100%; border-radius: var(--r-4); box-shadow: 0 28px 56px -24px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06); transform: scale(calc(1 + var(--beat, 0) * 0.008)); }
+.tp__info { margin-top: 24px; }
+.tp__title { font-size: 26px; }
+.pp__artist a:active { color: var(--text-1); }
+.tp__scrub { margin-top: 16px; }
+.tp__controls { margin-top: 10px; padding: 0 12px; }
+.tp__secondary { display: flex; align-items: center; justify-content: center; gap: 32px; margin-top: 8px; }
+/* Вертикально: текст и очередь — листом снизу, во всю ширину */
+.tp__pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  margin: 0 calc(-32px - var(--safe-right)) calc(-16px - var(--safe-bottom)) calc(-32px - var(--safe-left));
+  padding: 14px 24px 0;
+  border-radius: 28px 28px 0 0;
+  background: rgba(14, 16, 21, 0.72);
+  -webkit-backdrop-filter: blur(30px) saturate(1.3);
+  backdrop-filter: blur(30px) saturate(1.3);
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+.tp__tabs { width: min(360px, 100%); margin: 0 auto; flex: none; }
+.tp__pane-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: calc(var(--safe-bottom) + 16px); }
+/* Горизонтально: обложка с управлением слева, текст и очередь — колонкой справа */
+@media (orientation: landscape) {
+  .tp__main { flex-direction: row; align-items: stretch; gap: 48px; }
+  .tp__player { justify-content: center; width: min(460px, 42%); margin: 0; padding-bottom: 8px; }
+  .tp__art { width: min(100%, 46vh); }
+  .tp__pane { flex: 1; margin: 0; padding: 14px 16px 0; border-radius: var(--r-5); background: rgba(255, 255, 255, 0.04); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+  .tp__pane-body { padding-bottom: 16px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pp__frame, .pp-scrim { animation: none; }
   .pp.is-settling .pp__frame { transition: none; }

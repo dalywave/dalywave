@@ -52,7 +52,7 @@ const scrollable = computed(() => !(atStart.value && atEnd.value))
       <div class="shelf__actions">
         <slot name="actions" />
         <UiButton v-if="to" :to="to" variant="ghost" size="sm">{{ t('common.all') }}</UiButton>
-        <div v-if="scrollable" class="shelf__nav">
+        <div v-if="scrollable && !ui.isTouchUi" class="shelf__nav">
           <UiIconButton icon="ph:caret-left" :label="t('common.scrollLeft')" size="sm" :disabled="atStart" :tooltip="false" @click="scroll(-1)" />
           <UiIconButton icon="ph:caret-right" :label="t('common.scrollRight')" size="sm" :disabled="atEnd" :tooltip="false" @click="scroll(1)" />
         </div>

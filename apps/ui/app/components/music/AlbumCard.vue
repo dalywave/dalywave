@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { AlbumSummary } from '~/api/types'
+import type { MenuEntry } from '~/types/ui'
 
-// Карточка альбома: обложка поднимается при наведении, справа внизу — «играть»
+// Карточка альбома: обложка поднимается при наведении, справа внизу — «играть».
+// Правый щелчок (под пальцем — долгое нажатие) — меню альбома
 const props = withDefaults(defineProps<{
   album: AlbumSummary
   /** Подпись под названием; по умолчанию — артист и год */
@@ -14,9 +16,22 @@ const { t } = useI18n()
 const { playAlbum, isPlayingContext, loading } = usePlayActions()
 const sub = computed(() => props.meta ?? [props.album.artist.name, formatYear(props.album.releaseDate)].filter(Boolean).join(' · '))
 const playing = computed(() => isPlayingContext('album', props.album.id))
+const shareMenu = useShare()
+const menu = ref<MenuEntry[]>([])
+function onMenu() {
+  const a = props.album
+  menu.value = [
+    { label: t('common.play'), icon: 'ph:play', onSelect: () => void playAlbum(a.id) },
+    { label: t('common.shuffle'), icon: 'ph:shuffle', onSelect: () => void playAlbum(a.id, { shuffle: true }) },
+    { kind: 'separator' },
+    { label: t('track.goArtist'), icon: 'ph:user', onSelect: () => navigateTo(`/artist/${a.artist.id}`) },
+    shareMenu.entry('album', a.id, a.title),
+  ]
+}
 </script>
 
 <template>
+  <UiContextMenu :items="menu" @open="onMenu">
   <div class="card" :class="{ 'is-hover': forceHover }">
     <NuxtLink :to="`/album/${album.id}`" class="card__link" :aria-label="`${album.title} — ${album.artist.name}`" />
     <div class="card__art">
@@ -29,6 +44,7 @@ const playing = computed(() => isPlayingContext('album', props.album.id))
       <div class="card__sub">{{ sub }}</div>
     </div>
   </div>
+  </UiContextMenu>
 </template>
 
 <style>
@@ -49,5 +65,21 @@ const playing = computed(() => isPlayingContext('album', props.album.id))
 .card__sub a:hover { color: var(--text-1); }
 @media (max-width: 699px) {
   .card__play { display: none; }
+}
+/* Планшет под пальцем: наведения нет — «играть» видна всегда, тихим стеклянным кругом,
+   обложка не подпрыгивает от залипшего :hover */
+@media (pointer: coarse) and (min-width: 700px) {
+  .card { -webkit-touch-callout: none; user-select: none; }
+  .card .card__art .card__play {
+    opacity: 1;
+    transform: none;
+    background: rgba(8, 10, 14, 0.55);
+    color: #fff;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
+  .card:hover .card__art { transform: none; box-shadow: none; }
+  .card:active .card__art { transform: scale(0.98); }
 }
 </style>

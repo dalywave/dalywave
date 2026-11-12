@@ -41,12 +41,12 @@ const moreItems = computed<MenuEntry[]>(() => [
 </script>
 
 <template>
-  <section class="hero" :aria-label="t('wave.title')">
+  <section class="hero" :class="{ 'hero--touch': ui.isTouch }" :aria-label="t('wave.title')">
     <div class="hero__stage">
       <div class="hero__wave"><MusicWaveCanvas :layout="ui.isPhone ? 'hero-phone' : 'hero'" /></div>
       <div class="hero__more">
         <UiMenu :items="moreItems">
-          <UiIconButton icon="ph:dots-three-bold" :label="tl('more')" tone="glass" :size="ui.isPhone ? 'md' : 'sm'" />
+          <UiIconButton icon="ph:dots-three-bold" :label="tl('more')" tone="glass" :size="ui.isPhone ? 'md' : ui.isTouch ? 'lg' : 'sm'" :tooltip="ui.isTouchUi ? false : undefined" />
         </UiMenu>
       </div>
       <div class="hero__intro">
@@ -63,7 +63,7 @@ const moreItems = computed<MenuEntry[]>(() => [
             <span class="hero__dots" role="img" :aria-label="tl('progress', { ready, need })">
               <span v-for="i in need" :key="i" class="hero__dot" :class="{ 'is-on': i <= ready, 'is-next': i === ready + 1 }" />
             </span>
-            <UiButton :size="ui.isPhone ? 'md' : 'sm'" variant="ghost" icon="ph:x" @click="player.cancelWavePrep()">{{ tl('cancel') }}</UiButton>
+            <UiButton :size="ui.isTouchUi ? 'md' : 'sm'" variant="ghost" icon="ph:x" @click="player.cancelWavePrep()">{{ tl('cancel') }}</UiButton>
           </div>
         </div>
         <div v-else class="hero__now" aria-live="polite">
@@ -150,6 +150,12 @@ const moreItems = computed<MenuEntry[]>(() => [
   .hero__prep, .hero__dot.is-next { animation: none; }
 }
 .hero__below { margin-top: 12px; }
+/* Планшет: волна — полосой ниже плиток, а не на весь экран */
+.hero--touch .hero__stage { min-height: 0; padding: 28px 24px 20px 32px; border-radius: var(--r-5); }
+.hero--touch .hero__more { top: 16px; right: 16px; }
+.hero--touch .hero__title { font-size: 44px; }
+.hero--touch .hero__summary { font-size: var(--fs-body); }
+.hero--touch .hero__play { padding: 16px 0 18px; }
 
 @media (max-width: 699px) {
   .hero { padding: 0 16px; }

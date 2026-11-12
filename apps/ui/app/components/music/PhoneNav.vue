@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Верхняя строка вложенной страницы на телефоне (альбом, артист, плейлист, «Любимые», «Мой вкус»):
 // «назад» слева, второстепенные действия справа. Прозрачная над шапкой; когда название страницы
-// уезжает под неё — стекло и название по центру, как в Apple Music
+// уезжает под неё — стекло и название по центру, как в Apple Music. На планшете под пальцем — та же
+// строка на всю ширину колонки: верхней строки компьютера там нет
 const props = withDefaults(defineProps<{
   title?: string
   /** Название шапки ушло под строку: показать его здесь */
@@ -11,6 +12,7 @@ const props = withDefaults(defineProps<{
 }>(), { title: '', condensed: undefined, fallback: '/' })
 
 const router = useRouter()
+const ui = useUiStore()
 const { t } = useI18n()
 
 // Без шапки (загрузка, ошибка) стекло включается от прокрутки
@@ -34,7 +36,7 @@ function back() {
 </script>
 
 <template>
-  <div class="pn" :class="{ 'is-solid': solid }">
+  <div class="pn" :class="{ 'is-solid': solid, 'pn--touch': ui.isTouch }">
     <UiIconButton class="pn__back" icon="ph:caret-left" :label="t('nav.back')" size="lg" :tooltip="false" @click="back" />
     <div class="pn__title ellipsis" :aria-hidden="!solid">{{ title }}</div>
     <div class="pn__tools"><slot /></div>
@@ -76,6 +78,9 @@ function back() {
 .pn__tools { display: flex; align-items: center; justify-content: flex-end; justify-self: end; gap: 0; }
 .pn__tools :deep(.ib) { color: var(--text-1); }
 @media (min-width: 700px) {
-  .pn { display: none; }
+  .pn:not(.pn--touch) { display: none; }
 }
+/* Планшет: строка выходит за поля колонки (32 px), под ней — сама шапка страницы */
+.pn--touch { margin: calc(-20px - var(--safe-top)) -32px 0; padding: var(--safe-top) 20px 0; height: calc(var(--safe-top) + 60px); }
+.pn--touch .pn__title { font-size: var(--fs-h4); }
 </style>

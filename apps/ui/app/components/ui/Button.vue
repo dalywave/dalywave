@@ -62,6 +62,13 @@ const attrs = computed(() => {
 .btn--sm .btn__icon { font-size: 16px; }
 .btn--lg { --h: 48px; padding: 0 24px; font-size: 15px; }
 .btn--block { width: 100%; }
+@media (pointer: coarse) and (min-width: 700px) {
+  .btn { position: relative; }
+  .btn--sm::before { content: ''; position: absolute; inset: -6px 0; }
+  .btn { --h: 44px; }
+  .btn--sm { --h: 36px; }
+  .btn--lg { --h: 52px; }
+}
 .btn:active, .btn.is-pressed { transform: scale(0.97); }
 .btn:disabled { cursor: default; }
 .btn.is-focus { outline: 2px solid var(--focus); outline-offset: 2px; }

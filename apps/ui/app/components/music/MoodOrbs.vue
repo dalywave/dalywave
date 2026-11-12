@@ -67,6 +67,11 @@ function update(v: unknown) {
 .mood:focus-visible .mood__orb { outline-color: var(--focus); }
 .mood__label { font-size: var(--fs-small); font-weight: 550; white-space: nowrap; }
 .moods--compact .mood__label { display: none; }
+/* Планшет под пальцем: шарики крупнее, у каждого — область 44 pt */
+@media (pointer: coarse) and (min-width: 700px) {
+  .moods--compact .mood { justify-content: center; min-width: 40px; min-height: 44px; }
+  .moods--compact .mood__orb { width: 28px; height: 28px; }
+}
 /* Плитки на телефоне: лента с постоянной шириной плиток; выходит за поля экрана и гаснет к краю */
 .moods--full {
   display: flex;

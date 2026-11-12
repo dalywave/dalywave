@@ -82,6 +82,10 @@ function play() {
 .resume__bar i { display: block; height: 100%; border-radius: inherit; background: var(--text-2); }
 .resume__play { position: relative; z-index: 2; opacity: 0; transform: scale(0.9); transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-out); }
 .resume:hover .resume__play, .resume.is-hover .resume__play, .resume:focus-within .resume__play { opacity: 1; transform: none; }
+@media (pointer: coarse) and (min-width: 700px) {
+  .resume { -webkit-touch-callout: none; user-select: none; }
+  .resume .resume__play { --size: 44px; opacity: 1; transform: none; }
+}
 .resume.is-current .resume__title { color: var(--accent); }
 .resume.is-current .resume__play { opacity: 1; transform: none; }
 @media (max-width: 699px) {

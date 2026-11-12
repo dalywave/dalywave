@@ -76,6 +76,10 @@
   button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   a { color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
   img { display: block; max-width: 100%; }
+  /* Под пальцем долгое нажатие открывает наше меню — без системного превью ссылки и картинки */
+  @media (pointer: coarse) {
+    a, img { -webkit-touch-callout: none; }
+  }
 
   ::selection { background: var(--accent-line); color: var(--text-1); }
   :focus { outline: none; }

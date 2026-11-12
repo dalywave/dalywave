@@ -84,7 +84,7 @@ onBeforeUnmount(() => io?.disconnect())
 
 <template>
   <div class="rsv">
-    <MusicPhoneNav v-if="ui.isPhone" :title="t('title')" :condensed="condensed" fallback="/library" />
+    <MusicPhoneNav v-if="ui.isTouchUi" :title="t('title')" :condensed="condensed" fallback="/library" />
 
     <header class="head">
       <h1 ref="titleEl" class="head__title">{{ t('title') }}</h1>

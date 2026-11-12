@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlaylistSummary } from '~/api/types'
+import type { MenuEntry } from '~/types/ui'
 
 // «Микс дня»: настоящие обложки грани вкуса под цветной вуалью, крупный номер микса и артисты под ним.
 // «На повторе» и «Старые хиты на повторе» — та же карточка, вместо номера — своё название на полосе
@@ -17,9 +18,14 @@ const tint = computed(() => TINTS[(props.index - 1) % TINTS.length]!)
 const covers = computed(() => props.playlist.covers ?? [])
 const sub = computed(() => props.playlist.description || props.playlist.title)
 const special = computed(() => (props.playlist.generator === 'on_repeat' || props.playlist.generator === 'repeat_rewind' ? props.playlist.generator : null))
+// Правый щелчок (под пальцем — долгое нажатие) — то же меню плейлиста, что в медиатеке
+const pla = usePlaylistActions()
+const menu = ref<MenuEntry[]>([])
+const onMenu = () => (menu.value = pla.menuFor(props.playlist))
 </script>
 
 <template>
+  <UiContextMenu :items="menu" @open="onMenu">
   <div class="card mix" :style="{ '--tint': tint }">
     <NuxtLink :to="`/playlist/${playlist.id}`" class="card__link" :aria-label="playlist.title" />
     <div class="card__art mix__art">
@@ -37,6 +43,7 @@ const special = computed(() => (props.playlist.generator === 'on_repeat' || prop
       <div class="card__sub">{{ sub }}</div>
     </div>
   </div>
+  </UiContextMenu>
 </template>
 
 <style scoped>

@@ -259,6 +259,7 @@ function onKey(e: KeyboardEvent) {
 
 /* Пальцем — 44 pt. В панели над полосой кнопки управления: область растёт вниз, не заходя на них */
 @media (pointer: coarse) {
+  .scrub--wave .scrub__bar::before { content: ''; position: absolute; inset: -6px 0; }
   .scrub--line .scrub__bar::before { inset: -4px 0 -16px; }
   .scrub--line.scrub--lg .scrub__bar::before { inset: -12px 0; }
 }

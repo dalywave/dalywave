@@ -79,7 +79,7 @@ const playlists = computed(() => {
   return (library.playlists ?? []).filter(p => norm(p.title).includes(needle))
 })
 
-// Поле на телефоне (на большом экране поиск — в верхней строке)
+// Поле на телефоне и планшете под пальцем (на компьютере поиск — в верхней строке)
 const field = ref(q.value)
 const fieldRef = ref<{ focus: () => void, blur: () => void } | null>(null)
 watch(q, v => (field.value = v))
@@ -274,7 +274,21 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       </div>
       <SearchFilters v-if="q" v-model:type="typeModel" v-model:library="libraryModel" class="sbar__filters" />
     </div>
-    <SearchFilters v-else-if="q" v-model:type="typeModel" v-model:library="libraryModel" class="search__filters" />
+    <!-- Планшет: верхней строки нет — поле здесь, крупное, закреплено при прокрутке -->
+    <div v-else-if="ui.isTouch" class="tsbar" :class="{ 'is-solid': solid }">
+      <UiSearchField
+        ref="fieldRef"
+        v-model="field"
+        links
+        size="lg"
+        class="tsbar__field"
+        :placeholder="tg('search.placeholder')"
+        @update:model-value="onField"
+        @submit="onSubmit"
+      />
+      <RecognizeButton class="tsbar__mic" />
+    </div>
+    <SearchFilters v-if="!ui.isPhone && q" v-model:type="typeModel" v-model:library="libraryModel" class="search__filters" />
 
     <!-- Пустой запрос -->
     <div v-if="!q" class="search__idle">
@@ -463,10 +477,23 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
 .topres__meta { padding-right: 64px; font-size: var(--fs-small); color: var(--text-2); }
 .topres__play { position: absolute; right: 20px; bottom: 20px; z-index: 2; opacity: 0; transform: translateY(6px); transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-out); }
 .topres__card:hover .topres__play, .topres__card:focus-within .topres__play { opacity: 1; transform: none; }
+@media (pointer: coarse) and (min-width: 700px) {
+  .topres__play { opacity: 1; transform: none; }
+  .topres__card:hover { background: var(--fill-1); }
+}
 
 .search__skel { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.7fr); gap: 32px; }
 .search__skel-top { border-radius: var(--r-4); }
 .search__skel-rows { display: flex; flex-direction: column; gap: 16px; padding-top: 44px; }
+
+/* Планшет под пальцем: поле во всю колонку, закреплено под строкой состояния */
+.tsbar { position: sticky; top: var(--safe-top); z-index: 15; display: flex; align-items: center; gap: 8px; margin: 0 -32px; padding: 8px 32px 12px; transition: background-color var(--dur-2), box-shadow var(--dur-2); }
+.tsbar::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--safe-top); background: inherit; }
+.tsbar.is-solid { background: rgba(8, 9, 12, 0.88); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 1px 0 var(--hair); }
+.tsbar__field { flex: 1; }
+.tsbar :deep(.sf) { background: var(--fill-2); box-shadow: none; }
+.tsbar :deep(.sf:focus-within) { background: var(--fill-3); box-shadow: none; }
+.tsbar__mic { flex: none; --size: 48px; color: var(--text-2); }
 
 @media (max-width: 1099px) {
   .lead, .search__skel { grid-template-columns: minmax(0, 1fr); }

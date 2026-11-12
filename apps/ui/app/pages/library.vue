@@ -281,7 +281,7 @@ const sortItems = computed<MenuEntry[]>(() => [
 ])
 
 // Перетаскивание строк (компьютер, список): в папку, из неё и в «Своём порядке» — на новое место
-const canDrag = computed(() => !ui.isPhone && view.value === 'list' && filter.value !== 'recent' && filter.value !== 'downloaded')
+const canDrag = computed(() => !ui.isTouchUi && view.value === 'list' && filter.value !== 'recent' && filter.value !== 'downloaded')
 function nodeOf(i: LibraryItem): TreeNode | null {
   if (i.kind === 'folder' && i.folder) return { kind: 'folder', id: i.id, folder: i.folder, children: tree.childrenOf(i.id) }
   if (i.kind === 'playlist' && i.playlist) return { kind: 'playlist', id: i.id, playlist: i.playlist }
@@ -374,22 +374,22 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
   <div class="lib">
     <!-- Открытая папка: «назад», название, меню папки -->
     <header v-if="openFolder" class="lib__head lib__head--folder">
-      <UiIconButton icon="ph:caret-left" :label="t('back')" :size="ui.isPhone ? 'lg' : 'md'" :tooltip="false" class="lib__back" @click="closeFolder" />
+      <UiIconButton icon="ph:caret-left" :label="t('back')" :size="ui.isTouchUi ? 'lg' : 'md'" :tooltip="false" class="lib__back" @click="closeFolder" />
       <h1 class="lib__title lib__title--folder ellipsis">{{ openFolder.title }}</h1>
       <UiMenu :items="tree.folderMenu(openFolder)" align="end">
-        <UiIconButton icon="ph:dots-three" :label="tg('common.more')" :size="ui.isPhone ? 'lg' : 'md'" :tooltip="false" />
+        <UiIconButton icon="ph:dots-three" :label="tg('common.more')" :size="ui.isTouchUi ? 'lg' : 'md'" :tooltip="false" />
       </UiMenu>
     </header>
     <header v-else class="lib__head">
-      <NuxtLink v-if="ui.isPhone" to="/settings" class="lib__avatar" :aria-label="tg('nav.settings')">
+      <NuxtLink v-if="ui.isTouchUi" to="/settings" class="lib__avatar" :aria-label="tg('nav.settings')">
         <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="">
         <template v-else>{{ initial }}</template>
       </NuxtLink>
       <h1 class="lib__title">{{ t('title') }}</h1>
       <!-- Новый плейлист: на телефоне — лист снизу, на компьютере — всплывающая панель у кнопки -->
       <!-- «Недавно прослушанное» -->
-      <UiIconButton icon="ph:clock-counter-clockwise" :label="tg('nav.history')" :size="ui.isPhone ? 'lg' : 'sm'" :tooltip="ui.isPhone ? false : undefined" to="/history" class="lib__hist" />
-      <template v-if="ui.isPhone">
+      <UiIconButton icon="ph:clock-counter-clockwise" :label="tg('nav.history')" :size="ui.isTouchUi ? 'lg' : 'sm'" :tooltip="ui.isTouchUi ? false : undefined" to="/history" class="lib__hist" />
+      <template v-if="ui.isTouchUi">
         <UiIconButton icon="ph:plus" :label="t('newPlaylist')" size="lg" :tooltip="false" class="lib__plus" @click="createOpen = true" />
         <UiSheet v-model:open="createOpen" :title="t('newPlaylist')">
           <form class="newpl newpl--sheet" @submit.prevent="create">
@@ -408,7 +408,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
           <UiButton type="submit" variant="primary" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('create') }}</UiButton>
         </form>
       </UiPopover>
-      <UiIconButton v-if="!ui.isPhone" icon="ph:folder-simple-plus" :label="tg('folder.new')" size="sm" class="lib__folder" @click="newFolder" />
+      <UiIconButton v-if="!ui.isTouchUi" icon="ph:folder-simple-plus" :label="tg('folder.new')" size="sm" class="lib__folder" @click="newFolder" />
     </header>
 
     <!-- Фильтры: повторное нажатие или крестик возвращают всё -->
@@ -473,7 +473,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
           <UiIconButton
             :icon="view === 'grid' ? 'ph:rows' : 'ph:squares-four'"
             :label="view === 'grid' ? t('asList') : t('asGrid')"
-            :tooltip="ui.isPhone ? false : undefined"
+            :tooltip="ui.isTouchUi ? false : undefined"
             class="list__view"
             @click="view = view === 'grid' ? 'list' : 'grid'"
           />

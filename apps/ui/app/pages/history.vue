@@ -241,7 +241,7 @@ const empty = computed(() => state.value === 'ready' && !items.value.length)
 
 <template>
   <div class="hist">
-    <MusicPhoneNav v-if="ui.isPhone" :title="t('title')" :condensed="condensed" fallback="/library">
+    <MusicPhoneNav v-if="ui.isTouchUi" :title="t('title')" :condensed="condensed" fallback="/library">
       <UiIconButton icon="ph:calendar-blank" :label="t('jump')" size="lg" :tooltip="false" @click="calOpen = true" />
       <UiMenu :items="moreItems">
         <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />
@@ -250,7 +250,7 @@ const empty = computed(() => state.value === 'ready' && !items.value.length)
 
     <header class="head">
       <h1 ref="titleEl" class="head__title">{{ t('title') }}</h1>
-      <div v-if="!ui.isPhone" class="head__tools">
+      <div v-if="!ui.isTouchUi" class="head__tools">
         <UiPopover v-model:open="calOpen" side="bottom" align="end" :width="320" no-autofocus>
           <template #trigger>
             <UiButton size="sm" variant="secondary" icon="ph:calendar-blank">{{ t('jump') }}</UiButton>
@@ -271,7 +271,7 @@ const empty = computed(() => state.value === 'ready' && !items.value.length)
       </button>
     </div>
 
-    <UiSheet v-if="ui.isPhone" v-model:open="calOpen" :title="t('jump')">
+    <UiSheet v-if="ui.isTouchUi" v-model:open="calOpen" :title="t('jump')">
       <div class="calsheet">
         <HistoryCalendar :days="days" :selected="day" @pick="pick" />
       </div>

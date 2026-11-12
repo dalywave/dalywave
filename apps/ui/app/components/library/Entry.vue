@@ -77,7 +77,7 @@ function play() {
         class="le__cover"
       />
       <MusicPlayButton
-        v-if="!ui.isPhone && item.kind !== 'folder'"
+        v-if="!ui.isPhone && item.kind !== 'folder' && !(ui.isTouch && layout === 'list')"
         class="le__play"
         :playing="playing"
         :loading="busy"
@@ -147,6 +147,14 @@ function play() {
 .le--list.le--round .le__cover { border-radius: 50%; }
 .le--list .le__play { inset: 0; margin: auto; transform: scale(0.9); }
 .le--list .le__body { flex: 1; }
+/* Планшет под пальцем: «играть» в сетке видна всегда (стеклом), без наведения и выделения текста */
+@media (pointer: coarse) and (min-width: 700px) {
+  .le { -webkit-touch-callout: none; user-select: none; }
+  .le--grid .le__play { opacity: 1; transform: none; background: rgba(8, 10, 14, 0.55); color: #fff; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+  .le--grid:hover .le__art { transform: none; box-shadow: none; }
+  .le--list:hover { background: transparent; }
+  .le--list { min-height: 68px; }
+}
 .le--list .le__title { font-size: var(--fs-body); }
 .le__date { flex: none; width: 112px; font-size: var(--fs-small); color: var(--text-3); text-align: right; }
 

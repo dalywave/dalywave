@@ -17,10 +17,18 @@ export const useUiStore = defineStore('ui', () => {
   const isTablet = computed(() => !isPhone.value && !isDesktop.value)
   /** Узкая боковая панель из значков */
   const isRail = useMediaQuery('(min-width: 700px) and (max-width: 1023px)')
+  /** Планшет под пальцем (iPad), как Spotify на iPad: без боковой панели и верхней строки — внизу
+   *  плавающие вкладки и карточка плеера, плеер на весь экран, очередь и текст — листами.
+   *  iPad с трекпадом — тоже он: главный указатель всё равно палец */
+  const coarse = useMediaQuery('(pointer: coarse)')
+  const ipad = import.meta.client && useBridge().platform === 'ipados'
+  const isTouch = computed(() => !isPhone.value && (coarse.value || ipad))
+  /** Интерфейс под палец — телефон или планшет: крупные цели, листы вместо панелей, без подсказок */
+  const isTouchUi = computed(() => isPhone.value || isTouch.value)
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   function openPanel(tab: PanelTab) {
-    if (isPhone.value) {
+    if (isTouchUi.value) {
       sheetTab.value = tab
       return
     }
@@ -29,7 +37,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function togglePanel(tab: PanelTab) {
-    if (isPhone.value) {
+    if (isTouchUi.value) {
       sheetTab.value = sheetTab.value === tab ? null : tab
       return
     }
@@ -37,7 +45,7 @@ export const useUiStore = defineStore('ui', () => {
     else openPanel(tab)
   }
 
-  // Плеер на телефоне сворачивается своей анимацией (вниз, в мини-плеер); её регистрирует FullPlayer
+  // Плеер под пальцем сворачивается своей анимацией (вниз, в мини-плеер); её регистрирует FullPlayer
   let collapser: (() => Promise<void>) | null = null
   function onCollapsePlayer(fn: () => Promise<void>) {
     collapser = fn
@@ -50,7 +58,7 @@ export const useUiStore = defineStore('ui', () => {
   async function collapsePlayer() {
     sheetTab.value = null
     if (!playerOpen.value) return
-    if (isPhone.value && collapser) await collapser()
+    if (isTouchUi.value && collapser) await collapser()
     playerOpen.value = false
   }
 
@@ -61,12 +69,12 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function focusSearch() {
-    if (isPhone.value) {
+    if (isTouchUi.value) {
       void navigateTo('/search')
       return
     }
     searchFocus.value++
   }
 
-  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
+  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, isTouch, isTouchUi, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
 })

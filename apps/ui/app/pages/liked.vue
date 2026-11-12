@@ -81,7 +81,7 @@ function play(shuffle = false) {
       </MusicPageHeader>
 
       <div v-if="liked.length" class="liked__tools">
-        <UiSearchField v-model="filter" :placeholder="t('filter')" :size="ui.isPhone ? 'lg' : 'md'" class="liked__filter" />
+        <UiSearchField v-model="filter" :placeholder="t('filter')" :size="ui.isTouchUi ? 'lg' : 'md'" class="liked__filter" />
         <span v-if="filter" class="liked__count">{{ formatCount(shown.length, 'track', lang) }}</span>
       </div>
 
