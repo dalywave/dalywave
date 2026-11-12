@@ -25,7 +25,7 @@ settingGroups:
       # для iOS 18–25 — оба называются DalyWave
       ASSETCATALOG_COMPILER_APPICON_NAME: DalyWave
       TARGETED_DEVICE_FAMILY: "1,2"
-      MARKETING_VERSION: 0.1.2
+      MARKETING_VERSION: 0.1.3
       CURRENT_PROJECT_VERSION: 1
 targets:
   dalywave-shell_iOS:
@@ -183,7 +183,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: 0.1.2
+        MARKETING_VERSION: 0.1.3
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
@@ -217,7 +217,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: 0.1.2
+        MARKETING_VERSION: 0.1.3
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
@@ -253,7 +253,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: 0.1.2
+        MARKETING_VERSION: 0.1.3
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
