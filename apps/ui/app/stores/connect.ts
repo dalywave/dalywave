@@ -99,7 +99,7 @@ export const useConnectStore = defineStore('connect', () => {
     }))
     // Связи с сервером ещё нет — само устройство в списке всё равно есть
     if (!own) rows.unshift({ id: deviceId.value, name: deviceName(), kind: kindOf(bridge.platform, app), current: true, online: true, lastSeenAt: null, active: isActive.value })
-    return rows
+    return withoutStale(rows)
   })
 
   const now = () => Date.now() + offset
