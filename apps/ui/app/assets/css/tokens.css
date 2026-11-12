@@ -49,6 +49,9 @@
   --mini-h: 60px;
   /* Плавающие вкладки и карточка плеера на планшете */
   --dock-h: 64px;
+  /* Плеер сбоку на планшете горизонтально: колонка справа и её отступ от краёв */
+  --side-w: clamp(360px, 34vw, 460px);
+  --side-gap: 12px;
   --titlebar-h: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

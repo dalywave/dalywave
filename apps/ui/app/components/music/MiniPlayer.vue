@@ -2,7 +2,8 @@
 // Мини-плеер телефона над вкладками: нажатие раскрывает плеер, справа — пауза и следующий.
 // Внизу — тонкая сплошная линия прогресса. Пульт: вместо исполнителя — где играет; активное
 // устройство пропало — тихое «Было на: …», а ▶ продолжает здесь с того же места.
-// dock — карточка в нижней линии планшета рядом с вкладками: цвет — из обложки, справа «Где играть» и ▶
+// dock — карточка в нижней линии планшета рядом с вкладками: цвет — из обложки, справа «Где играть» и ▶;
+// горизонтально ещё «закрепить сбоку» — карточка разворачивается в колонку «Сейчас играет» справа
 import type { ConnectKind } from '~/api/types'
 
 withDefaults(defineProps<{ inline?: boolean, dock?: boolean }>(), {})
@@ -10,6 +11,7 @@ withDefaults(defineProps<{ inline?: boolean, dock?: boolean }>(), {})
 const player = usePlayerStore()
 const connect = useConnectStore()
 const ui = useUiStore()
+const prefs = usePrefsStore()
 const { t } = useI18n()
 const track = computed(() => player.current?.track ?? null)
 const ICON: Record<ConnectKind, string> = {
@@ -103,6 +105,7 @@ function onCancel() {
       <span v-else class="mini__sub ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</span>
     </button>
     <div class="mini__actions">
+      <UiIconButton v-if="dock && ui.canSidePlayer" icon="ph:sidebar-simple" class="side-icon" :label="t('player.pinSide')" size="lg" tone="solid" :tooltip="false" @click="prefs.sidePlayer = true" />
       <UiIconButton v-if="dock" icon="ph:devices" :label="t('player.devices')" size="lg" tone="solid" :active="connect.remote" :tooltip="false" @click="ui.openPanel('devices')" />
       <UiIconButton :icon="player.playing ? 'ph:pause-fill' : 'ph:play-fill'" :label="player.playing ? t('common.pause') : connect.orphaned ? t('connect.continueHere') : t('common.play')" size="lg" tone="solid" :tooltip="false" @click="player.toggle()" />
       <UiIconButton v-if="!dock" icon="ph:skip-forward-fill" :label="t('player.next')" size="lg" tone="solid" :tooltip="false" @click="player.next('skipped')" />

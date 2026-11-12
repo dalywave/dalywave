@@ -138,6 +138,9 @@
 html[data-backdrop='mica'], html[data-backdrop='mica'] body { background: transparent; }
 html[data-backdrop='mica'] .ambient { background-color: transparent; }
 
+/* Значок «плеер сбоку»: панель справа, как у колонки «Сейчас играет» на планшете */
+.side-icon .ib__icon { transform: scaleX(-1); }
+
 /* Значок «играет» */
 @keyframes eq-bounce { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
 @keyframes spin { to { transform: rotate(1turn); } }

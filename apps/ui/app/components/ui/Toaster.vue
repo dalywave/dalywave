@@ -56,7 +56,8 @@ function onOpen(t: ToastItem, open: boolean) {
         <button type="button" class="toast__action" @click="act(t)">{{ t.action.label }}</button>
       </ToastAction>
     </ToastRoot>
-    <ToastViewport class="toast-viewport" :style="{ '--toast-bottom': bottom }" />
+    <!-- Плеер сбоку: уведомления — над вкладками, по центру колонки содержимого -->
+    <ToastViewport class="toast-viewport" :style="{ '--toast-bottom': bottom, 'left': ui.sidePlayer && !ui.playerOpen ? 'calc((100vw - var(--side-w) - var(--side-gap) - var(--safe-right)) / 2)' : undefined }" />
   </ToastProvider>
 </template>
 

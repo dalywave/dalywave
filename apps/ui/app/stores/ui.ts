@@ -25,6 +25,13 @@ export const useUiStore = defineStore('ui', () => {
   const isTouch = computed(() => !isPhone.value && (coarse.value || ipad))
   /** Интерфейс под палец — телефон или планшет: крупные цели, листы вместо панелей, без подсказок */
   const isTouchUi = computed(() => isPhone.value || isTouch.value)
+  /** Планшет горизонтально (iPad от 1000 pt): места хватает, чтобы держать плеер колонкой сбоку.
+   *  Ориентация — тоже условие: большой iPad вертикально шире 1000 pt, но колонка там тесная */
+  const wide = useMediaQuery('(min-width: 1000px) and (orientation: landscape)')
+  const canSidePlayer = computed(() => isTouch.value && wide.value)
+  /** «Плеер сбоку» сейчас на экране: включён в настройках, планшет лежит горизонтально и что-то играет.
+   *  Вертикально — обычная карточка внизу, даже если настройка включена */
+  const sidePlayer = computed(() => canSidePlayer.value && usePrefsStore().sidePlayer && !!usePlayerStore().current)
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   function openPanel(tab: PanelTab) {
@@ -76,5 +83,5 @@ export const useUiStore = defineStore('ui', () => {
     searchFocus.value++
   }
 
-  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, isTouch, isTouchUi, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
+  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
 })

@@ -9,13 +9,15 @@ export type ScrubberStyle = 'wave' | 'line'
  */
 export interface Preferences {
   scrubber: ScrubberStyle
+  /** Планшет горизонтально: «Сейчас играет» — колонкой справа от содержимого, как у Spotify на iPad */
+  sidePlayer: boolean
   updatedAt: string | null
 }
 
 export type PreferencesPatch = Partial<Omit<Preferences, 'updatedAt'>>
 
 const STORAGE_KEY = 'dw.prefs'
-const DEFAULTS: Preferences = { scrubber: 'wave', updatedAt: null }
+const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, updatedAt: null }
 
 // Из хранилища (а потом и с сервера) берём только понятные значения: старая версия или чужая
 // запись не должны ломать интерфейс
@@ -23,6 +25,7 @@ function sanitize(raw: unknown): Preferences {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   return {
     scrubber: r.scrubber === 'line' ? 'line' : DEFAULTS.scrubber,
+    sidePlayer: typeof r.sidePlayer === 'boolean' ? r.sidePlayer : DEFAULTS.sidePlayer,
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : null,
   }
 }
@@ -60,6 +63,11 @@ export const usePrefsStore = defineStore('prefs', () => {
     set: v => update({ scrubber: v }),
   })
 
+  const sidePlayer = computed<boolean>({
+    get: () => prefs.value.sidePlayer,
+    set: v => update({ sidePlayer: v }),
+  })
+
   // Выбор в другой вкладке подхватывается сразу (key = null — там очистили хранилище)
   if (import.meta.client) {
     window.addEventListener('storage', (e) => {
@@ -67,5 +75,5 @@ export const usePrefsStore = defineStore('prefs', () => {
     })
   }
 
-  return { prefs, scrubber, update }
+  return { prefs, scrubber, sidePlayer, update }
 })

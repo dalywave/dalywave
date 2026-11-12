@@ -34,16 +34,13 @@ const paneOptions = computed(() => [
 ])
 const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
 
-const CONTEXT_KEY: Record<string, string> = { album: 'record.album', playlist: 'record.playlist', artist: 'record.artist', radio: 'record.radio' }
-const contextLabel = computed(() => {
-  const c = player.context
-  if (!c) return ''
-  if (c.type === 'wave') return player.wave.mood === 'any' ? t('wave.title') : `${t('wave.title')} · ${t(`wave.mood.${player.wave.mood}`)}`
-  const kind = CONTEXT_KEY[c.type]
-  return kind ? `${t(kind)} · ${c.title}` : c.title
-})
-const kicker = computed(() => (player.waveActive ? t('player.playingWave') : t('player.playingFrom')))
-const phoneTitle = computed(() => (player.waveActive ? contextLabel.value : player.context?.title ?? ''))
+const { label: contextLabel, kicker, title: phoneTitle } = useNowPlayingContext()
+/** Планшет горизонтально: закрепить плеер колонкой сбоку и свернуть этот слой */
+const prefs = usePrefsStore()
+function pinSide() {
+  prefs.sidePlayer = true
+  void ui.collapsePlayer()
+}
 
 const quality = computed(() => {
   if (player.source?.preview) return t('player.preview')
@@ -287,9 +284,13 @@ onBeforeUnmount(() => {
                 <div class="pp__kicker">{{ kicker }}</div>
                 <div class="pp__ctx-title ellipsis">{{ phoneTitle }}</div>
               </div>
-              <UiMenu v-model:open="menuOpen" :items="menuItems">
-                <UiIconButton icon="ph:dots-three" :label="t('common.more')" size="lg" tone="solid" :tooltip="false" />
-              </UiMenu>
+              <div class="tp__head-end">
+                <!-- Горизонтально — закрепить сбоку, как у Spotify на iPad: без похода в настройки -->
+                <UiIconButton v-if="ui.canSidePlayer" icon="ph:sidebar-simple" class="side-icon" :label="t('player.pinSide')" size="lg" tone="solid" :tooltip="false" @click="pinSide" />
+                <UiMenu v-model:open="menuOpen" :items="menuItems">
+                  <UiIconButton icon="ph:dots-three" :label="t('common.more')" size="lg" tone="solid" :tooltip="false" />
+                </UiMenu>
+              </div>
             </header>
 
             <div class="tp__main">
@@ -331,21 +332,7 @@ onBeforeUnmount(() => {
                   @seek="player.seek"
                 />
 
-                <div class="pp__controls tp__controls">
-                  <MusicPlayModeButton kind="shuffle" size="lg" />
-                  <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
-                  <MusicWavePlayButton
-                    variant="soft"
-                    :playing="player.playing"
-                    :loading="!!player.pending"
-                    :beat="audible"
-                    :size="76"
-                    :label="player.playing ? t('common.pause') : t('common.play')"
-                    @click="player.toggle()"
-                  />
-                  <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
-                  <MusicPlayModeButton kind="repeat" size="lg" />
-                </div>
+                <MusicPlayerControls class="pp__controls tp__controls" :play-size="76" />
 
                 <MusicConnectChip class="pp__connect" />
                 <div class="tp__secondary">
@@ -414,21 +401,7 @@ onBeforeUnmount(() => {
               @seek="player.seek"
             />
 
-            <div class="pp__controls">
-              <MusicPlayModeButton kind="shuffle" size="lg" />
-              <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
-              <MusicWavePlayButton
-                variant="soft"
-                :playing="player.playing"
-                :loading="!!player.pending"
-                :beat="audible"
-                :size="80"
-                :label="player.playing ? t('common.pause') : t('common.play')"
-                @click="player.toggle()"
-              />
-              <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
-              <MusicPlayModeButton kind="repeat" size="lg" />
-            </div>
+            <MusicPlayerControls class="pp__controls" :play-size="80" />
 
             <MusicConnectChip class="pp__connect" />
             <div class="pp__secondary">
@@ -585,10 +558,7 @@ onBeforeUnmount(() => {
 .pp__artist { font-size: 17px; color: var(--text-2); }
 .pp__reason { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: var(--fs-small); color: var(--accent); }
 .pp__scrub { margin-top: clamp(14px, 2.4vh, 20px); flex: none; }
-.pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: clamp(8px, 2.1vh, 18px); padding: 0 4px; flex: none; }
-.pp__controls :deep(.ib__icon) { font-size: 28px; }
-/* Перемешивание и повтор — тише главных кнопок, как в Spotify и Apple Music */
-.pp__controls :deep(.ib--lg .ib__icon) { font-size: 24px; }
+.pp__controls { margin-top: clamp(8px, 2.1vh, 18px); padding: 0 4px; flex: none; }
 .pp__like { display: inline-flex; flex: none; margin: -7px -8px 0 -4px; }
 /* С сердцем значок качества прижат к нему, а не висит посередине */
 .pp__titlerow:has(.pp__like) .pp__titles { flex: 1; }
@@ -605,7 +575,8 @@ onBeforeUnmount(() => {
   height: 100%;
   padding: var(--safe-top) calc(32px + var(--safe-right)) calc(var(--safe-bottom) + 16px) calc(32px + var(--safe-left));
 }
-.tp__head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; height: 64px; margin: 0 -8px; flex: none; }
+.tp__head { display: grid; grid-template-columns: minmax(44px, 1fr) minmax(0, 3fr) minmax(44px, 1fr); align-items: center; height: 64px; margin: 0 -8px; flex: none; }
+.tp__head-end { display: flex; justify-content: flex-end; gap: 4px; }
 .tp__main { display: flex; flex: 1; flex-direction: column; gap: 20px; min-height: 0; }
 .tp__player { display: flex; flex-direction: column; align-items: stretch; width: min(560px, 100%); margin: 0 auto; flex: none; }
 .tp__art { position: relative; width: min(100%, 38vh, 440px); margin: 8px auto 0; flex: none; border-radius: var(--r-4); }

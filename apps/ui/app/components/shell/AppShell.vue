@@ -4,7 +4,8 @@
 // Планшет: боковая панель сжимается в полосу значков, правая панель ложится поверх.
 // Телефон: документ прокручивается сам, внизу вкладки и мини-плеер, плеер и очередь — шторками.
 // Планшет под пальцем (iPad), как Spotify на iPad: то же, что на телефоне, но содержимое — в колонке
-// большого экрана, а внизу плавающие стеклянные вкладки и рядом карточка плеера; плеер — на весь экран
+// большого экрана, а внизу плавающие стеклянные вкладки и рядом карточка плеера; плеер — на весь экран.
+// Горизонтально с «Плеером сбоку» — карточки нет, «Сейчас играет» колонкой справа, содержимое уже
 const ui = useUiStore()
 const bridge = useBridge()
 const route = useRoute()
@@ -74,6 +75,7 @@ const phoneMain = ref<HTMLElement | null>(null)
     :class="{
       'is-panel': ui.panelOpen && !ui.isTouchUi,
       'is-touch': ui.isTouch,
+      'is-side': ui.sidePlayer,
       'is-rail': ui.isRail,
       'is-player': ui.playerOpen,
       [`is-titlebar-${titlebar}`]: !!titlebar,
@@ -103,7 +105,10 @@ const phoneMain = ref<HTMLElement | null>(null)
         <div v-if="ui.isTouch" class="page page--touch"><slot /></div>
         <slot v-else />
       </main>
-      <ShellDock v-if="ui.isTouch" />
+      <template v-if="ui.isTouch">
+        <ShellDock />
+        <MusicSidePlayer />
+      </template>
       <template v-else>
         <MusicMiniPlayer />
         <ShellTabBar />
@@ -152,6 +157,9 @@ const phoneMain = ref<HTMLElement | null>(null)
 .app.is-touch { display: block; height: auto; min-height: 100dvh; padding-top: 0; }
 .app.is-touch .app__main--phone { display: block; overflow: visible; padding: var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + var(--dock-h) + 40px) var(--safe-left); }
 .page--touch { min-height: 0; padding: 20px 32px 0; }
+/* Плеер сбоку: содержимое сужается до колонки слева, страницы раскладываются по ней сами */
+.app.is-side .app__main--phone { padding-right: calc(var(--side-w) + var(--side-gap) + var(--safe-right)); }
+.app.is-side .page--touch { padding: 20px 28px 0; }
 /* Под строкой состояния содержимое не просвечивает: тихая полоса фона, как у Spotify */
 .app.is-touch::before { content: ''; position: fixed; inset: 0 0 auto; z-index: 25; height: var(--safe-top); background: rgba(8, 9, 12, 0.86); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); pointer-events: none; }
 

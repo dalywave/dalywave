@@ -178,6 +178,10 @@ const language = computed({
       <SettingsRow :title="t('language')">
         <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
       </SettingsRow>
+      <!-- Планшет: «Сейчас играет» колонкой справа, когда лежит горизонтально. Своя для устройства -->
+      <SettingsRow v-if="ui.isTouch" :title="t('sidePlayer')" :description="t('sidePlayerDesc')">
+        <UiSwitch v-model="prefs.sidePlayer" :label="t('sidePlayer')" hide-label />
+      </SettingsRow>
     </SettingsGroup>
 
     <!-- Сюда одной строкой встают разделы других модулей, например <DownloaderSettings /> -->
@@ -274,6 +278,8 @@ const language = computed({
     "waveReset": "Настройки волны сброшены",
     "appearance": "Интерфейс",
     "language": "Язык",
+    "sidePlayer": "Плеер сбоку",
+    "sidePlayerDesc": "Горизонтально «Сейчас играет» — колонкой справа",
     "about": "О приложении",
     "server": "Сервер",
     "serverDown": "Не отвечает",
@@ -307,6 +313,8 @@ const language = computed({
     "waveReset": "Wave settings reset",
     "appearance": "Interface",
     "language": "Language",
+    "sidePlayer": "Side player",
+    "sidePlayerDesc": "In landscape, Now Playing stays on the right",
     "about": "About",
     "server": "Server",
     "serverDown": "Not responding",

@@ -147,6 +147,8 @@
     "mute": "Mute",
     "unmute": "Unmute",
     "expand": "Open player",
+    "pinSide": "Pin player to the side",
+    "unpinSide": "Collapse to mini player",
     "collapse": "Collapse",
     "playNextDone": "“{title}” plays next",
     "enqueued": "“{title}” added to queue",
