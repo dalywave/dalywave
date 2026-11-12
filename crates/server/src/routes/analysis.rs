@@ -25,7 +25,7 @@ use crate::{
 
 /// Версия расчёта фраз и точек в ETag: меняется вместе с алгоритмом, иначе кеш приложений отвечал бы
 /// 304 со старыми фразами при том же `rev` анализа.
-const ETAG_VERSION: u32 = 1;
+const ETAG_VERSION: u32 = 2;
 
 const CACHE: &str = "private, max-age=3600";
 
@@ -151,8 +151,10 @@ pub async fn track_analysis(
         outro_start_ms: row.outro_start_ms.map(f64::from),
         ..Default::default()
     };
-    let phrases = analysis.phrases();
-    let cues = analysis.cues().map(|c| AnalysisCues {
+    // Фразы и точки — по починенной сетке, как их видит планировщик в плеере
+    let fixed = analysis.repaired();
+    let phrases = fixed.phrases();
+    let cues = fixed.cues().map(|c| AnalysisCues {
         mix_in_ms: ms(c.mix_in_ms),
         mix_out_ms: ms(c.mix_out_ms),
     });
@@ -210,12 +212,12 @@ mod tests {
         assert!(!not_modified(&h, &tag));
         h.insert(
             header::IF_NONE_MATCH,
-            HeaderValue::from_static("\"other\", \"1.42\""),
+            HeaderValue::from_static("\"other\", \"2.42\""),
         );
         assert!(not_modified(&h, &tag));
         h.insert(
             header::IF_NONE_MATCH,
-            HeaderValue::from_static("W/\"1.41\""),
+            HeaderValue::from_static("W/\"2.41\""),
         );
         assert!(!not_modified(&h, &tag));
         h.insert(header::IF_NONE_MATCH, HeaderValue::from_static("*"));
