@@ -1,0 +1,7 @@
+{
+  "invocationInfo": {"req-id": "1794492923696651-5", "hostname": "music-api"},
+  "result": [
+    {"owner": {"uid": 42, "login": "daly"}, "uid": 42, "kind": 1001, "title": "Ночь", "trackCount": 4, "visibility": "public"},
+    {"owner": {"uid": 42, "login": "daly"}, "uid": 42, "kind": 1002, "title": "Пустой", "trackCount": 0, "visibility": "private"}
+  ]
+}

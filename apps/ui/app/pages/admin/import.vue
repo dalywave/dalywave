@@ -97,7 +97,7 @@ function statsLine(i: AdminImport): string {
     "empty": "Импортов пока не было",
     "emptyText": "Здесь появятся переносы архива Spotify, списков и своих файлов — с ходом и позициями, которые не нашлись",
     "col": { "what": "Что", "state": "Состояние", "matched": "Найдено", "unmatched": "Без пары", "when": "Когда" },
-    "kind": { "text": "Список текстом", "csv": "Таблица CSV", "m3u": "Плейлист M3U", "files": "Файлы", "spotify_archive": "Архив Spotify" },
+    "kind": { "text": "Список текстом", "csv": "Таблица CSV", "m3u": "Плейлист M3U", "files": "Файлы", "spotify_archive": "Архив Spotify", "yandex": "Яндекс Музыка", "youtube_playlist": "Плейлист YouTube Music", "youtube_takeout": "Архив YouTube Music" },
     "status": { "running": "Идёт", "done": "Готово", "failed": "Ошибка", "cancelled": "Остановлен" },
     "phase": { "uploading": "Загрузка файлов", "matching": "Поиск в каталоге", "applying": "Раскладка", "done": "Готово" }
   },
@@ -107,7 +107,7 @@ function statsLine(i: AdminImport): string {
     "empty": "No imports yet",
     "emptyText": "Transfers of the Spotify archive, lists and your own files will show up here — with progress and items that weren't found",
     "col": { "what": "What", "state": "State", "matched": "Found", "unmatched": "Unmatched", "when": "When" },
-    "kind": { "text": "Text list", "csv": "CSV table", "m3u": "M3U playlist", "files": "Files", "spotify_archive": "Spotify archive" },
+    "kind": { "text": "Text list", "csv": "CSV table", "m3u": "M3U playlist", "files": "Files", "spotify_archive": "Spotify archive", "yandex": "Yandex Music", "youtube_playlist": "YouTube Music playlist", "youtube_takeout": "YouTube Music archive" },
     "status": { "running": "Running", "done": "Done", "failed": "Failed", "cancelled": "Stopped" },
     "phase": { "uploading": "Uploading files", "matching": "Catalog search", "applying": "Applying", "done": "Done" },
     "stat": { "likes": "likes", "playlists": "playlists", "albums": "albums", "artists": "follows", "plays": "plays", "files": "files", "upgraded": "upgraded" }

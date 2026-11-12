@@ -48,6 +48,18 @@ class SelftestRequest(_Model):
     deezer_track_id: int | None = None
 
 
+class YtPlaylistRequest(_Model):
+    """Перенос: треки публичного плейлиста YouTube / YouTube Music."""
+
+    playlist_id: str = Field(min_length=2, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class YtSongsRequest(_Model):
+    """Перенос: имена видео по id (архив Google Takeout хранит только id)."""
+
+    video_ids: list[str] = Field(min_length=1, max_length=50)
+
+
 class Job(AcquireRequest):
     """Задание, которое загрузчик забирает с сервера (`POST /api/fetcher/jobs/claim`)."""
 

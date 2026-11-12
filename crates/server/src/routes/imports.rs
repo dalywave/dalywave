@@ -18,7 +18,7 @@ use dalywave_protocol::{
     imports::{
         FilesImportRequest, ImportItem, ImportItemFix, ImportItemKind, ImportItemPage,
         ImportItemsQuery, ImportKind, ImportList, ImportPhase, ImportSummary, ImportTarget,
-        ListFormat, ListImportRequest, UploadQuery,
+        ListFormat, ListImportRequest, UploadQuery, YandexImportRequest, YoutubeImportRequest,
     },
 };
 use futures_util::StreamExt;
@@ -31,8 +31,12 @@ use crate::{
     error::{AppError, AppResult, bad},
     extract::{Json, Path, Query},
     import::{
-        self, NewItem, Options, files, lists,
+        self, NewItem, Options,
+        collection::Collection,
+        files, lists,
         spotify::{self, ArchiveError, Limits},
+        yandex::{self, Yandex, YandexError},
+        youtube::{self, YoutubeError},
     },
     jobs as queue,
     state::AppState,
@@ -51,6 +55,12 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/imports/list",
             post(import_list).layer(DefaultBodyLimit::max(LIST_BODY_LIMIT)),
+        )
+        .route("/imports/yandex", post(import_yandex))
+        .route("/imports/youtube", post(import_youtube))
+        .route(
+            "/imports/youtube/takeout",
+            post(upload_takeout).layer(DefaultBodyLimit::disable()),
         )
         .route("/imports/files", post(start_files))
         .route("/imports/{id}", get(one).delete(remove))
@@ -279,6 +289,258 @@ pub async fn upload_spotify(
         StatusCode::ACCEPTED,
         Json(import::summary(&st.db, user, id).await?),
     ))
+}
+
+/// Медиатека другого сервиса уже собрана: импорт, позиции, сопоставление в фоне.
+async fn start_collection(
+    st: &AppState,
+    user: Uuid,
+    kind: ImportKind,
+    title: &str,
+    collection: &Collection,
+    size: Option<i64>,
+    file_name: Option<String>,
+) -> AppResult<(StatusCode, Json<ImportSummary>)> {
+    tracing::info!(
+        kind = kind.as_str(),
+        tracks = collection.tracks.len(),
+        liked = collection.tracks.iter().filter(|t| t.liked).count(),
+        playlists = collection.playlists.len(),
+        "import source collected"
+    );
+    let options = Options {
+        target: Some(ImportTarget::Library),
+        file_name,
+        ..Options::default()
+    };
+    let mut tx = st.db.begin().await?;
+    let id = import::create(
+        &mut tx,
+        user,
+        kind,
+        title,
+        &options,
+        ImportPhase::Matching,
+        size,
+    )
+    .await?;
+    import::store_collection(&mut tx, id, collection).await?;
+    import::enqueue_match(&mut tx, id).await?;
+    tx.commit().await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(import::summary(&st.db, user, id).await?),
+    ))
+}
+
+fn import_title(title: Option<String>, kind: ImportKind) -> String {
+    title
+        .map(|t| t.trim().chars().take(200).collect::<String>())
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| import::kind_title(kind).to_string())
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/imports/yandex",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    request_body = YandexImportRequest,
+    responses(
+        (status = 202, description = "Треки собраны, сопоставление идёт в фоне", body = ImportSummary),
+        (status = 400, description = "Нет ни ссылки, ни ключа входа, или в плейлисте нет треков", body = ErrorBody),
+        (status = 422, description = "Ссылка не «Яндекс Музыки» (`yandex_link`), ключ не похож на ключ (`yandex_token`), \
+            нужен ключ входа (`yandex_login_required`), ключ не подошёл (`yandex_token_rejected`), \
+            плейлиста нет или он скрыт (`yandex_not_found`), Яндекс не отвечает стране сервера (`yandex_region`)", body = ErrorBody),
+        (status = 503, description = "«Яндекс Музыка» не ответила", body = ErrorBody),
+    ),
+)]
+pub async fn import_yandex(
+    State(st): State<AppState>,
+    principal: Principal,
+    Json(body): Json<YandexImportRequest>,
+) -> AppResult<(StatusCode, Json<ImportSummary>)> {
+    let user = principal.user.id;
+    let link = match body.url.as_deref().map(str::trim).filter(|u| !u.is_empty()) {
+        Some(u) => Some(
+            yandex::parse_link(u).ok_or_else(|| AppError::Unprocessable {
+                code: "yandex_link",
+                message: "Это не ссылка на плейлист «Яндекс Музыки»".into(),
+            })?,
+        ),
+        None => None,
+    };
+    let token = match body
+        .token
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        Some(t) => Some(
+            yandex::parse_token(t).ok_or_else(|| AppError::Unprocessable {
+                code: "yandex_token",
+                message: "Ключ не похож на настоящий — скопируйте его целиком".into(),
+            })?,
+        ),
+        None => None,
+    };
+    if link.is_none() && token.is_none() {
+        return Err(bad("вставьте ссылку на плейлист"));
+    }
+    // Ключ живёт только здесь: в базу, задачи и журналы он не попадает
+    let fetched = Yandex::new(&st.http, &st.config.yandex_music.url, token.as_deref())
+        .fetch(link.as_ref())
+        .await
+        .map_err(|e| {
+            let code = match e {
+                YandexError::LoginRequired => "yandex_login_required",
+                YandexError::TokenRejected => "yandex_token_rejected",
+                YandexError::NotFound => "yandex_not_found",
+                YandexError::Region => "yandex_region",
+                YandexError::Unavailable(_) | YandexError::Format => {
+                    tracing::warn!(error = %e, "yandex music did not answer");
+                    return AppError::Unavailable(
+                        "«Яндекс Музыка» не ответила — попробуйте позже".into(),
+                    );
+                }
+            };
+            let message = match e {
+                YandexError::Region => {
+                    "«Яндекс Музыка» не отдаёт данные серверу из его страны".into()
+                }
+                e => capitalize(&e.to_string()),
+            };
+            AppError::Unprocessable { code, message }
+        })?;
+    drop(token);
+    if fetched.collection.is_empty() {
+        return Err(bad("в плейлисте нет треков"));
+    }
+    let title = import_title(fetched.title, ImportKind::Yandex);
+    start_collection(
+        &st,
+        user,
+        ImportKind::Yandex,
+        &title,
+        &fetched.collection,
+        None,
+        None,
+    )
+    .await
+}
+
+fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        Some(f) => f.to_uppercase().chain(c).collect(),
+        None => String::new(),
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/imports/youtube",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    request_body = YoutubeImportRequest,
+    responses(
+        (status = 202, description = "Треки плейлиста собраны, сопоставление идёт в фоне", body = ImportSummary),
+        (status = 400, description = "В плейлисте нет треков", body = ErrorBody),
+        (status = 422, description = "Не ссылка на плейлист (`youtube_link`) или плейлист закрыт (`youtube_not_found`)", body = ErrorBody),
+        (status = 503, description = "YouTube Music недоступен", body = ErrorBody),
+    ),
+)]
+pub async fn import_youtube(
+    State(st): State<AppState>,
+    principal: Principal,
+    Json(body): Json<YoutubeImportRequest>,
+) -> AppResult<(StatusCode, Json<ImportSummary>)> {
+    let user = principal.user.id;
+    let id = youtube::playlist_id(&body.url).ok_or_else(|| AppError::Unprocessable {
+        code: "youtube_link",
+        message: "Нужна ссылка на плейлист YouTube или YouTube Music".into(),
+    })?;
+    let playlist = youtube::fetch_playlist(&st.http, &st.config.fetcher.url, &id)
+        .await
+        .map_err(|e| match e {
+            YoutubeError::NotFound => AppError::Unprocessable {
+                code: "youtube_not_found",
+                message: "Плейлист не открылся — он закрыт или удалён".into(),
+            },
+            YoutubeError::Unavailable(m) => {
+                tracing::warn!(error = %m, "youtube music playlist failed");
+                AppError::Unavailable("YouTube Music сейчас недоступен — попробуйте позже".into())
+            }
+        })?;
+    let collection = youtube::playlist_collection(&playlist);
+    if collection.is_empty() {
+        return Err(bad("в плейлисте нет треков"));
+    }
+    let title = import_title(Some(playlist.title), ImportKind::YoutubePlaylist);
+    start_collection(
+        &st,
+        user,
+        ImportKind::YoutubePlaylist,
+        &title,
+        &collection,
+        None,
+        None,
+    )
+    .await
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/imports/youtube/takeout",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    params(UploadQuery),
+    request_body(content = Vec<u8>, content_type = "application/zip", description = "Архив Google Takeout «YouTube и YouTube Music», до 500 МБ"),
+    responses(
+        (status = 202, description = "Архив разобран, сопоставление идёт в фоне", body = ImportSummary),
+        (status = 400, description = "Не архив Takeout или в нём нет музыки", body = ErrorBody),
+        (status = 413, description = "Больше 500 МБ", body = ErrorBody),
+    ),
+)]
+pub async fn upload_takeout(
+    State(st): State<AppState>,
+    principal: Principal,
+    Query(q): Query<UploadQuery>,
+    headers: HeaderMap,
+    body: Body,
+) -> AppResult<(StatusCode, Json<ImportSummary>)> {
+    let user = principal.user.id;
+    let dir = temp_dir()?;
+    let (path, size, head) = receive(&headers, body, import::MAX_ARCHIVE_BYTES, dir.path()).await?;
+    if !head.starts_with(b"PK") {
+        return Err(bad("нужен ZIP-архив из Google Takeout"));
+    }
+    let collection = tokio::task::spawn_blocking(move || {
+        let file = std::fs::File::open(&path).map_err(|e| ArchiveError::Broken(e.to_string()))?;
+        youtube::parse_takeout(std::io::BufReader::new(file), Limits::default())
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.into()))?
+    .map_err(|e| match e {
+        ArchiveError::Empty => bad(
+            "в архиве нет музыки YouTube: в Takeout отметьте «YouTube и YouTube Music» — плейлисты и музыкальную библиотеку",
+        ),
+        e => AppError::BadRequest(e.to_string()),
+    })?;
+    let name = q
+        .name
+        .map(|n| n.trim().chars().take(300).collect::<String>())
+        .filter(|n| !n.is_empty());
+    start_collection(
+        &st,
+        user,
+        ImportKind::YoutubeTakeout,
+        import::kind_title(ImportKind::YoutubeTakeout),
+        &collection,
+        Some(size as i64),
+        name,
+    )
+    .await
 }
 
 #[utoipa::path(

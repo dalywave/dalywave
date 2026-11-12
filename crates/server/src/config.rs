@@ -11,6 +11,8 @@ pub const DEFAULT_DEEZER_URL: &str = "https://api.deezer.com";
 pub const DEFAULT_FETCHER_URL: &str = "http://localhost:8402";
 pub const DEFAULT_ML_URL: &str = "http://localhost:8403";
 pub const DEFAULT_LRCLIB_URL: &str = "https://lrclib.net";
+/// API «Яндекс Музыки», которым пользуются её приложения (перенос музыки).
+pub const DEFAULT_YANDEX_MUSIC_URL: &str = "https://api.music.yandex.net";
 /// Сколько держать запрос загрузчика, пока заданий нет: меньше таймаута его HTTP-клиента (30 с).
 pub const CLAIM_WAIT: Duration = Duration::from_secs(25);
 /// Аренда задания загрузчиком. Обычно трек качается 10–20 с; загрузчик продлевает аренду, пока работает.
@@ -47,6 +49,8 @@ pub struct Config {
     pub ml: MlConfig,
     /// Тексты песен
     pub lrclib: LrclibConfig,
+    /// Перенос из «Яндекс Музыки»
+    pub yandex_music: YandexMusicConfig,
     /// Токен конвейера выпусков (`make release-mac`, CI): загрузка сборки и регистрация выпуска
     /// приложения. `None` — выпускать нельзя.
     pub release_token: Option<String>,
@@ -79,6 +83,21 @@ impl Default for LrclibConfig {
     fn default() -> Self {
         Self {
             url: DEFAULT_LRCLIB_URL.into(),
+        }
+    }
+}
+
+/// API «Яндекс Музыки» для переноса медиатеки (ключа у сервера нет: ключ входа даёт человек).
+#[derive(Clone, Debug)]
+pub struct YandexMusicConfig {
+    /// Например `https://api.music.yandex.net`.
+    pub url: String,
+}
+
+impl Default for YandexMusicConfig {
+    fn default() -> Self {
+        Self {
+            url: DEFAULT_YANDEX_MUSIC_URL.into(),
         }
     }
 }
@@ -317,6 +336,11 @@ impl Config {
         let lrclib = LrclibConfig {
             url: lrclib_url.trim_end_matches('/').to_string(),
         };
+        let yandex_url = var("YANDEX_MUSIC_URL").unwrap_or_else(|| DEFAULT_YANDEX_MUSIC_URL.into());
+        url::Url::parse(&yandex_url).context("DALYWAVE_YANDEX_MUSIC_URL is not a valid URL")?;
+        let yandex_music = YandexMusicConfig {
+            url: yandex_url.trim_end_matches('/').to_string(),
+        };
         let release_token = var("RELEASE_TOKEN").filter(|t| {
             let ok = t.chars().count() >= MIN_RELEASE_TOKEN_LEN;
             if !ok {
@@ -345,6 +369,7 @@ impl Config {
             fetcher,
             ml,
             lrclib,
+            yandex_music,
             release_token,
         })
     }

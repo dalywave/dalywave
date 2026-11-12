@@ -1,0 +1,14 @@
+{
+  "playlistId": "PLntVvZRJe0d-6aEQPLPW4C3VjzjP2XbG8",
+  "title": "Ночная дорога",
+  "description": "",
+  "trackCount": 3,
+  "tracks": [
+    {"videoId": "Hurt0000001", "title": "Hurt", "artists": ["Lowborn"], "album": "Hurt",
+     "durationMs": 158000, "videoType": "MUSIC_VIDEO_TYPE_ATV"},
+    {"videoId": "Devil000001", "title": "Lowborn - Devil (Official Video) | Премьера 2023", "artists": ["LowbornVEVO"],
+     "album": null, "durationMs": 163000, "videoType": "MUSIC_VIDEO_TYPE_OMV"},
+    {"videoId": "Nobody00001", "title": "Совсем неизвестная песня", "artists": ["Nobody At All - Topic"],
+     "album": "Void", "durationMs": 200000, "videoType": "MUSIC_VIDEO_TYPE_ATV"}
+  ]
+}

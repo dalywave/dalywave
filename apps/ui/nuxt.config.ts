@@ -3,6 +3,9 @@ import tailwindcss from '@tailwindcss/vite'
 // Данные дизайн-макетов (обложки, превью) — только для моков в разработке
 const fixtures = decodeURIComponent(new URL('../../design/fixtures', import.meta.url).pathname)
 
+// Типов Node в проекте нет: переменная окружения — через globalThis
+const devApi = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.DALYWAVE_DEV_API ?? 'http://localhost:8400'
+
 // Один интерфейс для сайта и приложений Tauri: SPA, всё нужное для работы без сети — внутри сборки
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-01',
@@ -47,10 +50,11 @@ export default defineNuxtConfig({
 
   devServer: { port: 3400 },
 
-  // Локально API живёт на :8400; cookie сессии ставится для localhost:3400
+  // Локально API живёт на :8400; cookie сессии ставится для localhost:3400.
+  // Второй API (другая ветка, своя база) — DALYWAVE_DEV_API=http://localhost:8410
   nitro: {
     devProxy: {
-      '/api': { target: 'http://localhost:8400/api', ws: true },
+      '/api': { target: `${devApi}/api`, ws: true },
     },
   },
 

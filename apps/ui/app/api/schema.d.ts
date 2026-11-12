@@ -911,6 +911,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/imports/yandex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["import_yandex"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/youtube": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["import_youtube"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/imports/youtube/takeout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upload_takeout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/imports/{id}": {
         parameters: {
             query?: never;
@@ -3482,7 +3530,7 @@ export interface components {
          * @description Что импортируется. Хранится в `imports.kind`.
          * @enum {string}
          */
-        ImportKind: "text" | "csv" | "m3u" | "files" | "spotify_archive";
+        ImportKind: "text" | "csv" | "m3u" | "files" | "spotify_archive" | "yandex" | "youtube_playlist" | "youtube_takeout";
         ImportList: {
             items: components["schemas"]["ImportSummary"][];
         };
@@ -6362,6 +6410,21 @@ export interface components {
              */
             disputeId: string;
         };
+        /**
+         * @description Перенос из «Яндекс Музыки». Ссылка — на плейлист (`music.yandex.ru/users/<логин>/playlists/<номер>`,
+         *     `music.yandex.ru/playlists/<id>`) или на «Мне нравится» открытого профиля (`…/users/<логин>/tracks`).
+         *     Ключ входа (OAuth-токен «Яндекс Музыки») нужен, если Яндекс не отдаёт данные без входа; с ним и без
+         *     ссылки переносятся «Мне нравится» и все плейлисты аккаунта. Ключ используется только в этом
+         *     запросе: не сохраняется и не пишется в журналы.
+         */
+        YandexImportRequest: {
+            token?: string | null;
+            url?: string | null;
+        };
+        /** @description Плейлист YouTube или YouTube Music по ссылке (`…?list=PL…`). */
+        YoutubeImportRequest: {
+            url: string;
+        };
         /** @description Схемы нет в OpenAPI сервера — заглушка scripts/api-types.mjs */
         DeezerKind: string;
     };
@@ -8555,6 +8618,154 @@ export interface operations {
             };
         };
     };
+    import_yandex: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YandexImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Треки собраны, сопоставление идёт в фоне */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Нет ни ссылки, ни ключа входа, или в плейлисте нет треков */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Ссылка не «Яндекс Музыки» (`yandex_link`), ключ не похож на ключ (`yandex_token`), нужен ключ входа (`yandex_login_required`), ключ не подошёл (`yandex_token_rejected`), плейлиста нет или он скрыт (`yandex_not_found`), Яндекс не отвечает стране сервера (`yandex_region`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description «Яндекс Музыка» не ответила */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    import_youtube: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YoutubeImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Треки плейлиста собраны, сопоставление идёт в фоне */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description В плейлисте нет треков */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Не ссылка на плейлист (`youtube_link`) или плейлист закрыт (`youtube_not_found`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description YouTube Music недоступен */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    upload_takeout: {
+        parameters: {
+            query?: {
+                /** @description Имя файла, как у человека на диске. */
+                name?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Архив Google Takeout «YouTube и YouTube Music», до 500 МБ */
+        requestBody: {
+            content: {
+                "application/zip": number[];
+            };
+        };
+        responses: {
+            /** @description Архив разобран, сопоставление идёт в фоне */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummary"];
+                };
+            };
+            /** @description Не архив Takeout или в нём нет музыки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 500 МБ */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     one_get_imports_id_: {
         parameters: {
             query?: never;
@@ -8988,7 +9199,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description `already_queued` — уже в очереди; `too_many_pending` — пять треков уже ждут; `nothing_playing` — у хозяина ничего не на связи */
+            /** @description `already_queued` — уже в очереди; `too_many_pending` — пять треков уже ждут; `nothing_playing` — у хозяина ничего не на связи; `explicit_off` — хозяин слушает без нецензурного, а трек explicit */
             409: {
                 headers: {
                     [name: string]: unknown;

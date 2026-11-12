@@ -22,7 +22,14 @@ from .acquire import Fetcher
 from .config import Settings
 from .deezer import DeezerError, DeezerNotFoundError
 from .download import tool_versions
-from .models import AcquireRequest, MatchRequest, SelftestRequest
+from .library import LibraryUnavailableError, PlaylistNotFoundError, YTLibrary
+from .models import (
+    AcquireRequest,
+    MatchRequest,
+    SelftestRequest,
+    YtPlaylistRequest,
+    YtSongsRequest,
+)
 
 log = logging.getLogger("dalywave_fetcher")
 
@@ -75,9 +82,15 @@ def cookies_status(path: Path | None) -> dict[str, Any]:
     }
 
 
-def create_app(settings: Settings | None = None, fetcher: Fetcher | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    fetcher: Fetcher | None = None,
+    library: YTLibrary | None = None,
+) -> FastAPI:
     settings = settings or Settings.from_env()
     holder: dict[str, Fetcher] = {}
+    # Перенос музыки только читает YouTube Music: без замков, рядом со скачиванием
+    ytlib = library or YTLibrary()
     # Скачивание — строго по одному: так нас реже замечает защита YouTube.
     # Поиск кандидатов не качает файлы и идёт под своим замком, чтобы «Спорные»
     # в админке не ждали массовую загрузку.
@@ -111,6 +124,15 @@ def create_app(settings: Settings | None = None, fetcher: Fetcher | None = None)
     @app.exception_handler(DeezerError)
     async def deezer_error(_: Request, exc: DeezerError) -> JSONResponse:
         return _error(502, "deezer_error", f"Deezer не ответил: {exc}")
+
+    @app.exception_handler(PlaylistNotFoundError)
+    async def playlist_not_found(_: Request, __: PlaylistNotFoundError) -> JSONResponse:
+        return _error(404, "playlist_not_found", "Плейлист закрыт, удалён или это не плейлист")
+
+    @app.exception_handler(LibraryUnavailableError)
+    async def library_unavailable(_: Request, exc: LibraryUnavailableError) -> JSONResponse:
+        log.warning("YouTube Music не ответил: %s", exc)
+        return _error(502, "ytmusic_unavailable", "YouTube Music не ответил, повторите позже")
 
     @app.exception_handler(Exception)
     async def unexpected(_: Request, exc: Exception) -> JSONResponse:
@@ -153,6 +175,16 @@ def create_app(settings: Settings | None = None, fetcher: Fetcher | None = None)
                 direct_url=req.direct_url,
             )
             return result.to_json()
+
+    @app.post("/v1/ytmusic/playlist")
+    def ytmusic_playlist(req: YtPlaylistRequest) -> dict[str, Any]:
+        """Перенос музыки: треки публичного плейлиста по порядку."""
+        return ytlib.playlist(req.playlist_id)
+
+    @app.post("/v1/ytmusic/songs")
+    def ytmusic_songs(req: YtSongsRequest) -> dict[str, Any]:
+        """Перенос музыки: имя, канал, длительность и музыкальная метка видео по id."""
+        return {"songs": ytlib.songs(req.video_ids)}
 
     @app.post("/v1/selftest")
     def selftest(req: SelftestRequest | None = None) -> dict[str, Any]:

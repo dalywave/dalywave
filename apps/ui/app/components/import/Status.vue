@@ -39,7 +39,8 @@ const share = computed(() => {
 const failed = computed(() => props.summary?.status === 'failed')
 const cancelled = computed(() => props.summary?.status === 'cancelled')
 const isFiles = computed(() => props.summary?.kind === 'files')
-const isList = computed(() => !!props.summary && ['text', 'csv', 'm3u'].includes(props.summary.kind))
+// Один плейлист по ссылке итожится как список: «В плейлист „…“ добавлено N треков»
+const isList = computed(() => !!props.summary && ['text', 'csv', 'm3u', 'youtube_playlist'].includes(props.summary.kind))
 
 /** Слово после числа в нужной форме: [одна, две, пять] — для русского, [one, many] — для английского */
 function count(v: number, ru: [string, string, string], en: [string, string]): string {
@@ -73,6 +74,8 @@ const sentence = computed(() => {
   const parts: string[] = []
   if (st.likes) parts.push(count(st.likes, ['лайк', 'лайка', 'лайков'], ['like', 'likes']))
   if (st.playlists) parts.push(count(st.playlists, ['плейлист', 'плейлиста', 'плейлистов'], ['playlist', 'playlists']))
+  // Плейлисты уже были с прошлого переноса — дополнились
+  else if (st.playlistTracks) parts.push(t('result.intoPlaylists', { tracks: count(st.playlistTracks, ['трек', 'трека', 'треков'], ['track', 'tracks']) }))
   if (st.albums) parts.push(count(st.albums, ['альбом', 'альбома', 'альбомов'], ['album', 'albums']))
   if (st.artists) parts.push(count(st.artists, ['подписка', 'подписки', 'подписок'], ['follow', 'follows']))
   if (st.plays) parts.push(count(st.plays, ['прослушивание', 'прослушивания', 'прослушиваний'], ['play', 'plays']))
@@ -258,6 +261,7 @@ const tiles = computed(() => {
       "nothing": "Ни один трек не нашёлся — проверьте список ниже",
       "listPlaylist": "В плейлист «{title}» добавлено {tracks}",
       "listLikes": "В «Мне нравится» добавлено {tracks}",
+      "intoPlaylists": "{tracks} в плейлисты",
       "files": "Принято {files}, {upgraded} заменили копии хуже качеством",
       "filesOnly": "Принято {files}",
       "noFiles": "Ни один файл не подошёл — проверьте список ниже"
@@ -302,6 +306,7 @@ const tiles = computed(() => {
       "nothing": "No tracks were found — check the list below",
       "listPlaylist": "Added {tracks} to “{title}”",
       "listLikes": "Added {tracks} to Liked",
+      "intoPlaylists": "{tracks} to playlists",
       "files": "Accepted {files}, {upgraded} replaced lower-quality copies",
       "filesOnly": "Accepted {files}",
       "noFiles": "No files matched — check the list below"
