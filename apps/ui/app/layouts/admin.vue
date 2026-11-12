@@ -5,6 +5,8 @@ const route = useRoute()
 const ui = useUiStore()
 const { t } = useI18n()
 const { counts, refresh } = useAdminCounts()
+// Кнопки окна приложения — как в основной оболочке: «светофор» над колонкой разделов, на Windows — полоса
+const { win, titlebar, titlebarStyle } = useTitlebar()
 
 interface NavItem { to: string, key: string, icon: string, count?: 'disputed' | 'waiting' }
 const GROUPS: { key: string | null, items: NavItem[] }[] = [
@@ -55,7 +57,8 @@ onMounted(() => void nextTick(revealTab))
 </script>
 
 <template>
-  <div class="adm">
+  <div class="adm" :class="titlebar && `is-titlebar-${titlebar}`" :style="titlebarStyle">
+    <ShellTitleBar v-if="titlebar" :focused="win.focused" :maximized="win.maximized" />
     <aside v-if="!ui.isPhone" class="adm__side thin-scrollbar" :aria-label="t('admin.title')">
       <div class="adm__brand">
         <BrandLogo />
@@ -108,7 +111,9 @@ onMounted(() => void nextTick(revealTab))
 
 <style scoped>
 .adm { position: relative; z-index: 1; display: grid; background: var(--ink-1); grid-template-columns: 232px minmax(0, 1fr); height: 100vh; height: 100dvh; }
-.adm__side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 22px 12px 12px; border-right: 1px solid var(--hair); }
+.adm__side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: calc(22px + var(--titlebar-inset, 0px) - min(var(--titlebar-inset, 0px), 18px)) 12px 12px; border-right: 1px solid var(--hair); }
+.adm.is-titlebar-mac-inset { --titlebar-inset: var(--titlebar-size, 48px); }
+.adm.is-titlebar-windows { padding-top: var(--titlebar-size, 32px); }
 .adm__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 4px; }
 .adm__brand-sub { font-size: var(--fs-small); font-weight: 600; color: var(--text-3); }
 .adm__nav { display: flex; flex: 1; flex-direction: column; gap: 16px; }

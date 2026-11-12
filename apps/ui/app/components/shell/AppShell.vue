@@ -19,20 +19,13 @@ onMounted(() => useJamStore().init())
 onMounted(() => void useAccountSettings().load())
 
 // Окно приложения: во весь экран «светофора» нет, без фокуса заголовок приглушён
-const win = reactive({ maximized: false, focused: true, fullscreen: false })
-let offWin: (() => void) | null = null
-onMounted(() => {
-  if (bridge.isDesktopApp) offWin = bridge.window.onState(s => Object.assign(win, s))
-})
-onBeforeUnmount(() => offWin?.())
+const { win, titlebar, titlebarStyle } = useTitlebar()
 
 // Обновление приложения качается в фоне само и ждёт «Перезапустить» в настройках («О приложении»)
 // и в трее — без всплывающих предложений: ни музыку, ни работу оно не прерывает
 
 const main = ref<HTMLElement | null>(null)
 const scrolled = ref(false)
-const titlebar = computed(() => (bridge.isDesktopApp && bridge.chrome && bridge.chrome.controls !== 'none' ? bridge.chrome.controls : null))
-const titlebarStyle = computed(() => (bridge.chrome ? { '--titlebar-size': `${bridge.chrome.height}px` } : undefined))
 
 function onScroll() {
   scrolled.value = (main.value?.scrollTop ?? 0) > 8
@@ -80,11 +73,11 @@ const phoneMain = ref<HTMLElement | null>(null)
       'is-panel': ui.panelOpen && !ui.isPhone,
       'is-rail': ui.isRail,
       'is-player': ui.playerOpen,
-      [`is-titlebar-${titlebar}`]: titlebar && !win.fullscreen,
+      [`is-titlebar-${titlebar}`]: !!titlebar,
     }"
     :style="titlebarStyle"
   >
-    <ShellTitleBar v-if="titlebar && !win.fullscreen" :focused="win.focused" :maximized="win.maximized" />
+    <ShellTitleBar v-if="titlebar" :focused="win.focused" :maximized="win.maximized" />
     <template v-if="!ui.isPhone">
       <ShellSidebar class="app__side" :rail="ui.isRail" />
       <div class="app__center">

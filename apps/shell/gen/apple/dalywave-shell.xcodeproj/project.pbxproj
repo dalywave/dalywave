@@ -372,18 +372,18 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_53FE007E-2B55-4AA3-B7D5-B7ADB6855E38" /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = arm64;
-			sourceTree = "<group>";
-		};
-		"TEMP_96E80462-13B1-4AB1-8879-01BB07991BE6" /* x86_64 */ = {
+		"TEMP_4C140701-6072-4C80-BB17-E1825FB4F1B5" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
+			sourceTree = "<group>";
+		};
+		"TEMP_6C7648B7-3A6A-495D-8460-DEB31EC5F38D" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
