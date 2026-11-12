@@ -310,6 +310,45 @@ async fn commands_reach_their_device_and_come_back_acknowledged(db: PgPool) {
 }
 
 #[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn shuffle_and_repeat_travel_as_commands_and_in_the_snapshot(db: PgPool) {
+    let app = TestApp::new(db).await;
+    let me = app.listener("ann").await;
+    let addr = app.serve().await;
+    let mut a = device(addr, &me, "mac", "laptop").await;
+    let mut b = device(addr, &me, "phone", "phone").await;
+
+    for (id, command) in [
+        ("s1", json!({ "action": "setShuffle", "shuffle": true })),
+        ("r1", json!({ "action": "setRepeat", "mode": "one" })),
+    ] {
+        send(
+            &mut b,
+            json!({ "type": "connect.command", "id": id, "to": "mac", "command": command }),
+        )
+        .await;
+        let cmd = next_of(&mut a, "connect.command").await;
+        assert_eq!(cmd["command"], command);
+    }
+    // Неизвестный режим повтора не доходит
+    send(
+        &mut b,
+        json!({ "type": "connect.command", "id": "r2", "to": "mac", "command": { "action": "setRepeat", "mode": "twice" } }),
+    )
+    .await;
+    none_of(&mut a, "connect.command").await;
+
+    send(&mut a, json!({ "type": "connect.claim" })).await;
+    next_of(&mut b, "connect.active").await;
+    let mut st = state(1000, true);
+    st["shuffle"] = json!(true);
+    st["repeat"] = json!("all");
+    send(&mut a, json!({ "type": "connect.state", "state": st })).await;
+    let relayed = next_of(&mut b, "connect.state").await;
+    assert_eq!(relayed["state"]["shuffle"], true);
+    assert_eq!(relayed["state"]["repeat"], "all");
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
 async fn transfer_hands_queue_and_position_to_the_new_device(db: PgPool) {
     let app = TestApp::new(db).await;
     let me = app.listener("ann").await;

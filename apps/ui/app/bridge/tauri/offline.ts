@@ -10,7 +10,7 @@ import type {
   SavedAlbumPage, SearchResults, Track,
 } from '~/api/types'
 import type {
-  Bridge, DownloadKind, HapticKind, OfflineBridge, OfflineSettings, OfflineStatus, SourceResult, TrackDownload,
+  Bridge, DownloadKind, HapticKind, OfflineBridge, OfflineReserve, OfflineSettings, OfflineStatus, SourceResult, TrackDownload,
   WaveSettings, WaveStart, WaveTrack,
 } from '../types'
 import { gainFor } from '../web'
@@ -57,6 +57,7 @@ export function createOfflineBridge(): OfflineBridge {
     clear: () => call<OfflineStatus>('offline_clear'),
     downloads: () => call<TrackDownload[]>('offline_downloads'),
     onProgress: cb => on<TrackDownload>('downloads:progress', cb),
+    reserve: () => call<OfflineReserve>('offline_reserve'),
   }
 }
 
@@ -172,6 +173,10 @@ export function withOffline(bridge: Bridge, offline: OfflineBridge): Bridge {
       remove: synced(pl.remove),
       addItems: synced(pl.addItems),
       removeItem: synced(pl.removeItem),
+      removeItems: synced(pl.removeItems),
+      setCover: synced(pl.setCover),
+      removeCover: synced(pl.removeCover),
+      duplicate: synced(pl.duplicate),
       moveItem: synced(pl.moveItem),
       pin: synced(pl.pin),
     },

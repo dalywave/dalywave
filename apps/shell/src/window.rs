@@ -108,7 +108,7 @@ pub fn create_main(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     Ok(window)
 }
 
-fn is_app_url(url: &Url, dev_url: Option<&Url>) -> bool {
+pub(crate) fn is_app_url(url: &Url, dev_url: Option<&Url>) -> bool {
     match url.scheme() {
         // Свои страницы: tauri://localhost (macOS) и http(s)://tauri.localhost (Windows)
         "tauri" => true,
@@ -179,6 +179,14 @@ pub fn on_event(_window: &Window, _event: &WindowEvent) {}
 
 #[cfg(desktop)]
 pub fn on_event(window: &Window, event: &WindowEvent) {
+    // Мини-плеер: ⌘W и Alt+F4 закрывают его и возвращают главное окно
+    if window.label() == crate::MINI {
+        if let WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            crate::mini::close(window.app_handle());
+        }
+        return;
+    }
     if window.label() != MAIN {
         return;
     }

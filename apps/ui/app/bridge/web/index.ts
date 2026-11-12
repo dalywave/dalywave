@@ -1,6 +1,6 @@
 // Мост сайта: HTTP к нашему API, звук — WebAudioEngine, события — пачками, живые события — WebSocket.
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
-import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, Track, WaveSession } from '~/api/types'
+import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
 import type { AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
@@ -11,6 +11,7 @@ import { EventQueue } from './events'
 import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
 import { createLive } from './live'
 import { devOutputs, safariOutputs } from './outputs'
+import { devRecognizer } from '../mock/recognize'
 
 // По каким путям OpenAPI видно, что раздел уже на сервере
 const SECTION_READY: Record<Section, (paths: string[]) => boolean> = {
@@ -340,6 +341,10 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         return list.items
       },
       soundSearch: (text, limit = 12) => unwrap(api.POST('/api/search/sound', { body: { text, limit } })),
+      lyrics: trackId => unwrap(api.GET('/api/tracks/{id}/lyrics', { params: { path: { id: trackId } } })),
+      searchLyrics: (q, limit = 20) => unwrap(api.GET('/api/lyrics/search', { params: { query: { q, limit } } })),
+      similar: (id, limit = 20) => unwrap(api.GET('/api/tracks/{id}/similar', { params: { path: { id }, query: { limit } } })),
+      resolveLink: url => unwrap(api.POST('/api/resolve-link', { body: { url } })),
     },
 
     home: () => unwrap(api.GET('/api/home')),
@@ -349,6 +354,20 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       less: facetId => unwrap(api.POST('/api/taste/facets/{id}/less', { params: { path: { id: facetId } } })),
       undoLess: damperId => done(api.DELETE('/api/taste/dampers/{id}', { params: { path: { id: damperId } } })),
       reset: () => done(api.POST('/api/taste/reset', { body: { confirm: true } })),
+    },
+
+    rewind: {
+      years: () => unwrap(api.GET('/api/rewind')),
+      get: year => unwrap(api.GET('/api/rewind/{year}', { params: { path: { year } } })),
+      savePlaylist: async year => (await unwrap(api.POST('/api/rewind/{year}/playlist', { params: { path: { year } } }))).id,
+    },
+
+    // Распознать песню умеют только приложения (bridge.recognizer); трек и история — везде
+    recognizer: devRecognizer(),
+    recognize: {
+      resolve: match => unwrap(api.POST('/api/recognize/resolve', { body: match })),
+      history: (cursor, limit = 20) => unwrap(api.GET('/api/recognize/history', { params: { query: { cursor: cursor ?? undefined, limit } } })),
+      remove: id => done(api.DELETE('/api/recognize/history/{id}', { params: { path: { id } } })),
     },
 
     library: {
@@ -390,7 +409,11 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       },
       update: (id, patch) => unwrap(api.PATCH('/api/playlists/{id}', { params: { path: { id } }, body: patch })),
       remove: id => done(api.DELETE('/api/playlists/{id}', { params: { path: { id } } })),
-      addItems: (id, body) => done(api.POST('/api/playlists/{id}/items', { params: { path: { id } }, body })),
+      addItems: (id, body) => unwrap(api.POST('/api/playlists/{id}/items', { params: { path: { id } }, body })),
+      removeItems: (id, itemIds) => done(api.POST('/api/playlists/{id}/items/remove', { params: { path: { id } }, body: { itemIds } })),
+      setCover: (id, file) => upload<PlaylistSummary>('PUT', `/api/playlists/${encodeURIComponent(id)}/cover`, file, file.type || 'image/jpeg'),
+      removeCover: id => unwrap(api.DELETE('/api/playlists/{id}/cover', { params: { path: { id } } })),
+      duplicate: (id, title) => unwrap(api.POST('/api/playlists/{id}/duplicate', { params: { path: { id } }, body: title ? { title } : {} })),
       removeItem: (id, itemId) => done(api.DELETE('/api/playlists/{id}/items/{itemId}', { params: { path: { id, itemId } } })),
       moveItem: (id, itemId, afterItemId) => done(api.POST('/api/playlists/{id}/items/{itemId}/move', { params: { path: { id, itemId } }, body: { afterItemId } })),
       pin: (id, pinned) => (pinned
@@ -432,6 +455,13 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
           params: { path: { id: session } },
           body: { trackId, kind, positionMs: Math.max(0, Math.round(positionMs)) },
         }))
+      },
+      presets: {
+        list: async () => (await unwrap(api.GET('/api/wave/presets'))).items,
+        create: body => unwrap(api.POST('/api/wave/presets', { body })),
+        update: (id, patch) => unwrap(api.PATCH('/api/wave/presets/{id}', { params: { path: { id } }, body: patch })),
+        remove: id => done(api.DELETE('/api/wave/presets/{id}', { params: { path: { id } } })),
+        reorder: async ids => (await unwrap(api.PUT('/api/wave/presets/order', { body: { ids } }))).items,
       },
     },
 

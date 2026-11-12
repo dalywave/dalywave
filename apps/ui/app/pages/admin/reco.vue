@@ -31,6 +31,12 @@ const selected = computed({
   },
 })
 const user = computed(() => data.value?.user)
+// В списке слушателей — сразу видно, у кого вкус уже есть: лайки и прослушивания
+const listenerOptions = computed(() => listeners.value.map(l => ({
+  value: l.id,
+  label: l.id === viewerId.value ? t('me', { name: l.name }) : l.name,
+  hint: t('whoHint', { l: formatNumber(l.likes, lang.value), p: formatNumber(l.plays, lang.value) }),
+})))
 
 const ix = computed(() => data.value?.index)
 const n = (v: number) => formatNumber(v, lang.value)
@@ -132,15 +138,6 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   <div class="ap">
     <header class="ap-head">
       <h1 class="ap-title">{{ t('title') }}</h1>
-      <div class="ap-head__side">
-        <span v-if="data?.modelVersion" class="rc__model">{{ t('model', { v: data.modelVersion }) }}</span>
-        <label v-if="listeners.length" class="rc__who">
-          <span class="rc__who-label">{{ t('who') }}</span>
-          <select v-model="selected" class="ap-input ap-select" :aria-label="t('who')">
-            <option v-for="l in listeners" :key="l.id" :value="l.id">{{ l.id === viewerId ? t('me', { name: l.name }) : l.name }}</option>
-          </select>
-        </label>
-      </div>
     </header>
 
     <AdminState :loading="state === 'loading'" :error="state === 'error' || state === 'missing'" :rows="6" @retry="load">
@@ -148,7 +145,10 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
         <!-- Вкус выбранного слушателя -->
         <header class="rc__group">
           <span class="rc__eyebrow">{{ t('user.eyebrow') }}</span>
-          <h2 class="rc__group-title">{{ user.name }}</h2>
+          <h2 class="rc__group-title">
+            <AdminSelect v-if="listeners.length > 1" v-model="selected" :options="listenerOptions" :label="t('who')" variant="title" />
+            <template v-else>{{ user.name }}</template>
+          </h2>
           <p class="ap-hint">{{ t('user.hint') }}</p>
         </header>
 
@@ -336,14 +336,11 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
 </template>
 
 <style scoped>
-.rc__model { font-size: var(--fs-caption); font-weight: 600; color: var(--text-2); }
-.rc__who { display: flex; align-items: center; gap: 8px; }
-.rc__who-label { font-size: var(--fs-small); color: var(--text-3); }
-.rc__who .ap-select { min-width: 200px; max-width: 280px; text-overflow: ellipsis; }
-.rc__group { display: flex; flex-direction: column; gap: 4px; margin-bottom: -16px; }
+.rc__group { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: -16px; }
+.rc__group > * { max-width: 100%; }
 .rc__group--shared { padding-top: 32px; border-top: 1px solid var(--hair); }
 .rc__eyebrow { font-size: 11px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
-.rc__group-title { margin: 0; overflow: hidden; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); text-overflow: ellipsis; white-space: nowrap; }
+.rc__group-title { display: flex; min-width: 0; margin: 0 0 0 -8px; padding-left: 8px; overflow: hidden; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); text-overflow: ellipsis; white-space: nowrap; }
 .rc__slider { display: flex; align-items: center; gap: 16px; width: 280px; max-width: 100%; }
 .rc__slider > :first-child { flex: 1; min-width: 0; }
 .rc__slider b { min-width: 72px; font-size: var(--fs-small); font-weight: 600; text-align: right; }
@@ -372,10 +369,6 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   .ap-stats[style*="--n: 5"] .ap-stat:nth-child(4) { padding-left: 0; border-left: 0; }
 }
 @media (max-width: 699px) {
-  .ap-head__side { width: 100%; }
-  .rc__model { display: none; }
-  .rc__who { flex: 1; }
-  .rc__who .ap-select { flex: 1; min-width: 0; max-width: none; height: 44px; }
   .rc__group { margin-bottom: -8px; }
   .rc__group--shared { padding-top: 24px; }
   .ap-stats .ap-stat:nth-child(odd) { padding-left: 0; border-left: 0; }
@@ -396,8 +389,8 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
 {
   "ru": {
     "title": "Рекомендации",
-    "model": "Модель {v}",
     "who": "Слушатель",
+    "whoHint": "лайки: {l} · прослушивания: {p}",
     "me": "{name} (вы)",
     "failed": "Не получилось — попробуйте ещё раз",
     "user": {
@@ -493,8 +486,8 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   },
   "en": {
     "title": "Recommendations",
-    "model": "Model {v}",
     "who": "Listener",
+    "whoHint": "likes: {l} · plays: {p}",
     "me": "{name} (you)",
     "failed": "Didn't work — try again",
     "user": {

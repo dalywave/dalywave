@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Добавки к Info.plist приложения macOS: Tauri сливает этот файл с созданным при сборке.
+     iPhone и iPad — gen/apple/project.yml. -->
+<plist version="1.0">
+<dict>
+  <!-- «Распознать» (ShazamKit, src/recognize.rs) -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Чтобы узнать, какая песня играет рядом</string>
+</dict>
+</plist>

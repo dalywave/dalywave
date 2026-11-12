@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.id FROM users u\n         WHERE NOT u.disabled\n           AND EXISTS (SELECT 1 FROM play_events p WHERE p.user_id = u.id AND p.started_at >= $1 AND p.started_at < $2)\n           AND NOT EXISTS (SELECT 1 FROM rewinds r WHERE r.user_id = u.id AND r.year = $3\n                             AND r.computed_at > now() - interval '20 hours')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a35fbdfac65e2dd7d9b8400f0d9e906f914fc61b6408d24c03ca06096efb45c9"
+}

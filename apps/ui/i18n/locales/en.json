@@ -20,10 +20,11 @@
     "newRelease": "New release",
     "aside": "Sections and library",
     "main": "Sections",
-    "downloading": "{done} of {total} tracks on the server",
-    "newPlaylistSoon": "Creating playlists arrives with the playlist editor",
-    "of": "of",
-    "syncDone": "Follows on the server",
+    "downloading": "Tracks are still loading",
+    "newPlaylistName": "Name",
+    "create": "Create",
+    "createFailed": "Couldn't create the playlist",
+    "syncDone": "Follows loaded",
     "syncTitle": "Downloading follows"
   },
   "common": {
@@ -48,7 +49,10 @@
     "devMock": "Design fixtures: this section isn't on the server yet",
     "offline": "Offline — playing what's already downloaded",
     "notFound": "This page doesn't exist",
-    "notFoundText": "It may have been removed, or the link is incomplete"
+    "notFoundText": "It may have been removed, or the link is incomplete",
+    "crashed": "Something broke",
+    "crashedText": "Reload the page — that usually does it",
+    "reload": "Reload"
   },
   "wave": {
     "title": "My Wave",
@@ -111,12 +115,17 @@
     "readyLabel": "Ready to go"
   },
   "player": {
+    "shuffleOn": "Enable shuffle",
+    "shuffleOff": "Disable shuffle",
+    "repeatAll": "Enable repeat",
+    "repeatOne": "Enable repeat one",
+    "repeatOff": "Disable repeat",
     "like": "Like",
     "unlike": "Remove from liked",
     "liked": "Liked",
     "dislike": "Dislike",
     "dislikeHint": "Dislike — don't play again",
-    "notNow": "Skipped without penalty — it will come back",
+    "notNow": "Not now — it will come back",
     "notNowLabel": "Not now",
     "moreLike": "More like this",
     "moreLikeThis": "More like “{title}”",
@@ -138,11 +147,10 @@
     "manualCleared": "Manual queue cleared",
     "disliked": "We won't play “{title}” again",
     "waveRetuned": "The wave adjusts from the next track",
-    "waveFailed": "The wave didn't start — the server didn't respond. Try again",
-    "trackFailed": "“{title}” won't play: the file is unavailable. Playing the next one",
+    "waveFailed": "The wave didn’t start. Try again",
+    "trackFailed": "“{title}” didn’t start — playing the next one",
     "transitionAt": "Transition at {time}",
     "preview": "30 s preview",
-    "silent": "No sound — stream not ready yet",
     "quality": "Opus 160",
     "playingFrom": "Playing from",
     "waveContext": "My Wave · {mood}",
@@ -151,18 +159,16 @@
     "panel": "Player panel",
     "playingWave": "Playing the wave",
     "region": "Player",
-    "acquiring": "Downloading to the server…",
-    "acquiringQueue": "Downloading to the server · #{n} in queue",
-    "acquiringLong": "Downloading — will start by itself",
-    "waitingDownloader": "Waiting for the Mac downloader",
-    "waitingDownloaderLong": "Waiting for the Mac downloader — the track will start by itself",
+    "acquiring": "Loading…",
+    "acquiringLong": "Loading — will start by itself",
+    "waitingDownloader": "Waiting to load",
+    "waitingDownloaderLong": "Waiting to load — will start by itself",
     "skip": "Play next",
-    "unavailable": "“{title}” isn't in any source — playing the next one",
+    "unavailable": "“{title}” is unavailable — playing the next one",
     "waveEmpty": "Nothing to build the wave from yet — like a few tracks first"
   },
   "transition": {
     "title": "Transitions",
-    "hint": "for the wave",
     "gapless": "Gapless",
     "gaplessDesc": "Tracks join edge to edge",
     "smooth": "Smooth",
@@ -180,13 +186,10 @@
   },
   "devices": {
     "title": "Play on",
-    "online": "{n} online",
     "here": "Playing here",
     "thisDevice": "This device",
     "offline": "Offline",
     "lastSeen": "seen {when}",
-    "note": "Control goes through the server: switch from your phone.",
-    "soon": "Playing on “{name}” arrives with cross-device control",
     "otherApps": "Other DalyWave devices",
     "routes": "AirPlay & Bluetooth",
     "outputs": "Sound output",
@@ -194,22 +197,81 @@
     "routesHint": "Speakers, headphones, TVs",
     "system": "System default",
     "tab": "Browser tab",
-    "onlineOne": "Online",
-    "none": "No other devices yet — open DalyWave on your phone or computer"
+    "onlineOne": "Online"
   },
   "queue": {
     "now": "Now",
     "manual": "Next — added by you",
     "fromWave": "Next — from the wave",
-    "fromContext": "Next — from “{title}”",
+    "fromContext": "Next",
     "clear": "Clear",
-    "liveHint": "picked on the fly",
-    "footer": "The wave never ends: it picks more after these.",
     "saveAsPlaylist": "To playlist",
     "empty": "Queue is empty",
     "emptyHint": "Use “Play next” or start the wave",
-    "andMore": "And {n} more — open the full list",
-    "saveSoon": "Saving the queue as a playlist arrives with the playlist editor"
+    "andMore": "And {n} more",
+    "saved": "Saved to “{title}”",
+    "open": "Open",
+    "saveFailed": "Couldn’t save the playlist"
+  },
+  "pl": {
+    "kind": {
+      "user": "Playlist",
+      "smart": "Smart playlist",
+      "mix": "Mix"
+    },
+    "empty": "Empty playlist",
+    "add": "Add to playlist",
+    "added": "“{title}” added to “{playlist}”",
+    "addedMany": "{n} added to “{playlist}”",
+    "addFailed": "Couldn't add — try again",
+    "failed": "Something went wrong — try again",
+    "created": "Playlist “{title}” created",
+    "createdWith": "Created playlist “{title}”",
+    "open": "Open",
+    "copyTitle": "{title} (copy)",
+    "duplicated": "Copy ready — “{title}”",
+    "saved": "“{title}” saved to your playlists",
+    "deleteTitle": "Delete “{title}”?",
+    "deleteText": "The playlist disappears on all devices. The tracks stay in your library.",
+    "delete": "Delete",
+    "deleted": "“{title}” deleted",
+    "edit": "Edit",
+    "saveAs": "Save as playlist",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "download": "Download",
+    "duplicate": "Duplicate",
+    "pickSearch": "Find a playlist",
+    "new": "New playlist",
+    "newName": "Name",
+    "create": "Create",
+    "noMatch": "Nothing found",
+    "noPlaylists": "No playlists of your own yet",
+    "removeFrom": "Remove from playlist",
+    "removed": "“{title}” removed from the playlist",
+    "removedMany": "Removed: {n}",
+    "selected": "Selected: {n}",
+    "clearSelection": "Clear selection",
+    "addTracks": "Add tracks",
+    "fits": "Fits this playlist",
+    "fromLiked": "From your likes",
+    "searchTracks": "Tracks and artists",
+    "addTrack": "Add",
+    "inPlaylist": "Already in the playlist",
+    "done": "Done",
+    "titleLabel": "Name",
+    "descLabel": "Description",
+    "descPlaceholder": "Add a description",
+    "titleRequired": "A playlist needs a name",
+    "cover": "Cover",
+    "coverChange": "Change cover",
+    "coverChoose": "Choose image",
+    "coverMosaic": "Mosaic of covers",
+    "coverFailed": "Couldn't upload the cover — use a JPEG, PNG or WebP image up to 15 MB",
+    "drag": "Drag: {title}",
+    "remove": "Remove",
+    "removeTrack": "Remove “{title}”",
+    "editEmpty": "No tracks yet"
   },
   "track": {
     "playNext": "Play next",
@@ -225,6 +287,7 @@
     "blockedArtist": "We won't recommend {name} again",
     "blockFailed": "That didn't work — the server didn't respond",
     "report": "Wrong match — fix",
+    "removeFromQueue": "Remove from queue",
     "status": {
       "none": "Downloads when played",
       "noneShort": "downloads when played",
@@ -246,12 +309,10 @@
     "radio": "Radio"
   },
   "about": {
-    "artists": "Artists",
     "duration": "Duration",
-    "file": "File",
     "position": "Track number",
-    "status": "On the server",
-    "tempo": "Tempo"
+    "tempo": "Tempo",
+    "quality": "Quality"
   },
   "artist": {
     "following": "Following"
@@ -274,8 +335,7 @@
     }
   },
   "lyrics": {
-    "title": "No lyrics",
-    "text": ""
+    "title": "No lyrics"
   },
   "search": {
     "placeholder": "Tracks, artists, albums"
@@ -335,7 +395,8 @@
         "taste": "Taste rebuild",
         "import_match": "Import matching",
         "import_apply": "Import apply",
-        "import_file": "Own file"
+        "import_file": "Own file",
+        "lyrics": "Lyrics"
       }
     },
     "acq": {
@@ -392,7 +453,6 @@
     "webName": "{browser} on {os}",
     "playingOn": "Playing on: {name}",
     "playingOnShort": "Playing on another device",
-    "lost": "“{name}” is offline",
     "lostHint": "Music stopped on “{name}” — continue here from the same spot",
     "continueHere": "Continue here",
     "playHere": "Play here",
@@ -404,7 +464,8 @@
     "offline": "“{name}” is offline",
     "failed": "“{name}” couldn’t do that",
     "movedTo": "Now playing on “{name}”",
-    "remoteVolume": "Volume on “{name}”"
+    "remoteVolume": "Volume on “{name}”",
+    "wasOn": "Was on: {name}"
   },
   "offline": {
     "download": "Download",
@@ -426,5 +487,33 @@
       "ready": "Downloaded to this device",
       "failed": "Didn't download"
     }
+  },
+  "sound": {
+    "eq": "Equalizer",
+    "preset": {
+      "off": "Off",
+      "bass-boost": "Bass Booster",
+      "bass-cut": "Bass Reducer",
+      "vocal": "Vocal",
+      "acoustic": "Acoustic",
+      "electronic": "Electronic",
+      "loudness": "Loudness",
+      "custom": "Custom"
+    },
+    "reset": "Reset",
+    "db": "dB",
+    "hz": "Hz",
+    "sleep": "Sleep Timer",
+    "sleepLeft": "Pausing in {time}",
+    "sleepOff": "Turn Off Timer",
+    "minutes": "{n} min",
+    "hour": "1 hour",
+    "endOfTrack": "End of Track",
+    "mini": "Mini Player"
+  },
+  "share": {
+    "action": "Share",
+    "copied": "Link copied",
+    "failed": "Couldn’t copy the link"
   }
 }

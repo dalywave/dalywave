@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\", COALESCE(sum(played_ms), 0)::bigint AS \"ms!\", max(created_at) AS last,\n                  (SELECT count(*) FROM liked_tracks WHERE user_id = $1) AS \"likes!\",\n                  (SELECT max(created_at) FROM liked_tracks WHERE user_id = $1) AS liked_at,\n                  (SELECT count(*) FROM followed_artists WHERE user_id = $1) AS \"follows!\"\n           FROM play_events WHERE user_id = $1 AND started_at >= $2 AND started_at < $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "ms!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "last",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "likes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "liked_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "follows!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "451a26f26475f5232cb227a51f5ac3131aff43d8c223207f5ea591140f953e3b"
+}

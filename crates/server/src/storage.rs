@@ -49,6 +49,11 @@ pub mod keys {
         format!("images/{dir}/{id}")
     }
 
+    /// Своя обложка плейлиста: у каждой загрузки своя папка, поэтому ссылка `?v=` меняется сама.
+    pub fn playlist_cover(playlist_id: Uuid, upload_id: Uuid) -> String {
+        format!("images/playlists/{playlist_id}/{upload_id}")
+    }
+
     pub fn image(prefix: &str, size: u32) -> String {
         format!("{prefix}/{size}.jpg")
     }

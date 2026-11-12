@@ -8,6 +8,7 @@ import type { TransitionMode } from '~/stores/player'
 const auth = useAuthStore()
 const player = usePlayerStore()
 const prefs = usePrefsStore()
+const sound = useSoundStore()
 const ui = useUiStore()
 const bridge = useBridge()
 const toast = useToast()
@@ -15,6 +16,8 @@ const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
 const i18n = useNuxtApp().$i18n
 useHead({ title: () => t('title') })
+// Название в верхней строке телефона — когда крупный заголовок ушёл под неё
+const { y: scrollY } = useWindowScroll()
 
 const health = ref<Health | null>(null)
 const healthFailed = ref(false)
@@ -71,6 +74,7 @@ const language = computed({
 
 <template>
   <div class="set">
+    <MusicPhoneNav :title="t('title')" :condensed="scrollY > 44" />
     <h1 class="set__title">{{ t('title') }}</h1>
 
     <SettingsGroup :title="t('account')">
@@ -94,6 +98,7 @@ const language = computed({
       <SettingsRow :title="t('normalize')">
         <UiSwitch v-model="player.normalize" :label="t('normalize')" hide-label />
       </SettingsRow>
+      <MusicEqPicker v-if="sound.eqSupported" />
       <SettingsRow :title="t('scrubber')" stack>
         <MusicScrubberStylePicker v-model="prefs.scrubber" :label="t('scrubber')" />
       </SettingsRow>
@@ -133,14 +138,6 @@ const language = computed({
     </SettingsGroup>
 
     <SettingsGroup :title="t('appearance')">
-      <SettingsRow :title="t('theme')">
-        <UiSegmentedControl
-          model-value="dark"
-          :options="[{ value: 'dark', label: t('dark') }, { value: 'light', label: t('light'), disabled: true, hint: t('soon') }]"
-          :label="t('theme')"
-          :size="ui.isPhone ? 'sm' : 'md'"
-        />
-      </SettingsRow>
       <SettingsRow :title="t('language')">
         <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
       </SettingsRow>
@@ -152,13 +149,17 @@ const language = computed({
 
     <ShellDownloaderSettings />
 
+    <!-- Приложение для компьютера: статус «Слушает DalyWave» в Discord -->
+    <SettingsDiscord />
+
     <SettingsGroup :title="t('about')">
       <!-- Приложение для компьютера: версия и «Обновление готово — Перезапустить» -->
       <ShellAppUpdateRow />
-      <SettingsRow :title="t('server')">
-        <span class="status" :class="health ? 'status--ok' : healthFailed ? 'status--bad' : ''"><i />{{ health ? t('serverOk') : healthFailed ? t('serverDown') : '…' }}</span>
+      <!-- Сервер — только когда с ним беда; остальное про него живёт в админке -->
+      <SettingsRow v-if="healthFailed" :title="t('server')">
+        <span class="status status--bad"><i />{{ t('serverDown') }}</span>
       </SettingsRow>
-      <SettingsRow v-if="health" :title="t('version')">
+      <SettingsRow v-if="health && !bridge.isDesktopApp" :title="t('version')">
         <span class="value tnum">{{ health.version }}</span>
       </SettingsRow>
     </SettingsGroup>
@@ -176,7 +177,7 @@ const language = computed({
 
 /* Профиль: фото с daly.rest или буква на «Сумерках» */
 .acct { --sr-lead: 44px; min-height: 68px; }
-.acct__avatar { display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: var(--brand-gradient); font-size: 18px; font-weight: 750; color: #fff; }
+.acct__avatar { display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: var(--fill-3); font-size: 18px; font-weight: 700; color: var(--text-1); }
 .acct__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .acct :deep(.sr__title) { font-size: var(--fs-h4); font-weight: 650; overflow-wrap: anywhere; }
 .acct :deep(.sr__desc) { overflow-wrap: anywhere; }
@@ -193,13 +194,14 @@ const language = computed({
 
 .status { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; }
 .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-4); }
-.status--ok i { background: var(--success); }
 .status--bad { color: var(--danger); }
 .status--bad i { background: var(--danger); }
 .value { font-size: var(--fs-small); color: var(--text-2); }
 
 @media (max-width: 699px) {
-  .set { gap: 32px; padding: 8px 16px 0; }
+  .set { gap: 32px; padding: 0 16px; }
+  /* Строка «назад» — во всю ширину экрана, мимо полей колонки */
+  .set > .pn { margin-right: -16px; margin-bottom: -32px; margin-left: -16px; }
   .set__title { margin: 0 0 -4px; font-size: 28px; }
   .expr { padding-right: 0; }
 }
@@ -226,17 +228,12 @@ const language = computed({
     "waveRow": "Настройки волны",
     "waveResetBtn": "Сбросить",
     "waveReset": "Настройки волны сброшены",
-    "appearance": "Внешний вид",
-    "theme": "Тема",
-    "dark": "Тёмная",
-    "light": "Светлая",
-    "soon": "Скоро",
+    "appearance": "Интерфейс",
     "language": "Язык",
     "about": "О приложении",
     "server": "Сервер",
-    "serverOk": "Работает",
     "serverDown": "Не отвечает",
-    "version": "Версия сервера"
+    "version": "Версия"
   },
   "en": {
     "title": "Settings",
@@ -257,17 +254,12 @@ const language = computed({
     "waveRow": "Wave settings",
     "waveResetBtn": "Reset",
     "waveReset": "Wave settings reset",
-    "appearance": "Appearance",
-    "theme": "Theme",
-    "dark": "Dark",
-    "light": "Light",
-    "soon": "Soon",
+    "appearance": "Interface",
     "language": "Language",
     "about": "About",
     "server": "Server",
-    "serverOk": "Running",
     "serverDown": "Not responding",
-    "version": "Server version"
+    "version": "Version"
   }
 }
 </i18n>

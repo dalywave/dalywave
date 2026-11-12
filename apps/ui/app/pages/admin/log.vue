@@ -60,6 +60,9 @@ async function loadMore() {
   }
 }
 
+const kindOptions = computed(() => [{ value: '', label: t('allKinds') }, ...GROUPS.map(g => ({ value: g as string, label: t(`group.${g.slice(0, -1)}`) }))])
+const actorOptions = computed(() => [{ value: '', label: t('anyone') }, ...users.value.map(u => ({ value: u.id, label: u.name }))])
+
 const KNOWN = new Set([
   'auth.sign_in', 'auth.sign_in_failed', 'auth.sign_in_denied', 'auth.logout', 'auth.app_code_reused', 'user.created', 'user.roles_changed',
   'user.disabled', 'user.enabled', 'session.revoked', 'job.retried', 'job.cancelled', 'lane.changed', 'downloader.created', 'downloader.revoked',
@@ -96,6 +99,40 @@ function details(e: AuditEvent) {
   if (typeof p.ip === 'string') parts.push(p.ip)
   return parts.join(' · ')
 }
+
+// Строки по дням; подряд идущие одинаковые события (десяток входов паролем) — одной строкой «×N»
+const locale = computed(() => (lang.value === 'en' ? 'en-GB' : 'ru-RU'))
+const dayKey = (iso: string) => new Date(iso).toLocaleDateString('sv-SE')
+function dayLabel(key: string) {
+  const today = dayKey(new Date().toISOString())
+  const yesterday = dayKey(new Date(Date.now() - 86400_000).toISOString())
+  if (key === today) return t('today')
+  if (key === yesterday) return t('yesterday')
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y!, m! - 1, d!)
+  return new Intl.DateTimeFormat(locale.value, { day: 'numeric', month: 'long', ...(y === new Date().getFullYear() ? {} : { year: 'numeric' }) }).format(date)
+}
+const time = (iso: string) => new Intl.DateTimeFormat(locale.value, { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+interface Row { e: AuditEvent, details: string, count: number, times: string[] }
+const days = computed(() => {
+  const out: { key: string, label: string, rows: Row[] }[] = []
+  for (const e of items.value ?? []) {
+    const key = dayKey(e.at)
+    let day = out.at(-1)
+    if (day?.key !== key) {
+      day = { key, label: dayLabel(key), rows: [] }
+      out.push(day)
+    }
+    const d = details(e)
+    const last = day.rows.at(-1)
+    if (last && last.e.kind === e.kind && last.e.actor?.id === e.actor?.id && last.details === d) {
+      last.count++
+      last.times.push(time(e.at))
+    }
+    else day.rows.push({ e, details: d, count: 1, times: [time(e.at)] })
+  }
+  return out
+})
 </script>
 
 <template>
@@ -104,25 +141,23 @@ function details(e: AuditEvent) {
       <h1 class="ap-title">{{ t('title') }}</h1>
     </header>
 
-    <div class="lg__filters">
-      <select v-model="kind" class="ap-input ap-select" :aria-label="t('filterKind')">
-        <option value="">{{ t('allKinds') }}</option>
-        <option v-for="g in GROUPS" :key="g" :value="g">{{ t(`group.${g.slice(0, -1)}`) }}</option>
-      </select>
-      <select v-model="actor" class="ap-input ap-select" :aria-label="t('filterActor')">
-        <option value="">{{ t('anyone') }}</option>
-        <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
-      </select>
+    <div class="ap-filters">
+      <AdminSelect v-model="kind" :options="kindOptions" :label="t('filterKind')" />
+      <AdminSelect v-model="actor" :options="actorOptions" :label="t('filterActor')" />
     </div>
 
     <AdminState :loading="!items && !failed" :error="failed" :empty="!!items && !items.length" empty-icon="ph:scroll" :empty-title="t('empty')" :rows="8" @retry="load">
       <div class="ap-table lg">
-        <div v-for="e in items" :key="e.id" class="ap-tr">
-          <span class="ap-muted tnum">{{ formatDateTime(e.at, lang) }}</span>
-          <span class="lg__kind" :class="{ 'ap-bad': BAD.has(e.kind) }">{{ kindLabel(e.kind) }}</span>
-          <span class="lg__who">{{ e.actor?.name ?? t('system') }}</span>
-          <span class="lg__details" :title="details(e)">{{ details(e) }}</span>
-        </div>
+        <template v-for="d in days" :key="d.key">
+          <div class="ap-group"><span>{{ d.label }}</span></div>
+          <div v-for="r in d.rows" :key="r.e.id" class="ap-tr">
+            <span class="ap-muted tnum" :title="r.count > 1 ? r.times.join(', ') : undefined">{{ r.times[0] }}</span>
+            <span class="lg__kind" :class="{ 'ap-bad': BAD.has(r.e.kind) }">{{ kindLabel(r.e.kind) }}<span v-if="r.count > 1" class="lg__count tnum">×{{ r.count }}</span></span>
+            <span class="lg__who">{{ r.e.actor?.name ?? t('system') }}</span>
+            <span class="lg__details" :title="r.details">{{ r.details }}</span>
+            <span class="lg__sub">{{ [r.e.actor?.name ?? t('system'), r.details].filter(Boolean).join(' · ') }}</span>
+          </div>
+        </template>
         <div v-if="cursor" class="ap-more"><UiButton variant="ghost" size="sm" :loading="more" @click="loadMore">{{ t('more') }}</UiButton></div>
       </div>
     </AdminState>
@@ -130,23 +165,22 @@ function details(e: AuditEvent) {
 </template>
 
 <style scoped>
-.lg__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: -16px; }
-.lg { --cols: 128px minmax(150px, 0.9fr) minmax(100px, 0.6fr) minmax(0, 1.5fr); }
+.lg { --cols: 56px minmax(150px, 0.9fr) minmax(100px, 0.6fr) minmax(0, 1.5fr); }
 .lg .ap-tr { align-items: baseline; min-height: 44px; padding: 12px 0; }
-.lg__kind { font-weight: 600; }
+.lg__kind { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-weight: 600; }
+.lg__count { font-size: var(--fs-caption); font-weight: 600; color: var(--text-3); }
 .lg__who { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
 .lg__details { overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
+.lg__sub { display: none; }
 @media (max-width: 899px) {
-  .lg { --cols: 104px minmax(0, 1fr); }
+  .lg { --cols: 48px minmax(0, 1fr); }
   .lg .ap-tr { row-gap: 2px; }
-  .lg__who, .lg__details { grid-column: 2; }
+  .lg__who, .lg__details { display: none; }
+  .lg__sub { display: block; grid-column: 2; overflow: hidden; font-size: var(--fs-caption); color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 699px) {
-  .lg__filters { margin-bottom: -8px; }
-  .lg__filters .ap-select { flex: 1; height: 40px; }
-  .lg { --cols: 104px minmax(0, 1fr); }
   .lg .ap-tr { row-gap: 0; padding: 10px 0; }
-  .lg .ap-tr > :first-child { font-size: var(--fs-caption); white-space: nowrap; }
+  .lg .ap-tr > :first-child { font-size: var(--fs-caption); }
 }
 </style>
 
@@ -162,6 +196,8 @@ function details(e: AuditEvent) {
     "failed": "Не получилось загрузить журнал",
     "more": "Показать ещё",
     "system": "система",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
     "group": { "auth": "Входы и выходы", "user": "Люди и роли", "session": "Сессии", "lane": "Полосы очереди", "job": "Задачи", "downloader": "Загрузчики", "acquisition": "Спорные", "recording": "Каталог", "source": "Проверки скачивания", "reco": "Рекомендации", "settings": "Настройки" },
     "kind": {
       "auth_sign_in": "Вход",
@@ -210,6 +246,8 @@ function details(e: AuditEvent) {
     "failed": "Couldn't load the log",
     "more": "Show more",
     "system": "system",
+    "today": "Today",
+    "yesterday": "Yesterday",
     "group": { "auth": "Sign-ins and sign-outs", "user": "People and roles", "session": "Sessions", "lane": "Queue lanes", "job": "Jobs", "downloader": "Downloaders", "acquisition": "Disputed", "recording": "Catalog", "source": "Download tests", "reco": "Recommendations", "settings": "Settings" },
     "kind": {
       "auth_sign_in": "Sign-in",

@@ -40,8 +40,10 @@ function meta(d: PlaybackDevice) {
   }
   if (d.active) return d.online ? t('connect.playingNow') : t('connect.activeOffline')
   if (!d.online) return d.lastSeenAt ? `${t('devices.offline')} · ${t('devices.lastSeen', { when: formatRelative(d.lastSeenAt, lang.value) })}` : t('devices.offline')
-  return d.kind === 'web' ? t('devices.tab') : t('devices.onlineOne')
+  return kindLabel(d)
 }
+
+const kindLabel = (d: PlaybackDevice) => (d.kind === 'web' ? t('devices.tab') : t('devices.onlineOne'))
 
 const routeHint = computed(() => out.current.value?.name ?? t('devices.routesHint'))
 const systemHint = computed(() => (out.state.value.followsSystem ? out.current.value?.name ?? '' : ''))
@@ -58,7 +60,8 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
           <span class="drow__name ellipsis">{{ playingElsewhere.name }}</span>
           <span class="drow__meta">
             <span v-if="playingElsewhere.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
-            {{ meta(playingElsewhere) }}
+            <!-- Раздел уже называется «Сейчас играет» — под именем не повторяем -->
+            {{ playingElsewhere.online ? kindLabel(playingElsewhere) : meta(playingElsewhere) }}
           </span>
         </span>
         <Icon name="ph:check-bold" class="drow__check" />
@@ -81,7 +84,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
       </button>
     </section>
 
-    <section v-if="others.length || !playingElsewhere" class="dsec">
+    <section v-if="others.length" class="dsec">
       <h3 class="dsec__title">{{ t('devices.otherApps') }}</h3>
       <button v-for="d in others" :key="d.id" type="button" class="drow" :class="{ 'is-offline': !d.online }" @click="emit('select', d)">
         <Icon :name="ICON[d.kind]" class="drow__icon" />
@@ -90,7 +93,6 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
           <span class="drow__meta ellipsis">{{ meta(d) }}</span>
         </span>
       </button>
-      <p v-if="!others.length && !playingElsewhere" class="dsec__empty">{{ t('devices.none') }}</p>
     </section>
 
     <section v-if="out.mode === 'picker'" class="dsec">
@@ -211,7 +213,6 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .dsheet { padding-bottom: 12px; }
 .dsec + .dsec { margin-top: 12px; }
 .dsec__title { margin: 0; padding: 12px 20px 6px; font-size: 12px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
-.dsec__empty { margin: 0; padding: 4px 20px 8px; font-size: var(--fs-small); line-height: 1.4; color: var(--text-3); }
 .drow {
   position: relative;
   display: flex;

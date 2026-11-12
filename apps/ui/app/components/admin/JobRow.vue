@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { AdminAcquisition, Job } from '~/api/types'
 
-// Задача очереди строкой: состояние, вид, полоса, попытки, ошибка; повтор и отмена.
+// Задача очереди строкой таблицы: состояние, что, полоса, попытки, когда; повтор и отмена.
 // У скачивания по нажатию открывается его история — кандидаты, оценки, проверка
 const props = defineProps<{
-  job: Job
+  job?: Job
   lanes?: Record<string, string>
   names?: Record<string, string>
+  /** Строка-шапка с названиями колонок */
+  header?: boolean
 }>()
 const bridge = useBridge()
 const toast = useToast()
@@ -14,7 +16,7 @@ const lang = useLang()
 const L = useAdminLabels()
 const { t } = useI18n({ useScope: 'local' })
 
-const j = computed(() => props.job)
+const j = computed(() => props.job ?? ({ status: 'queued', kind: '', payload: {} } as unknown as Job))
 const p = computed(() => (j.value.payload ?? {}) as Record<string, unknown>)
 const acqId = computed(() => (j.value.kind === 'acquire' && typeof p.value.acquisitionId === 'string' ? p.value.acquisitionId : null))
 const subject = computed(() => {
@@ -62,26 +64,37 @@ async function cancel() {
 </script>
 
 <template>
-  <div class="jr" :class="{ 'is-open': open }">
+  <div v-if="header" class="jr jr--head" aria-hidden="true">
     <div class="jr__row">
-      <UiBadge :variant="JOB_TONE[j.status]" class="jr__status">{{ L.jobStatus(j.status) }}</UiBadge>
+      <div class="jr__main">
+        <span>{{ t('col.state') }}</span>
+        <span>{{ t('col.job') }}</span>
+        <span class="ap-hide-phone">{{ t('col.lane') }}</span>
+        <span class="ap-num ap-hide-phone">{{ t('col.attempts') }}</span>
+        <span class="ap-num ap-hide-phone">{{ t('col.updated') }}</span>
+        <span />
+      </div>
+      <span class="jr__actions" />
+    </div>
+  </div>
+  <div v-else-if="job" class="jr" :class="{ 'is-open': open }">
+    <div class="jr__row">
       <component :is="acqId ? 'button' : 'div'" :type="acqId ? 'button' : undefined" class="jr__main" :class="{ 'is-btn': acqId }" :aria-expanded="acqId ? open : undefined" @click="acqId && toggle()">
-        <span class="jr__title">
+        <AdminStatus :tone="JOB_TONE[j.status]" :pulse="j.status === 'running'">{{ L.jobStatus(j.status) }}</AdminStatus>
+        <span class="ap-cell">
           <b>{{ acq?.track?.title ?? L.jobKind(j.kind) }}</b>
-          <span class="ap-muted">{{ acq?.track ? artistNames(acq.track.artists) : subject }}</span>
+          <small v-if="j.lastError" class="jr__error" :title="j.lastError">{{ j.lastError }}</small>
+          <small v-else>{{ acq?.track ? `${artistNames(acq.track.artists)} · ${L.jobKind(j.kind)}` : subject }}</small>
         </span>
-        <span class="jr__meta">
-          <span>{{ lanes?.[j.lane] ?? j.lane }}</span>
-          <span v-if="acq?.track">{{ L.jobKind(j.kind) }}</span>
-          <span class="tnum">{{ t('attempts', { n: j.attempts, max: j.maxAttempts }) }}</span>
-          <span>{{ formatRelative(j.updatedAt, lang) }}</span>
-        </span>
-        <span v-if="j.lastError" class="jr__error" :title="j.lastError">{{ j.lastError }}</span>
+        <span class="jr__lane ap-hide-phone">{{ lanes?.[j.lane] ?? j.lane }}</span>
+        <span class="ap-num ap-muted tnum ap-hide-phone">{{ j.attempts }}/{{ j.maxAttempts }}</span>
+        <span class="ap-num ap-muted tnum ap-hide-phone">{{ formatRelative(j.updatedAt, lang) }}</span>
         <Icon v-if="acqId" name="ph:caret-down" class="jr__caret" />
+        <span v-else />
       </component>
       <div class="jr__actions">
-        <UiButton v-if="j.status === 'failed' || j.status === 'cancelled'" size="sm" icon="ph:arrow-clockwise" @click="retry">{{ t('retry') }}</UiButton>
-        <UiButton v-else-if="j.status === 'queued' || j.status === 'running'" size="sm" variant="ghost" icon="ph:x" @click="cancel">{{ t('cancel') }}</UiButton>
+        <UiButton v-if="j.status === 'failed' || j.status === 'cancelled'" size="sm" variant="ghost" icon="ph:arrow-clockwise" @click="retry">{{ t('retry') }}</UiButton>
+        <UiIconButton v-else-if="j.status === 'queued' || j.status === 'running'" icon="ph:x" :label="t('cancelJob')" size="sm" @click="cancel" />
       </div>
     </div>
     <div v-if="open" class="jr__detail">
@@ -95,26 +108,23 @@ async function cancel() {
 <style scoped>
 .jr { border-top: 1px solid var(--hair); }
 .jr:first-child { border-top: 0; }
-.jr__row { display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 6px 0; }
-.jr__status { flex: none; min-width: 88px; justify-content: center; }
-.jr__main { position: relative; display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 28px 6px 8px; margin: 0 0 0 -8px; border: 0; border-radius: var(--r-3); background: none; color: inherit; font: inherit; text-align: left; }
+.jr--head { border-bottom: 1px solid var(--hair); }
+.jr--head + .jr { border-top: 0; }
+.jr__row { display: flex; align-items: center; gap: 8px; }
+.jr__main { display: grid; flex: 1; grid-template-columns: 120px minmax(0, 1.6fr) minmax(0, 0.7fr) 64px 104px 16px; align-items: center; gap: 16px; min-width: 0; min-height: 56px; padding: 8px; margin: 0 -8px; border: 0; border-radius: var(--r-3); background: none; color: inherit; font: inherit; font-size: var(--fs-small); text-align: left; }
+.jr--head .jr__main { min-height: 32px; padding-top: 0; padding-bottom: 6px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-3); }
 .jr__main.is-btn { cursor: pointer; transition: background-color var(--dur-1); }
 .jr__main.is-btn:hover { background: var(--fill-1); }
 .jr__main:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
-.jr__title { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; white-space: nowrap; }
-.jr__title b { overflow: hidden; font-weight: 600; text-overflow: ellipsis; }
-.jr__title span { overflow: hidden; font-size: var(--fs-small); text-overflow: ellipsis; }
-.jr__meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: var(--fs-caption); color: var(--text-3); }
-.jr__error { overflow: hidden; font-size: var(--fs-caption); color: var(--danger); text-overflow: ellipsis; white-space: nowrap; }
-.jr__caret { position: absolute; top: 50%; right: 8px; font-size: 14px; color: var(--text-3); transform: translateY(-50%); transition: transform var(--dur-2) var(--ease-out); }
-.jr.is-open .jr__caret { transform: translateY(-50%) rotate(180deg); }
-.jr__actions { flex: none; }
+.jr__lane { overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
+.jr__error { color: var(--danger) !important; }
+.jr__caret { font-size: 14px; color: var(--text-3); transition: transform var(--dur-2) var(--ease-out); }
+.jr.is-open .jr__caret { transform: rotate(180deg); }
+.jr__actions { display: flex; flex: none; justify-content: flex-end; width: 124px; }
 .jr__detail { padding: 4px 0 24px; }
 @media (max-width: 699px) {
-  .jr__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; column-gap: 8px; }
-  .jr__status { grid-row: 1; grid-column: 1; justify-self: start; min-width: 0; }
-  .jr__actions { grid-row: 1; grid-column: 2; }
-  .jr__main { grid-column: 1 / -1; }
+  .jr__main { grid-template-columns: 96px minmax(0, 1fr) 16px; gap: 10px; }
+  .jr__actions { width: auto; min-width: 32px; }
 }
 </style>
 
@@ -123,9 +133,10 @@ async function cancel() {
   "ru": {
     "album": "альбом",
     "artist": "артист",
-    "attempts": "попытка {n} из {max}",
     "retry": "Повторить",
     "cancel": "Отменить",
+    "cancelJob": "Отменить задачу",
+    "col": { "state": "Состояние", "job": "Задача", "lane": "Полоса", "attempts": "Попытки", "updated": "Обновлена" },
     "retried": "Задача снова в очереди",
     "cancelled": "Задача отменена",
     "actionFailed": "Не получилось — задача уже изменилась, обновите список",
@@ -134,9 +145,10 @@ async function cancel() {
   "en": {
     "album": "album",
     "artist": "artist",
-    "attempts": "attempt {n} of {max}",
     "retry": "Retry",
     "cancel": "Cancel",
+    "cancelJob": "Cancel job",
+    "col": { "state": "State", "job": "Job", "lane": "Lane", "attempts": "Attempts", "updated": "Updated" },
     "retried": "Job queued again",
     "cancelled": "Job cancelled",
     "actionFailed": "Didn't work — the job already changed, refresh the list",

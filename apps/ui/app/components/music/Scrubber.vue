@@ -212,7 +212,7 @@ function onKey(e: KeyboardEvent) {
 .wf__played-zone { color: color-mix(in oklab, var(--accent) 60%, white); clip-path: inset(0 calc((1 - var(--p)) * 100%) 0 calc(var(--x) * 100%)); }
 .wf__marker { position: absolute; top: -5px; bottom: -5px; left: calc(var(--x) * 100%); width: 0; pointer-events: none; }
 .wf__marker::before { content: ''; position: absolute; left: -0.75px; top: 5px; bottom: 5px; width: 1.5px; border-radius: 2px; background: var(--accent); }
-.wf__marker::after { content: ''; position: absolute; left: -4px; top: 0; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px var(--accent); }
+.wf__marker::after { content: ''; position: absolute; left: -4px; top: 0; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); transform: rotate(45deg); }
 
 /* ---------- Линия ---------- */
 .scrub--line .scrub__bar { --h: 4px; height: 24px; }
@@ -246,7 +246,7 @@ function onKey(e: KeyboardEvent) {
   margin: -4px 0 0 -4px;
   border-radius: 2px;
   background: var(--accent);
-  box-shadow: 0 0 0 2px var(--ink-1), 0 0 10px var(--accent);
+  box-shadow: 0 0 0 2px var(--ink-1);
   transform: rotate(45deg);
   transition: transform var(--dur-1) var(--ease-out);
   pointer-events: none;

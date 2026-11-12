@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Track } from '~/api/types'
+import type { MenuEntry } from '~/types/ui'
 
 // Строка трека — одна для подборок, очереди, альбомов и поиска.
 // Под названием — артист и почему трек здесь; справа — состояние на сервере и длительность
@@ -14,6 +15,10 @@ const props = withDefaults(defineProps<{
   forceHover?: boolean
   /** Без состояния на сервере (поиск): трек, которого ещё нет, просто включается */
   plain?: boolean
+  /** Выбран в списке (Shift/⌘ + щелчок) */
+  selected?: boolean
+  /** Пункты меню места, где показан трек («Убрать из плейлиста») */
+  extra?: () => MenuEntry[]
 }>(), { variant: 'default' })
 
 const emit = defineEmits<{ play: [] }>()
@@ -27,7 +32,7 @@ const isCurrent = computed(() => props.playing ?? player.current?.track.id === p
 const isPlaying = computed(() => isCurrent.value && (props.playing ?? player.playing))
 const liked = computed(() => library.isLiked(props.track))
 const status = computed(() => library.statusOf(props.track))
-const remote = computed(() => !props.plain && status.value === 'none')
+const remote = computed(() => !props.plain && (status.value === 'none' || status.value === 'queued'))
 const unavailable = computed(() => status.value === 'unavailable')
 const artists = computed(() => props.track.artists.map(a => a.name).join(', '))
 // «Remix», «(Live)» — приглушённо после названия, в скобках
@@ -41,7 +46,7 @@ const dl = computed(() => (offline.available ? offline.trackState(props.track.id
 const dlShare = computed(() => (dl.value?.total ? dl.value.received / dl.value.total : 0))
 const dlLabel = computed(() => (dl.value ? t(`offline.track.${dl.value.state}`, { p: Math.round(dlShare.value * 100) }) : ''))
 const menuOpen = ref(false)
-const items = computed(() => (menuOpen.value ? menuFor(props.track, { inQueue: props.queueUid }) : []))
+const items = computed(() => (menuOpen.value ? menuFor(props.track, { inQueue: props.queueUid, extra: props.extra?.() }) : []))
 
 function onRowClick(e: MouseEvent) {
   if ((e.target as HTMLElement).closest('button, a')) return
@@ -56,7 +61,7 @@ function onKey(e: KeyboardEvent) {
 <template>
   <div
     class="tr"
-    :class="[`tr--${variant}`, { 'is-current': isCurrent, 'is-remote': remote, 'is-unavailable': unavailable, 'is-hover': forceHover, 'is-menu': menuOpen }]"
+    :class="[`tr--${variant}`, { 'is-current': isCurrent, 'is-remote': remote, 'is-unavailable': unavailable, 'is-hover': forceHover, 'is-menu': menuOpen, 'is-selected': selected }]"
     role="row"
     tabindex="0"
     :aria-current="isCurrent ? 'true' : undefined"
@@ -85,7 +90,7 @@ function onKey(e: KeyboardEvent) {
           <Icon v-else :name="dl.state === 'failed' ? 'ph:warning-circle-fill' : 'ph:arrow-circle-down-fill'" />
         </span>
         <NuxtLink v-if="track.artists[0]" :to="`/artist/${track.artists[0].id}`" class="tr__artist" @click.stop>{{ artists }}</NuxtLink>
-        <template v-if="unavailable"><span class="tr__sep">·</span><span class="tr__note">{{ t('track.status.unavailable') }}</span></template>
+        <template v-if="unavailable"><span class="tr__sep tr__note">·</span><span class="tr__note">{{ t('track.status.unavailable') }}</span></template>
         <template v-else-if="reason"><span class="tr__sep">·</span><span class="tr__reason">{{ typographRu(reason) }}</span></template>
       </div>
     </div>
@@ -95,11 +100,10 @@ function onKey(e: KeyboardEvent) {
     <div class="tr__end" role="cell">
       <!-- Место под состояние есть всегда: колонки в широком списке не гуляют от строки к строке -->
       <span v-if="!plain" class="tr__slot">
-        <UiTooltip v-if="status === 'none'" :text="t('track.status.none')">
-          <span class="tr__state tr__state--cloud" role="img" :aria-label="t('track.status.none')"><Icon name="ph:cloud-arrow-down" /></span>
-        </UiTooltip>
-        <UiTooltip v-else-if="status === 'queued' || status === 'acquiring'" :text="t(`track.status.${status}`)">
-          <span class="tr__state"><UiProgressRing :state="status === 'queued' ? 'queued' : 'progress'" :value="0.42" :size="18" :label="t(`track.status.${status}`)" /></span>
+        <!-- Трек, которого ещё нет на сервере, просто включается: об этом говорят приглушённые обложка
+             и название, без значка. Значок — только когда идёт загрузка или что-то не так -->
+        <UiTooltip v-if="status === 'acquiring'" :text="t('track.status.acquiring')">
+          <span class="tr__state tr__state--spin"><UiProgressRing state="progress" :value="0.3" :size="18" :label="t('track.status.acquiring')" /></span>
         </UiTooltip>
         <UiTooltip v-else-if="status === 'disputed' || status === 'failed'" :text="t(`track.status.${status}`)">
           <span class="tr__state tr__state--warn" role="img" :aria-label="t(`track.status.${status}`)"><Icon name="ph:warning-circle" /></span>
@@ -145,6 +149,7 @@ function onKey(e: KeyboardEvent) {
 .tr--queue { cursor: grab; }
 .tr:hover, .tr.is-hover, .tr:focus-visible, .tr.is-menu { background: var(--fill-1); }
 .tr:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+.tr.is-selected, .tr.is-selected:hover { background: var(--fill-2); }
 
 .tr__lead { position: relative; display: grid; place-items: center; width: 28px; height: 28px; color: var(--text-3); font-size: var(--fs-small); }
 .tr__lead > * { grid-area: 1 / 1; transition: opacity var(--dur-1); }
@@ -183,6 +188,7 @@ function onKey(e: KeyboardEvent) {
 .tr__slot { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; }
 .tr__state { display: inline-grid; place-items: center; width: 22px; height: 22px; color: var(--text-3); font-size: 17px; flex: none; }
 .tr__state--warn { color: var(--warning); }
+.tr__state--spin :deep(svg) { animation: spin 1.1s linear infinite; }
 .tr__dur { width: 40px; text-align: right; font-size: var(--fs-small); color: var(--text-3); }
 .tr :deep(.tr__like), .tr :deep(.tr__more) { opacity: 0; }
 .tr:hover :deep(.tr__like), .tr.is-hover :deep(.tr__like), .tr:focus-within :deep(.tr__like), .tr.is-menu :deep(.tr__like),
@@ -190,7 +196,7 @@ function onKey(e: KeyboardEvent) {
 .tr :deep(.tr__like.is-liked) { opacity: 1; }
 
 .tr.is-remote :deep(.art) { filter: saturate(0.45) brightness(0.82); }
-.tr.is-remote .tr__title { color: var(--text-2); }
+.tr.is-remote:not(.is-current) .tr__title { color: var(--text-2); }
 .tr.is-unavailable { opacity: 0.45; }
 
 /* Очередь и узкие колонки: без сердца; «ещё» заменяет длительность при наведении */
@@ -216,6 +222,7 @@ function onKey(e: KeyboardEvent) {
   .tr--wide { grid-template-columns: var(--cover) minmax(0, 1fr) auto; }
   .tr--wide .tr__lead, .tr--wide .tr__album { display: none; }
   .tr :deep(.tr__like), .tr__dur { display: none; }
-  .tr :deep(.tr__more) { opacity: 1; --size: 44px; }
+  .tr :deep(.tr__more) { opacity: 1; --size: 44px; margin-right: -6px; color: var(--text-2); font-size: 22px; }
+  .tr__slot:empty { display: none; }
 }
 </style>

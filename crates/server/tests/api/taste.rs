@@ -400,10 +400,12 @@ async fn home_has_release_radar_in_time_of_day_order(db: PgPool) {
         }
     };
     let fresh = release(followed, "Fresh", 3).await;
+    let newer = release(followed, "Newer", 1).await;
     let old = release(followed, "Old", 90).await;
     let hidden = release(blocked, "Hidden", 2).await;
-    let mut want = Vec::new();
-    for (album, n) in [(fresh, 4), (old, 1), (hidden, 1)] {
+    let disliked = release(followed, "Disliked", 2).await;
+    let mut gone = Vec::new();
+    for (album, n) in [(fresh, 4), (newer, 1), (old, 1), (hidden, 1), (disliked, 2)] {
         for i in 0..n {
             let t = s
                 .track(
@@ -423,11 +425,14 @@ async fn home_has_release_radar_in_time_of_day_order(db: PgPool) {
                 .execute(&db)
                 .await
                 .unwrap();
-            if album == fresh {
-                want.push(t.to_string());
+            if album == disliked {
+                gone.push(t);
             }
         }
     }
+    // Из релиза не осталось ничего, что можно рекомендовать: трек «не рекомендовать», трек «не нравится»
+    s.block(user, "track", gone[0]).await;
+    s.dislike(user, gone[1]).await;
     let res = app.get("/api/home", &me).await;
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
     let shelves = res.body["shelves"].as_array().unwrap();
@@ -441,12 +446,27 @@ async fn home_has_release_radar_in_time_of_day_order(db: PgPool) {
         .unwrap()
         .iter()
         .map(|i| {
-            assert_eq!(i["type"], "track");
+            assert_eq!(i["type"], "album");
             i["id"].as_str().unwrap().to_string()
         })
         .collect();
-    // Три самых популярных трека свежего релиза; старое и заблокированное — мимо
-    assert_eq!(ids, want[..3].to_vec());
+    // По карточке на релиз, свежие первыми; старое, заблокированное и целиком отвергнутое — мимо
+    assert_eq!(ids, vec![newer.to_string(), fresh.to_string()]);
+    assert_eq!(radar["items"][0]["recordType"], "single");
+    // В «Новинках подписок» те же релизы не повторяются, заблокированного артиста там тоже нет
+    let fresh: Vec<&str> = shelves
+        .iter()
+        .find(|s| s["id"] == "new-releases")
+        .map(|s| {
+            s["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|i| i["title"].as_str().unwrap())
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(fresh, vec!["Disliked"], "{}", res.text);
 
     // Порядок полок — по времени суток слушателя
     let settings = reco::Settings::load(&db).await.unwrap();

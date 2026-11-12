@@ -1,5 +1,5 @@
 //! Настройки оболочки: адрес сервера, язык системных меню, загрузчик на Mac (включён ли, на
-//! паузе ли) и выбранное устройство вывода звука на компьютере. Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают —
+//! паузе ли), выбранное устройство вывода звука на компьютере и эквалайзер этого устройства. Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают —
 //! токены живут в связке ключей.
 
 use std::{path::PathBuf, sync::Mutex};
@@ -44,6 +44,19 @@ struct Stored {
     /// Устройство вывода звука (`cpal::DeviceId` строкой); нет — системное по умолчанию
     #[serde(default, skip_serializing_if = "Option::is_none")]
     audio_output: Option<String>,
+    /// Эквалайзер этого устройства: пресет и полосы «Своего»; нет — выключен
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    eq: Option<StoredEq>,
+}
+
+/// Эквалайзер в настройках: `preset` — id пресета (`off`, `bass-boost`… или `custom`), `gains` —
+/// усиления десяти полос «Своего», дБ (помнятся и при другом пресете).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredEq {
+    pub preset: String,
+    #[serde(default)]
+    pub gains: Vec<f32>,
 }
 
 pub struct Settings {
@@ -145,6 +158,16 @@ impl Settings {
     pub fn set_audio_output(&self, id: Option<String>) -> ShellResult<()> {
         let mut stored = self.lock();
         stored.audio_output = id;
+        self.save(&stored)
+    }
+
+    pub fn eq(&self) -> Option<StoredEq> {
+        self.lock().eq.clone()
+    }
+
+    pub fn set_eq(&self, eq: Option<StoredEq>) -> ShellResult<()> {
+        let mut stored = self.lock();
+        stored.eq = eq;
         self.save(&stored)
     }
 

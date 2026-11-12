@@ -1,57 +1,81 @@
 <script setup lang="ts">
-// Шапка страницы альбома, артиста, плейлиста: обложка со свечением её цвета, вид, название, подробности.
-// meta — короткая строка «9 треков · 45 мин» (разделители — .ph-dot, не переносятся отдельно);
-// status — состояние на сервере своей строкой, без точки; actions — один ряд: «Слушать», второе
-// действие и круглые кнопки. На телефоне ряд не разваливается на две строки
+// Шапка страницы альбома, артиста, плейлиста: обложка, вид, название, подробности. Фон — ровный:
+// цвет на странице даёт сама обложка.
+// meta — короткая строка «9 треков · 45 мин» (разделители — точки, не переносятся отдельно).
+// actions — две главные кнопки («Слушать» и вторая), tools — круглые второстепенные (+, скачать, ⋯).
+// Компьютер: всё одним рядом. Телефон: tools уезжают в верхнюю строку рядом с «назад»,
+// а две главные кнопки делят ширину поровну — подписи не обрезаются
 withDefaults(defineProps<{
   kicker: string
   title: string
-  /** Цвет свечения за шапкой */
-  glow?: string | null
   round?: boolean
-}>(), { glow: null })
+  /** Куда «назад» на телефоне, если истории нет */
+  back?: string
+}>(), { back: '/' })
+
+const ui = useUiStore()
+
+// Название ушло под верхнюю строку — она показывает его сама
+const titleEl = ref<HTMLElement | null>(null)
+const condensed = ref(false)
+let io: IntersectionObserver | null = null
+onMounted(() => {
+  if (!titleEl.value) return
+  io = new IntersectionObserver(([e]) => {
+    if (e) condensed.value = !e.isIntersecting && e.boundingClientRect.top < 100
+  }, { rootMargin: '-100px 0px 0px 0px' })
+  io.observe(titleEl.value)
+})
+onBeforeUnmount(() => io?.disconnect())
 </script>
 
 <template>
-  <header class="ph" :class="{ 'ph--round': round }" :style="glow ? { '--glow': glow } : undefined">
+  <MusicPhoneNav v-if="ui.isPhone" :title="title" :condensed="condensed" :fallback="back">
+    <slot name="tools" />
+  </MusicPhoneNav>
+  <header class="ph" :class="{ 'ph--round': round }">
     <div class="ph__art"><slot name="art" /></div>
     <div class="ph__text">
       <div class="ph__kicker">{{ kicker }}</div>
-      <h1 class="ph__title">{{ title }}</h1>
+      <h1 ref="titleEl" class="ph__title">{{ title }}</h1>
       <div v-if="$slots.sub" class="ph__sub"><slot name="sub" /></div>
-      <div v-if="$slots.meta || $slots.status" class="ph__info">
-        <div v-if="$slots.meta" class="ph__meta"><slot name="meta" /></div>
-        <div v-if="$slots.status" class="ph__status"><slot name="status" /></div>
+      <div v-if="$slots.meta" class="ph__meta"><slot name="meta" /></div>
+      <div v-if="$slots.actions || $slots.tools" class="ph__actions">
+        <slot name="actions" />
+        <template v-if="!ui.isPhone"><slot name="tools" /></template>
       </div>
-      <div v-if="$slots.actions" class="ph__actions"><slot name="actions" /></div>
     </div>
   </header>
 </template>
 
 <style scoped>
-.ph { position: relative; display: flex; align-items: flex-end; gap: 32px; padding: 24px 0 8px; isolation: isolate; }
-.ph::before {
-  content: '';
-  position: absolute;
-  inset: calc((var(--topbar-h) + 8px) * -1) -32px -40px;
-  z-index: -1;
-  background: radial-gradient(60% 90% at 18% 0%, color-mix(in oklab, var(--glow, var(--amb-1)) 34%, transparent), transparent 70%);
-  pointer-events: none;
-}
+.ph { position: relative; display: flex; align-items: flex-end; gap: 32px; padding: 24px 0 8px; }
 .ph__art { width: 232px; flex: none; }
 .ph__art :deep(.art), .ph__art :deep(.pc) { width: 100%; border-radius: var(--r-4); box-shadow: var(--shadow-cover); }
 .ph--round .ph__art :deep(.art) { border-radius: 50%; }
 .ph__text { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-bottom: 4px; }
 .ph__kicker { font-size: var(--fs-caption); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-2); }
-.ph__title { margin: 0; font-size: clamp(32px, 4.4vw, var(--fs-display)); font-weight: 750; letter-spacing: var(--tr-display); line-height: 1.02; text-wrap: balance; overflow-wrap: anywhere; }
-.ph__sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-h4); font-weight: 550; color: var(--text-1); }
+/* Длинное название — не больше трёх строк, дальше многоточие */
+.ph__title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(32px, 4.4vw, var(--fs-display));
+  font-weight: 750;
+  letter-spacing: var(--tr-display);
+  line-height: 1.04;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.ph__sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-h4); font-weight: 550; color: var(--text-1); }
 .ph__sub :deep(a:hover) { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
-.ph__info { display: flex; flex-direction: column; gap: 4px; }
 .ph__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; font-size: var(--fs-small); color: var(--text-2); }
 /* Разделитель «·» держится за следующий пункт: строка не кончается точкой */
 .ph__meta > :deep(*) { white-space: nowrap; }
 .ph__meta > :deep(* + *)::before { content: '·'; margin: 0 8px; color: var(--text-4); }
-.ph__status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--fs-small); color: var(--text-3); text-wrap: pretty; }
 .ph__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 @media (max-width: 1023px) {
   .ph { gap: 24px; }
@@ -67,21 +91,16 @@ withDefaults(defineProps<{
   }
 }
 @media (max-width: 699px) {
-  .ph { flex-direction: column; align-items: center; gap: 18px; padding: 12px 16px 0; text-align: center; }
-  .ph::before { inset: calc(var(--safe-top) * -1 - 8px) 0 -40px; background: radial-gradient(90% 70% at 50% 0%, color-mix(in oklab, var(--glow, var(--amb-1)) 36%, transparent), transparent 75%); }
-  .ph__art { width: min(240px, 64vw); }
-  .ph__text { align-items: center; width: 100%; }
-  .ph__title { font-size: 28px; }
-  .ph__sub, .ph__meta, .ph__status { justify-content: center; }
-  .ph__info { align-items: center; }
-  /* Один ряд: две кнопки делят ширину, круглые — справа */
-  .ph__actions { flex-wrap: nowrap; justify-content: center; gap: 8px; width: 100%; margin-top: 10px; }
-  .ph__actions > :deep(.btn) { flex: 1 1 auto; min-width: 0; max-width: 200px; height: 44px; padding: 0 14px; gap: 6px; font-size: var(--fs-body); }
+  .ph { flex-direction: column; align-items: center; gap: 20px; padding: 0 16px; text-align: center; }
+  .ph__art { width: min(260px, 66vw); }
+  .ph__text { align-items: center; gap: 6px; width: 100%; padding-bottom: 0; }
+  /* Узкая колонка: до четырёх строк, перенос обычный — balance с обрезкой сдвигает последнюю строку */
+  .ph__title { font-size: 26px; line-height: 1.12; letter-spacing: var(--tr-title); text-wrap: pretty; -webkit-line-clamp: 4; line-clamp: 4; }
+  .ph__sub { justify-content: center; font-size: var(--fs-h4); }
+  .ph__meta { justify-content: center; }
+  /* Две главные кнопки поровну на всю ширину, как в Apple Music */
+  .ph__actions { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 12px; width: 100%; margin-top: 14px; }
+  .ph__actions > :deep(.btn) { min-width: 0; height: 48px; padding: 0 12px; gap: 8px; font-size: var(--fs-body); }
   .ph__actions > :deep(.btn .btn__label) { overflow: hidden; text-overflow: ellipsis; }
-  /* Четыре действия в ряд: второй кнопке хватает слова, значок уступает место */
-  .ph__actions:has(> :nth-child(4)) > :deep(.btn:not(.btn--primary) .btn__icon) { display: none; }
-}
-@media (max-width: 379px) {
-  .ph__actions > :deep(.btn:not(.btn--primary) .btn__icon) { display: none; }
 }
 </style>

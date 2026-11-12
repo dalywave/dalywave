@@ -7,7 +7,7 @@ use axum::{
 };
 use dalywave_server::{
     AppState, Config,
-    config::{DeezerConfig, FetcherConfig, MlConfig},
+    config::{DeezerConfig, FetcherConfig, LrclibConfig, MlConfig},
     deezer::Deezer,
     jobs::{
         handlers,
@@ -47,6 +47,10 @@ pub fn config() -> Config {
         },
         // Настоящего сервиса анализа в тестах нет: адрес, где никто не слушает (заглушку ставят сами тесты)
         ml: MlConfig {
+            url: "http://127.0.0.1:9".into(),
+        },
+        // Тексты — тоже без сети: тесты текстов ставят свою заглушку LRCLIB
+        lrclib: LrclibConfig {
             url: "http://127.0.0.1:9".into(),
         },
         release_token: None,

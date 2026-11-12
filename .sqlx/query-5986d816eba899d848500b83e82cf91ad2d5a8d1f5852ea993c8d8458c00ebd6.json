@@ -1,0 +1,109 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.track_id, p.started_at, p.played_ms, p.end_reason, p.context_type, p.wave_session_id,\n                  t.album_id,\n                  (SELECT ta.artist_id FROM track_artists ta\n                   WHERE ta.track_id = p.track_id AND ta.role = 'main' ORDER BY ta.position LIMIT 1) AS \"artist_id?\"\n           FROM play_events p JOIN tracks t ON t.id = p.track_id\n           WHERE p.user_id = $1 AND p.started_at >= $2 AND p.started_at < $3\n           ORDER BY p.started_at, p.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "played_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "played_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "end_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "end_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "context_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "context_type"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "wave_session_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "wave_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "album_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "artist_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "5986d816eba899d848500b83e82cf91ad2d5a8d1f5852ea993c8d8458c00ebd6"
+}

@@ -1,16 +1,20 @@
 // «Мост» — единственный путь экранов к данным и звуку. На сайте за ним HTTP и HTML-аудио,
 // в приложениях — оболочка Tauri (окно, вход через системный браузер) и аудиодвижок на Rust,
 // который сам ведёт «Сейчас играет» и пульт системы. Экраны пишутся один раз.
+import type { EqConfig } from '~/utils/eq'
 import type {
-  AddPlaylistItems, AdminAcquisition, AdminAcquisitionPage, AdminImportList, AdminOverview, AdminRecordingPage,
+  AddPlaylistItems, AddedPlaylistItems, AdminAcquisition, AdminAcquisitionPage, AdminImportList, AdminOverview, AdminRecordingPage,
   AcquisitionStatus, AudioStatus, DownloaderToken, RecoOverview, RecoRunResult, RecoSettings,
   RecoSettingsPatch, RecoTask, ResolveRequest, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
   ClientMessage, DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
-  SoundSearchResults, TasteDamper, TasteOverview, WaveSeed,
+  SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest,
+  LyricsSearchResults, TrackLyrics,
+  Recognition, RecognitionPage, RecognizeRequest,
+  ResolvedLink,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -162,6 +166,21 @@ export interface AudioEngineEvents {
   /** Приложение: движок сам перешёл к другому элементу очереди — без пауз, кроссфейдом,
    *  с пульта системы (`user`), пропустив сбойный трек */
   advance: (uid: string, reason: 'auto' | 'user') => void
+  /** Приложение: таймер сна в движке поставили, сняли, началось затухание, сработал */
+  sleep: (s: SleepState) => void
+}
+
+/** Таймер сна: через `ms` или в конце текущего трека */
+export type SleepTimer = { mode: 'minutes', ms: number } | { mode: 'track' }
+
+export interface SleepState {
+  /** null — таймера нет */
+  timer: 'minutes' | 'track' | null
+  /** Когда пауза, мс от эпохи Unix */
+  endsAtMs: number | null
+  fading: boolean
+  /** Сработал: музыка на паузе */
+  finished: boolean
 }
 
 /** Трек очереди для движка приложения: метаданные для «Сейчас играет» и ссылка, если есть */
@@ -213,7 +232,30 @@ export interface AudioEngine {
   /** Переход и выравнивание громкости (приложение) */
   /** `dj` — сведение по долям в движке приложения; на сайте его нет (там «Умный»). `expressiveness` 0…1 */
   configure(opts: { transition: 'gapless' | 'crossfade' | 'dj', fadeMs: number, normalize: boolean, expressiveness?: number }): void
+  /** Эквалайзер есть (сайт — WebAudio; без него — нет) */
+  readonly eqSupported: boolean
+  /** Эквалайзер (utils/eq.ts): приложение запоминает его в оболочке для этого устройства; null — выключить */
+  setEq(eq: EqConfig | null): void
+  /** Что запомнила оболочка (приложение); сайт — null, настройка в localStorage */
+  savedEq(): Promise<EqConfig | null>
+  /** Таймер сна в движке приложения: затухание и пауза там же, работает и в фоне. Сайт — ничего:
+   *  таймер ведёт интерфейс (stores/sound.ts) через fadeOut */
+  setSleep(timer: SleepTimer | null): void
+  /** Таймер сна в движке сейчас (приложение); сайт — null */
+  sleepState(): Promise<SleepState | null>
+  /** Сайт: звук затухает до тишины за `ms` (таймер сна); null — громкость обратно */
+  fadeOut(ms: number | null): void
+  /** Приложение: перемешивание и повтор — повтор одного трека движок ведёт сам (без паузы, и в
+   *  фоне), оба режима видны в Пункте управления. Сайт — нет: повтор ведёт плеер */
+  setModes?(shuffle: boolean, repeat: RepeatMode): void
   on<E extends keyof AudioEngineEvents>(event: E, cb: AudioEngineEvents[E]): () => void
+}
+
+/** Мини-плеер приложения для компьютера: маленькое окно поверх всех, главное прячется */
+export interface MiniPlayerControl {
+  open(): Promise<void>
+  close(): Promise<void>
+  toggle(): Promise<void>
 }
 
 /** Что показать системе: экран блокировки, Пункт управления, плашка Windows */
@@ -232,6 +274,11 @@ export type MediaCommand =
   | { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop' }
   | { action: 'seek', positionMs: number }
   | { action: 'seekBy', offsetMs: number }
+  | { action: 'setShuffle', shuffle: boolean }
+  | { action: 'setRepeat', mode: RepeatMode }
+
+/** Повтор: выключен, вся очередь (альбом, плейлист) по кругу, один трек */
+export type RepeatMode = 'off' | 'all' | 'one'
 
 export type LiveState = 'idle' | 'connecting' | 'open' | 'closed'
 export type ServerEventOf<T extends ServerEventType> = Extract<ServerEvent, { type: T }>
@@ -353,6 +400,38 @@ export interface OfflineBridge {
   /** Все треки на устройстве и ход их загрузки */
   downloads(): Promise<TrackDownload[]>
   onProgress(cb: (d: TrackDownload) => void): () => void
+  /** Состав умного запаса: все треки в порядке загрузки и уже скачанные из них */
+  reserve(): Promise<OfflineReserve>
+}
+
+/** Умный запас волны на устройстве */
+export interface OfflineReserve {
+  trackIds: string[]
+  readyIds: string[]
+  builtAt: string | null
+}
+
+/** Что узнал ShazamKit: название, исполнитель и ISRC — трек каталога по ним находит сервер */
+export interface RecognizeMatch {
+  title: string
+  artist: string
+  isrc: string | null
+  appleMusicId: string | null
+  shazamId: string | null
+  artworkUrl: string | null
+}
+
+/** Почему не узнали: тишина или шум, нет доступа к микрофону, микрофона нет, отменили, сбой Shazam */
+export type RecognizeErrorCode = 'no_match' | 'permission' | 'no_microphone' | 'cancelled' | 'shazam' | 'unsupported'
+
+/** «Распознать»: ShazamKit в приложениях для iPhone, iPad и macOS. Своя музыка на паузе, пока слушаем */
+export interface Recognizer {
+  /** Слушать до совпадения, не дольше 15 с; ошибка — `{ code: RecognizeErrorCode }` */
+  listen(): Promise<RecognizeMatch>
+  cancel(): Promise<void>
+  /** Открыть экран распознавания просят трей macOS или быстрое действие на значке iPhone
+   *  (и при запуске, если приложение открыли этим действием) */
+  onOpen(cb: () => void): () => void
 }
 
 export interface Bridge {
@@ -434,6 +513,15 @@ export interface Bridge {
     lookup(ids: string[]): Promise<Track[]>
     /** Поиск словами по звучанию: «спокойный инструментал для работы» — из медиатеки и индекса каталога */
     soundSearch(text: string, limit?: number): Promise<SoundSearchResults>
+    /** Текст песни: строки с временем, простой текст, «без слов» или «не нашли» */
+    lyrics(trackId: string): Promise<TrackLyrics>
+    /** Песни, в тексте которых есть строчка (среди уже взятых текстов) */
+    searchLyrics(q: string, limit?: number): Promise<LyricsSearchResults>
+    /** Похожие по звучанию на трек (не больше двух у артиста) — «Подходит к плейлисту» */
+    similar(trackId: string, limit?: number): Promise<WaveItems>
+    /** «Поделиться → DalyWave»: ссылка Deezer, Spotify, Apple Music, YouTube, SoundCloud, Bandcamp → трек,
+     *  альбом или артист каталога. Ошибки: `unsupported_link` (422), `not_found` (404) */
+    resolveLink(url: string): Promise<ResolvedLink>
   }
 
   home(): Promise<Home>
@@ -447,6 +535,14 @@ export interface Bridge {
     undoLess(damperId: string): Promise<void>
     /** Сбросить вкус: грани и миксы собираются заново по новым прослушиваниям */
     reset(): Promise<void>
+  }
+
+  /** «Итоги года»: годы с прослушиваниями, итоги года («по сей день» — у текущего), плейлист лучших треков */
+  rewind: {
+    years(): Promise<RewindYears>
+    get(year: number): Promise<Rewind>
+    /** «Твои лучшие треки {год}»: создать или обновить; id плейлиста */
+    savePlaylist(year: number): Promise<string>
   }
 
   library: {
@@ -491,10 +587,19 @@ export interface Bridge {
     create(body: NewPlaylist): Promise<PlaylistSummary>
     update(id: string, patch: PlaylistPatch): Promise<PlaylistSummary>
     remove(id: string): Promise<void>
-    addItems(id: string, body: AddPlaylistItems): Promise<void>
+    /** Новые позиции — их id нужны для «Отменить» */
+    addItems(id: string, body: AddPlaylistItems): Promise<AddedPlaylistItems>
     removeItem(id: string, itemId: string): Promise<void>
+    /** Несколько позиций разом (выбранные в списке) */
+    removeItems(id: string, itemIds: string[]): Promise<void>
     moveItem(id: string, itemId: string, afterItemId: string | null): Promise<void>
     pin(id: string, pinned: boolean): Promise<void>
+    /** Своя обложка: картинка обрезается по центру до квадрата */
+    setCover(id: string, file: Blob): Promise<PlaylistSummary>
+    /** Убрать свою обложку — снова мозаика */
+    removeCover(id: string): Promise<PlaylistSummary>
+    /** Копия плейлиста или микса — обычный плейлист человека */
+    duplicate(id: string, title?: string): Promise<PlaylistSummary>
   }
 
   /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */
@@ -508,6 +613,16 @@ export interface Bridge {
     next(session: string, settings: WaveSettings, count: number, exclude: string[]): Promise<WaveTrack[]>
     /** Реакция на трек волны: лайк, «не нравится», пропуск, «не сейчас», «больше такого», дослушан */
     feedback(session: string, trackId: string, kind: WaveFeedbackKind, positionMs: number): Promise<void>
+    /** Сохранённые сочетания настроек: карточки под волной, по порядку */
+    presets: {
+      list(): Promise<WavePreset[]>
+      /** Новое — в конец ряда */
+      create(body: NewWavePreset): Promise<WavePreset>
+      update(id: string, patch: WavePresetPatch): Promise<WavePreset>
+      remove(id: string): Promise<void>
+      /** Названные — первыми в этом порядке, остальные — после */
+      reorder(ids: string[]): Promise<WavePreset[]>
+    }
   }
 
   media: {
@@ -574,6 +689,17 @@ export interface Bridge {
   }
 
   audio: AudioEngine
+  /** Мини-плеер (приложение на macOS и Windows); иначе нет */
+  miniPlayer?: MiniPlayerControl | null
+
+  /** Распознавание песни рядом (приложение на iPhone, iPad, macOS); на сайте и Windows — нет */
+  recognizer?: Recognizer | null
+  /** Распознанное: трек каталога по совпадению и история — на всех устройствах */
+  recognize: {
+    resolve(match: RecognizeRequest): Promise<Recognition>
+    history(cursor?: string | null, limit?: number): Promise<RecognitionPage>
+    remove(id: string): Promise<void>
+  }
 }
 
 export type { DeviceInfo, Track }

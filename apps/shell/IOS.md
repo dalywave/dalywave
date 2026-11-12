@@ -65,6 +65,35 @@ DalyWave?» → «Открыть».
 | 12 | Авиарежим → «Моя волна» | Играет из скачанного, пропуски и настроения учитываются; альбом из «Скачанного» играет |
 | 13 | Лайк, «играть», «следующий», шторка по ступеням, долгое нажатие | Лёгкий тактильный отклик |
 
+## «Поделиться → DalyWave»
+
+Ссылка из YouTube, Safari, Telegram, Spotify, Apple Music: «Поделиться» → **DalyWave** (если его нет в
+ряду — «Ещё» → включить). Приложение открывается и предлагает «Слушать», «В любимые», «В плейлист».
+Это расширение `dalywave-share` (`gen/apple/ShareExtension`, Bundle ID `rest.daly.wave.share`) —
+Xcode подписывает его той же командой сам. Проверка на симуляторе — `ShareExtensionTests` в
+`make ios-test`, снимки — `design/shots/share`.
+
+## «Распознать» (Shazam)
+
+Один раз, до первой проверки, — в Apple Developer (developer.apple.com → Account → **Certificates,
+Identifiers & Profiles** → **Identifiers**):
+
+1. Открыть App ID **rest.daly.wave** (если его нет — Xcode создаёт его при первом ⌘R).
+2. Вкладка **App Services** → поставить галочку **ShazamKit** → **Save** (подтвердить «Confirm»).
+3. В Xcode: Settings → Accounts → команда Y5KR5JPCRG → **Download Manual Profiles**, затем ⌘R. Отдельного
+   права (entitlement) в проекте для ShazamKit нет — служба включается только у App ID.
+
+Тот же App ID — у приложения macOS (`make app`, подпись Developer ID той же командой): на Mac
+распознавание заработает после того же шага. Без службы Shazam отвечает ошибкой — экран покажет
+«Shazam не ответил», в журнале — `recognize: ShazamKit error 202`.
+
+Проверка на iPhone: «Поиск» → значок микрофона справа от поля (или долгое нажатие на значок DalyWave →
+«Распознать»). Первый раз iOS спросит доступ к микрофону — «Разрешить». Включите песню на другом
+устройстве: за 3–8 с откроется лист с обложкой и «Слушать», «В любимые», «В плейлист», «Волна по треку»;
+своя музыка на это время на паузе. Узнанное — в «Поиске», блок «Распознанное». Симулятор без
+микрофона: `DALYWAVE_RECOGNIZE_MOCK=1 DALYWAVE_RECOGNIZE_OPEN=1` (BRIDGE.md, «Распознать»), снимки —
+`design/shots/shazam`.
+
 ## Журнал
 
 Xcode → Window → Devices and Simulators → iPhone → Installed Apps → DalyWave → «…» → Download

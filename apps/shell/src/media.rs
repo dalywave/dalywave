@@ -9,7 +9,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 use dalywave_audio::{Event, PlaybackState};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::MAIN;
@@ -40,6 +40,16 @@ pub enum Source {
     Tray,
 }
 
+/// Повтор: выключен, вся очередь по кругу, один трек — как `repeat` плеера интерфейса.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RepeatMode {
+    #[default]
+    Off,
+    All,
+    One,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "action",
@@ -64,6 +74,15 @@ pub enum Command {
     SeekBy {
         offset_ms: i64,
     },
+    /// Пункт управления, CarPlay, Siri (macOS, iOS): очередь перемешивает интерфейс
+    #[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
+    SetShuffle {
+        shuffle: bool,
+    },
+    #[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
+    SetRepeat {
+        mode: RepeatMode,
+    },
 }
 
 #[derive(Clone, Serialize)]
@@ -85,6 +104,8 @@ struct Synced {
 #[derive(Default)]
 pub struct Media {
     current: Mutex<Option<NowPlaying>>,
+    /// Перемешивание и повтор интерфейса — для кнопок системы
+    modes: Mutex<(bool, RepeatMode)>,
     synced: Mutex<Option<Synced>>,
     #[cfg(target_vendor = "apple")]
     apple: Mutex<AppleState>,
@@ -193,17 +214,55 @@ pub fn attach_engine(app: &AppHandle) {
                 RemoteCommand::Seek(s) => Command::Seek {
                     position_ms: (s.max(0.0) * 1000.0) as u64,
                 },
+                RemoteCommand::SetShuffle(shuffle) => Command::SetShuffle { shuffle },
+                RemoteCommand::SetRepeat(r) => Command::SetRepeat {
+                    mode: match r {
+                        dalywave_audio::apple::Repeat::Off => RepeatMode::Off,
+                        dalywave_audio::apple::Repeat::One => RepeatMode::One,
+                        dalywave_audio::apple::Repeat::All => RepeatMode::All,
+                    },
+                },
             };
             crate::player::remote(&handle, command, Source::System);
         });
         let media = app.state::<Media>();
         let mut apple = media.apple.lock().unwrap_or_else(|e| e.into_inner());
         apple.remote = Some(remote);
+        let (shuffle, repeat) = *media.modes.lock().unwrap_or_else(|e| e.into_inner());
+        apple_modes(shuffle, repeat);
         #[cfg(target_os = "ios")]
         apple.observers.extend(ios_observers(app));
     }
     #[cfg(not(target_vendor = "apple"))]
     let _ = app;
+}
+
+/// Перемешивание и повтор интерфейса — кнопкам системы (Пункт управления, CarPlay на macOS и iOS).
+/// Плашка Windows (souvlaki) таких кнопок не умеет.
+pub fn set_modes(app: &AppHandle, shuffle: bool, repeat: RepeatMode) {
+    let media = app.state::<Media>();
+    let mut modes = media.modes.lock().unwrap_or_else(|e| e.into_inner());
+    if *modes == (shuffle, repeat) {
+        return;
+    }
+    *modes = (shuffle, repeat);
+    #[cfg(target_vendor = "apple")]
+    {
+        let _ = app.run_on_main_thread(move || apple_modes(shuffle, repeat));
+    }
+}
+
+#[cfg(target_vendor = "apple")]
+fn apple_modes(shuffle: bool, repeat: RepeatMode) {
+    use dalywave_audio::apple::{Repeat, set_modes};
+    set_modes(
+        shuffle,
+        match repeat {
+            RepeatMode::Off => Repeat::Off,
+            RepeatMode::All => Repeat::All,
+            RepeatMode::One => Repeat::One,
+        },
+    );
 }
 
 /// iOS: звонок, Siri, будильник, наушники, сброс медиасервисов, уход в фон.
@@ -515,6 +574,28 @@ mod tests {
         assert_eq!(
             serde_json::to_value(event).unwrap(),
             serde_json::json!({ "action": "toggle", "source": "tray" })
+        );
+        let event = CommandEvent {
+            command: Command::SetRepeat {
+                mode: RepeatMode::One,
+            },
+            source: Source::System,
+        };
+        assert_eq!(
+            serde_json::to_value(event).unwrap(),
+            serde_json::json!({ "action": "setRepeat", "mode": "one", "source": "system" })
+        );
+        let event = CommandEvent {
+            command: Command::SetShuffle { shuffle: true },
+            source: Source::System,
+        };
+        assert_eq!(
+            serde_json::to_value(event).unwrap(),
+            serde_json::json!({ "action": "setShuffle", "shuffle": true, "source": "system" })
+        );
+        assert_eq!(
+            serde_json::from_str::<RepeatMode>(r#""all""#).unwrap(),
+            RepeatMode::All
         );
     }
 }

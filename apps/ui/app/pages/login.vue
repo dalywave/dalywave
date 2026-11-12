@@ -167,7 +167,7 @@ async function submit() {
   box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
   text-align: center;
 }
-.login__icon { width: 72px; height: 72px; filter: drop-shadow(0 18px 30px rgba(176, 28, 240, 0.35)); }
+.login__icon { width: 72px; height: 72px; }
 .login__title { margin: 18px 0 0; font-size: 32px; font-weight: 750; letter-spacing: var(--tr-display); line-height: 1.1; }
 .login__lead { max-width: 300px; margin: 8px 0 24px; color: var(--text-2); text-wrap: balance; }
 .login__error { display: flex; align-items: flex-start; gap: 10px; width: 100%; margin-bottom: 16px; padding: 10px 12px; border-radius: var(--r-3); background: color-mix(in oklab, var(--danger) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 30%, transparent); font-size: var(--fs-small); text-align: left; }
@@ -211,7 +211,7 @@ async function submit() {
 {
   "ru": {
     "title": "Вход",
-    "lead": "Своя музыка на своём сервере — и волна, которая знает, что вам нравится",
+    "lead": "Ваша музыка — и волна, которая знает, что вам нравится",
     "oidc": "Войти через {title}",
     "or": "или",
     "emergency": "Аварийный вход",
@@ -252,7 +252,7 @@ async function submit() {
   },
   "en": {
     "title": "Sign in",
-    "lead": "Your music on your own server — and a wave that knows what you like",
+    "lead": "Your music — and a wave that knows what you like",
     "oidc": "Sign in with {title}",
     "or": "or",
     "emergency": "Emergency sign-in",

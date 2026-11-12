@@ -291,8 +291,8 @@ function showToast(kind: 'plain' | 'undo' | 'error') {
         <DevSpec label="WaveSettingsBar: токены (телефон)" wide>
           <MusicWaveSettingsBar v-model="waveSet" variant="tokens" />
         </DevSpec>
-        <DevSpec label="SavedCombos: «Работа» сейчас" wide>
-          <MusicSavedCombos active="work" />
+        <DevSpec label="SavedCombos" wide>
+          <MusicSavedCombos />
         </DevSpec>
         <DevSpec label="WaveHero — живая волна; настроение меняет весь акцент интерфейса" wide :pad="false">
           <div class="herobox"><MusicWaveHero greeting="Добрый вечер, Захар" /></div>

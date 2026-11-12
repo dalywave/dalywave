@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT track_id FROM play_events\n         WHERE user_id = $1 AND started_at >= $2 AND started_at < $3 AND (played_ms >= $4 OR end_reason = 'completed')\n         GROUP BY track_id ORDER BY count(*) DESC, sum(played_ms) DESC, track_id LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4033a4146831f6dae9c4ad32ba3066dd3fe212a9110aaecbb744bd43b0ce1acd"
+}

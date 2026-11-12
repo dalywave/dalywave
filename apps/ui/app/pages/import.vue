@@ -13,6 +13,7 @@ const lang = useLang()
 const route = useRoute()
 const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
+const { y: scrollY } = useWindowScroll()
 
 const MODES: { value: Mode, icon: string }[] = [
   { value: 'spotify', icon: 'ph:spotify-logo' },
@@ -329,8 +330,7 @@ function historySub(s: ImportSummary): string {
   if (s.status === 'running') return `${when} · ${t('history.running')}`
   if (s.status === 'failed') return `${when} · ${t('history.failed')}`
   if (s.status === 'cancelled') return `${when} · ${t('history.cancelled')}`
-  const found = `${formatNumber(s.matched, lang.value)} ${t('history.of')} ${formatNumber(s.total, lang.value)}`
-  return `${when} · ${t('history.found', { found })}`
+  return `${when} · ${t('history.found', { found: formatNumber(s.matched, lang.value) })}`
 }
 
 const actionLink = computed(() => {
@@ -345,47 +345,37 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 
 <template>
   <div class="imp">
-    <header class="imp__head">
-      <h1 class="imp__title">{{ t('title') }}</h1>
-      <p class="imp__lead">{{ t('lead') }}</p>
-    </header>
+    <MusicPhoneNav :title="t('title')" :condensed="scrollY > 44" fallback="/settings" />
+    <h1 class="imp__title">{{ t('title') }}</h1>
 
     <template v-if="!active">
-      <div class="imp__choices" role="radiogroup" :aria-label="t('how')">
+      <!-- Откуда переносить: один ряд, как сегменты, но с зоной касания 44 -->
+      <div class="imp__modes" role="radiogroup" :aria-label="t('how')">
         <button
           v-for="m in MODES"
           :key="m.value"
           type="button"
           role="radio"
-          class="imp__choice"
+          class="imp__mode"
           :class="{ 'is-on': mode === m.value }"
           :aria-checked="mode === m.value"
           @click="mode = m.value"
         >
-          <span class="imp__choice-icon" aria-hidden="true"><Icon :name="m.icon" /></span>
-          <span class="imp__choice-text">
-            <span class="imp__choice-title">{{ t(`mode.${m.value}.title`) }}</span>
-            <span class="imp__choice-sub">{{ t(`mode.${m.value}.sub`) }}</span>
-          </span>
-          <Icon v-if="mode === m.value" name="ph:check-circle-fill" class="imp__choice-check" aria-hidden="true" />
+          <Icon :name="m.icon" class="imp__mode-icon" aria-hidden="true" />
+          <span class="ellipsis">{{ t(`mode.${m.value}`) }}</span>
         </button>
       </div>
 
       <section v-if="mode === 'spotify'" class="imp__panel">
         <ImportDropZone
-          :title="t('spotify.drop')"
+          :title="ui.isPhone ? t('spotify.dropPhone') : t('spotify.drop')"
           :hint="t('spotify.dropHint')"
           :button="t('spotify.pick')"
           icon="ph:file-zip"
           accept=".zip,.json,application/zip"
           @files="startSpotify"
         />
-        <div class="imp__how">
-          <Icon name="ph:info" class="imp__how-icon" aria-hidden="true" />
-          <p>
-            <b>{{ t('spotify.whereTitle') }}</b> {{ t('spotify.where') }}
-          </p>
-        </div>
+        <p class="imp__note">{{ t('spotify.where') }}</p>
       </section>
 
       <section v-else-if="mode === 'list'" class="imp__panel">
@@ -435,7 +425,7 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 
       <section v-else class="imp__panel">
         <ImportDropZone
-          :title="t('files.drop')"
+          :title="ui.isPhone ? t('files.dropPhone') : t('files.drop')"
           :hint="t('files.dropHint')"
           :button="t('files.pick')"
           icon="ph:file-audio"
@@ -443,10 +433,6 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
           multiple
           @files="addFiles"
         />
-        <div class="imp__how">
-          <Icon name="ph:sparkle" class="imp__how-icon" aria-hidden="true" />
-          <p>{{ t('files.how') }}</p>
-        </div>
       </section>
     </template>
 
@@ -511,46 +497,37 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 </template>
 
 <style scoped>
-.imp { display: flex; flex-direction: column; gap: 28px; width: 100%; max-width: 880px; margin: 0 auto; padding: 16px 0 48px; }
-.imp__head { display: flex; flex-direction: column; gap: 8px; }
+.imp { display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 760px; margin: 0 auto; padding: 16px 0 48px; }
 .imp__title { margin: 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
-.imp__lead { margin: 0; max-width: 620px; font-size: var(--fs-body); color: var(--text-2); text-wrap: pretty; }
 
-/* Три способа — плитки-переключатели */
-.imp__choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.imp__choice {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-  min-height: 128px;
-  padding: 18px;
+/* Три способа — сегменты в одной подложке */
+.imp__modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: min(520px, 100%); padding: 4px; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
+.imp__mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
   border: 0;
-  border-radius: var(--r-4);
-  background: var(--fill-1);
-  box-shadow: inset 0 0 0 1px var(--line);
-  color: var(--text-1);
-  text-align: left;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--dur-1), box-shadow var(--dur-2), transform var(--dur-1) var(--ease-out);
+  transition: background-color var(--dur-1), color var(--dur-1);
+  -webkit-tap-highlight-color: transparent;
 }
-.imp__choice:hover { background: var(--fill-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.imp__choice:active { transform: scale(0.985); }
-.imp__choice:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.imp__choice.is-on { background: radial-gradient(120% 100% at 0% 0%, var(--accent-soft), transparent 70%), var(--fill-2); box-shadow: inset 0 0 0 1.5px var(--accent-line); }
-.imp__choice-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--fill-2); color: var(--text-2); font-size: 20px; transition: background var(--dur-2), color var(--dur-2); }
-.imp__choice.is-on .imp__choice-icon { background: var(--brand-gradient); color: #fff; }
-.imp__choice-text { display: flex; flex-direction: column; gap: 2px; }
-.imp__choice-title { font-size: var(--fs-body); font-weight: 650; }
-.imp__choice-sub { font-size: var(--fs-small); color: var(--text-3); }
-.imp__choice-check { position: absolute; top: 16px; right: 16px; font-size: 20px; color: var(--accent); }
+.imp__mode:hover { color: var(--text-1); }
+.imp__mode:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.imp__mode.is-on { background: var(--fill-3); color: var(--text-1); }
+.imp__mode-icon { flex: none; font-size: 18px; }
 
-.imp__panel { display: flex; flex-direction: column; gap: 16px; }
-.imp__how { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-3); background: var(--fill-1); }
-.imp__how p { margin: 0; font-size: var(--fs-small); color: var(--text-2); text-wrap: pretty; }
-.imp__how b { color: var(--text-1); font-weight: 600; }
-.imp__how-icon { flex: none; margin-top: 2px; font-size: 18px; color: var(--text-3); }
+.imp__panel { display: flex; flex-direction: column; gap: 12px; }
+.imp__note { margin: 0; font-size: var(--fs-small); line-height: 1.45; color: var(--text-3); text-wrap: pretty; }
 
 /* Список: поле с подвалом и выбор, куда класть */
 .imp__area { display: flex; flex-direction: column; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow var(--dur-2); }
@@ -594,8 +571,8 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 .imp__go { align-self: flex-start; }
 
 /* Файлы: строка на файл */
-.imp__files { display: flex; flex-direction: column; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
-.imp__frow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; }
+.imp__files { display: flex; flex-direction: column; }
+.imp__frow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 0; }
 .imp__frow + .imp__frow { box-shadow: inset 0 1px 0 var(--hair); }
 .imp__frow-icon { display: grid; flex: none; place-items: center; width: 36px; height: 36px; border-radius: var(--r-3); background: var(--fill-2); color: var(--text-3); font-size: 18px; }
 .imp__frow-icon.is-ok { background: color-mix(in oklab, var(--success) 16%, transparent); color: var(--success); }
@@ -608,9 +585,9 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 .imp__frow-state.is-warn { color: var(--warning); }
 .imp__frow-state.is-bad { color: var(--danger); }
 .imp__frow-meta { flex: none; font-size: var(--fs-small); color: var(--text-3); }
-.imp__frow-bar { position: absolute; left: 16px; right: 16px; bottom: 0; height: 2px; overflow: hidden; border-radius: 1px; background: var(--fill-2); }
+.imp__frow-bar { position: absolute; left: 48px; right: 0; bottom: 0; height: 2px; overflow: hidden; border-radius: 1px; background: var(--fill-2); }
 .imp__frow-bar i { display: block; height: 100%; background: var(--accent); transition: width var(--dur-2); }
-.imp__more-files { min-height: 0; margin: 8px; padding: 16px; }
+.imp__more-files { min-height: 0; margin-top: 8px; padding: 16px; }
 .imp__more-files :deep(.dz__icon) { display: none; }
 .imp__more-files :deep(.dz__button) { margin-top: 8px; }
 
@@ -622,26 +599,27 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 
 /* Прошлые переносы */
 .imp__history { display: flex; flex-direction: column; gap: 12px; }
-.imp__hlist { display: flex; flex-direction: column; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
-.imp__hrow { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; border: 0; background: transparent; color: var(--text-1); text-align: left; cursor: pointer; transition: background-color var(--dur-1); }
-.imp__hrow + .imp__hrow { box-shadow: inset 0 1px 0 var(--hair); }
+.imp__hlist { display: flex; flex-direction: column; }
+/* Строка нажимается целиком: подсветка выходит за колонку, текст остаётся на месте */
+.imp__hrow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; margin: 0 -12px; padding: 10px 12px; border: 0; border-radius: var(--r-3); background: transparent; color: var(--text-1); text-align: left; cursor: pointer; transition: background-color var(--dur-1); }
+.imp__hrow + .imp__hrow::before { content: ''; position: absolute; top: 0; left: 64px; right: 12px; height: 1px; background: var(--hair); }
+.imp__hrow:active { background: var(--fill-2); }
 .imp__hrow:hover { background: var(--fill-1); }
 .imp__hrow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .imp__hrow-icon { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: var(--r-3); background: var(--fill-2); color: var(--text-2); font-size: 18px; }
 .imp__hrow-main { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 .imp__hrow-title { font-size: var(--fs-body); font-weight: 600; }
 .imp__hrow-sub { font-size: var(--fs-small); color: var(--text-3); }
-.imp__hrow-badge { flex: none; padding: 3px 10px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-caption); font-weight: 600; }
-.imp__hrow-badge.is-warn { background: color-mix(in oklab, var(--warning) 14%, transparent); color: var(--warning); }
+/* Состояние справа — просто словом, без плашки */
+.imp__hrow-badge { flex: none; color: var(--accent); font-size: var(--fs-small); font-weight: 600; }
+.imp__hrow-badge.is-warn { color: var(--warning); }
 .imp__hrow-chev { flex: none; font-size: 16px; color: var(--text-4); }
 
-@media (max-width: 899px) {
-  .imp__choices { grid-template-columns: 1fr; gap: 8px; }
-  .imp__choice { flex-direction: row; align-items: center; min-height: 72px; padding: 14px 16px; }
-  .imp__choice-check { position: static; margin-left: auto; }
-}
 @media (max-width: 699px) {
-  .imp { gap: 24px; padding: 8px 16px 32px; }
+  .imp { gap: 20px; padding: 0 16px 32px; }
+  .imp > .pn { margin-right: -16px; margin-bottom: -20px; margin-left: -16px; }
+  .imp__mode { height: 44px; padding: 0 8px; }
+  .imp__mode-icon { display: none; }
   .imp__title { font-size: 28px; }
   .imp__text { min-height: 180px; padding: 14px 16px; }
   .imp__target { flex-direction: column; align-items: stretch; }
@@ -650,28 +628,20 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
   .imp__frow-meta { display: none; }
   .imp__forget { margin-left: 0; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .imp__choice, .imp__choice-icon { transition: none; }
-}
 </style>
 
 <i18n lang="json">
 {
   "ru": {
     "title": "Перенести музыку",
-    "lead": "Лайки, плейлисты и историю из Spotify, список треков или свои файлы — найденное ляжет в медиатеку, а волна сразу начнёт учитывать ваш вкус.",
     "how": "Откуда переносить",
-    "mode": {
-      "spotify": { "title": "Архив Spotify", "sub": "Лайки, плейлисты, история" },
-      "list": { "title": "Список треков", "sub": "Текст, CSV или M3U" },
-      "files": { "title": "Свои файлы", "sub": "FLAC, ALAC, MP3, WAV" }
-    },
+    "mode": { "spotify": "Spotify", "list": "Список", "files": "Файлы" },
     "spotify": {
       "drop": "Перетащите сюда my_spotify_data.zip",
-      "dropHint": "Подойдут оба архива — данные аккаунта и расширенная история, по очереди",
+      "dropPhone": "Архив my_spotify_data.zip",
+      "dropHint": "Подойдёт и архив расширенной истории",
       "pick": "Выбрать архив",
-      "whereTitle": "Где взять архив.",
-      "where": "В Spotify: Аккаунт → Конфиденциальность → «Скачать ваши данные». Данные аккаунта приходят на почту за несколько дней, расширенная история — до 30 дней.",
+      "where": "Архив — в Spotify: Аккаунт → Конфиденциальность → «Скачать ваши данные». Приходит на почту за несколько дней.",
       "wrongFile": "Нужен архив my_spotify_data.zip из письма Spotify",
       "tooBig": "Архив больше 500 МБ — такого у Spotify не бывает. Проверьте файл"
     },
@@ -691,9 +661,9 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
     },
     "files": {
       "drop": "Перетащите сюда аудиофайлы",
-      "dropHint": "FLAC, ALAC, MP3, Opus, WAV и AIFF — можно сразу папку с альбомом",
+      "dropPhone": "Аудиофайлы",
+      "dropHint": "FLAC, ALAC, MP3, Opus, WAV и AIFF",
       "pick": "Выбрать файлы",
-      "how": "Сервер узнает трек по тегам и звучанию и положит файл к нему. Если ваш файл лучше копии с YouTube — например, без потерь, — он её заменит.",
       "more": "Добавить ещё файлы",
       "list": "Файлы",
       "waiting": "В очереди",
@@ -702,7 +672,7 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
       "unmatched": "Не узнали — выберите трек ниже",
       "skipped": "Пропущен",
       "upgraded": "заменил копию хуже",
-      "kept": "на сервере уже было не хуже",
+      "kept": "уже был не хуже",
       "skippedSome": "Пропущено файлов не того формата: {n}"
     },
     "review": {
@@ -715,7 +685,6 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
       "running": "идёт",
       "failed": "не получилось",
       "cancelled": "остановлен",
-      "of": "из",
       "found": "найдено {found}",
       "live": "Идёт",
       "check": "Проверить {n}"
@@ -732,19 +701,14 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
   },
   "en": {
     "title": "Bring your music",
-    "lead": "Likes, playlists and history from Spotify, a track list or your own files — everything found goes into your library, and the wave starts learning your taste right away.",
     "how": "Where from",
-    "mode": {
-      "spotify": { "title": "Spotify archive", "sub": "Likes, playlists, history" },
-      "list": { "title": "Track list", "sub": "Text, CSV or M3U" },
-      "files": { "title": "Your files", "sub": "FLAC, ALAC, MP3, WAV" }
-    },
+    "mode": { "spotify": "Spotify", "list": "List", "files": "Files" },
     "spotify": {
       "drop": "Drop my_spotify_data.zip here",
-      "dropHint": "Both archives work — account data and extended history, one after another",
+      "dropPhone": "my_spotify_data.zip archive",
+      "dropHint": "The extended history archive works too",
       "pick": "Choose archive",
-      "whereTitle": "Where to get it.",
-      "where": "In Spotify: Account → Privacy → “Download your data”. Account data arrives by email within a few days, extended history takes up to 30 days.",
+      "where": "Get it in Spotify: Account → Privacy → “Download your data”. It arrives by email within a few days.",
       "wrongFile": "Use the my_spotify_data.zip archive from Spotify's email",
       "tooBig": "The archive is over 500 MB — Spotify never sends that much. Check the file"
     },
@@ -764,9 +728,9 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
     },
     "files": {
       "drop": "Drop audio files here",
-      "dropHint": "FLAC, ALAC, MP3, Opus, WAV and AIFF — a whole album folder works too",
+      "dropPhone": "Audio files",
+      "dropHint": "FLAC, ALAC, MP3, Opus, WAV and AIFF",
       "pick": "Choose files",
-      "how": "The server recognises each track by its tags and sound and attaches the file to it. If your file is better than the YouTube copy — lossless, say — it replaces it.",
       "more": "Add more files",
       "list": "Files",
       "waiting": "Queued",
@@ -775,7 +739,7 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
       "unmatched": "Not recognised — pick the track below",
       "skipped": "Skipped",
       "upgraded": "replaced a worse copy",
-      "kept": "the server already had one as good",
+      "kept": "already had one as good",
       "skippedSome": "Skipped files of the wrong format: {n}"
     },
     "review": {
@@ -788,7 +752,6 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
       "running": "running",
       "failed": "failed",
       "cancelled": "stopped",
-      "of": "of",
       "found": "{found} found",
       "live": "Running",
       "check": "Check {n}"

@@ -18,7 +18,7 @@ use dalywave_protocol::{
         SyncAlbum, SyncArtist, SyncBlockedItem, SyncDeviceDownload, SyncDeviceSetItem, SyncEntity,
         SyncFollowedArtist, SyncLikedTrack, SyncPage, SyncPlaylist, SyncPlaylistItem, SyncQuery,
         SyncRecording, SyncSavedAlbum, SyncTombstone, SyncTrack, SyncTrackArtist,
-        SyncTrackFeatures,
+        SyncTrackFeatures, SyncWavePreset,
     },
 };
 use serde_json::{Map, Value};
@@ -89,6 +89,7 @@ enum Change {
     Download(SyncDeviceDownload),
     Set(SyncDeviceSetItem),
     Features(SyncTrackFeatures),
+    Preset(SyncWavePreset),
     Tombstone(SyncTombstone),
 }
 
@@ -108,6 +109,7 @@ impl Change {
             Self::Download(r) => r.rev,
             Self::Set(r) => r.rev,
             Self::Features(r) => r.rev,
+            Self::Preset(r) => r.rev,
             Self::Tombstone(r) => r.rev,
         }
     }
@@ -299,6 +301,7 @@ fn tombstone(
         "playlist_items" => SyncEntity::PlaylistItems,
         "device_downloads" => SyncEntity::DeviceDownloads,
         "device_sets" => SyncEntity::DeviceSets,
+        "wave_presets" => SyncEntity::WavePresets,
         "artists" => SyncEntity::Artists,
         "albums" => SyncEntity::Albums,
         "tracks" => SyncEntity::Tracks,
@@ -419,6 +422,7 @@ pub async fn sync(
             Change::Download(r) => page.device_downloads.push(r),
             Change::Set(r) => page.device_sets.push(r),
             Change::Features(r) => page.track_features.push(r),
+            Change::Preset(r) => page.wave_presets.push(r),
             Change::Tombstone(r) => page.tombstones.push(r),
         }
     }
@@ -626,6 +630,30 @@ async fn collect(
         .await?
         .into_iter()
         .map(|r| Change::Features(r.into())),
+    );
+    out.extend(
+        sqlx::query!(
+            "SELECT id, name, icon, settings, position, created_at, rev FROM wave_presets
+             WHERE user_id = $1 AND txid >= $2::text::xid8 AND rev > $3 ORDER BY rev LIMIT $4",
+            user,
+            w,
+            after,
+            fetch,
+        )
+        .fetch_all(&mut *conn)
+        .await?
+        .into_iter()
+        .map(|r| {
+            Change::Preset(SyncWavePreset {
+                id: r.id,
+                rev: r.rev,
+                name: r.name,
+                icon: r.icon,
+                settings: serde_json::from_value(r.settings).unwrap_or_default(),
+                position: r.position,
+                created_at: r.created_at,
+            })
+        }),
     );
     out.extend(
         sqlx::query!(

@@ -39,7 +39,7 @@ const albums = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'album
 const artists = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'artist' } => i.type === 'artist') as ArtistSummary[]
 const tracks = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'track' } => i.type === 'track') as Track[]
 const playlists = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'playlist' } => i.type === 'playlist') as PlaylistSummary[]
-const TRACK_SHELVES = new Set(['discover_weekly', 'release_radar', 'forgotten_favorites'])
+const TRACK_SHELVES = new Set(['discover_weekly', 'forgotten_favorites'])
 
 /** Полка треков: играть с выбранного, контекст — «микс» с названием полки */
 function playShelf(s: Shelf, i: number) {
@@ -54,6 +54,9 @@ function shelfTitle(s: Shelf) {
   const key = `home.shelf.${s.id}`
   return te(key) ? tg(key) : s.title
 }
+
+// «Недавно понравилось» — превью, а не весь список: на телефоне пять строк, на большом экране две колонки по пять
+const likesShown = computed(() => (ui.isPhone ? 5 : 10))
 
 function playLiked(list: Track[], i: number) {
   const tr = list[i]
@@ -77,6 +80,9 @@ function playLiked(list: Track[], i: number) {
 
     <MusicWaveHero :greeting="ui.isPhone ? undefined : greeting" />
 
+    <!-- Итоги года — в декабре -->
+    <RewindCard season-only />
+
     <template v-if="home">
       <template v-for="s in home.shelves" :key="s.id">
         <MusicShelf v-if="s.kind === 'continue'" :title="shelfTitle(s)" :cols="3" :rows="s.items.length > 3 ? 2 : 1" phone-width="82%">
@@ -91,7 +97,12 @@ function playLiked(list: Track[], i: number) {
           <template #actions>
             <UiButton variant="ghost" size="sm" icon="ph:play-fill" @click="playShelf(s, 0)">{{ t('playAll') }}</UiButton>
           </template>
-          <MusicTrackCard v-for="(tr, i) in tracks(s)" :key="tr.id" :track="tr" :badge="s.kind === 'release_radar' ? 'new' : null" @play="playShelf(s, i)" />
+          <MusicTrackCard v-for="(tr, i) in tracks(s)" :key="tr.id" :track="tr" @play="playShelf(s, i)" />
+        </MusicShelf>
+
+        <!-- Радар: по карточке на релиз — обложка, название, артист и вид релиза -->
+        <MusicShelf v-else-if="s.kind === 'release_radar'" :title="shelfTitle(s)" :hint="t('hint.release_radar')" :cols="6" phone-width="136px">
+          <MusicAlbumCard v-for="a in albums(s)" :key="a.id" :album="a" :meta="`${a.artist.name} · ${tg(`record.${a.recordType}`)}`" />
         </MusicShelf>
 
         <MusicShelf v-else-if="s.kind === 'new_releases'" :title="shelfTitle(s)" :cols="5">
@@ -110,7 +121,7 @@ function playLiked(list: Track[], i: number) {
             <UiButton to="/liked" variant="ghost" size="sm" icon-right="ph:caret-right">{{ t('allLiked') }}</UiButton>
           </header>
           <div class="likes__grid">
-            <MusicTrackRow v-for="(tr, i) in tracks(s)" :key="tr.id" :track="tr" :index="i + 1" @play="playLiked(tracks(s), i)" />
+            <MusicTrackRow v-for="(tr, i) in tracks(s).slice(0, likesShown)" :key="tr.id" :track="tr" variant="compact" @play="playLiked(tracks(s), i)" />
           </div>
         </section>
 
@@ -118,6 +129,11 @@ function playLiked(list: Track[], i: number) {
           <MusicArtistCard v-for="a in artists(s)" :key="a.id" :artist="a" />
         </MusicShelf>
       </template>
+      <!-- Первый вход: полкам пока не из чего собраться -->
+      <UiEmptyState v-if="!home.shelves.length" icon="ph:music-notes-simple" :title="t('emptyTitle')" :text="t('emptyText')">
+        <UiButton to="/search" icon="ph:magnifying-glass">{{ t('find') }}</UiButton>
+        <UiButton to="/import" variant="ghost">{{ t('import') }}</UiButton>
+      </UiEmptyState>
       <ShellDevMockNote :sections="['home']" what="полки главной" class="home__note" />
     </template>
 
@@ -139,7 +155,7 @@ function playLiked(list: Track[], i: number) {
 .phead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px 0; }
 .phead__date { font-size: var(--fs-small); font-weight: 550; color: var(--text-3); }
 .phead__hello { margin: 0; font-size: 28px; font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }
-.phead__avatar { display: grid; place-items: center; width: 44px; height: 44px; flex: none; overflow: hidden; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); font-weight: 700; }
+.phead__avatar { display: grid; place-items: center; width: 44px; height: 44px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--hair); font-weight: 700; }
 .phead__avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .likes { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .likes__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
@@ -190,7 +206,11 @@ function playLiked(list: Track[], i: number) {
     "allLiked": "Все любимые",
     "settings": "Настройки",
     "failed": "Главная не загрузилась",
-    "failedText": "Сервер не ответил. Волна работает — запустите её, а полки подтянутся позже",
+    "failedText": "Проверьте соединение и попробуйте ещё раз",
+    "emptyTitle": "Здесь появятся ваши подборки",
+    "emptyText": "Слушайте волну и отмечайте любимое — миксы и новинки соберутся сами",
+    "find": "Найти музыку",
+    "import": "Перенести медиатеку",
     "retry": "Повторить"
   },
   "en": {
@@ -217,7 +237,11 @@ function playLiked(list: Track[], i: number) {
     "allLiked": "All liked",
     "settings": "Settings",
     "failed": "Home didn't load",
-    "failedText": "The server didn't respond. The wave still works — start it, shelves will come later",
+    "failedText": "Check your connection and try again",
+    "emptyTitle": "Your picks will show up here",
+    "emptyText": "Play the wave and like what you love — mixes and new releases will follow",
+    "find": "Find music",
+    "import": "Bring your library",
     "retry": "Retry"
   }
 }

@@ -11,10 +11,14 @@ pub mod home;
 pub mod images;
 pub mod imports;
 pub mod library;
+pub mod lyrics;
 pub mod offline;
 pub mod playlists;
 pub mod queue;
 pub mod reco;
+pub mod recognize;
+pub mod rewind;
+pub mod share;
 pub mod sources;
 pub mod stream;
 pub mod sync;
@@ -22,6 +26,7 @@ pub mod system;
 pub mod taste;
 pub mod updates;
 pub mod wave;
+pub mod wave_presets;
 pub mod ws;
 
 use axum::{
@@ -73,11 +78,15 @@ pub fn router(state: AppState) -> Router {
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
     let catalog = catalog::routes()
         .merge(wave::catalog_routes())
+        .merge(lyrics::routes())
+        .merge(share::routes())
         .route_layer(from_fn_with_state(state.clone(), require_access));
     let library = library::routes()
         .merge(playlists::routes())
         .merge(home::routes())
         .merge(taste::routes())
+        .merge(rewind::routes())
+        .merge(recognize::routes())
         .merge(sync::routes())
         .merge(imports::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
@@ -85,6 +94,7 @@ pub fn router(state: AppState) -> Router {
         .merge(stream::routes())
         .merge(analysis::routes())
         .merge(wave::routes())
+        .merge(wave_presets::routes())
         .merge(connect::routes())
         .merge(offline::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
@@ -108,7 +118,8 @@ pub fn router(state: AppState) -> Router {
 
     let app = Router::new().nest("/api", api);
     let app = match &state.config.static_dir {
-        Some(dir) => app.fallback_service(spa::router(dir)),
+        // Страницы трека, альбома, артиста и плейлиста — с тегами превью для мессенджеров
+        Some(dir) => app.merge(share::pages()).fallback_service(spa::router(dir)),
         None => app.fallback(not_found),
     };
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ImageSet } from '~/api/types'
 
-// Цветная плитка в верхнем ряду медиатеки: «Любимые треки», «Моя волна», «Недавно добавленные».
-// У каждой своя палитра из цветов настроений, значок, название и одна строка подписи
+// Плитка в верхнем ряду медиатеки: «Любимые треки» и «Моя волна» — в цветах бренда,
+// «Недавно добавленные» — нейтральная, цвет ей дают обложки веером. Значок, название, одна строка подписи
 const props = defineProps<{
   tone: 'liked' | 'wave' | 'recent'
   icon: string
@@ -58,6 +58,7 @@ const tag = computed(() => (props.to ? NuxtLink : 'button'))
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), var(--shadow-1);
   transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-2);
   -webkit-tap-highlight-color: transparent;
+  container-type: inline-size;
 }
 .tile:hover { transform: translateY(-2px); }
 .tile:active { transform: scale(0.98); }
@@ -66,9 +67,11 @@ const tag = computed(() => (props.to ? NuxtLink : 'button'))
 
 .tile--liked { background: radial-gradient(90% 120% at 100% 0%, color-mix(in oklab, var(--brand-3) 85%, transparent), transparent 60%), radial-gradient(90% 120% at 0% 100%, var(--brand-1), transparent 70%), var(--brand-2); }
 .tile--wave { background: radial-gradient(80% 90% at 85% 10%, color-mix(in oklab, var(--mood-calm-3) 40%, transparent), transparent 60%), radial-gradient(90% 100% at 0% 100%, var(--mood-calm-2), transparent 75%), var(--mood-calm-1); }
-.tile--recent { background: radial-gradient(80% 100% at 100% 0%, color-mix(in oklab, var(--mood-energetic-3) 55%, transparent), transparent 60%), radial-gradient(90% 110% at 0% 100%, var(--mood-energetic-2), transparent 75%), var(--mood-energetic-1); }
+.tile--recent { background: var(--fill-2); color: var(--text-1); }
+.tile--recent .tile__icon { background: var(--fill-2); box-shadow: none; color: var(--text-1); }
+.tile--recent .tile__meta { color: var(--text-2); }
 
-.tile__icon { position: relative; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); font-size: 20px; backdrop-filter: blur(8px); }
+.tile__icon { position: relative; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); font-size: 20px; }
 .tile__text { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tile__title { font-size: var(--fs-h4); font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; text-wrap: balance; }
 .tile__meta { overflow: hidden; font-size: var(--fs-small); color: rgba(255, 255, 255, 0.82); text-overflow: ellipsis; white-space: nowrap; }
@@ -85,6 +88,12 @@ const tag = computed(() => (props.to ? NuxtLink : 'button'))
 .tile__fan img:nth-child(3) { right: 36px; transform: rotate(-12deg) scale(0.88); z-index: 1; filter: brightness(0.6); }
 .tile:hover .tile__fan img:nth-child(1) { transform: rotate(12deg) translateX(4px); }
 .tile:hover .tile__fan img:nth-child(3) { transform: rotate(-16deg) scale(0.88) translateX(-4px); }
+/* Текст не уходит под веер; узкая плитка (открыта правая панель) — без веера */
+.tile:has(.tile__fan) .tile__text { padding-right: 140px; }
+@container (max-width: 340px) {
+  .tile__fan { display: none; }
+  .tile:has(.tile__fan) .tile__text { padding-right: 0; }
+}
 
 @media (max-width: 699px) {
   .tile { min-height: 0; aspect-ratio: 1 / 1.08; padding: 12px; gap: 8px; border-radius: var(--r-3); }

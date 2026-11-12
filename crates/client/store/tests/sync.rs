@@ -456,3 +456,57 @@ fn features_and_plays_feed_the_offline_wave() {
     let u = store.usage().unwrap();
     assert_eq!((u.pinned, u.cache), (1000, 0));
 }
+
+#[test]
+fn wave_presets_follow_rev_and_tombstones() {
+    let mut store = Store::memory().unwrap();
+    let preset = |n: u128, rev: i64, name: &str, position: f64| SyncWavePreset {
+        id: id(n),
+        rev,
+        name: name.into(),
+        icon: "laptop".into(),
+        settings: dalywave_protocol::wave::WaveSettings {
+            mood: dalywave_protocol::wave::WaveMood::Calm,
+            ..Default::default()
+        },
+        position,
+        created_at: Utc::now(),
+    };
+    let page = SyncPage {
+        cursor: "5".into(),
+        wave_presets: vec![preset(1, 3, "Работа", 2.0), preset(2, 4, "Ночь", 1.0)],
+        ..Default::default()
+    };
+    store.apply(&page).unwrap();
+    let names: Vec<String> = store
+        .wave_presets()
+        .unwrap()
+        .into_iter()
+        .map(|p| p.name)
+        .collect();
+    assert_eq!(names, vec!["Ночь", "Работа"]);
+    assert_eq!(
+        store.wave_presets().unwrap()[0].settings.mood,
+        dalywave_protocol::wave::WaveMood::Calm
+    );
+    // Старая копия не затирает переименование; tombstone удаляет только более старое
+    let page = SyncPage {
+        cursor: "6".into(),
+        wave_presets: vec![preset(1, 9, "Фокус", 2.0), preset(2, 2, "Старое", 1.0)],
+        tombstones: vec![SyncTombstone {
+            rev: 10,
+            entity: SyncEntity::WavePresets,
+            key: json!({ "id": id(2) }),
+            deleted_at: Utc::now(),
+        }],
+        ..Default::default()
+    };
+    store.apply(&page).unwrap();
+    let names: Vec<String> = store
+        .wave_presets()
+        .unwrap()
+        .into_iter()
+        .map(|p| p.name)
+        .collect();
+    assert_eq!(names, vec!["Фокус"]);
+}

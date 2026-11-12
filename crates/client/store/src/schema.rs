@@ -97,11 +97,21 @@ pub const RESET_LIBRARY: &str = "
 DELETE FROM artists; DELETE FROM albums; DELETE FROM tracks; DELETE FROM track_artists;
 DELETE FROM recordings; DELETE FROM liked_tracks; DELETE FROM saved_albums; DELETE FROM followed_artists;
 DELETE FROM blocked_items; DELETE FROM playlists; DELETE FROM playlist_items; DELETE FROM device_downloads;
-DELETE FROM device_sets; DELETE FROM track_features;
+DELETE FROM device_sets; DELETE FROM track_features; DELETE FROM wave_presets;
 DELETE FROM meta WHERE key LIKE 'sync.%';
 ";
 
-const MIGRATIONS: &[&str] = &[V1];
+/// Сохранённые сочетания настроек волны. Курсор сбрасывается: сочетания, созданные до обновления
+/// приложения, придут только полной синхронизацией.
+const V2: &str = "
+CREATE TABLE wave_presets (
+    id TEXT PRIMARY KEY, rev INTEGER NOT NULL, name TEXT NOT NULL, icon TEXT NOT NULL,
+    settings TEXT NOT NULL, position REAL NOT NULL, created_at TEXT NOT NULL
+);
+DELETE FROM meta WHERE key = 'sync.cursor';
+";
+
+const MIGRATIONS: &[&str] = &[V1, V2];
 
 pub fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;

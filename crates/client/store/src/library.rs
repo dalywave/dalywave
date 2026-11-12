@@ -303,6 +303,7 @@ impl Store {
                     tracks_count: r.get(7)?,
                     duration_ms: r.get(8)?,
                     covers: Vec::new(),
+                    image: None,
                 })
             })
             .optional()?;

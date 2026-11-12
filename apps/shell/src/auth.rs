@@ -197,6 +197,7 @@ pub fn handle_urls(app: &AppHandle, urls: Vec<Url>) {
             app.state::<Auth>().deliver(&url);
         } else {
             log::info!("deep link {url}");
+            crate::links::remember(app, url.as_str());
             window::show_main(app);
             let _ = app.emit_to(
                 MAIN,
@@ -388,6 +389,14 @@ mod keychain {
     }
 
     pub fn load(server: &str) -> ShellResult<Option<String>> {
+        // Только симулятор: вход без окна браузера для проверок экранов (`DALYWAVE_DEV_TOKEN` —
+        // токен устройства локального сервера); в сборке для телефона и компьютера кода нет
+        #[cfg(all(target_os = "ios", target_abi = "sim"))]
+        if let Ok(token) = std::env::var("DALYWAVE_DEV_TOKEN")
+            && token.starts_with("dwd_")
+        {
+            return Ok(Some(token));
+        }
         match entry(server)?.get_password() {
             Ok(token) => Ok(Some(token)),
             Err(keyring_core::Error::NoEntry) => Ok(None),

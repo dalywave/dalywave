@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import type { PlaylistSummary } from '~/api/types'
+import type { MenuEntry } from '~/types/ui'
+
 // Боковая панель: знак, разделы, закреплённое, подписки и состояние загрузки подписок.
-// rail — узкая полоса значков на планшете
+// rail — узкая полоса значков на планшете. Правый щелчок (долгое нажатие) по плейлисту — его
+// меню; треки из списков можно бросить на свой плейлист
 withDefaults(defineProps<{ rail?: boolean }>(), {})
 
 const route = useRoute()
 const library = useLibraryStore()
 const player = usePlayerStore()
+const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
 const { t } = useI18n()
@@ -23,11 +28,43 @@ onMounted(() => {
   void library.loadPlaylists().catch(() => {})
 })
 
-const playlists = computed(() => library.playlists ?? library.overview?.pinnedPlaylists ?? [])
+const pui = usePlaylistUi()
+const pla = usePlaylistActions()
+const playlists = computed(() => (library.playlists ?? library.overview?.pinnedPlaylists ?? []).filter(p => !pui.hidden.has(p.id)))
+
+// Меню элемента: пункты собираются для того, по которому щёлкнули
+const menuItems = ref<MenuEntry[]>([])
+function onContext(target: EventTarget | null) {
+  const key = (target as HTMLElement | null)?.closest<HTMLElement>('[data-pl]')?.dataset.pl
+  if (key === 'liked') menuItems.value = pla.likedMenu()
+  else {
+    const p = playlists.value.find(x => x.id === key)
+    menuItems.value = p ? pla.menuFor(p) : []
+  }
+}
+
+// Треки тянут из списка: свой плейлист подсвечивается и принимает их
+const dropOn = ref<string | null>(null)
+function onDragOver(p: PlaylistSummary, e: DragEvent) {
+  if (!pui.dragTracks || p.kind !== 'user') return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+  dropOn.value = p.id
+}
+function onDragLeave(p: PlaylistSummary) {
+  if (dropOn.value === p.id) dropOn.value = null
+}
+function onDrop(p: PlaylistSummary, e: DragEvent) {
+  e.preventDefault()
+  dropOn.value = null
+  const tracks = pui.dragTracks
+  pui.dragTracks = null
+  if (tracks?.length) void pla.addTo(p, tracks)
+}
 const followed = computed(() => library.overview?.followedArtists ?? [])
 const loaded = computed(() => !!library.overview)
 
-// Загрузка подписок: сколько треков артистов уже на сервере
+// Загрузка подписок: кольцо показывает долю, подпись — чьи треки ещё качаются. Всё скачано — строки нет
 const sync = computed(() => {
   const list = followed.value
   const total = list.reduce((s, f) => s + f.tracksTotal, 0)
@@ -36,8 +73,27 @@ const sync = computed(() => {
   return { total, done, pending, complete: !pending.length }
 })
 
-function newPlaylist() {
-  toast.show({ text: t('nav.newPlaylistSoon'), icon: 'ph:playlist' })
+// Новый плейлист — та же короткая форма, что в медиатеке
+const createOpen = ref(false)
+const newTitle = ref('')
+const creating = ref(false)
+async function createPlaylist() {
+  const title = newTitle.value.trim()
+  if (!title || creating.value) return
+  creating.value = true
+  try {
+    const p = await bridge.playlists.create({ title })
+    createOpen.value = false
+    newTitle.value = ''
+    void library.loadPlaylists(true)
+    await navigateTo(`/playlist/${p.id}`)
+  }
+  catch {
+    toast.error(t('nav.createFailed'))
+  }
+  finally {
+    creating.value = false
+  }
 }
 </script>
 
@@ -59,31 +115,51 @@ function newPlaylist() {
       <section class="sec">
         <header class="sec__head">
           <span class="sec__title">{{ t('nav.pinned') }}</span>
-          <UiIconButton v-if="!rail" icon="ph:plus" :label="t('nav.newPlaylist')" size="xs" @click="newPlaylist" />
+          <UiPopover v-if="!rail" v-model:open="createOpen" :title="t('nav.newPlaylist')" side="right" align="start" :width="300">
+            <template #trigger>
+              <UiIconButton icon="ph:plus" :label="t('nav.newPlaylist')" size="xs" />
+            </template>
+            <form class="newpl" @submit.prevent="createPlaylist">
+              <input v-model="newTitle" class="newpl__input" :placeholder="t('nav.newPlaylistName')" :aria-label="t('nav.newPlaylist')" maxlength="120" autofocus>
+              <UiButton type="submit" variant="primary" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('nav.create') }}</UiButton>
+            </form>
+          </UiPopover>
         </header>
-        <UiTooltip :text="rail ? t('nav.liked') : undefined" side="right">
-          <NuxtLink to="/liked" class="item" :class="{ 'is-active': route.path === '/liked', 'is-current': player.context?.type === 'library' }">
-            <span class="item__art item__art--liked"><Icon name="ph:heart-fill" /></span>
-            <span class="item__text">
-              <span class="item__title">{{ t('nav.liked') }}</span>
-              <span class="item__meta"><Icon name="ph:push-pin-fill" class="item__pin" />{{ formatCount(library.likedCount, 'track', lang) }}</span>
-            </span>
-          </NuxtLink>
-        </UiTooltip>
-        <template v-if="loaded || playlists.length">
-          <UiTooltip v-for="p in playlists" :key="p.id" :text="rail ? p.title : undefined" side="right">
-            <NuxtLink :to="`/playlist/${p.id}`" class="item" :class="{ 'is-active': route.path === `/playlist/${p.id}`, 'is-current': player.context?.type === 'playlist' && player.context.id === p.id }">
-              <MusicPlaylistCover :id="p.id" :title="p.title" :covers="p.covers" :kind="p.kind" :show-title="false" class="item__art" />
-              <span class="item__text">
-                <span class="item__title">{{ p.title }}</span>
-                <span class="item__meta"><Icon v-if="p.pinned" name="ph:push-pin-fill" class="item__pin" />{{ t('record.playlist') }} · {{ p.tracksCount }}</span>
-              </span>
-            </NuxtLink>
-          </UiTooltip>
-        </template>
-        <template v-else>
-          <div v-for="n in 3" :key="n" class="item item--skel"><UiSkeleton width="36px" height="36px" /><span class="item__text"><UiSkeleton variant="line" width="70%" /><UiSkeleton variant="line" width="40%" /></span></div>
-        </template>
+        <UiContextMenu :items="menuItems" @open="onContext">
+          <div class="sec__list">
+            <UiTooltip :text="rail ? t('nav.liked') : undefined" side="right">
+              <NuxtLink to="/liked" data-pl="liked" class="item" :class="{ 'is-active': route.path === '/liked', 'is-current': player.context?.type === 'library' }">
+                <span class="item__art item__art--liked"><Icon name="ph:heart-fill" /></span>
+                <span class="item__text">
+                  <span class="item__title">{{ t('nav.liked') }}</span>
+                  <span class="item__meta"><Icon name="ph:push-pin-fill" class="item__pin" />{{ formatCount(library.likedCount, 'track', lang) }}</span>
+                </span>
+              </NuxtLink>
+            </UiTooltip>
+            <template v-if="loaded || playlists.length">
+              <UiTooltip v-for="p in playlists" :key="p.id" :text="rail ? p.title : undefined" side="right">
+                <NuxtLink
+                  :to="`/playlist/${p.id}`"
+                  :data-pl="p.id"
+                  class="item"
+                  :class="{ 'is-active': route.path === `/playlist/${p.id}`, 'is-current': player.context?.type === 'playlist' && player.context.id === p.id, 'is-drop': dropOn === p.id }"
+                  @dragover="onDragOver(p, $event)"
+                  @dragleave="onDragLeave(p)"
+                  @drop="onDrop(p, $event)"
+                >
+                  <MusicPlaylistCover :id="p.id" :title="p.title" :covers="p.covers" :image="p.image" :kind="p.kind" :show-title="false" class="item__art" />
+                  <span class="item__text">
+                    <span class="item__title">{{ p.title }}</span>
+                    <span class="item__meta"><Icon v-if="p.pinned" name="ph:push-pin-fill" class="item__pin" /><span class="item__sub">{{ pla.subOf(p) }}</span></span>
+                  </span>
+                </NuxtLink>
+              </UiTooltip>
+            </template>
+            <template v-else>
+              <div v-for="n in 3" :key="n" class="item item--skel"><UiSkeleton width="36px" height="36px" /><span class="item__text"><UiSkeleton variant="line" width="70%" /><UiSkeleton variant="line" width="40%" /></span></div>
+            </template>
+          </div>
+        </UiContextMenu>
       </section>
 
       <section v-if="followed.length" class="sec">
@@ -92,8 +168,8 @@ function newPlaylist() {
           <NuxtLink :to="`/artist/${f.artist.id}`" class="item item--artist" :class="{ 'is-active': route.path === `/artist/${f.artist.id}` }">
             <MusicCoverArt :image="f.artist.image" size="small" round :alt="f.artist.name" class="item__art" fallback-icon="ph:user" />
             <span class="item__text"><span class="item__title">{{ f.artist.name }}</span></span>
-            <UiTooltip v-if="f.tracksOnServer < f.tracksTotal && !rail" :text="t('nav.downloading', { done: f.tracksOnServer, total: f.tracksTotal })" side="right">
-              <span class="item__dl" role="img" :aria-label="t('nav.downloading', { done: f.tracksOnServer, total: f.tracksTotal })" />
+            <UiTooltip v-if="f.tracksOnServer < f.tracksTotal && !rail" :text="t('nav.downloading')" side="right">
+              <span class="item__dl" role="img" :aria-label="t('nav.downloading')" />
             </UiTooltip>
           </NuxtLink>
         </UiTooltip>
@@ -103,12 +179,12 @@ function newPlaylist() {
     <!-- Подвал: строки состояния друг под другом. Сюда одной строкой встаёт <DownloaderIndicator />;
          пустой подвал прячется сам (:empty) -->
     <footer class="side__foot">
-      <UiTooltip v-if="followed.length" :text="rail ? (sync.complete ? t('nav.syncDone') : t('nav.syncTitle')) : undefined" side="right">
+      <UiTooltip v-if="followed.length && !sync.complete" :text="rail ? t('nav.syncTitle') : undefined" side="right">
         <NuxtLink to="/library?tab=artists" class="sync">
-          <UiProgressRing :state="sync.complete ? 'done' : sync.done === 0 ? 'queued' : 'progress'" :value="sync.total ? sync.done / sync.total : 1" :size="28" />
+          <UiProgressRing :state="sync.done === 0 ? 'queued' : 'progress'" :value="sync.total ? sync.done / sync.total : 1" :size="28" />
           <span class="sync__text">
-            <span class="sync__title">{{ sync.complete ? t('nav.syncDone') : t('nav.syncTitle') }}</span>
-            <span class="sync__meta">{{ sync.complete ? formatCount(library.overview?.counts.readyTracks ?? sync.done, 'track', lang) : `${sync.done} ${t('nav.of')} ${sync.total} · ${sync.pending.slice(0, 2).join(', ')}` }}</span>
+            <span class="sync__title">{{ t('nav.syncTitle') }}</span>
+            <span class="sync__meta">{{ sync.pending.join(', ') }}</span>
           </span>
         </NuxtLink>
       </UiTooltip>
@@ -124,9 +200,7 @@ function newPlaylist() {
   min-height: 0;
   height: 100%;
   padding-top: var(--titlebar-inset, 0px);
-  background: rgba(10, 11, 15, 0.62);
-  -webkit-backdrop-filter: blur(30px) saturate(1.3);
-  backdrop-filter: blur(30px) saturate(1.3);
+  background: var(--ink-1);
   border-right: 1px solid var(--hair);
 }
 .side__brand { padding: calc(22px - min(var(--titlebar-inset, 0px), 18px)) 20px 18px; }
@@ -151,10 +225,16 @@ function newPlaylist() {
 .item__meta { display: flex; align-items: center; gap: 4px; overflow: hidden; font-size: var(--fs-caption); color: var(--text-3); white-space: nowrap; }
 .item__pin { flex: none; font-size: 12px; color: var(--accent); }
 .item.is-current .item__title { color: var(--accent); }
+.item.is-drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent-line); }
+.item__sub { overflow: hidden; text-overflow: ellipsis; }
 .item--artist { min-height: 40px; padding-top: 4px; padding-bottom: 4px; }
 .item--artist .item__art { width: 28px; height: 28px; margin: 0 4px; border-radius: 50%; }
 .item--skel { pointer-events: none; }
 .item__dl { width: 5px; height: 5px; flex: none; margin-right: 8px; border-radius: 50%; background: var(--accent); opacity: 0.8; }
+.newpl { display: flex; flex-direction: column; gap: 8px; padding: 0 6px 6px; }
+.newpl__input { height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-1); font: inherit; }
+.newpl__input::placeholder { color: var(--text-4); }
+.newpl__input:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--focus); }
 .side__foot { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-top: 1px solid var(--hair); }
 .side__foot:empty { display: none; }
 .sync { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: var(--r-3); text-align: left; transition: background-color var(--dur-1); }
@@ -169,8 +249,9 @@ function newPlaylist() {
 .side--rail .nav { justify-content: center; padding: 0; height: 44px; }
 .side--rail .nav__label, .side--rail .nav__kbd { display: none; }
 .side--rail .side__scroll { padding: 16px 10px 12px; }
-.side--rail .sec__head { justify-content: center; padding: 0; }
-.side--rail .sec__title { font-size: 9.5px; letter-spacing: 0.06em; }
+/* Подписи разделов в полосе не помещаются — вместо них волосок */
+.side--rail .sec__head { height: 1px; margin: 0 14px 12px; padding: 0; background: var(--hair); }
+.side--rail .sec__title { display: none; }
 .side--rail .item { justify-content: center; padding: 6px 0; }
 .side--rail .item__text { display: none; }
 .side--rail .item--artist .item__art { width: 32px; height: 32px; margin: 0; }

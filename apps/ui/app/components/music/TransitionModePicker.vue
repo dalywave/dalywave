@@ -11,7 +11,7 @@ withDefaults(defineProps<{
   web?: boolean
   /** Только значок (узкая панель) */
   compact?: boolean
-  /** Круглая кнопка-значок, как соседние в нижнем ряду плеера на телефоне; режим — значком и точкой */
+  /** Круглая кнопка-значок, как соседние в нижнем ряду плеера на телефоне; режим — значком */
   icon?: boolean
   /** Размер значка: sm — нижняя панель большого экрана (с подсказкой), lg — плеер на телефоне */
   size?: 'sm' | 'lg'
@@ -31,25 +31,23 @@ const { t } = useI18n()
   <div v-if="inline" class="pop pop--static" style="width: 340px">
     <header class="pop__head">
       <span class="pop__title">{{ t('transition.title') }}</span>
-      <span class="pop__hint">{{ t('transition.hint') }}</span>
     </header>
     <MusicTransitionModeOptions v-model:mode="mode" v-model:expressiveness="expressiveness" :web="web" :next-at="nextAt" />
   </div>
-  <UiSheet v-else-if="sheet" v-model:open="open" :title="t('transition.title')" :description="t('transition.hint')" :show-title="false" inset>
+  <UiSheet v-else-if="sheet" v-model:open="open" :title="t('transition.title')" :show-title="false" inset>
     <template #trigger>
       <MusicTransitionModeTrigger :mode="mode" :icon="icon" :size="size" :compact="compact" />
     </template>
     <template #head>
       <header class="mode-sheet__head">
         <span class="mode-sheet__title">{{ t('transition.title') }}</span>
-        <span class="mode-sheet__hint">{{ t('transition.hint') }}</span>
       </header>
     </template>
     <div class="mode-sheet">
       <MusicTransitionModeOptions v-model:mode="mode" v-model:expressiveness="expressiveness" :web="web" :next-at="nextAt" />
     </div>
   </UiSheet>
-  <UiPopover v-else v-model:open="open" :side="side" align="end" :title="t('transition.title')" :hint="t('transition.hint')" :width="340">
+  <UiPopover v-else v-model:open="open" :side="side" align="end" :title="t('transition.title')" :width="340">
     <template #trigger>
       <MusicTransitionModeTrigger :mode="mode" :icon="icon" :size="size" :compact="compact" tooltip />
     </template>
@@ -92,19 +90,16 @@ const { t } = useI18n()
   transition: color var(--dur-1), background-color var(--dur-1), transform var(--dur-1) var(--ease-out);
 }
 .mode-ib__icon { font-size: 24px; }
-.mode-ib__dot { position: absolute; top: 9px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--ink-0); }
-/* Как .ib--sm у соседних кнопок нижней панели: 32 px, значок 18 px; точка — у плеча значка */
+/* Как .ib--sm у соседних кнопок нижней панели: 32 px, значок 18 px */
 .mode-ib--sm { width: 32px; height: 32px; }
 .mode-ib--sm .mode-ib__icon { font-size: 18px; }
-.mode-ib--sm .mode-ib__dot { top: 6px; right: 5px; width: 5px; height: 5px; box-shadow: 0 0 0 1.5px var(--ink-1); }
-/* data-state у кнопки делят подсказка и панель — открытость берём из aria-expanded */
+.mode-ib--sm /* data-state у кнопки делят подсказка и панель — открытость берём из aria-expanded */
 .mode-ib:hover, .mode-ib[aria-expanded='true'] { color: var(--text-1); background: var(--fill-2); }
 .mode-ib:active { transform: scale(0.92); background: var(--fill-3); }
 .mode-ib:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .mode-chip:hover, .mode-chip[data-state='open'] { color: var(--text-1); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .mode-sheet__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 20px 8px; flex: none; }
 .mode-sheet__title { font-size: 17px; font-weight: 700; color: var(--text-1); }
-.mode-sheet__hint { font-size: var(--fs-caption); color: var(--text-3); }
 .mode-sheet { padding: 0 8px 10px; }
 .mode-sheet .opt { min-height: 60px; padding: 12px; }
 .mode-sheet .pop__foot { padding: 10px 12px 4px; }

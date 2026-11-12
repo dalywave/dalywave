@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "Только компьютеры: «Поделиться» кладёт ссылку в буфер обмена (запись, без чтения)",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "macOS",
+    "windows",
+    "linux"
+  ],
+  "permissions": [
+    "clipboard-manager:allow-write-text"
+  ]
+}

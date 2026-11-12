@@ -52,6 +52,10 @@ url = "2"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 keyring = "4.2"
 tauri-plugin-shell = "2.6.0"
+# Статус в Discord: Rich Presence через локальный IPC (сокет на macOS, именованный канал на Windows)
+discord-rich-presence = "1.1"
+# «Поделиться»: ссылка в буфер обмена из Rust — без жеста пользователя, которого ждёт WebView
+tauri-plugin-clipboard-manager = "2.5.0"
 tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }
 # TLS — системный (Security.framework, SChannel): доверие из ОС и никакой сборки C-криптографии
 tauri-plugin-updater = { version = "2.14.1", default-features = false, features = ["native-tls", "system-proxy", "zip"] }
@@ -85,6 +89,36 @@ objc2-authentication-services = { version = "0.3.2", default-features = false, f
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFCGTypes"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSURL", "NSError", "NSObject"] }
 objc2-ui-kit = { version = "0.3", default-features = false, features = ["std", "UIDevice", "UIResponder", "UIView", "UIWindow"] }
+
+# «Распознать» (recognize.rs): ShazamKit слушает микрофон через AVAudioEngine; доступ к
+# микрофону — AVCaptureDevice (одинаково на macOS и iOS)
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+block2 = "0.6"
+objc2-av-foundation = { version = "0.3.2", default-features = false, features = ["std", "block2", "AVCaptureDevice", "AVMediaFormat"] }
+objc2-avf-audio = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "block2",
+    "AVAudioBuffer",
+    "AVAudioEngine",
+    "AVAudioFormat",
+    "AVAudioIONode",
+    "AVAudioNode",
+    "AVAudioSession",
+    "AVAudioSessionTypes",
+    "AVAudioTime",
+    "AVAudioTypes",
+] }
+objc2-shazam-kit = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "block2",
+    "objc2-avf-audio",
+    "SHError",
+    "SHMatch",
+    "SHMatchedMediaItem",
+    "SHMediaItem",
+    "SHSession",
+    "SHSignature",
+] }
 
 [target.'cfg(windows)'.dependencies]
 # «Сейчас играет» и медиаклавиши Windows (SMTC); на macOS и iOS — MediaPlayer из движка

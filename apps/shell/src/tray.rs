@@ -1,5 +1,5 @@
 //! Значок в строке меню macOS и в трее Windows: что играет, пауза, следующий и предыдущий
-//! трек, «Показать DalyWave», выход. Команды плеера выполняет движок (player.rs); что он не
+//! трек, «Показать DalyWave», мини-плеер, выход. Команды плеера выполняет движок (player.rs); что он не
 //! может сам (например, «играть» без очереди), уходит интерфейсу как `media:command`.
 //! И загрузчик музыки (downloader.rs): строка состояния, пауза и «Скачивать на этом Mac» (на
 //! Windows — «на этом ПК»). Скачанное обновление — пунктом «Обновление готово — Перезапустить»
@@ -36,6 +36,9 @@ struct Texts {
     next: &'static str,
     previous: &'static str,
     show: &'static str,
+    mini: &'static str,
+    recognize: &'static str,
+    mini_close: &'static str,
     quit: &'static str,
     update: &'static str,
 }
@@ -47,6 +50,9 @@ const RU: Texts = Texts {
     next: "Следующий трек",
     previous: "Предыдущий трек",
     show: "Показать DalyWave",
+    mini: "Мини-плеер",
+    recognize: "Распознать песню",
+    mini_close: "Закрыть мини-плеер",
     quit: "Выйти из DalyWave",
     update: "Обновление готово — Перезапустить",
 };
@@ -58,6 +64,9 @@ const EN: Texts = Texts {
     next: "Next Track",
     previous: "Previous Track",
     show: "Show DalyWave",
+    mini: "Mini Player",
+    recognize: "Recognize Song",
+    mini_close: "Close Mini Player",
     quit: "Quit DalyWave",
     update: "Update Ready — Restart",
 };
@@ -159,6 +168,9 @@ pub struct TrayItems {
     next: MenuItem<Wry>,
     previous: MenuItem<Wry>,
     show: MenuItem<Wry>,
+    mini: MenuItem<Wry>,
+    /// «Распознать песню» — только macOS (ShazamKit, recognize.rs)
+    recognize: MenuItem<Wry>,
     quit: MenuItem<Wry>,
     downloader: DlItems,
     update: UpdateItems,
@@ -189,6 +201,8 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let next = MenuItem::with_id(app, "next", t.next, true, none)?;
     let previous = MenuItem::with_id(app, "previous", t.previous, true, none)?;
     let show = MenuItem::with_id(app, "show", t.show, true, none)?;
+    let mini = MenuItem::with_id(app, "mini", t.mini, true, none)?;
+    let recognize = MenuItem::with_id(app, "recognize", t.recognize, true, none)?;
     let quit = MenuItem::with_id(app, "quit", t.quit, true, none)?;
     let downloader = dl_items(app)?;
     let separator = || PredefinedMenuItem::separator(app);
@@ -204,7 +218,10 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
         ],
     )?;
     menu.append_items(&[&downloader.menu, &separator()?])?;
-    menu.append_items(&[&show, &separator()?, &quit])?;
+    menu.append_items(&[&show, &mini])?;
+    #[cfg(target_os = "macos")]
+    menu.append(&recognize)?;
+    menu.append_items(&[&separator()?, &quit])?;
     let update = UpdateItems {
         menu: menu.clone(),
         item: MenuItem::with_id(app, "update", t.update, true, none)?,
@@ -217,6 +234,8 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
         next,
         previous,
         show,
+        mini,
+        recognize,
         quit,
         downloader,
         update,
@@ -278,7 +297,19 @@ fn on_menu(app: &AppHandle, event: MenuEvent) {
         "previous" => player::remote(app, Command::Previous, Source::Tray),
         "dl-toggle" => downloader::toggle_paused(app),
         "dl-enabled" => downloader::toggle_enabled(app),
-        "show" => window::show_main(app),
+        "show" => {
+            if crate::mini::is_open(app) {
+                crate::mini::close(app);
+            } else {
+                window::show_main(app);
+            }
+        }
+        "recognize" => crate::recognize::open(app),
+        "mini" => {
+            if let Err(e) = crate::mini::toggle(app) {
+                log::warn!("mini player: {e}");
+            }
+        }
         "update" => updates::restart(app),
         "quit" => app.exit(0),
         _ => {}
@@ -416,6 +447,12 @@ pub fn refresh(app: &AppHandle) {
     let _ = items.next.set_text(t.next);
     let _ = items.previous.set_text(t.previous);
     let _ = items.show.set_text(t.show);
+    let _ = items.mini.set_text(if crate::mini::is_open(app) {
+        t.mini_close
+    } else {
+        t.mini
+    });
+    let _ = items.recognize.set_text(t.recognize);
     let _ = items.quit.set_text(t.quit);
     if let Some(tray) = app.tray_by_id(TRAY) {
         let tooltip = line.map_or_else(|| "DalyWave".to_string(), |l| format!("DalyWave — {l}"));

@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO rewinds (user_id, year, fingerprint, data, computed_at) VALUES ($1, $2, $3, $4, now())\n         ON CONFLICT (user_id, year) DO UPDATE\n         SET fingerprint = EXCLUDED.fingerprint, data = EXCLUDED.data, computed_at = now()\n         RETURNING computed_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "computed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rewinds",
+            "name": "computed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fba6d38072d200a767e20fe7861b283d3aad40275f89289e4a4b035876ab115b"
+}

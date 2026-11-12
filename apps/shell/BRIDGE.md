@@ -150,6 +150,14 @@ const shell = createShell({ invoke, listen })
 | `player.setNormalize(enabled)` | `player_set_normalize { enabled }` | — выравнивание по LUFS |
 | `player.setLevels(enabled)` | `player_set_levels { enabled }` | — события `player:level` |
 | `player.state()` | `player_state` | `PlayerSnapshot` |
+| `player.setEq(eq)` | `player_set_eq { eq }` | — эквалайзер этого устройства, запоминается; `null` — выключить (см. «Эквалайзер») |
+| `player.eq()` | `player_eq` | `PlayerEq \| null` — сохранённый |
+| `player.setSleep(timer)` | `player_set_sleep { timer }` | — `{ mode: 'minutes', ms }` \| `{ mode: 'track' }`; `null` — снять |
+| `player.sleep()` | `player_sleep` | `PlayerSleep` — таймер сна сейчас |
+| `player.setModes(shuffle, repeat)` | `player_set_modes { shuffle, repeat }` | — перемешивание и повтор (`'off' \| 'all' \| 'one'`), см. «Повтор» |
+| `player.now()` | `player_now` | `PlayerNow \| null` — что играет (мини-плеер) |
+| `player.remote(action)` | `player_remote { action }` | — `toggle`, `play`, `pause`, `next`, `previous` как с пульта |
+| `mini.open()` / `close()` / `toggle()` | `mini_open` / `mini_close` / `mini_toggle` | — мини-плеер, macOS и Windows |
 | `audio.outputs()` | `audio_outputs` | `AudioOutputs` — куда идёт звук (см. «Звук») |
 | `audio.setOutput(id)` | `audio_set_output { id }` | `AudioOutputs` — macOS и Windows; `null` — как в системе |
 | `audio.showPicker()` | `audio_show_picker` | — системное окно AirPlay и Bluetooth; iPhone и iPad |
@@ -158,6 +166,13 @@ const shell = createShell({ invoke, listen })
 | `downloader.setPaused(paused)` | `downloader_set_paused { paused }` | `DownloaderSnapshot` |
 | `downloader.recreateToken()` | `downloader_recreate_token` | `DownloaderSnapshot` — только в `token-rejected` |
 | `downloader.openLog()` | `downloader_open_log` | — журнал в «Консоли» (Windows — в Блокноте) |
+| `recognize.listen()` | `recognize_listen` | `RecognizeMatch` — слушает до совпадения, не дольше 15 с (см. «Распознать») |
+| `recognize.cancel()` | `recognize_cancel` | `boolean` — шло ли распознавание |
+| `recognize.takePending()` | `recognize_take_pending` | `boolean` — просили открыть экран до загрузки страницы |
+| `links.take()` | `links_take` | `string \| null` — последняя необработанная ссылка `dalywave://…` (и забыть её), см. «Поделиться» |
+| `discord.state()` | `discord_state` | `DiscordState` — `{ available, enabled, connected }`, macOS и Windows |
+| `discord.setEnabled(enabled)` | `discord_set_enabled { enabled }` | `DiscordState` — переключатель «Статус в Discord», запоминается |
+| — | `plugin:clipboard-manager\|write_text { text }` | — ссылка в буфер обмена (macOS и Windows, только запись) |
 
 ## События (`shell.on(name, handler)`)
 
@@ -176,14 +191,17 @@ const shell = createShell({ invoke, listen })
 | `player:error` | `{ id \| null, message }` | трек не открылся или оборвался |
 | `player:ended` | `null` | очередь движка доиграла |
 | `player:level` | `{ rms, peak, bands: [low, mid, high] }` | ~20 раз в секунду, пока включено `setLevels(true)` |
+| `player:sleep` | `PlayerSleep` | таймер сна поставили, сняли, началось затухание, сработал (`finished`) |
+| `player:now` | `PlayerNow \| null` | только окну мини-плеера: другой трек, пауза, конец очереди |
 | `audio:outputs` | `AudioOutputs` | появилось или пропало устройство вывода, сменились устройство по умолчанию или маршрут |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |
 | `update:available` | `UpdateInfo` | проверка нашла обновление, скачивание началось |
 | `update:progress` | `{ downloadedBytes, totalBytes }` | ход скачивания, до 4 раз в секунду |
 | `update:ready` | `UpdateInfo` | скачано и проверено подписью — можно «Перезапустить» |
 | `update:state` | `UpdateState` | каждая перемена у обновления (и ход скачивания) |
-| `deep-link:open` | `{ url }` | ссылка `dalywave://…`, кроме возврата входа (на будущее) |
+| `deep-link:open` | `{ url }` | ссылка `dalywave://…`, кроме возврата входа; саму ссылку забирать `links.take()` |
 | `downloader:state` | `DownloaderSnapshot` | загрузчик на компьютере: каждая перемена, ход задания — до 4 раз в секунду |
+| `recognize:open` | `null` | открыть экран «Распознать»: пункт трея macOS, быстрое действие на значке iPhone |
 
 ## Вход и запросы к серверу
 
@@ -278,7 +296,17 @@ type MediaCommand =
   | { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop', source: 'system' | 'tray' }
   | { action: 'seek', positionMs: number, source: 'system' }     // ползунок в Пункте управления
   | { action: 'seekBy', offsetMs: number, source: 'system' }     // плашка Windows
+  | { action: 'setShuffle', shuffle: boolean, source: 'system' }  // Пункт управления, CarPlay (macOS, iOS)
+  | { action: 'setRepeat', mode: 'off' | 'all' | 'one', source: 'system' }
 ```
+
+**Повтор.** Перемешивание и повтор всей очереди ведёт плеер интерфейса (новые круги списка — через
+`setUpcoming`), повтор одного трека — движок: после `setModes(…, 'one')` следом за текущим всегда стоит
+его копия, она готовится заранее и склеивается без паузы (или переходом), в том числе в фоне на iPhone.
+Наружу копия — тот же элемент: `player:track` с тем же `id` и `reason: 'auto'`. «Следующий» и
+«предыдущий» с пульта повтор пропускают; «предыдущий» дальше 3 с — трек сначала. Оба режима видны в
+Пункте управления (`changeShuffleModeCommand`, `changeRepeatModeCommand`); их смена там приходит
+`media:command`, повтор одного движок включает сам сразу. Плашка Windows (souvlaki) таких кнопок не умеет.
 
 «Сейчас играет» (название, исполнитель, альбом, обложка, длительность, позиция, пауза) движок
 публикует сам по своим событиям; `navigator.mediaSession` в приложении не задавать.
@@ -295,6 +323,51 @@ audio`. Звонок, Siri, будильник — пауза и продолж�
 **Смена устройства вывода.** macOS сама переводит поток на новое устройство по умолчанию;
 устройство пропало — пауза; поток стал непригоден (другая частота, сброс медиасервисов iOS) —
 вывод открывается заново, трек продолжается с той же позиции.
+
+### Эквалайзер
+
+Десять полос (31, 62, 125, 250, 500 Гц, 1, 2, 4, 8, 16 кГц), колоколы шириной в октаву, ±12 дБ; в
+движке — на общем выходе (`crates/client/audio/src/eq.rs`). Предусиление опускает звук на самый
+высокий подъём АЧХ, остальное ловит ограничитель — подъём полос не перегружает. Смена пресета и
+движение полос — плавные (150 мс), выключенный эквалайзер звук не трогает вовсе.
+
+```ts
+type PlayerEqPreset = 'off' | 'bass-boost' | 'bass-cut' | 'vocal' | 'acoustic' | 'electronic' | 'loudness' | 'custom'
+interface PlayerEq { preset: PlayerEqPreset, gains: number[] }   // gains — полосы «Своего», дБ
+```
+
+Пресеты — таблица движка (`EqPreset::gains`), та же — в `apps/ui/app/utils/eq.ts` (сайт играет те же
+полосы через WebAudio). Настройка своя у каждого устройства: оболочка хранит её в `settings.json` и
+включает с запуска движка — до интерфейса. `gains` помнятся и когда выбран другой пресет.
+
+### Таймер сна
+
+`player.setSleep({ mode: 'minutes', ms })` — пауза через `ms` по часам (пауза не останавливает
+отсчёт); `{ mode: 'track' }` — в конце текущего трека. Последние 15 с звук затухает по равномощной
+кривой, затем пауза; «в конце трека» затухание кончается ровно на стыке, следующий трек встаёт в
+начало и ждёт. Перемотка и другой трек переносят затухание к новому концу. После паузы громкость
+сама возвращается. Таймер живёт в движке — работает и в фоне на iPhone, когда WebView усыплён.
+
+```ts
+interface PlayerSleep {
+  timer: 'minutes' | 'track' | null
+  endsAtMs: number | null      // когда пауза, мс от эпохи Unix
+  remainingMs: number | null
+  fading: boolean
+  finished: boolean            // сработал: музыка на паузе
+}
+```
+
+### Мини-плеер
+
+macOS и Windows: окно 360 × 136 поверх всех — обложка, название, кнопки, полоса прокрутки. Открывается
+из трея («Мини-плеер»), из «⋯» панели плеера и по ⌘⇧M (Ctrl+Shift+M); главное окно на это время
+прячется. Закрытие (своя кнопка, ⌘W, пункт трея) возвращает главное окно. Место окна запоминается.
+
+Это не второй плеер: та же страница интерфейса (`/mini`, признак `window.__DALYWAVE_MINI__`),
+сторы плеера и сокет там не запускаются. Окно получает те же события `player:*` и `player:now`,
+кнопки — `player.remote(...)` (как трей: что движок не может, уходит главному окну `media:command`),
+перемотка — `player.seek`.
 
 ### Куда идёт звук
 
@@ -390,6 +463,7 @@ WebSocket `/api/ws`, что и живые события, сообщениями
 | `offline_pin` / `offline_unpin` | `pin: { kind: 'track' \| 'album' \| 'playlist' \| 'artist' \| 'liked', refId }` | `OfflineStatus` |
 | `offline_clear` | — | `OfflineStatus` — удалить все файлы и закреплённое, умный запас выключается |
 | `offline_downloads` | — | `TrackDownload[]` — все треки на устройстве и ход их загрузки |
+| `offline_reserve` | — | `{ trackIds, readyIds: string[], builtAt: string \| null }` — состав умного запаса в порядке загрузки и уже скачанные из него |
 | `offline_source` | `trackId` | `{ durationMs, loudnessLufs, truePeakDb, waveform }` скачанного или `null` |
 | `offline_wave_next` | `session, settings, count, exclude` | `{ track, reason }[]` — волна из скачанного |
 | `offline_wave_react` | `session, trackId, kind, positionMs` | — реакция в волне без сети |
@@ -430,6 +504,44 @@ interface TrackDownload { trackId: string, state: 'queued' | 'downloading' | 're
 **Проверка без входа** — `DALYWAVE_OFFLINE_SMOKE=<тестовый сервер>`: своя база, файлы тестового сервера
 качаются тем же путём (iPhone — фоновой сессией), затем «Без сети», волна из скачанного и воспроизведение
 из файлов. В журнал — `offline smoke: …`.
+
+## Распознать
+
+macOS, iPhone и iPad: какая песня играет рядом — ShazamKit (`SHSession`) слушает микрофон через
+`AVAudioEngine` (`src/recognize.rs`). На Windows команды отвечают `unsupported`; в интерфейсе
+`bridge.recognizer` там и на сайте — `null`, кнопки нет.
+
+```ts
+interface RecognizeMatch {
+  title: string; artist: string
+  isrc: string | null; appleMusicId: string | null; shazamId: string | null; artworkUrl: string | null
+}
+```
+
+1. `recognize.listen()` — первый раз система спрашивает доступ к микрофону («Чтобы узнать, какая песня
+   играет рядом»). Пока слушаем, своя музыка на паузе (на iPhone сеанс на это время — `playAndRecord`
+   с выводом в динамик). Не узнали, отменили, сбой — музыка продолжается; узнали — пауза остаётся.
+2. Совпадение интерфейс отправляет серверу: `POST /api/recognize/resolve` → `Recognition` с треком
+   каталога (или `track: null`) — он же попадает в «Распознанное» (`GET /api/recognize/history`).
+
+| Код ошибки `listen()` | Что случилось |
+|---|---|
+| `no_match` | за 15 с не узнали |
+| `permission` | нет доступа к микрофону |
+| `no_microphone` | у устройства нет входа звука |
+| `cancelled` | `recognize.cancel()` или новый `listen()` |
+| `shazam` | сервис Shazam не ответил: нет сети или у App ID не включена служба ShazamKit (IOS.md) |
+| `unsupported` | Windows, Linux |
+
+**Открыть экран просят** пункт трея macOS «Распознать песню» и быстрое действие «Распознать» на
+значке iPhone (долгое нажатие): окно выходит вперёд, приходит `recognize:open`. Если приложение
+запустили этим действием, страница ещё не загружена — при запуске интерфейс зовёт
+`recognize.takePending()` (обёртка `app/bridge/tauri/recognize.ts` делает это сама).
+
+**Проверка без микрофона:** `DALYWAVE_RECOGNIZE_MOCK=1` — через 2,5 с совпадение «Midnight City — M83»
+(`Название|Исполнитель|ISRC` — своё, `none` — «не узнали», `permission` — нет доступа);
+`DALYWAVE_RECOGNIZE_OPEN=1` вместе с ним — экран открывается сам при запуске. Сайт в разработке —
+`?recognize=match|none|listening`.
 
 ## Окно и приложение
 
@@ -498,3 +610,29 @@ interface UpdateState {
 ```
 
 `updates.install()` до `ready` сначала скачивает (ход — `update:progress`); ошибка — `{ code: 'update' }`.
+
+## Поделиться и статус в Discord
+
+**Ссылки наружу.** «Поделиться» в меню трека, альбома, плейлиста и артиста даёт
+`https://wave.daly.rest/{kind}/{id}`: на телефоне — системное меню (`navigator.share`), на
+компьютере — буфер обмена через плагин Rust (`plugin:clipboard-manager|write_text`: WebView
+пустил бы запись только по жесту, а пункт меню срабатывает после закрытия меню) и уведомление.
+Превью в мессенджерах сервер отдаёт сам (Open Graph на `/{kind}/{id}`).
+
+**«Поделиться → DalyWave».** iPhone и iPad: расширение `dalywave-share` (gen/apple/ShareExtension)
+в системном меню «Поделиться» для ссылок и текста — открывает приложение ссылкой
+`dalywave://share?url=…`. macOS — та же ссылка из любого места. Оболочка кладёт её в `links` и шлёт
+`deep-link:open`; интерфейс забирает `links.take()` при запуске (приложение могли открыть самой
+ссылкой — событие ушло раньше подписки) и на каждое событие, только после входа. Ещё вставка ссылки
+в окно или в поле поиска и перетаскивание ссылки на окно. Ссылку разбирает сервер
+(`POST /api/resolve-link`) — Deezer, Spotify, Apple Music, YouTube, YouTube Music, SoundCloud,
+Bandcamp; своя ссылка просто открывает экран.
+
+**Статус в Discord** (macOS, Windows) ведёт Rust по событиям движка, интерфейсу делать нечего: тип
+«Слушает», название, исполнители, обложка (публичный адрес Deezer из `GET /api/share/track/{id}`),
+значок DalyWave, отметки начала и конца — Discord рисует прогресс; кнопка «Слушать в DalyWave».
+Пауза дольше 30 с — статус убирается. Discord не запущен — тишина, запустили позже — статус
+появится сам (попытка раз в 15 с). id приложения Discord — `DALYWAVE_DISCORD_CLIENT_ID` (при
+запуске или при сборке) или `plugins.discord.clientId` в `tauri.conf.json`; нет — `available:
+false`, переключатель в настройках не показывается.
+

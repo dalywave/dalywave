@@ -8,6 +8,8 @@ withDefaults(defineProps<{
   title?: string
   hint?: string
   width?: number
+  /** Не ставить фокус внутрь при открытии мышью (список, где выбранное и так видно) */
+  noAutofocus?: boolean
 }>(), { side: 'bottom', align: 'start', width: 300 })
 
 const open = defineModel<boolean>('open', { default: false })
@@ -26,6 +28,7 @@ const open = defineModel<boolean>('open', { default: false })
         :collision-padding="12"
         class="pop"
         :style="{ width: `${width}px` }"
+        @open-auto-focus="(e: Event) => noAutofocus && e.preventDefault()"
       >
         <header v-if="title" class="pop__head">
           <span class="pop__title">{{ title }}</span>

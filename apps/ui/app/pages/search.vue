@@ -260,6 +260,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
         <UiSearchField
           ref="fieldRef"
           v-model="field"
+          links
           class="sbar__field"
           :placeholder="tg('search.placeholder')"
           @update:model-value="onField"
@@ -267,6 +268,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
           @submit="onSubmit"
         />
         <button v-if="searching" type="button" class="sbar__cancel" @click="cancel">{{ t('cancel') }}</button>
+        <RecognizeButton v-else class="sbar__mic" />
       </div>
       <SearchFilters v-if="q" v-model:type="typeModel" v-model:library="libraryModel" class="sbar__filters" />
     </div>
@@ -277,6 +279,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       <SearchRecent v-if="searching && recentItems.length" :limit="12" />
       <template v-else>
         <SearchRecent :limit="ui.isPhone ? 4 : 6" />
+        <RecognizeHistory :limit="ui.isPhone ? 4 : 6" />
         <SearchBrowse />
         <MusicShelf v-if="followed.length" :title="t('yourArtists')" :cols="8" phone-width="88px" class="search__artists">
           <SearchAvatar v-for="a in followed" :key="a.id" :artist="a" />
@@ -480,8 +483,11 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
   .sbar :deep(.sf:focus-within) { background: var(--fill-3); box-shadow: none; }
   .sbar :deep(.sf__input) { font-size: 16px; }
   .sbar :deep(.sf__icon) { font-size: 18px; }
+  .sbar__mic { flex: none; --size: 44px; margin-right: -8px; color: var(--text-2); }
   .sbar__cancel { min-height: 44px; flex: none; padding: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 500; color: var(--text-1); animation: fade-in var(--dur-2) var(--ease-out); }
   .sbar__filters { margin-inline: -16px; padding-inline: 16px; }
+  /* Правый отступ ленты: padding в конце прокрутки не учитывается, последний чип прилипал бы к краю */
+  .sbar__filters::after { content: ''; width: 8px; flex: none; }
 
   .search__idle { gap: 32px; padding: 16px 16px 0; }
   .search__artists { margin: 0 -16px; }

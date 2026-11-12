@@ -47,8 +47,8 @@ const offsetLabel = (m: number) => {
   const a = Math.abs(m)
   return `UTC${sign}${Math.floor(a / 60)}${a % 60 ? `:${String(a % 60).padStart(2, '0')}` : ''}`
 }
-async function setOffset(e: Event) {
-  const v = Number((e.target as HTMLSelectElement).value)
+const offsetOptions = OFFSETS.map(o => ({ value: o, label: offsetLabel(o) }))
+async function setOffset(v: number) {
   try {
     settings.value = await bridge.admin.updateSettings({ utcOffsetMin: v })
     toast.show({ text: t('saved'), icon: 'ph:check' })
@@ -80,14 +80,16 @@ async function patchLane(l: Lane, patch: LanePatch) {
     toast.error(t('failed'))
   }
 }
-const setPause = (l: Lane, e: Event) => patchLane(l, { minIntervalMs: Number((e.target as HTMLSelectElement).value) })
-const setConcurrency = (l: Lane, e: Event) => patchLane(l, { concurrency: Number((e.target as HTMLSelectElement).value) })
+const setPause = (l: Lane, v: number) => patchLane(l, { minIntervalMs: v })
+const setConcurrency = (l: Lane, v: number) => patchLane(l, { concurrency: v })
+const pauseOptions = (l: Lane) => [...PAUSES, ...(PAUSES.includes(l.minIntervalMs) ? [] : [l.minIntervalMs])].map(p => ({ value: p, label: pauseLabel(p) }))
+const concurrencyOptions = computed(() => [1, 2, 3, 4, 6, 8].map(c => ({ value: c, label: t('speed.workers', { n: c }) })))
+const hourOptions = (current: number) => [...HOURS, ...(current % 60 ? [current] : [])].map(h => ({ value: h, label: hhmm(h) }))
 function setWindowed(l: Lane, on: boolean) {
   // Включённое расписание по умолчанию — ночь: с 01:00 до 07:00
   void patchLane(l, { schedule: on ? { from: 60, until: 420 } : { from: null, until: null } })
 }
-function setBound(l: Lane, which: 'from' | 'until', e: Event) {
-  const v = Number((e.target as HTMLSelectElement).value)
+function setBound(l: Lane, which: 'from' | 'until', v: number) {
   const from = which === 'from' ? v : l.activeFrom ?? 60
   const until = which === 'until' ? v : l.activeUntil ?? 420
   if (from === until) return toast.error(t('sameBounds'))
@@ -112,13 +114,8 @@ function setBound(l: Lane, which: 'from' | 'until', e: Event) {
     <AdminState :loading="!lanes && !failed.lanes" :error="failed.lanes && !lanes" :rows="5" @retry="loadLanes">
       <SettingsGroup :title="t('speed.title')" :footnote="t('speed.note')">
         <SettingsRow v-for="l in downloadLanes" :key="l.lane" :title="l.title" stack>
-          <select class="ap-input ap-select" :value="l.minIntervalMs" :aria-label="t('speed.pause', { title: l.title })" @change="setPause(l, $event)">
-            <option v-for="p in PAUSES" :key="p" :value="p">{{ pauseLabel(p) }}</option>
-            <option v-if="!PAUSES.includes(l.minIntervalMs)" :value="l.minIntervalMs">{{ pauseLabel(l.minIntervalMs) }}</option>
-          </select>
-          <select class="ap-input ap-select" :value="l.concurrency" :aria-label="t('speed.parallel', { title: l.title })" @change="setConcurrency(l, $event)">
-            <option v-for="c in [1, 2, 3, 4, 6, 8]" :key="c" :value="c">{{ t('speed.workers', { n: c }) }}</option>
-          </select>
+          <AdminSelect class="se__pause" :model-value="l.minIntervalMs" :options="pauseOptions(l)" :label="t('speed.pause', { title: l.title })" align="end" @update:model-value="v => setPause(l, v)" />
+          <AdminSelect class="se__workers" :model-value="l.concurrency" :options="concurrencyOptions" :label="t('speed.parallel', { title: l.title })" align="end" @update:model-value="v => setConcurrency(l, v)" />
         </SettingsRow>
       </SettingsGroup>
     </AdminState>
@@ -131,15 +128,9 @@ function setBound(l: Lane, which: 'from' | 'until', e: Event) {
         <SettingsRow v-if="l.activeFrom != null && l.activeUntil != null" indent>
           <div class="se__window">
             <span>{{ t('schedule.from') }}</span>
-            <select class="ap-input ap-select" :value="l.activeFrom" :aria-label="t('schedule.fromLabel', { title: l.title })" @change="setBound(l, 'from', $event)">
-              <option v-for="h in HOURS" :key="h" :value="h">{{ hhmm(h) }}</option>
-              <option v-if="l.activeFrom % 60" :value="l.activeFrom">{{ hhmm(l.activeFrom) }}</option>
-            </select>
+            <AdminSelect :model-value="l.activeFrom" :options="hourOptions(l.activeFrom)" :label="t('schedule.fromLabel', { title: l.title })" @update:model-value="v => setBound(l, 'from', v)" />
             <span>{{ t('schedule.until') }}</span>
-            <select class="ap-input ap-select" :value="l.activeUntil" :aria-label="t('schedule.untilLabel', { title: l.title })" @change="setBound(l, 'until', $event)">
-              <option v-for="h in HOURS" :key="h" :value="h">{{ hhmm(h) }}</option>
-              <option v-if="l.activeUntil % 60" :value="l.activeUntil">{{ hhmm(l.activeUntil) }}</option>
-            </select>
+            <AdminSelect :model-value="l.activeUntil" :options="hourOptions(l.activeUntil)" :label="t('schedule.untilLabel', { title: l.title })" @update:model-value="v => setBound(l, 'until', v)" />
           </div>
         </SettingsRow>
       </template>
@@ -147,9 +138,7 @@ function setBound(l: Lane, which: 'from' | 'until', e: Event) {
 
     <SettingsGroup v-if="settings" :title="t('tz.title')">
       <SettingsRow :title="t('tz.label')" :description="t('tz.hint')">
-        <select class="ap-input ap-select" :value="settings.utcOffsetMin" :aria-label="t('tz.label')" @change="setOffset">
-          <option v-for="o in OFFSETS" :key="o" :value="o">{{ offsetLabel(o) }}</option>
-        </select>
+        <AdminSelect :model-value="settings.utcOffsetMin" :options="offsetOptions" :label="t('tz.label')" align="end" @update:model-value="setOffset" />
       </SettingsRow>
     </SettingsGroup>
   </div>
@@ -158,7 +147,13 @@ function setBound(l: Lane, which: 'from' | 'until', e: Event) {
 <style scoped>
 .se { max-width: 760px; }
 .se__window { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-2); }
-.se :deep(.sr__control) .ap-select { min-width: 0; }
+.se :deep(.sr__control) .asl { min-width: 0; }
+/* Одинаковая ширина у выпадающих списков всех полос — колонки ровные */
+.se :deep(.se__pause) { width: 140px; }
+.se :deep(.se__workers) { width: 180px; }
+@media (max-width: 699px) {
+  .se :deep(.se__pause), .se :deep(.se__workers) { flex: 1 1 0; width: auto; }
+}
 </style>
 
 <i18n lang="json">

@@ -158,6 +158,9 @@ pub struct PlaylistSummary {
     pub duration_ms: i64,
     /// Обложки первых альбомов плейлиста (до четырёх) — для мозаики.
     pub covers: Vec<ImageSet>,
+    /// Своя обложка, загруженная человеком; без неё — мозаика из `covers`.
+    #[serde(default)]
+    pub image: Option<ImageSet>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -223,6 +226,22 @@ pub struct AddedPlaylistItems {
     pub items: Vec<PlaylistItem>,
     /// Позиции остальных треков пересчитаны: интерфейсу стоит перечитать плейлист.
     pub rebalanced: bool,
+}
+
+/// Убрать несколько позиций разом (выбранные в списке).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RemovePlaylistItems {
+    pub item_ids: Vec<Uuid>,
+}
+
+/// Копия плейлиста или микса — обычный плейлист человека.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DuplicatePlaylist {
+    /// Название копии; без него — как у исходного.
+    #[serde(default)]
+    pub title: Option<String>,
 }
 
 /// Переставить позицию: после другой или в начало (`afterItemId: null`).

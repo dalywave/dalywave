@@ -88,7 +88,7 @@ function pick(e: MenuAction) {
           v-else
           type="button"
           class="as__row"
-          :class="{ 'is-danger': r.entry.danger, 'is-checked': r.entry.checked }"
+          :class="{ 'is-danger': r.entry.danger, 'is-checked': r.entry.checked, 'no-icon': !r.entry.icon }"
           :disabled="r.entry.disabled || undefined"
           @click="pick(r.entry)"
         >
@@ -136,6 +136,8 @@ function pick(e: MenuAction) {
   -webkit-tap-highlight-color: transparent;
 }
 .as__row + .as__row::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 0.5px; background: rgba(255, 255, 255, 0.1); }
+/* Волосок начинается там, где текст: без значка — от левого поля */
+.as__row.no-icon::before { left: 16px; }
 .as__row:active { background: rgba(255, 255, 255, 0.08); }
 .as__row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .as__row:disabled { color: var(--text-4); }

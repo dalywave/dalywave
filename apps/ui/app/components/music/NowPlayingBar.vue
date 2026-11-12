@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { MenuEntry } from '~/types/ui'
+
 // Панель «Сейчас играет» внизу большого экрана: трек и почему он здесь, управление с формой волны,
 // режим переходов, текст, очередь, устройства, громкость
 const player = usePlayerStore()
@@ -17,6 +19,18 @@ const FLAT = Array.from({ length: 120 }, () => 0.18)
 function openPlayer() {
   if (track.value) ui.playerOpen = !ui.playerOpen
 }
+
+// «⋯»: таймер сна и мини-плеер (приложение для компьютера)
+const sound = useSoundStore()
+const bridge = useBridge()
+const { items: sleepItems } = useSleepMenu()
+const moreOpen = ref(false)
+const moreItems = computed<MenuEntry[]>(() => {
+  const list: MenuEntry[] = [{ label: t('sound.sleep'), icon: sound.sleepActive ? 'ph:moon-fill' : 'ph:moon', children: sleepItems.value.filter(e => e.kind !== 'heading') }]
+  const mini = bridge.miniPlayer
+  if (mini) list.push({ label: t('sound.mini'), icon: 'ph:picture-in-picture', kbd: [bridge.platform === 'macos' ? '⌘' : 'Ctrl', '⇧', 'M'], onSelect: () => void mini.open() })
+  return list
+})
 </script>
 
 <template>
@@ -32,32 +46,38 @@ function openPlayer() {
         <div class="bar__artist ellipsis">
           <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`">{{ a.name }}</NuxtLink></template>
         </div>
-        <MusicConnectChip v-if="connect.remote || connect.orphaned" variant="line" />
+        <MusicWavePrepNote v-if="player.waveStarting" />
+        <MusicConnectChip v-else-if="connect.remote || connect.orphaned" variant="line" />
         <MusicPendingNote v-else-if="player.pending" :pending="player.pending" />
         <div v-else-if="entry?.reason" class="bar__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
       </div>
-      <div v-else class="bar__meta">
-        <span class="bar__title ellipsis">{{ t('wave.title') }}</span>
-        <span class="bar__artist ellipsis">{{ t('player.nothingHint') }}</span>
-      </div>
-    </div>
-
-    <div class="bar__center">
-      <div class="bar__transport">
-        <UiIconButton icon="ph:thumbs-down" :label="t('player.dislike')" :tooltip="t('player.dislikeHint')" :disabled="!track" size="sm" @click="player.dislike()" />
-        <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" :kbd="['⇧', '←']" :disabled="!track" @click="player.prev()" />
-        <MusicPlayButton :playing="player.playing" :loading="(player.waveLoading && !track) || !!player.pending" :size="36" :label="player.pending ? t('player.acquiring') : player.playing ? t('common.pause') : t('common.play')" @click="player.toggle()" />
-        <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" :kbd="['⇧', '→']" :disabled="!track" @click="player.next('skipped')" />
+      <!-- Сердце — рядом с треком, как в Spotify; «не нравится» — только в волне и радио -->
+      <div v-if="track" class="bar__react">
         <UiIconButton
           :icon="liked ? 'ph:heart-fill' : 'ph:heart'"
           :label="liked ? t('player.unlike') : t('player.like')"
           :kbd="['L']"
           :tone="liked ? 'liked' : 'default'"
           :pressed="liked"
-          :disabled="!track"
           size="sm"
           @click="player.toggleLike()"
         />
+        <UiIconButton v-if="!player.modesAvailable" icon="ph:thumbs-down" :label="t('player.dislike')" :tooltip="t('player.dislikeHint')" size="sm" @click="player.dislike()" />
+      </div>
+      <div v-else class="bar__meta">
+        <span class="bar__title ellipsis">{{ t('wave.title') }}</span>
+        <MusicWavePrepNote v-if="player.waveStarting" />
+        <span v-else class="bar__artist ellipsis">{{ t('player.nothingHint') }}</span>
+      </div>
+    </div>
+
+    <div class="bar__center">
+      <div class="bar__transport">
+        <MusicPlayModeButton v-if="player.modesAvailable" kind="shuffle" kbd />
+        <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" :kbd="['⇧', '←']" :disabled="!track" @click="player.prev()" />
+        <MusicPlayButton :playing="player.playing" :loading="(player.waveLoading && !track) || !!player.pending" :size="36" :label="player.pending ? t('player.acquiring') : player.playing ? t('common.pause') : t('common.play')" @click="player.toggle()" />
+        <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" :kbd="['⇧', '→']" :disabled="!track" @click="player.next('skipped')" />
+        <MusicPlayModeButton v-if="player.modesAvailable" kind="repeat" kbd />
       </div>
       <MusicScrubber
         :peaks="peaks"
@@ -72,12 +92,17 @@ function openPlayer() {
     </div>
 
     <div class="bar__right">
+      <!-- Таймер сна стоит: луна с остатком -->
+      <MusicSleepTimerButton v-if="sound.sleepActive" size="sm" />
       <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" :web="!connect.djAvailable" :next-at="nextAt" icon size="sm" />
       <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="sm" :active="ui.panelOpen && ui.panelTab === 'lyrics'" @click="ui.togglePanel('lyrics')" />
       <UiIconButton icon="ph:queue" :label="t('player.queue')" size="sm" :active="ui.panelOpen && ui.panelTab === 'queue'" @click="ui.togglePanel('queue')" />
       <MusicDevicePicker :devices="player.devices" :playing="player.playing" @open="player.loadDevices()" @select="player.selectDevice" />
       <!-- Пульт: громкость активного устройства -->
       <MusicVolumeSlider v-if="connect.volumeControl" v-model:volume="connect.volume" v-model:muted="connect.muted" />
+      <UiMenu v-model:open="moreOpen" :items="moreItems" side="top" align="end">
+        <UiIconButton icon="ph:dots-three" :label="t('common.more')" size="sm" />
+      </UiMenu>
     </div>
   </div>
 </template>
@@ -106,6 +131,7 @@ function openPlayer() {
 .bar__idle-art { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 8px; background: var(--brand-gradient); color: #fff; }
 .bar__glyph { width: 30px; height: 30px; }
 .bar__meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bar__react { display: flex; align-items: center; flex: none; margin-left: -6px; }
 .bar__title { font-weight: 600; }
 a.bar__title:hover, .bar__artist a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
 .bar__artist { font-size: var(--fs-small); color: var(--text-2); }

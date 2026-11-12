@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ta.artist_id, count(DISTINCT l.track_id) AS \"n!\" FROM liked_tracks l\n           JOIN track_artists ta ON ta.track_id = l.track_id AND ta.role = 'main'\n           WHERE l.user_id = $1 AND ta.artist_id = ANY($2) GROUP BY ta.artist_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_artists",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "e9755dd3c981673f25cdf46c1f01d6362da42cbd29b4c8a591260714ac9f01a0"
+}

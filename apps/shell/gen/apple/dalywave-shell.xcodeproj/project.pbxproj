@@ -11,6 +11,8 @@
 		0D7043CC236F437E07150F2E /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EE8D3754EB6635BC61E5266 /* AVKit.framework */; };
 		0F4DB40E3DCDAC99EBCCC9D4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 338F139382A68AFE2AE173BF /* Security.framework */; };
 		1A43260E845B988075568FBC /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 375402116E2037E9999A79FF /* MediaPlayer.framework */; };
+		2236D45F40E31DACD49256A1 /* ShareExtensionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03ED3BF81A7DD119B85A122 /* ShareExtensionTests.swift */; };
+		27CD3BD0450D79D2C614686E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6C18721B1459AAA3822C5D /* ShareViewController.swift */; };
 		2BBE475EF6512BD0CBC946F5 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51D42D29EB38AED4AEBFFAAE /* libapp.a */; };
 		34680CA9D2759AE11324C23E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8939A14EB49E4F5DEA32F192 /* MetalKit.framework */; };
 		4BA81422555241885A6A61AA /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 759968486A44C6A199A816CF /* Metal.framework */; };
@@ -19,10 +21,13 @@
 		70F6F09D1150B49EA7E8E5B3 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06F48107150D751B1FEB95D3 /* AudioToolbox.framework */; };
 		A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */; };
 		A626211671509DDBDB62667F /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */; };
+		A8555214625F12E71E94957E /* ShazamKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C8545FAE6945FC72A700A89 /* ShazamKit.framework */; };
 		B2256499133D0A5B8A158A31 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3C12E0D418269F691759B755 /* main.mm */; };
 		B7FF745BD6654F557CAFDA64 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB852A5757460E97877E17EA /* CoreGraphics.framework */; };
 		BE6310FA185DEAF239FD69D3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9DD0496943717BF685CF20E /* Assets.xcassets */; };
 		C2800CEC082EC5AB9DFDE72E /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8680BC5BA77A8F5D01DAD70A /* UIKit.framework */; };
+		C66D69EAD3DD94DBCED00FA3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F04A250DEDD01BC9EB862FFB /* AVFoundation.framework */; };
+		C8008CAFBAC257752E260EB5 /* dalywave-share.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D9C094241682F36FAFC622E9 /* dalywave-share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C9C09914F010D0BEAB60BF4C /* DalyWave.icon in Resources */ = {isa = PBXBuildFile; fileRef = CBA685D63A1B696AAA3F0582 /* DalyWave.icon */; };
 		CAC466375E0855EE31F6724B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */; };
 		EA4F0FAF5D753B9B1996A97B /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */; };
@@ -38,7 +43,28 @@
 			remoteGlobalIDString = 6926EE097D68303541BAEF57;
 			remoteInfo = "dalywave-shell_iOS";
 		};
+		D35348528894F48ACFFE4589 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C1E56E15F0F0C79AEFDCDD6E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF846410CDFDC6429FD8E158;
+			remoteInfo = "dalywave-share";
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		BAC0017D24A2CA313041648F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C8008CAFBAC257752E260EB5 /* dalywave-share.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		00E8B93BF740C8186DB6361D /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
@@ -58,13 +84,17 @@
 		375402116E2037E9999A79FF /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		39AE223214B55ED7B90ABF77 /* settings.rs */ = {isa = PBXFileReference; path = settings.rs; sourceTree = "<group>"; };
 		3C12E0D418269F691759B755 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		4DD55E8BAC864777E137F488 /* discord.rs */ = {isa = PBXFileReference; path = discord.rs; sourceTree = "<group>"; };
 		51D42D29EB38AED4AEBFFAAE /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		571594673FEEE302CCCE4546 /* smoke.rs */ = {isa = PBXFileReference; path = smoke.rs; sourceTree = "<group>"; };
 		5D23FE966015BD36E8390CBC /* downloader.rs */ = {isa = PBXFileReference; path = downloader.rs; sourceTree = "<group>"; };
 		5EE8D3754EB6635BC61E5266 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		670CBC2ADAB6CE48A7904EEF /* mini.rs */ = {isa = PBXFileReference; path = mini.rs; sourceTree = "<group>"; };
+		6C8545FAE6945FC72A700A89 /* ShazamKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ShazamKit.framework; path = System/Library/Frameworks/ShazamKit.framework; sourceTree = SDKROOT; };
 		6F16AFB01D664D4859FCBA8D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		73A56A10B0D7E0D2A07AAD02 /* updates.rs */ = {isa = PBXFileReference; path = updates.rs; sourceTree = "<group>"; };
 		759968486A44C6A199A816CF /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		78F428E4B3B528B3EF4190E7 /* recognize.rs */ = {isa = PBXFileReference; path = recognize.rs; sourceTree = "<group>"; };
 		81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		82E855B1FFBF5A66BB26A28E /* auth.rs */ = {isa = PBXFileReference; path = auth.rs; sourceTree = "<group>"; };
 		8680BC5BA77A8F5D01DAD70A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -74,7 +104,9 @@
 		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
+		9F6C18721B1459AAA3822C5D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		A03ED3BF81A7DD119B85A122 /* ShareExtensionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionTests.swift; sourceTree = "<group>"; };
 		A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginSheetTests.swift; sourceTree = "<group>"; };
 		A1E6D8BAACB5F170BB90DD7A /* dalywave-shell_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "dalywave-shell_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5DB1F76A956B88840826EE6 /* window.rs */ = {isa = PBXFileReference; path = window.rs; sourceTree = "<group>"; };
@@ -85,9 +117,13 @@
 		CBA685D63A1B696AAA3F0582 /* DalyWave.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = DalyWave.icon; sourceTree = "<group>"; };
 		CFA224F3B3C52421C49FE531 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		D439E9BF9652190398434011 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		D9C094241682F36FAFC622E9 /* dalywave-share.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "dalywave-share.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9E270ECE1B189E64138C9FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DE1F407F37E3B60496B5DF7A /* haptics.rs */ = {isa = PBXFileReference; path = haptics.rs; sourceTree = "<group>"; };
 		E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		EB852A5757460E97877E17EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		EFB67A422D70CA5989A32E30 /* links.rs */ = {isa = PBXFileReference; path = links.rs; sourceTree = "<group>"; };
+		F04A250DEDD01BC9EB862FFB /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +146,8 @@
 				1A43260E845B988075568FBC /* MediaPlayer.framework in Frameworks */,
 				60F6E6A692B23570D7F60AFD /* AuthenticationServices.framework in Frameworks */,
 				A626211671509DDBDB62667F /* SystemConfiguration.framework in Frameworks */,
+				A8555214625F12E71E94957E /* ShazamKit.framework in Frameworks */,
+				C66D69EAD3DD94DBCED00FA3 /* AVFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,6 +160,7 @@
 				06F48107150D751B1FEB95D3 /* AudioToolbox.framework */,
 				E81054E980B9DFF08ADF9E39 /* AuthenticationServices.framework */,
 				0DF01CFF7E4EBD9EBB29E79C /* AVFAudio.framework */,
+				F04A250DEDD01BC9EB862FFB /* AVFoundation.framework */,
 				5EE8D3754EB6635BC61E5266 /* AVKit.framework */,
 				D439E9BF9652190398434011 /* CoreAudio.framework */,
 				EB852A5757460E97877E17EA /* CoreGraphics.framework */,
@@ -131,6 +170,7 @@
 				8939A14EB49E4F5DEA32F192 /* MetalKit.framework */,
 				A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */,
 				338F139382A68AFE2AE173BF /* Security.framework */,
+				6C8545FAE6945FC72A700A89 /* ShazamKit.framework */,
 				81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */,
 				8680BC5BA77A8F5D01DAD70A /* UIKit.framework */,
 				CFA224F3B3C52421C49FE531 /* WebKit.framework */,
@@ -151,16 +191,20 @@
 			children = (
 				1AD983A4882E2E568FD6593D /* audio.rs */,
 				82E855B1FFBF5A66BB26A28E /* auth.rs */,
+				4DD55E8BAC864777E137F488 /* discord.rs */,
 				5D23FE966015BD36E8390CBC /* downloader.rs */,
 				253DBBE975A202E6D5DF3810 /* error.rs */,
 				DE1F407F37E3B60496B5DF7A /* haptics.rs */,
 				21915CE4038CA63D3585AB63 /* ios.rs */,
 				0144B38ADB9470106F94418D /* lib.rs */,
+				EFB67A422D70CA5989A32E30 /* links.rs */,
 				17F5055370C371339A65AFD4 /* macos.rs */,
 				062A5A2D7472DB44AB8873E5 /* main.rs */,
 				C0FCC0DDA051C860490DC013 /* media.rs */,
+				670CBC2ADAB6CE48A7904EEF /* mini.rs */,
 				912A4D203E5A5DB0B2FF559B /* platform.rs */,
 				88A58456576E3E031E1A9E3E /* player.rs */,
+				78F428E4B3B528B3EF4190E7 /* recognize.rs */,
 				39AE223214B55ED7B90ABF77 /* settings.rs */,
 				3741B8EE0756D0F278CC21C7 /* snap.rs */,
 				15BF5CCB7F35C1D588A8384C /* tray.rs */,
@@ -184,10 +228,20 @@
 		2F21CE4734BD0F007756A913 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				D9C094241682F36FAFC622E9 /* dalywave-share.appex */,
 				A1E6D8BAACB5F170BB90DD7A /* dalywave-shell_iOS.app */,
 				B614F846A144CB791D297423 /* dalywave-shell_UITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7861A1167EFA9446E243C55D /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				D9E270ECE1B189E64138C9FA /* Info.plist */,
+				9F6C18721B1459AAA3822C5D /* ShareViewController.swift */,
+			);
+			path = ShareExtension;
 			sourceTree = "<group>";
 		};
 		90A6E48F818045C851CE4E7C /* icons */ = {
@@ -243,6 +297,7 @@
 				1208209C3A8A10399398F374 /* dalywave-shell_iOS */,
 				D78C09200EAD515069920099 /* Externals */,
 				90A6E48F818045C851CE4E7C /* icons */,
+				7861A1167EFA9446E243C55D /* ShareExtension */,
 				0596AD3D968A08669B07BC40 /* Sources */,
 				0D971B9401EC3B8438183AB2 /* src */,
 				F4A32B8C22E604101EBA527B /* UITests */,
@@ -255,18 +310,19 @@
 			isa = PBXGroup;
 			children = (
 				A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */,
+				A03ED3BF81A7DD119B85A122 /* ShareExtensionTests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_3C25BDB6-1C13-4E32-89C7-9B53709D74BB" /* arm64 */ = {
+		"TEMP_1789F4A3-8DD5-49E6-998E-BA6360F9D047" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = arm64;
 			sourceTree = "<group>";
 		};
-		"TEMP_D2FF767E-DC82-4190-BB5F-2046A678158A" /* x86_64 */ = {
+		"TEMP_92EEAABB-9A01-4519-A89A-E309F27B6DE4" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -284,10 +340,12 @@
 				1CB65FC8099B4711AF35AC4B /* Sources */,
 				082E43B98E808F45AD96E6CA /* Resources */,
 				4FA6E590BF577B7172C2CE34 /* Frameworks */,
+				BAC0017D24A2CA313041648F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3B553A6AC2B74FED90F5CE0B /* PBXTargetDependency */,
 			);
 			name = "dalywave-shell_iOS";
 			packageProductDependencies = (
@@ -314,6 +372,23 @@
 			productReference = B614F846A144CB791D297423 /* dalywave-shell_UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		DF846410CDFDC6429FD8E158 /* dalywave-share */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2EB15B83FB83B3EA4E091CCA /* Build configuration list for PBXNativeTarget "dalywave-share" */;
+			buildPhases = (
+				62E1225C9CCD7B07CCBE4848 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "dalywave-share";
+			packageProductDependencies = (
+			);
+			productName = "dalywave-share";
+			productReference = D9C094241682F36FAFC622E9 /* dalywave-share.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -332,6 +407,10 @@
 						ProvisioningStyle = Automatic;
 						TestTargetID = 6926EE097D68303541BAEF57;
 					};
+					DF846410CDFDC6429FD8E158 = {
+						DevelopmentTeam = Y5KR5JPCRG;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 1BF98670E6144350D0D3BE65 /* Build configuration list for PBXProject "dalywave-shell" */;
@@ -349,6 +428,7 @@
 			projectRoot = "";
 			targets = (
 				6926EE097D68303541BAEF57 /* dalywave-shell_iOS */,
+				DF846410CDFDC6429FD8E158 /* dalywave-share */,
 				77D1F6F2ABB8FFDE2F65F7F3 /* dalywave-shell_UITests */,
 			);
 		};
@@ -401,17 +481,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		62E1225C9CCD7B07CCBE4848 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27CD3BD0450D79D2C614686E /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0F686CD859DCD53DE24F8AD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */,
+				2236D45F40E31DACD49256A1 /* ShareExtensionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		3B553A6AC2B74FED90F5CE0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF846410CDFDC6429FD8E158 /* dalywave-share */;
+			targetProxy = D35348528894F48ACFFE4589 /* PBXContainerItemProxy */;
+		};
 		70E2942E1449396B72A5F0DF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 6926EE097D68303541BAEF57 /* dalywave-shell_iOS */;
@@ -420,6 +514,31 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		27E80D46B88566004B42323C /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ARCHS = (
+					arm64,
+				);
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y5KR5JPCRG;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.share;
+				PRODUCT_NAME = DalyWaveShare;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = debug;
+		};
 		77B128F8D08E5701BC8D3E94 /* debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -561,6 +680,31 @@
 			};
 			name = release;
 		};
+		A4A4FF9F7D917023B6FF431E /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ARCHS = (
+					arm64,
+				);
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y5KR5JPCRG;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.share;
+				PRODUCT_NAME = DalyWaveShare;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = release;
+		};
 		C9546D3D07C8C5980F8A5D05 /* debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -670,6 +814,15 @@
 			buildConfigurations = (
 				D0890FC434FF781BCC49F42B /* debug */,
 				E6114D004EB2D6CFBBFDBE47 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		2EB15B83FB83B3EA4E091CCA /* Build configuration list for PBXNativeTarget "dalywave-share" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27E80D46B88566004B42323C /* debug */,
+				A4A4FF9F7D917023B6FF431E /* release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = debug;

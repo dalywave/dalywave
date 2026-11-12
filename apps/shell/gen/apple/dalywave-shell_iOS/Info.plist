@@ -40,6 +40,19 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Чтобы узнать, какая песня играет рядом</string>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>shazam.logo</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Распознать</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>rest.daly.wave.recognize</string>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

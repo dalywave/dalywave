@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_lyrics (track_id, synced, instrumental, lines, plain, source, source_id, fetched_at, not_found_until)\n         VALUES ($1, $2, $3, $4, $5, 'lrclib', $6, now(), $7)\n         ON CONFLICT (track_id) DO UPDATE SET synced = EXCLUDED.synced, instrumental = EXCLUDED.instrumental,\n             lines = EXCLUDED.lines, plain = EXCLUDED.plain, source = EXCLUDED.source,\n             source_id = EXCLUDED.source_id, fetched_at = now(), not_found_until = EXCLUDED.not_found_until",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Bool",
+        "Jsonb",
+        "Text",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b604f0544c9642b85f64be6ee73dae0aa12478a39105fc6a98c12506f8378511"
+}

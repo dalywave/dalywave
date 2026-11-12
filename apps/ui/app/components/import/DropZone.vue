@@ -73,59 +73,42 @@ function onDrop(e: DragEvent) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 232px;
+  gap: 4px;
+  min-height: 220px;
   padding: 32px 24px;
-  border-radius: var(--r-4);
-  background:
-    radial-gradient(70% 90% at 50% 0%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%),
-    var(--fill-1);
-  box-shadow: inset 0 0 0 1px var(--line);
-  text-align: center;
-  isolation: isolate;
-  transition: box-shadow var(--dur-2), background-color var(--dur-2), transform var(--dur-2) var(--ease-out);
-}
-/* Пунктир поверх волоска: рисуется отдельно, чтобы скругление было ровным */
-.dz::after {
-  content: '';
-  position: absolute;
-  inset: 8px;
-  z-index: -1;
   border: 1.5px dashed var(--line-strong);
-  border-radius: calc(var(--r-4) - 8px);
-  pointer-events: none;
-  transition: border-color var(--dur-2);
+  border-radius: var(--r-4);
+  background: var(--fill-1);
+  text-align: center;
+  transition: border-color var(--dur-2), background-color var(--dur-2), transform var(--dur-2) var(--ease-out);
 }
-.dz:hover:not(.is-disabled) { background-color: var(--fill-2); }
-.dz:hover:not(.is-disabled)::after { border-color: var(--text-4); }
-.dz.is-over { transform: scale(1.01); box-shadow: inset 0 0 0 1px var(--accent-line), 0 0 0 4px var(--accent-soft); }
-.dz.is-over::after { border-color: var(--accent); }
+.dz:hover:not(.is-disabled) { border-color: var(--text-4); background-color: var(--fill-2); }
+.dz.is-over { border-color: var(--accent); background-color: var(--accent-soft); transform: scale(1.01); }
 .dz.is-disabled { opacity: 0.55; }
-.dz__hit { position: absolute; inset: 0; z-index: 1; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.dz__hit { position: absolute; inset: -1.5px; z-index: 1; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
 .dz__hit:disabled { cursor: default; }
 .dz__hit:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .dz__icon {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   margin-bottom: 10px;
-  border-radius: 18px;
-  background: var(--brand-gradient);
-  box-shadow: 0 12px 32px -14px color-mix(in oklab, var(--brand-2) 80%, transparent), var(--inner-hi);
-  color: #fff;
-  font-size: 26px;
-  transition: transform var(--dur-2) var(--ease-spring);
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: 24px;
+  transition: transform var(--dur-2) var(--ease-spring), color var(--dur-2);
 }
-.dz.is-over .dz__icon { transform: translateY(4px); }
+.dz.is-over .dz__icon { color: var(--accent); transform: translateY(4px); }
 .dz__title { max-width: 420px; font-size: var(--fs-h4); font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
 .dz__hint { max-width: 420px; font-size: var(--fs-small); color: var(--text-3); text-wrap: pretty; }
 .dz__button {
   display: inline-flex;
   align-items: center;
-  height: 36px;
-  margin-top: 14px;
-  padding: 0 16px;
+  height: 40px;
+  margin-top: 16px;
+  padding: 0 18px;
   border-radius: var(--r-pill);
   background: var(--fill-2);
   box-shadow: inset 0 0 0 1px var(--line);
@@ -136,7 +119,8 @@ function onDrop(e: DragEvent) {
 .dz:hover:not(.is-disabled) .dz__button { background: var(--fill-3); }
 .dz__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 @media (max-width: 699px) {
-  .dz { min-height: 200px; padding: 28px 20px; }
+  .dz { min-height: 0; padding: 28px 20px; }
+  .dz__button { height: 44px; padding: 0 22px; font-size: var(--fs-body); }
 }
 @media (prefers-reduced-motion: reduce) {
   .dz, .dz__icon { transition: none; }

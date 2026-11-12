@@ -1,4 +1,5 @@
 // Настройки волны: варианты групп, сохранённые сочетания и человеческое описание
+import type { WavePreset } from '~/api/types'
 import type { WaveActivity, WaveCharacter, WaveLanguage, WaveMood, WaveSettings } from '~/bridge/types'
 
 export interface WaveOption<T extends string> {
@@ -43,19 +44,68 @@ export const LANGUAGE_OPTIONS: WaveOption<WaveLanguage>[] = [
   { value: 'none', icon: 'ph:microphone-slash', key: 'wave.language.none' },
 ]
 
-export interface WavePreset {
-  id: string
-  icon: string
-  titleKey: string
-  metaKey: string
-  set: WaveSettings
+/** Иконки сохранённых сочетаний — полные имена: сборка берёт в комплект только упомянутые в коде */
+export const PRESET_ICONS = [
+  'ph:laptop', 'ph:car', 'ph:moon-stars', 'ph:coffee', 'ph:barbell', 'ph:sun-horizon', 'ph:confetti',
+  'ph:headphones', 'ph:waves', 'ph:lightning', 'ph:cloud-rain', 'ph:heart', 'ph:book-open', 'ph:sparkle',
+] as const
+
+/** Иконка сочетания: на сервере — имя без префикса; незнакомое (с другого устройства) — искра */
+export function presetIcon(name: string): string {
+  const full = `ph:${name}`
+  return (PRESET_ICONS as readonly string[]).includes(full) ? full : 'ph:sparkle'
 }
 
-export const WAVE_PRESETS: WavePreset[] = [
-  { id: 'work', icon: 'ph:laptop', titleKey: 'wave.preset.work', metaKey: 'wave.preset.workMeta', set: { mood: 'calm', activity: 'work', character: 'mix', language: 'none' } },
-  { id: 'road', icon: 'ph:car', titleKey: 'wave.preset.road', metaKey: 'wave.preset.roadMeta', set: { mood: 'energetic', activity: 'road', character: 'fav', language: 'ru' } },
-  { id: 'night', icon: 'ph:moon-stars', titleKey: 'wave.preset.night', metaKey: 'wave.preset.nightMeta', set: { mood: 'sad', activity: 'rest', character: 'rare', language: 'any' } },
-]
+/** Иконка по умолчанию для новых настроек: занятие, иначе настроение */
+export function suggestIcon(s: WaveSettings): string {
+  const icon = s.activity !== 'any'
+    ? ACTIVITY_OPTIONS.find(o => o.value === s.activity)?.icon
+    : MOOD_OPTIONS.find(o => o.value === s.mood)?.icon
+  return icon && (PRESET_ICONS as readonly string[]).includes(icon) ? icon : 'ph:sparkle'
+}
+
+/** Настройки с сервера: пропущенные поля — по умолчанию, как их понимает сервер */
+export function fromApiSettings(s: WavePreset['settings']): WaveSettings {
+  return { mood: s.mood ?? 'any', activity: s.activity ?? 'any', character: s.character ?? 'mix', language: s.language ?? 'any' }
+}
+
+const ACTIVITY_NOUN_RU: Record<WaveActivity, string> = { any: '', wake: 'Утро', road: 'Дорога', work: 'Работа', sport: 'Тренировка', rest: 'Отдых', sleep: 'Сон', party: 'Вечеринка' }
+const MOOD_NEUT_RU: Record<WaveMood, string> = { any: '', energetic: 'Бодрое', happy: 'Весёлое', calm: 'Спокойное', sad: 'Грустное' }
+const CHARACTER_SHORT_RU: Record<WaveCharacter, string> = { fav: 'любимое', mix: '', new: 'новое', pop: 'популярное', rare: 'редкое' }
+const LANGUAGE_SHORT_RU: Record<WaveLanguage, string> = { any: '', ru: 'на русском', foreign: 'иностранное', none: 'без слов' }
+const ACTIVITY_NOUN_EN: Record<WaveActivity, string> = { any: '', wake: 'Morning', road: 'Road', work: 'Work', sport: 'Workout', rest: 'Unwind', sleep: 'Sleep', party: 'Party' }
+const MOOD_EN_SHORT: Record<WaveMood, string> = { any: '', energetic: 'Energetic', happy: 'Happy', calm: 'Calm', sad: 'Sad' }
+const CHARACTER_SHORT_EN: Record<WaveCharacter, string> = { fav: 'favourites', mix: '', new: 'new', pop: 'popular', rare: 'rare' }
+const LANGUAGE_SHORT_EN: Record<WaveLanguage, string> = { any: '', ru: 'Russian', foreign: 'foreign', none: 'instrumental' }
+
+function shortParts(s: WaveSettings, locale: 'ru' | 'en'): string[] {
+  const ru = locale === 'ru'
+  const parts = [
+    (ru ? ACTIVITY_NOUN_RU : ACTIVITY_NOUN_EN)[s.activity],
+    (ru ? MOOD_NEUT_RU : MOOD_EN_SHORT)[s.mood],
+    (ru ? LANGUAGE_SHORT_RU : LANGUAGE_SHORT_EN)[s.language],
+    (ru ? CHARACTER_SHORT_RU : CHARACTER_SHORT_EN)[s.character],
+  ].filter(Boolean)
+  return parts.map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p.toLowerCase()))
+}
+
+/** Название для нового сочетания: «Спокойное · без слов», «Работа · спокойное» */
+export function suggestPresetName(s: WaveSettings, locale: 'ru' | 'en' = 'ru'): string {
+  const parts = shortParts(s, locale).slice(0, 2)
+  return parts.length ? parts.join(' · ') : (locale === 'ru' ? 'Моя волна' : 'My wave')
+}
+
+/** Подпись под названием сочетания: настроение, язык, характер — «спокойное, без слов» */
+export function presetMeta(s: WaveSettings, locale: 'ru' | 'en' = 'ru'): string {
+  const ru = locale === 'ru'
+  const parts = [
+    (ru ? MOOD_NEUT_RU : MOOD_EN_SHORT)[s.mood],
+    (ru ? LANGUAGE_SHORT_RU : LANGUAGE_SHORT_EN)[s.language],
+    (ru ? CHARACTER_SHORT_RU : CHARACTER_SHORT_EN)[s.character],
+  ].filter(Boolean).map(p => p.toLowerCase())
+  if (!parts.length) return ru ? 'знакомое и новое' : 'familiar and new'
+  return parts.join(', ')
+}
 
 /** Цвета шара настроения: глубина, тело, свет */
 export const MOOD_ORB: Record<WaveMood, [string, string, string]> = {

@@ -344,6 +344,57 @@ pub struct SoundSearchResults {
     pub catalog: Vec<Track>,
 }
 
+/// Сохранённое сочетание настроек волны: запускает волну в одно нажатие.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WavePreset {
+    pub id: Uuid,
+    pub name: String,
+    /// Имя иконки Phosphor без префикса: `laptop`, `moon-stars`.
+    pub icon: String,
+    /// Без затравки: радио не сохраняется.
+    pub settings: WaveSettings,
+    /// Порядок карточек — по возрастанию.
+    pub position: f64,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Сочетания по порядку карточек.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WavePresetList {
+    pub items: Vec<WavePreset>,
+}
+
+/// Новое сочетание — в конец ряда.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NewWavePreset {
+    /// 1–40 символов.
+    pub name: String,
+    pub icon: String,
+    pub settings: WaveSettings,
+}
+
+/// Правка сочетания: переданные поля меняются.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WavePresetPatch {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub settings: Option<WaveSettings>,
+}
+
+/// Новый порядок: названные сочетания — первыми в этом порядке, остальные — после, как были.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WavePresetOrder {
+    pub ids: Vec<Uuid>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

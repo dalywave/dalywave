@@ -6,6 +6,8 @@ const props = withDefaults(defineProps<{
   autofocus?: boolean
   size?: 'md' | 'lg'
   forceState?: 'hover' | 'focus'
+  /** Вставленная ссылка из Deezer, Spotify, YouTube… открывается как трек или альбом («Поделиться → DalyWave») */
+  links?: boolean
 }>(), { placeholder: 'Треки, артисты, альбомы', size: 'md' })
 
 const emit = defineEmits<{ submit: [value: string], focus: [] }>()
@@ -17,6 +19,16 @@ defineExpose({ focus: () => input.value?.focus(), blur: () => input.value?.blur(
 onMounted(() => {
   if (props.autofocus) input.value?.focus()
 })
+
+const sharedLink = useSharedLink()
+function onPaste(e: ClipboardEvent) {
+  if (!props.links) return
+  const text = e.clipboardData?.getData('text/plain') ?? ''
+  if (text && sharedLink.open(text)) {
+    e.preventDefault()
+    input.value?.blur()
+  }
+}
 
 function clear() {
   model.value = ''
@@ -43,6 +55,7 @@ function clear() {
       spellcheck="false"
       enterkeyhint="search"
       @focus="emit('focus')"
+      @paste="onPaste"
       @keydown.esc="model ? clear() : input?.blur()"
     >
     <UiKbd v-if="shortcut && !model" :keys="['⌘', 'K']" class="sf__kbd" />

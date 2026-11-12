@@ -5,7 +5,10 @@
 //! Tombstone удаляет строку с меньшим `rev`. Плейлист уходит вместе с позициями — их tombstone'ов при
 //! каскадном удалении сервер не пишет.
 
-use dalywave_protocol::sync::{SyncEntity, SyncPage, SyncTombstone};
+use dalywave_protocol::{
+    sync::{SyncEntity, SyncPage, SyncTombstone},
+    wave::WavePreset,
+};
 use rusqlite::{Transaction, params};
 use serde_json::Value;
 use uuid::Uuid;
@@ -58,6 +61,41 @@ impl Store {
         }
         tx.commit()?;
         Ok(a)
+    }
+}
+
+impl Store {
+    /// Сохранённые сочетания волны по порядку карточек.
+    pub fn wave_presets(&self) -> StoreResult<Vec<WavePreset>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, icon, settings, position, created_at FROM wave_presets ORDER BY position, id",
+        )?;
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, f64>(4)?,
+                r.get::<_, String>(5)?,
+            ))
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            let (id, name, icon, settings, position, created_at) = row?;
+            let (Ok(id), Ok(created_at)) = (id.parse(), created_at.parse()) else {
+                continue;
+            };
+            out.push(WavePreset {
+                id,
+                name,
+                icon,
+                settings: serde_json::from_str(&settings).unwrap_or_default(),
+                position,
+                created_at,
+            });
+        }
+        Ok(out)
     }
 }
 
@@ -308,6 +346,24 @@ fn apply_rows(
         a.reserve |= n > 0;
         a.rows += n;
     }
+    for r in &page.wave_presets {
+        a.rows += tx.execute(
+            "INSERT INTO wave_presets (id, rev, name, icon, settings, position, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, name = excluded.name, icon = excluded.icon,
+               settings = excluded.settings, position = excluded.position, created_at = excluded.created_at
+             WHERE excluded.rev >= wave_presets.rev",
+            params![
+                r.id.to_string(),
+                r.rev,
+                r.name,
+                r.icon,
+                json(&r.settings)?,
+                r.position,
+                r.created_at.to_rfc3339()
+            ],
+        )?;
+    }
     for r in &page.track_features {
         a.rows += tx.execute(
             "INSERT INTO track_features (recording_id, rev, energy, valence, danceability, bpm, key_camelot, voice,
@@ -431,6 +487,10 @@ fn apply_tombstone(
         SyncEntity::TrackFeatures => tx.execute(
             "DELETE FROM track_features WHERE recording_id = ?1 AND rev < ?2",
             params![key_str(k, "recordingId"), t.rev],
+        )?,
+        SyncEntity::WavePresets => tx.execute(
+            "DELETE FROM wave_presets WHERE id = ?1 AND rev < ?2",
+            params![key_str(k, "id"), t.rev],
         )?,
     };
     if n > 0

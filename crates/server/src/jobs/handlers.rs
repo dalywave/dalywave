@@ -44,7 +44,8 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::TASTE_MODEL, crate::reco::model::run)
         .register(kind::IMPORT_MATCH, crate::import::jobs::run_match)
         .register(kind::IMPORT_APPLY, crate::import::jobs::run_apply)
-        .register(kind::IMPORT_FILE, crate::import::files::run_file);
+        .register(kind::IMPORT_FILE, crate::import::files::run_file)
+        .register(kind::LYRICS, crate::lyrics::run);
     if fetcher.server {
         registry.register(kind::ACQUIRE, acquire::server::run);
     } else {

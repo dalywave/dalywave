@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, a.styles, a.moods FROM unnest($1::uuid[]) AS ids(id)\n           JOIN tracks t ON t.id = ids.id JOIN track_analysis a ON a.recording_id = t.recording_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "styles",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "styles"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "moods",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "moods"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "befec04f7656778cf1dd3b271a4c279543b5826883243b4a741fc65faddc9510"
+}

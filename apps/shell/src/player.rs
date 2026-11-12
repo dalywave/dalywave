@@ -17,18 +17,18 @@ use std::time::{Duration, Instant};
 
 use crossbeam_channel::Receiver;
 use dalywave_audio::{
-    ChangeReason, Engine, EngineConfig, Event, PlaybackState, Resolved, Resolver, SourceSpec,
-    TrackSpec, Transition,
+    ChangeReason, EQ_BANDS, Engine, EngineConfig, EqPreset, EqSettings, Event, PlaybackState,
+    Resolved, Resolver, SleepStatus, SleepTimer, SourceSpec, TrackSpec, Transition,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{
-    MAIN,
+    MAIN, MINI,
     error::{ShellError, ShellResult},
-    media::{self, Command, Source},
-    settings::Settings,
+    media::{self, Command, Media, RepeatMode, Source},
+    settings::{Settings, StoredEq},
 };
 
 pub const EVENT_STATE: &str = "player:state";
@@ -38,6 +38,9 @@ pub const EVENT_BUFFERING: &str = "player:buffering";
 pub const EVENT_ERROR: &str = "player:error";
 pub const EVENT_ENDED: &str = "player:ended";
 pub const EVENT_LEVEL: &str = "player:level";
+pub const EVENT_SLEEP: &str = "player:sleep";
+/// Мини-плеер: что играет (название, обложка, пауза) — после смены трека и паузы
+pub const EVENT_NOW: &str = "player:now";
 
 /// Громкость до первой команды интерфейса — как `dw.volume` в интерфейсе по умолчанию
 const DEFAULT_VOLUME: f32 = 0.72;
@@ -163,6 +166,8 @@ fn start_engine(app: &AppHandle) {
         ),
         resolver: Some(resolver(app)),
         analysis: Some(analysis_source(app)),
+        // Эквалайзер этого устройства — с первого трека, ещё до интерфейса
+        eq: app.state::<Settings>().eq().as_ref().and_then(eq_settings),
         ..EngineConfig::default()
     };
     let started = Instant::now();
@@ -406,7 +411,11 @@ struct LevelPayload {
 }
 
 fn emit<S: Serialize + Clone>(app: &AppHandle, event: &str, payload: S) {
-    let _ = app.emit_to(MAIN, event, payload);
+    let _ = app.emit_to(MAIN, event, payload.clone());
+    // Мини-плеер — ещё один вид того же плеера: те же события
+    if app.get_webview_window(MINI).is_some() {
+        let _ = app.emit_to(MINI, event, payload);
+    }
 }
 
 #[cfg_attr(not(target_os = "ios"), allow(dead_code))]
@@ -574,8 +583,21 @@ fn forward_events(app: &AppHandle, events: Receiver<Event>) {
                 // Устройство могло смениться: шторке «Устройства» — свежий список
                 crate::audio::changed(app);
             }
+            Event::Sleep(status) => {
+                log::info!("player: sleep timer {status:?}");
+                emit(app, EVENT_SLEEP, SleepPayload::from(*status));
+            }
         }
         media::on_player_event(app, &ev);
+        #[cfg(desktop)]
+        crate::discord::on_player_event(app, &ev);
+        if matches!(
+            ev,
+            Event::TrackChanged { .. } | Event::State(_) | Event::QueueEnded
+        ) && app.get_webview_window(MINI).is_some()
+        {
+            let _ = app.emit_to(MINI, EVENT_NOW, now_payload(app));
+        }
     }
 }
 
@@ -596,9 +618,15 @@ pub fn remote(app: &AppHandle, command: Command, source: Source) {
         Command::Play if loaded => engine.play(),
         Command::Toggle if loaded => engine.toggle(),
         Command::Pause | Command::Stop => engine.pause(),
-        Command::Next if s.index.is_some_and(|i| i + 1 < s.queue_len) => engine.next(),
-        Command::Previous if loaded && (s.index != Some(0) || s.position_ms > 3000) => {
+        // Повтор одного трека «следующий» и «предыдущий» пропускают — это движок учитывает сам
+        Command::Next if s.has_next => engine.next(),
+        Command::Previous if loaded && (s.has_previous || s.position_ms > 3000) => {
             engine.previous()
+        }
+        Command::SetRepeat { mode } => {
+            // Повтор одного трека движок включает сразу (WebView может спать), режим — интерфейсу
+            engine.set_repeat_one(mode == RepeatMode::One);
+            media::forward(app, command, source);
         }
         Command::Seek { position_ms } if loaded => engine.seek(position_ms),
         Command::SeekBy { offset_ms } if loaded => {
@@ -819,12 +847,210 @@ pub async fn player_state(app: AppHandle) -> ShellResult<PlayerSnapshot> {
     })
 }
 
+// ---- эквалайзер и таймер сна ----
+
+/// Эквалайзер от интерфейса: `preset` — `off`, `bass-boost`, `bass-cut`, `vocal`, `acoustic`,
+/// `electronic`, `loudness` или `custom`; `gains` — десять полос «Своего», дБ.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EqDto {
+    pub preset: String,
+    #[serde(default)]
+    pub gains: Vec<f32>,
+}
+
+/// Что играет движок: пресет — его таблица, «Свой» — полосы как есть, `off` — ничего.
+fn eq_settings(eq: &StoredEq) -> Option<EqSettings> {
+    if eq.preset == "custom" {
+        let mut gains = [0.0; EQ_BANDS];
+        for (g, v) in gains.iter_mut().zip(&eq.gains) {
+            *g = *v;
+        }
+        return Some(EqSettings::new(gains)).filter(|s| !s.is_flat());
+    }
+    EqPreset::from_id(&eq.preset)
+        .filter(|p| *p != EqPreset::Off)
+        .map(EqSettings::preset)
+}
+
+/// Эквалайзер этого устройства: запоминается и действует сразу. null — выключить.
+#[tauri::command]
+pub async fn player_set_eq(app: AppHandle, eq: Option<EqDto>) -> ShellResult<()> {
+    let stored = eq.map(|e| StoredEq {
+        preset: e.preset,
+        gains: e.gains.into_iter().take(EQ_BANDS).collect(),
+    });
+    if let Some(e) = &stored
+        && e.preset != "custom"
+        && EqPreset::from_id(&e.preset).is_none()
+    {
+        return Err(ShellError::Invalid(format!(
+            "нет такого пресета эквалайзера: «{}»",
+            e.preset
+        )));
+    }
+    app.state::<Settings>().set_eq(stored.clone())?;
+    engine(&app)
+        .await?
+        .set_eq(stored.as_ref().and_then(eq_settings));
+    Ok(())
+}
+
+/// Сохранённый эквалайзер этого устройства; null — не настраивали (выключен).
+#[tauri::command]
+pub fn player_eq(app: AppHandle) -> Option<EqDto> {
+    app.state::<Settings>().eq().map(|e| EqDto {
+        preset: e.preset,
+        gains: e.gains,
+    })
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(tag = "mode", rename_all = "camelCase")]
+pub enum SleepDto {
+    /// Через `ms` миллисекунд
+    Minutes { ms: u64 },
+    /// В конце текущего трека
+    Track,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SleepPayload {
+    /// `minutes`, `track`; null — таймера нет
+    timer: Option<&'static str>,
+    /// Когда пауза, мс от эпохи Unix (для конца трека — по позиции)
+    ends_at_ms: Option<u64>,
+    remaining_ms: Option<u64>,
+    fading: bool,
+    /// Таймер сработал: музыка на паузе
+    finished: bool,
+}
+
+impl From<SleepStatus> for SleepPayload {
+    fn from(s: SleepStatus) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as u64);
+        Self {
+            timer: s.timer.map(|t| match t {
+                SleepTimer::After { .. } => "minutes",
+                SleepTimer::EndOfTrack => "track",
+            }),
+            ends_at_ms: s.remaining_ms.map(|r| now + r),
+            remaining_ms: s.remaining_ms,
+            fading: s.fading,
+            finished: s.finished,
+        }
+    }
+}
+
+/// Таймер сна: последние секунды звук затухает, затем пауза. null — снять. Ход — `player:sleep`.
+#[tauri::command]
+pub async fn player_set_sleep(app: AppHandle, timer: Option<SleepDto>) -> ShellResult<()> {
+    let timer = timer.map(|t| match t {
+        SleepDto::Minutes { ms } => SleepTimer::After {
+            ms: ms.clamp(1_000, 24 * 3_600_000),
+        },
+        SleepDto::Track => SleepTimer::EndOfTrack,
+    });
+    engine(&app).await?.set_sleep(timer);
+    Ok(())
+}
+
+/// Перемешивание и повтор плеера интерфейса: повтор одного трека ведёт движок (и в фоне),
+/// оба режима показываются в Пункте управления.
+#[tauri::command]
+pub async fn player_set_modes(
+    app: AppHandle,
+    shuffle: bool,
+    repeat: RepeatMode,
+) -> ShellResult<()> {
+    engine(&app)
+        .await?
+        .set_repeat_one(repeat == RepeatMode::One);
+    media::set_modes(&app, shuffle, repeat);
+    Ok(())
+}
+
+/// Таймер сна сейчас (при запуске интерфейса: таймер мог стоять, пока окно было закрыто).
+#[tauri::command]
+pub async fn player_sleep(app: AppHandle) -> ShellResult<SleepPayload> {
+    let s = engine(&app).await?.snapshot().sleep.unwrap_or(SleepStatus {
+        timer: None,
+        remaining_ms: None,
+        fading: false,
+        finished: false,
+    });
+    Ok(s.into())
+}
+
+// ---- мини-плеер: другой вид того же плеера ----
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NowPayload {
+    title: String,
+    artist: String,
+    album: Option<String>,
+    artwork_url: Option<String>,
+    duration_ms: Option<u64>,
+    position_ms: u64,
+    playing: bool,
+    /// Ключ элемента очереди: с ним сверяются события `player:position`
+    id: Option<String>,
+}
+
+fn now_payload(app: &AppHandle) -> Option<NowPayload> {
+    let now = app.state::<Media>().current()?;
+    let snap = app.state::<Player>().engine().map(|e| e.snapshot());
+    Some(NowPayload {
+        title: now.title,
+        artist: now.artist,
+        album: now.album,
+        artwork_url: now.artwork_url,
+        duration_ms: snap
+            .as_ref()
+            .and_then(|s| s.duration_ms)
+            .or(now.duration_ms),
+        position_ms: snap.as_ref().map_or(now.position_ms, |s| s.position_ms),
+        playing: now.playing,
+        id: snap.and_then(|s| s.id),
+    })
+}
+
+/// Что играет — для мини-плеера; null — ничего.
+#[tauri::command]
+pub fn player_now(app: AppHandle) -> Option<NowPayload> {
+    now_payload(&app)
+}
+
+/// Кнопки мини-плеера — как пульт: что движок не может сам (следующий в конце его очереди,
+/// предыдущий из истории), уходит плееру главного окна.
+#[tauri::command]
+pub fn player_remote(app: AppHandle, action: String) -> ShellResult<()> {
+    let command = match action.as_str() {
+        "toggle" => Command::Toggle,
+        "play" => Command::Play,
+        "pause" => Command::Pause,
+        "next" => Command::Next,
+        "previous" => Command::Previous,
+        other => {
+            return Err(ShellError::Invalid(format!(
+                "неизвестное действие пульта: «{other}»"
+            )));
+        }
+    };
+    remote(&app, command, Source::Tray);
+    Ok(())
+}
+
 // ---- проверка звука без входа ----
 
 /// `DALYWAVE_SMOKE=<адрес тестового сервера>` (crates/client/audio/tools/serve.py): очередь из
 /// его manifest.json играет сразу после запуска, в журнал — смены треков, позиция, уровень и
 /// нагрузка. `DALYWAVE_SMOKE_ALBUM` — id набора из manifest.json (по умолчанию все подряд).
-/// Громкость — `DW_VOLUME`.
+/// Громкость — `DW_VOLUME`; `DALYWAVE_SMOKE_MINI=1` — сразу открыть мини-плеер.
 fn smoke(app: AppHandle, engine: Engine, server: String) {
     app.state::<Player>().smoke.store(true, Ordering::Relaxed);
     let spawned = std::thread::Builder::new()
@@ -847,6 +1073,16 @@ fn smoke(app: AppHandle, engine: Engine, server: String) {
             log::info!("smoke: {} tracks from {server}", tracks.len());
             engine.set_levels(true);
             engine.load_queue(tracks, 0, true);
+            // Проверка мини-плеера: `DALYWAVE_SMOKE_MINI=1` — окно открывается само
+            #[cfg(desktop)]
+            if std::env::var("DALYWAVE_SMOKE_MINI").is_ok_and(|v| v == "1") {
+                let handle = app.clone();
+                let _ = app.run_on_main_thread(move || {
+                    if let Err(e) = crate::mini::open(&handle) {
+                        log::warn!("smoke: mini player: {e}");
+                    }
+                });
+            }
             loop {
                 std::thread::sleep(Duration::from_secs(10));
                 let s = engine.snapshot();
@@ -943,6 +1179,56 @@ mod tests {
             serde_json::from_value(serde_json::json!({ "mode": "dj", "expressiveness": 0.25 }))
                 .unwrap();
         assert!(matches!(t, TransitionDto::Dj { expressiveness } if expressiveness == 0.25));
+    }
+
+    #[test]
+    fn eq_from_settings() {
+        let off = StoredEq {
+            preset: "off".into(),
+            gains: vec![3.0; 10],
+        };
+        assert_eq!(eq_settings(&off), None);
+        let vocal = StoredEq {
+            preset: "vocal".into(),
+            gains: vec![],
+        };
+        assert_eq!(
+            eq_settings(&vocal),
+            Some(EqSettings::preset(EqPreset::Vocal))
+        );
+        let custom = StoredEq {
+            preset: "custom".into(),
+            gains: vec![20.0, -3.0],
+        };
+        let s = eq_settings(&custom).unwrap();
+        assert_eq!(s.gains_db[0], 12.0, "clamped");
+        assert_eq!(s.gains_db[1], -3.0);
+        assert_eq!(s.gains_db[9], 0.0);
+        let flat = StoredEq {
+            preset: "custom".into(),
+            gains: vec![0.0; 10],
+        };
+        assert_eq!(eq_settings(&flat), None);
+    }
+
+    #[test]
+    fn sleep_json() {
+        let t: SleepDto =
+            serde_json::from_value(serde_json::json!({ "mode": "minutes", "ms": 900000 })).unwrap();
+        assert!(matches!(t, SleepDto::Minutes { ms: 900_000 }));
+        let t: SleepDto = serde_json::from_value(serde_json::json!({ "mode": "track" })).unwrap();
+        assert!(matches!(t, SleepDto::Track));
+        let v = serde_json::to_value(SleepPayload::from(SleepStatus {
+            timer: Some(SleepTimer::EndOfTrack),
+            remaining_ms: Some(1000),
+            fading: true,
+            finished: false,
+        }))
+        .unwrap();
+        assert_eq!(v["timer"], "track");
+        assert_eq!(v["remainingMs"], 1000);
+        assert_eq!(v["fading"], true);
+        assert!(v["endsAtMs"].as_u64().unwrap() > 1000);
     }
 
     #[test]

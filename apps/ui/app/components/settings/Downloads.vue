@@ -64,6 +64,11 @@ const reserveText = computed(() => {
   return t('reserveCount', { ready: r.ready, total: formatCount(r.tracks, 'track', lang.value) })
 })
 
+const reserveSize = computed(() => {
+  const r = s.value?.reserve
+  return `${formatCount(r?.ready ?? 0, 'track', lang.value)} · ${formatBytes(usage.value.reserveBytes, lang.value)}`
+})
+
 // «Удалить всё» — вторым нажатием: первое меняет подпись на «Точно удалить?»
 const confirming = ref(false)
 let confirmTimer: ReturnType<typeof setTimeout> | undefined
@@ -126,6 +131,12 @@ onMounted(() => {
       <UiSwitch :model-value="s?.settings.reserveEnabled ?? true" :label="t('reserve')" hide-label @update:model-value="v => offline.setSettings({ reserveEnabled: v })" />
     </SettingsRow>
 
+    <!-- Состав запаса — отдельной страницей, в «Скачанном» его нет -->
+    <SettingsRow v-if="s?.settings.reserveEnabled" as="button" :title="t('reserveList')" @click="navigateTo('/downloads/reserve')">
+      <span class="rsv tnum">{{ reserveSize }}</span>
+      <Icon name="ph:caret-right" class="rsv__chev" aria-hidden="true" />
+    </SettingsRow>
+
     <SettingsRow :title="t('forceOffline')" :description="t('forceOfflineDesc')">
       <UiSwitch :model-value="s?.settings.forceOffline ?? false" :label="t('forceOffline')" hide-label @update:model-value="v => offline.setSettings({ forceOffline: v })" />
     </SettingsRow>
@@ -144,7 +155,7 @@ onMounted(() => {
 .use__seg { height: 100%; transition: width var(--dur-3) var(--ease-out); }
 .use__seg + .use__seg { box-shadow: -1px 0 0 var(--ink-1, #08090c); }
 .use__seg--pinned, .use__dot--pinned { background: var(--accent); }
-.use__seg--reserve, .use__dot--reserve { background: #b01cf0; }
+.use__seg--reserve, .use__dot--reserve { background: color-mix(in oklab, var(--accent) 45%, var(--ink-3)); }
 .use__seg--cache, .use__dot--cache { background: var(--text-3); }
 .use__legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-small); color: var(--text-2); }
 .use__item { display: inline-flex; align-items: center; gap: 6px; }
@@ -160,6 +171,8 @@ onMounted(() => {
 .lim__slider { flex: 1; min-width: 120px; }
 .lim__value { width: 72px; flex: none; text-align: right; font-size: var(--fs-small); font-weight: 600; color: var(--text-1); }
 .tnum { font-variant-numeric: tabular-nums; }
+.rsv { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; }
+.rsv__chev { flex: none; font-size: 16px; color: var(--text-3); }
 </style>
 
 <i18n lang="json">
@@ -183,6 +196,7 @@ onMounted(() => {
     "reserve": "Умный запас",
     "reserveDesc": "Любимое вперемешку с новым — волна играет и без сети",
     "reserveCount": "Волна без сети: на устройстве {ready} из {total}",
+    "reserveList": "Запас для волны",
     "forceOffline": "Без сети",
     "forceOfflineDesc": "Только скачанное: приложение не ходит на сервер",
     "remove": "Удалить всё скачанное",
@@ -207,6 +221,7 @@ onMounted(() => {
     "reserve": "Smart reserve",
     "reserveDesc": "Favourites mixed with new music — the wave plays offline",
     "reserveCount": "Offline wave: {ready} of {total} on this device",
+    "reserveList": "Wave reserve",
     "forceOffline": "Offline mode",
     "forceOfflineDesc": "Downloads only: the app stays off the server",
     "remove": "Remove all downloads",

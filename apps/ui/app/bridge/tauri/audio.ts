@@ -3,8 +3,9 @@
 // сводит без пауз или наложением и сам переходит к нему — в фоне, на экране блокировки, с пульта
 // системы. Ссылки, которых нет или которые истекли, движок просит у сервера сам. Плееру остаются
 // очередь и история: движок сообщает, к какому элементу перешёл (`advance`).
-import type { AudioEngine, AudioEngineEvents, AudioLevels, EngineTrack, TrackSource } from '../types'
-import type { PlayerItem, PlayerTransition, Shell } from './shell'
+import type { EqConfig } from '~/utils/eq'
+import type { AudioEngine, AudioEngineEvents, AudioLevels, EngineTrack, RepeatMode, SleepState, SleepTimer, TrackSource } from '../types'
+import type { PlayerItem, PlayerSleep, PlayerTransition, Shell } from './shell'
 
 type Listener<E extends keyof AudioEngineEvents> = AudioEngineEvents[E]
 
@@ -36,8 +37,9 @@ export class NativeAudioEngine implements AudioEngine {
   // «играть» должны прийти по порядку
   private chain: Promise<unknown> = Promise.resolve()
   private listeners: { [E in keyof AudioEngineEvents]: Set<Listener<E>> } = {
-    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(),
+    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(), sleep: new Set(),
   }
+  readonly eqSupported = true
 
   constructor(private readonly shell: () => Promise<Shell>) {
     void this.subscribe()
@@ -89,6 +91,7 @@ export class NativeAudioEngine implements AudioEngine {
       this.level = l
       this.levelAt = performance.now()
     })
+    await sh.on('player:sleep', s => this.emit('sleep', toSleep(s)))
   }
 
   private emit<E extends keyof AudioEngineEvents>(event: E, ...args: Parameters<AudioEngineEvents[E]>) {
@@ -245,9 +248,40 @@ export class NativeAudioEngine implements AudioEngine {
     })
   }
 
+  // Эквалайзер и таймер сна — в движке: оболочка помнит эквалайзер этого устройства и включает
+  // его с запуска, таймер сна работает и в фоне, когда WebView усыплён
+  setEq(eq: EqConfig | null) {
+    this.run(sh => sh.player.setEq(eq ? { preset: eq.preset, gains: eq.gains } : null))
+  }
+
+  async savedEq(): Promise<EqConfig | null> {
+    const eq = await (await this.shell()).player.eq().catch(() => null)
+    return eq ? { preset: eq.preset, gains: eq.gains } : null
+  }
+
+  setSleep(timer: SleepTimer | null) {
+    this.run(sh => sh.player.setSleep(timer))
+  }
+
+  async sleepState(): Promise<SleepState | null> {
+    const s = await (await this.shell()).player.sleep().catch(() => null)
+    return s ? toSleep(s) : null
+  }
+
+  // Затухание таймера сна делает движок
+  fadeOut() {}
+
+  setModes(shuffle: boolean, repeat: RepeatMode) {
+    this.run(sh => sh.player.setModes(shuffle, repeat))
+  }
+
   on<E extends keyof AudioEngineEvents>(event: E, cb: AudioEngineEvents[E]): () => void {
     const set = this.listeners[event] as Set<AudioEngineEvents[E]>
     set.add(cb)
     return () => set.delete(cb)
   }
+}
+
+function toSleep(s: PlayerSleep): SleepState {
+  return { timer: s.timer, endsAtMs: s.endsAtMs, fading: s.fading, finished: s.finished }
 }

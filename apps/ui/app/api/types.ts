@@ -31,6 +31,13 @@ export type SearchScope = Schemas['SearchScope']
 export type SearchResults = Schemas['SearchResults']
 export type TrackList = Schemas['TrackList']
 
+// Тексты песен
+export type LyricsKind = Schemas['LyricsKind']
+export type LyricsLine = Schemas['LyricsLine']
+export type TrackLyrics = Schemas['TrackLyrics']
+export type LyricsHit = Schemas['LyricsHit']
+export type LyricsSearchResults = Schemas['LyricsSearchResults']
+
 // Главная
 export type ShelfKind = Schemas['ShelfKind']
 export type ShelfItem = Schemas['ShelfItem']
@@ -45,6 +52,13 @@ export type ListeningStats = Schemas['ListeningStats']
 export type TasteKnowledge = Schemas['TasteKnowledge']
 export type TopArtist = Schemas['TopArtist']
 export type TopGenre = Schemas['TopGenre']
+
+// Итоги года
+export type Rewind = Schemas['Rewind']
+export type RewindYears = Schemas['RewindYears']
+export type RewindTrack = Schemas['RewindTrack']
+export type RewindArtist = Schemas['RewindArtist']
+export type RewindAlbum = Schemas['RewindAlbum']
 
 // Медиатека
 export type DownloadPolicy = Schemas['DownloadPolicy']
@@ -73,6 +87,7 @@ export type PlaylistList = Schemas['PlaylistList']
 export type NewPlaylist = Schemas['NewPlaylist']
 export type PlaylistPatch = Schemas['PlaylistPatch']
 export type AddPlaylistItems = Schemas['AddPlaylistItems']
+export type AddedPlaylistItems = Schemas['AddedPlaylistItems']
 
 // Импорт: архив Spotify, списки, свои файлы
 export type ImportKind = Schemas['ImportKind']
@@ -166,6 +181,10 @@ export type WaveFeedbackKind = Schemas['WaveFeedbackKind']
 export type WaveReason = Schemas['Reason']
 export type SoundSearchResults = Schemas['SoundSearchResults']
 export type WaveSeed = Schemas['WaveSeed']
+export type WavePreset = Schemas['WavePreset']
+export type WavePresetList = Schemas['WavePresetList']
+export type NewWavePreset = Schemas['NewWavePreset']
+export type WavePresetPatch = Schemas['WavePresetPatch']
 export type RecoOverview = Schemas['RecoOverview']
 export type RecoSettings = Schemas['RecoSettings']
 export type RecoSettingsPatch = Schemas['RecoSettingsPatch']
@@ -176,6 +195,12 @@ export type WaveSessionView = Schemas['WaveSessionView']
 export type WavePoolView = Schemas['WavePoolView']
 export type MixView = Schemas['MixView']
 export type RecoRunResult = Schemas['RecoRunResult']
+
+// «Поделиться»: карточка ссылки и разбор чужих ссылок
+export type ShareKind = Schemas['ShareKind']
+export type ShareCard = Schemas['ShareCard']
+export type LinkSource = Schemas['LinkSource']
+export type ResolvedLink = Schemas['ResolvedLink']
 
 export type ErrorBody = Schemas['ErrorBody']
 
@@ -190,3 +215,8 @@ export class ApiError extends Error {
     this.name = 'ApiError'
   }
 }
+
+// «Распознать» (Shazam): что узнали и какой это трек каталога
+export type Recognition = Schemas['Recognition']
+export type RecognitionPage = Schemas['RecognitionPage']
+export type RecognizeRequest = Schemas['RecognizeRequest']

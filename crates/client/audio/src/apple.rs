@@ -20,11 +20,13 @@ use objc2::{AnyThread, Message};
 use objc2_core_foundation::CGSize;
 use objc2_foundation::{NSData, NSMutableDictionary, NSNumber, NSString};
 use objc2_media_player::{
-    MPChangePlaybackPositionCommandEvent, MPMediaItemArtwork, MPMediaItemPropertyAlbumTitle,
+    MPChangePlaybackPositionCommandEvent, MPChangeRepeatModeCommandEvent,
+    MPChangeShuffleModeCommandEvent, MPMediaItemArtwork, MPMediaItemPropertyAlbumTitle,
     MPMediaItemPropertyArtist, MPMediaItemPropertyArtwork, MPMediaItemPropertyPlaybackDuration,
     MPMediaItemPropertyTitle, MPNowPlayingInfoCenter, MPNowPlayingInfoPropertyDefaultPlaybackRate,
     MPNowPlayingInfoPropertyElapsedPlaybackTime, MPNowPlayingInfoPropertyPlaybackRate,
     MPRemoteCommand, MPRemoteCommandCenter, MPRemoteCommandEvent, MPRemoteCommandHandlerStatus,
+    MPRepeatType, MPShuffleType,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -36,6 +38,17 @@ pub enum RemoteCommand {
     Previous,
     /// Перемотка с экрана блокировки, секунды.
     Seek(f64),
+    /// Перемешивание включили или выключили (Пункт управления, CarPlay, Siri).
+    SetShuffle(bool),
+    SetRepeat(Repeat),
+}
+
+/// Повтор для системы: выключен, один трек, вся очередь.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Repeat {
+    Off,
+    One,
+    All,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -158,7 +171,8 @@ impl Drop for RemoteCommands {
     }
 }
 
-/// Регистрирует команды play, pause, toggle, next, previous и перемотку. Главный поток.
+/// Регистрирует команды play, pause, toggle, next, previous, перемотку, перемешивание и повтор.
+/// Главный поток.
 pub fn register_remote_commands<F>(handler: F) -> RemoteCommands
 where
     F: Fn(RemoteCommand) + Send + Sync + 'static,
@@ -205,11 +219,57 @@ where
                 MPRemoteCommandHandlerStatus::Success
             }),
         );
+        let h = handler.clone();
+        add(
+            Retained::into_super(center.changeShuffleModeCommand()),
+            Box::new(move |ev: NonNull<MPRemoteCommandEvent>| {
+                let ev = ev.cast::<MPChangeShuffleModeCommandEvent>();
+                h(RemoteCommand::SetShuffle(
+                    ev.as_ref().shuffleType() != MPShuffleType::Off,
+                ));
+                MPRemoteCommandHandlerStatus::Success
+            }),
+        );
+        let h = handler.clone();
+        add(
+            Retained::into_super(center.changeRepeatModeCommand()),
+            Box::new(move |ev: NonNull<MPRemoteCommandEvent>| {
+                let ev = ev.cast::<MPChangeRepeatModeCommandEvent>();
+                let repeat = match ev.as_ref().repeatType() {
+                    MPRepeatType::One => Repeat::One,
+                    MPRepeatType::All => Repeat::All,
+                    _ => Repeat::Off,
+                };
+                h(RemoteCommand::SetRepeat(repeat));
+                MPRemoteCommandHandlerStatus::Success
+            }),
+        );
         // Перемотка на ±15 с не нужна: на экране блокировки остаются «назад/вперёд по трекам».
         center.skipForwardCommand().setEnabled(false);
         center.skipBackwardCommand().setEnabled(false);
     }
     RemoteCommands { targets }
+}
+
+/// Текущие перемешивание и повтор — системе (кнопки в Пункте управления, CarPlay). Главный поток.
+pub fn set_modes(shuffle: bool, repeat: Repeat) {
+    unsafe {
+        let center = MPRemoteCommandCenter::sharedCommandCenter();
+        center
+            .changeShuffleModeCommand()
+            .setCurrentShuffleType(if shuffle {
+                MPShuffleType::Items
+            } else {
+                MPShuffleType::Off
+            });
+        center
+            .changeRepeatModeCommand()
+            .setCurrentRepeatType(match repeat {
+                Repeat::Off => MPRepeatType::Off,
+                Repeat::One => MPRepeatType::One,
+                Repeat::All => MPRepeatType::All,
+            });
+    }
 }
 
 /// Обновляет «Сейчас играет». Лучше звать с главного потока.

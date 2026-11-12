@@ -64,7 +64,7 @@ const offset = computed(() => (C * (1 - Math.min(1, Math.max(0, progress.value))
 .dring svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
 .dring circle { fill: none; stroke-width: 2.2; }
 .dring__track { stroke: var(--fill-3); }
-.dring__bar { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset var(--dur-3) var(--ease-out); filter: drop-shadow(0 0 3px color-mix(in oklab, var(--accent) 55%, transparent)); }
+.dring__bar { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset var(--dur-3) var(--ease-out); }
 .dring__spin { stroke: var(--text-3); stroke-linecap: round; transform-origin: 12px 12px; animation: dring-spin 1.1s linear infinite; }
 .dring__icon { font-size: calc(var(--size) * 0.46); }
 .dring__dot { position: absolute; right: 0; bottom: 0; width: max(6px, calc(var(--size) * 0.24)); height: max(6px, calc(var(--size) * 0.24)); border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--ink-1), 0 0 8px color-mix(in oklab, var(--success) 60%, transparent); animation: dring-breathe 2.8s var(--ease-in-out) infinite; }

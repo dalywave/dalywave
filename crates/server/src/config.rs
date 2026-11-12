@@ -10,6 +10,7 @@ pub const DEFAULT_LISTEN: &str = "0.0.0.0:8400";
 pub const DEFAULT_DEEZER_URL: &str = "https://api.deezer.com";
 pub const DEFAULT_FETCHER_URL: &str = "http://localhost:8402";
 pub const DEFAULT_ML_URL: &str = "http://localhost:8403";
+pub const DEFAULT_LRCLIB_URL: &str = "https://lrclib.net";
 /// Сколько держать запрос загрузчика, пока заданий нет: меньше таймаута его HTTP-клиента (30 с).
 pub const CLAIM_WAIT: Duration = Duration::from_secs(25);
 /// Аренда задания загрузчиком. Обычно трек качается 10–20 с; загрузчик продлевает аренду, пока работает.
@@ -44,6 +45,8 @@ pub struct Config {
     pub deezer: DeezerConfig,
     pub fetcher: FetcherConfig,
     pub ml: MlConfig,
+    /// Тексты песен
+    pub lrclib: LrclibConfig,
     /// Токен конвейера выпусков (`make release-mac`, CI): загрузка сборки и регистрация выпуска
     /// приложения. `None` — выпускать нельзя.
     pub release_token: Option<String>,
@@ -61,6 +64,21 @@ impl Default for MlConfig {
     fn default() -> Self {
         Self {
             url: DEFAULT_ML_URL.into(),
+        }
+    }
+}
+
+/// LRCLIB — открытая база текстов песен (ключ не нужен).
+#[derive(Clone, Debug)]
+pub struct LrclibConfig {
+    /// Например `https://lrclib.net`.
+    pub url: String,
+}
+
+impl Default for LrclibConfig {
+    fn default() -> Self {
+        Self {
+            url: DEFAULT_LRCLIB_URL.into(),
         }
     }
 }
@@ -294,6 +312,11 @@ impl Config {
         let ml = MlConfig {
             url: ml_url.trim_end_matches('/').to_string(),
         };
+        let lrclib_url = var("LRCLIB_URL").unwrap_or_else(|| DEFAULT_LRCLIB_URL.into());
+        url::Url::parse(&lrclib_url).context("DALYWAVE_LRCLIB_URL is not a valid URL")?;
+        let lrclib = LrclibConfig {
+            url: lrclib_url.trim_end_matches('/').to_string(),
+        };
         let release_token = var("RELEASE_TOKEN").filter(|t| {
             let ok = t.chars().count() >= MIN_RELEASE_TOKEN_LEN;
             if !ok {
@@ -321,6 +344,7 @@ impl Config {
             deezer,
             fetcher,
             ml,
+            lrclib,
             release_token,
         })
     }

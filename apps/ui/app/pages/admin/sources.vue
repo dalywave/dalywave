@@ -31,6 +31,7 @@ useIntervalFn(() => void load(), 30_000)
 const names = computed(() => Object.fromEntries((data.value?.downloaders ?? []).map(d => [d.id, d.name])))
 const live = computed(() => data.value?.downloaders.filter(d => !d.revokedAt) ?? [])
 const revoked = computed(() => data.value?.downloaders.filter(d => d.revokedAt) ?? [])
+const showRevoked = ref(false)
 
 // ---------- Проверка скачивания ----------
 
@@ -158,7 +159,7 @@ const rate = computed(() => {
           </div>
           <div v-for="d in live" :key="d.id" class="ap-tr">
             <span class="ap-cell"><b>{{ d.name }}</b><small>{{ d.workerId ?? t('dl.noMachine') }}</small></span>
-            <span class="src__state" :class="{ 'ap-ok': d.online }"><i class="ap-dot" :class="{ 'is-ok': d.online }" />{{ seen(d) }}</span>
+            <AdminStatus :tone="d.online ? 'ok' : 'idle'">{{ seen(d) }}</AdminStatus>
             <span class="ap-cell ap-hide-phone">
               <b>{{ d.ytDlpVersion ? `yt-dlp ${d.ytDlpVersion}` : '—' }}</b>
               <small>{{ [d.version ? `fetcher ${d.version}` : null, abilities(d)].filter(Boolean).join(' · ') }}</small>
@@ -171,7 +172,10 @@ const rate = computed(() => {
             </span>
           </div>
         </div>
-        <p v-else class="ap-hint src__none">{{ t('dl.none') }}</p>
+        <div v-else class="src__none">
+          <Icon name="ph:plugs" />
+          <span class="ap-cell"><b>{{ t('dl.none') }}</b><small>{{ t('dl.noneHint') }}</small></span>
+        </div>
         <form class="src__new" @submit.prevent="create">
           <input v-model="newName" class="ap-input" maxlength="60" :placeholder="t('dl.newPlaceholder')" :aria-label="t('dl.newLabel')">
           <UiButton type="submit" icon="ph:plus" :disabled="!newName.trim()" :loading="creating">{{ t('dl.add') }}</UiButton>
@@ -184,15 +188,15 @@ const rate = computed(() => {
             <UiIconButton icon="ph:x" :label="t('dl.hideToken')" size="sm" @click="token = null" />
           </div>
         </div>
-        <details v-if="revoked.length" class="src__revoked">
-          <summary>{{ t('dl.revokedList', { n: revoked.length }) }}</summary>
-          <div class="ap-table">
+        <div v-if="revoked.length" class="src__revoked">
+          <UiButton variant="ghost" size="sm" :icon-right="showRevoked ? 'ph:caret-up' : 'ph:caret-down'" :aria-expanded="showRevoked" @click="showRevoked = !showRevoked">{{ t('dl.revokedList', { n: revoked.length }) }}</UiButton>
+          <div v-if="showRevoked" class="ap-table">
             <div v-for="d in revoked" :key="d.id" class="ap-tr src__rev">
               <span class="ap-cell"><b>{{ d.name }}</b><small>{{ d.workerId ?? '' }}</small></span>
               <span class="ap-muted">{{ seen(d) }}</span>
             </div>
           </div>
-        </details>
+        </div>
       </AdminState>
     </AdminSection>
 
@@ -227,16 +231,15 @@ const rate = computed(() => {
 
 <style scoped>
 .src__table { --cols: minmax(140px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.2fr) 64px 64px 64px 40px; }
-.src__state { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-2); }
-.src__state.ap-ok { color: var(--success); }
-.src__none { padding: 8px 0; }
+.src__none { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-small); }
+.src__none > .iconify { flex: none; font-size: 22px; color: var(--text-3); }
 .src__new { display: flex; gap: 8px; max-width: 520px; padding-top: 12px; }
 .src__new .ap-input { flex: 1; }
 .src__token { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; }
 .src__token-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .src__token code { padding: 8px 10px; border-radius: var(--r-2); background: var(--fill-1); color: var(--text-1); word-break: break-all; user-select: all; }
-.src__revoked { padding-top: 8px; font-size: var(--fs-small); color: var(--text-3); }
-.src__revoked summary { cursor: pointer; padding: 8px 0; }
+.src__revoked { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 8px; margin-left: -12px; }
+.src__revoked .ap-table { align-self: stretch; margin-left: 12px; font-size: var(--fs-small); color: var(--text-2); }
 .src__rev { --cols: minmax(0, 1fr) auto; }
 .src__rate { font-size: var(--fs-small); font-weight: 600; color: var(--text-2); }
 .src__err { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
@@ -281,6 +284,7 @@ const rate = computed(() => {
       "revoke": "Отозвать токен",
       "revoked": "Токен «{name}» больше не действует",
       "none": "Загрузчиков пока нет",
+      "noneHint": "Добавьте первый: имя, затем токен для make downloader",
       "newLabel": "Имя нового загрузчика",
       "newPlaceholder": "Например, «Mac Захара»",
       "add": "Добавить",
@@ -288,7 +292,7 @@ const rate = computed(() => {
       "copy": "Копировать",
       "copied": "Токен скопирован",
       "hideToken": "Скрыть токен",
-      "revokedList": "Отозванные: {n}"
+      "revokedList": "Отозванные · {n}"
     },
     "days": {
       "title": "По дням",
@@ -345,6 +349,7 @@ const rate = computed(() => {
       "revoke": "Revoke token",
       "revoked": "The “{name}” token no longer works",
       "none": "No downloaders yet",
+      "noneHint": "Add the first one: a name, then a token for make downloader",
       "newLabel": "New downloader name",
       "newPlaceholder": "For example, “Zakhar's Mac”",
       "add": "Add",
@@ -352,7 +357,7 @@ const rate = computed(() => {
       "copy": "Copy",
       "copied": "Token copied",
       "hideToken": "Hide token",
-      "revokedList": "Revoked: {n}"
+      "revokedList": "Revoked · {n}"
     },
     "days": {
       "title": "By day",

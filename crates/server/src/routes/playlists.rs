@@ -5,15 +5,17 @@ use std::collections::HashMap;
 
 use axum::{
     Router,
-    extract::State,
+    body::Bytes,
+    extract::{DefaultBodyLimit, State},
     http::StatusCode,
     routing::{get, post, put},
 };
 use dalywave_protocol::{
     ErrorBody,
     library::{
-        AddPlaylistItems, AddedPlaylistItems, MovePlaylistItem, MovedPlaylistItem, NewPlaylist,
-        PlaylistDetail, PlaylistItem, PlaylistKind, PlaylistList, PlaylistPatch, PlaylistSummary,
+        AddPlaylistItems, AddedPlaylistItems, DuplicatePlaylist, MovePlaylistItem,
+        MovedPlaylistItem, NewPlaylist, PlaylistDetail, PlaylistItem, PlaylistKind, PlaylistList,
+        PlaylistPatch, PlaylistSummary, RemovePlaylistItems,
     },
     realtime::{LibraryChange, ServerEvent},
     sync::SyncEntity,
@@ -26,8 +28,10 @@ use crate::{
     catalog::views::{self, ImageKind, image_set},
     error::{AppError, AppResult, bad},
     extract::{Json, JsonOrDefault, Path},
+    images,
     realtime::{self, Audience},
     state::AppState,
+    storage::{IMAGE_SIZES, IMMUTABLE, keys},
 };
 
 /// Шаг между позициями при добавлении в конец и перенумерации.
@@ -35,13 +39,23 @@ pub const STEP: f64 = 1024.0;
 /// Ближе — места для вставки нет, позиции плейлиста перенумеровываются.
 pub const MIN_GAP: f64 = 1e-6;
 pub const MAX_ADD: usize = 500;
+/// Своя обложка: фото с телефона бывает крупным, но не больше этого.
+pub const MAX_COVER_BYTES: usize = 15 * 1024 * 1024;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/playlists", get(list).post(create))
         .route("/playlists/{id}", get(detail).patch(update).delete(remove))
         .route("/playlists/{id}/pin", put(pin).delete(unpin))
+        .route(
+            "/playlists/{id}/cover",
+            put(set_cover)
+                .delete(remove_cover)
+                .layer(DefaultBodyLimit::max(MAX_COVER_BYTES)),
+        )
+        .route("/playlists/{id}/duplicate", post(duplicate))
         .route("/playlists/{id}/items", post(add_items))
+        .route("/playlists/{id}/items/remove", post(remove_items))
         .route(
             "/playlists/{id}/items/{itemId}",
             axum::routing::delete(remove_item),
@@ -92,6 +106,26 @@ async fn lock_owned(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> AppResu
     Ok(())
 }
 
+/// Как [`lock_owned`], но только для плейлистов, которые человек ведёт сам: миксы собираются
+/// рекомендациями и при следующей сборке затёрли бы правку — их сначала сохраняют копией.
+async fn lock_editable(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> AppResult<()> {
+    let kind = sqlx::query_scalar!(
+        "SELECT kind FROM playlists WHERE id = $1 AND user_id = $2 FOR UPDATE",
+        id,
+        user_id
+    )
+    .fetch_optional(&mut *conn)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    if kind != PlaylistKind::User.as_str() {
+        return Err(AppError::Conflict {
+            code: "read_only",
+            message: "Этот плейлист собирается сам — сохраните его как свой, чтобы менять".into(),
+        });
+    }
+    Ok(())
+}
+
 async fn touch(conn: &mut PgConnection, id: Uuid) -> Result<(), sqlx::Error> {
     sqlx::query!("UPDATE playlists SET updated_at = now() WHERE id = $1", id)
         .execute(conn)
@@ -116,7 +150,7 @@ pub async fn summaries(
     pinned_only: bool,
 ) -> Result<Vec<PlaylistSummary>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"SELECT p.id, p.title, p.description, p.kind, p.pinned, p.created_at, p.updated_at,
+        r#"SELECT p.id, p.title, p.description, p.kind, p.pinned, p.cover_key, p.created_at, p.updated_at,
                   (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS "tracks_count!",
                   (SELECT COALESCE(sum(t.duration_ms), 0) FROM playlist_items i JOIN tracks t ON t.id = i.track_id
                    WHERE i.playlist_id = p.id)::bigint AS "duration_ms!",
@@ -156,6 +190,7 @@ pub async fn summaries(
                     image_set(ImageKind::Albums, *id, key.as_deref(), source.as_deref())
                 })
                 .collect(),
+            image: image_set(ImageKind::Playlists, r.id, r.cover_key.as_deref(), None),
             id: r.id,
             title: r.title,
             description: r.description,
@@ -376,7 +411,7 @@ pub async fn update(
         .map(clean_description)
         .transpose()?;
     let mut tx = st.db.begin().await?;
-    lock_owned(&mut tx, user, id).await?;
+    lock_editable(&mut tx, user, id).await?;
     sqlx::query!(
         "UPDATE playlists SET title = COALESCE($2, title), description = COALESCE($3, description),
                 updated_at = now()
@@ -428,6 +463,202 @@ pub async fn remove(
     .await;
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/playlists/{id}/cover",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id плейлиста")),
+    request_body(content = Vec<u8>, content_type = "image/jpeg", description = "Картинка: JPEG, PNG или WebP, до 15 МБ. Обрезается по центру до квадрата"),
+    responses(
+        (status = 200, description = "Плейлист со своей обложкой", body = PlaylistSummary),
+        (status = 400, description = "Это не картинка", body = ErrorBody),
+        (status = 404, description = "Нет такого плейлиста", body = ErrorBody),
+        (status = 409, description = "Плейлист собирается сам (микс)", body = ErrorBody),
+        (status = 413, description = "Файл больше 15 МБ", body = ErrorBody),
+    ),
+)]
+pub async fn set_cover(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+    body: Bytes,
+) -> AppResult<Json<PlaylistSummary>> {
+    let user = principal.user.id;
+    // Сначала — есть ли что менять, чтобы не обрабатывать картинку зря
+    {
+        let mut tx = st.db.begin().await?;
+        lock_editable(&mut tx, user, id).await?;
+    }
+    if body.is_empty() {
+        return Err(bad("файл пустой"));
+    }
+    let processed = tokio::task::spawn_blocking(move || images::process(&body, false))
+        .await
+        .map_err(|e| AppError::Internal(e.into()))?
+        .map_err(|_| bad("это не картинка: подойдут JPEG, PNG или WebP"))?;
+    let prefix = keys::playlist_cover(id, Uuid::now_v7());
+    for (size, jpeg) in processed.variants {
+        st.storage
+            .put(
+                &keys::image(&prefix, size),
+                jpeg,
+                "image/jpeg",
+                Some(IMMUTABLE),
+            )
+            .await
+            .map_err(|e| AppError::Unavailable(format!("хранилище не приняло картинку: {e}")))?;
+    }
+    let mut tx = st.db.begin().await?;
+    lock_editable(&mut tx, user, id).await?;
+    let old = sqlx::query_scalar!(
+        "UPDATE playlists p SET cover_key = $2, updated_at = now()
+         FROM (SELECT cover_key FROM playlists WHERE id = $1) old
+         WHERE p.id = $1 RETURNING old.cover_key",
+        id,
+        prefix,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    changed(&mut tx, user, vec![SyncEntity::Playlists]).await;
+    tx.commit().await?;
+    if let Some(old) = old {
+        drop_cover(&st, &old).await;
+    }
+    Ok(Json(summary(&st.db, user, id).await?))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/playlists/{id}/cover",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id плейлиста")),
+    responses(
+        (status = 200, description = "Своей обложки больше нет — снова мозаика", body = PlaylistSummary),
+        (status = 404, description = "Нет такого плейлиста", body = ErrorBody),
+        (status = 409, description = "Плейлист собирается сам (микс)", body = ErrorBody),
+    ),
+)]
+pub async fn remove_cover(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<PlaylistSummary>> {
+    let user = principal.user.id;
+    let mut tx = st.db.begin().await?;
+    lock_editable(&mut tx, user, id).await?;
+    let old = sqlx::query_scalar!(
+        "UPDATE playlists p SET cover_key = NULL, updated_at = now()
+         FROM (SELECT cover_key FROM playlists WHERE id = $1) old
+         WHERE p.id = $1 RETURNING old.cover_key",
+        id,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    changed(&mut tx, user, vec![SyncEntity::Playlists]).await;
+    tx.commit().await?;
+    if let Some(old) = old {
+        drop_cover(&st, &old).await;
+    }
+    Ok(Json(summary(&st.db, user, id).await?))
+}
+
+/// Копии старой обложки больше не нужны; не удалились — останутся мусором, ссылок на них нет.
+async fn drop_cover(st: &AppState, prefix: &str) {
+    for size in IMAGE_SIZES {
+        if let Err(e) = st.storage.delete(&keys::image(prefix, size)).await {
+            tracing::warn!(prefix, error = %e, "could not delete an old playlist cover");
+        }
+    }
+}
+
+/// Копирует файлы своей обложки в папку новой загрузки: у копии плейлиста они свои.
+async fn copy_cover(st: &AppState, from: &str, to: &str) -> AppResult<()> {
+    for size in IMAGE_SIZES {
+        let bytes = st
+            .storage
+            .get_bytes(&keys::image(from, size))
+            .await
+            .map_err(|e| AppError::Unavailable(format!("хранилище не отдало обложку: {e}")))?;
+        st.storage
+            .put(&keys::image(to, size), bytes, "image/jpeg", Some(IMMUTABLE))
+            .await
+            .map_err(|e| AppError::Unavailable(format!("хранилище не приняло обложку: {e}")))?;
+    }
+    Ok(())
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/playlists/{id}/duplicate",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id плейлиста или микса")),
+    request_body = DuplicatePlaylist,
+    responses(
+        (status = 201, description = "Копия — обычный плейлист с теми же треками, описанием и обложкой", body = PlaylistSummary),
+        (status = 404, description = "Нет такого плейлиста", body = ErrorBody),
+    ),
+)]
+pub async fn duplicate(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+    JsonOrDefault(body): JsonOrDefault<DuplicatePlaylist>,
+) -> AppResult<(StatusCode, Json<PlaylistSummary>)> {
+    let user = principal.user.id;
+    let source = sqlx::query!(
+        "SELECT title, description, cover_key FROM playlists WHERE id = $1 AND user_id = $2",
+        id,
+        user
+    )
+    .fetch_optional(&st.db)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    let title = clean_title(body.title.as_deref().unwrap_or(&source.title))?;
+    let new_id = Uuid::now_v7();
+    let cover = match source.cover_key {
+        Some(from) => {
+            let to = keys::playlist_cover(new_id, Uuid::now_v7());
+            copy_cover(&st, &from, &to).await?;
+            Some(to)
+        }
+        None => None,
+    };
+    let mut tx = st.db.begin().await?;
+    sqlx::query!(
+        "INSERT INTO playlists (id, user_id, title, description, cover_key) VALUES ($1, $2, $3, $4, $5)",
+        new_id,
+        user,
+        title,
+        source.description,
+        cover,
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "INSERT INTO playlist_items (playlist_id, track_id, position)
+         SELECT $1, track_id, row_number() OVER (ORDER BY position, id) * 1024.0
+         FROM playlist_items WHERE playlist_id = $2",
+        new_id,
+        id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    changed(
+        &mut tx,
+        user,
+        vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
+    )
+    .await;
+    tx.commit().await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(summary(&st.db, user, new_id).await?),
+    ))
 }
 
 async fn set_pinned(st: &AppState, user: Uuid, id: Uuid, pinned: bool) -> AppResult<StatusCode> {
@@ -536,7 +767,7 @@ pub async fn add_items(
         return Err(bad("нет треков для добавления"));
     }
     let mut tx = st.db.begin().await?;
-    lock_owned(&mut tx, user, id).await?;
+    lock_editable(&mut tx, user, id).await?;
     check_tracks(&mut tx, &body.track_ids).await?;
     let n = body.track_ids.len();
     let find = async |tx: &mut PgConnection| -> AppResult<(Option<f64>, Option<f64>)> {
@@ -604,7 +835,7 @@ pub async fn remove_item(
 ) -> AppResult<StatusCode> {
     let user = principal.user.id;
     let mut tx = st.db.begin().await?;
-    lock_owned(&mut tx, user, id).await?;
+    lock_editable(&mut tx, user, id).await?;
     let deleted = sqlx::query!(
         "DELETE FROM playlist_items WHERE id = $1 AND playlist_id = $2",
         item_id,
@@ -615,6 +846,50 @@ pub async fn remove_item(
     if deleted.rows_affected() == 0 {
         return Err(AppError::NotFound);
     }
+    touch(&mut tx, id).await?;
+    changed(
+        &mut tx,
+        user,
+        vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
+    )
+    .await;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/playlists/{id}/items/remove",
+    tag = "library",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id плейлиста")),
+    request_body = RemovePlaylistItems,
+    responses(
+        (status = 204, description = "Позиции убраны; чужих и уже убранных среди них не было или они пропущены"),
+        (status = 400, description = "Пустой список или больше 500 позиций", body = ErrorBody),
+        (status = 404, description = "Нет такого плейлиста", body = ErrorBody),
+        (status = 409, description = "Плейлист собирается сам (микс)", body = ErrorBody),
+    ),
+)]
+pub async fn remove_items(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+    Json(body): Json<RemovePlaylistItems>,
+) -> AppResult<StatusCode> {
+    let user = principal.user.id;
+    if body.item_ids.is_empty() || body.item_ids.len() > MAX_ADD {
+        return Err(bad(format!("от 1 до {MAX_ADD} позиций за раз")));
+    }
+    let mut tx = st.db.begin().await?;
+    lock_editable(&mut tx, user, id).await?;
+    sqlx::query!(
+        "DELETE FROM playlist_items WHERE playlist_id = $1 AND id = ANY($2)",
+        id,
+        &body.item_ids
+    )
+    .execute(&mut *tx)
+    .await?;
     touch(&mut tx, id).await?;
     changed(
         &mut tx,
@@ -650,7 +925,7 @@ pub async fn move_item(
 ) -> AppResult<Json<MovedPlaylistItem>> {
     let user = principal.user.id;
     let mut tx = st.db.begin().await?;
-    lock_owned(&mut tx, user, id).await?;
+    lock_editable(&mut tx, user, id).await?;
     let current = sqlx::query_scalar!(
         "SELECT position FROM playlist_items WHERE id = $1 AND playlist_id = $2",
         item_id,

@@ -70,7 +70,8 @@ const accountMenu = computed<MenuEntry[]>(() => [
       <UiIconButton icon="ph:caret-left" :label="t('nav.back')" size="sm" :disabled="!canBack" side="bottom" @click="router.back()" />
       <UiIconButton icon="ph:caret-right" :label="t('nav.forward')" size="sm" :disabled="!canForward" side="bottom" @click="router.forward()" />
     </div>
-    <UiSearchField ref="search" v-model="q" class="top__search" shortcut :placeholder="t('search.placeholder')" @update:model-value="onInput" @submit="onSubmit" />
+    <UiSearchField ref="search" v-model="q" class="top__search" shortcut links :placeholder="t('search.placeholder')" @update:model-value="onInput" @submit="onSubmit" />
+    <RecognizeButton size="sm" class="top__mic" />
     <div class="top__spacer" />
     <UiMenu :items="accountMenu" align="end">
       <button type="button" class="avatar" :aria-label="t('nav.profile')">
@@ -105,6 +106,8 @@ const accountMenu = computed<MenuEntry[]>(() => [
 .top__nav :deep(.ib:hover) { background: var(--fill-2); }
 .top__nav :deep(.ib:disabled) { background: var(--fill-1); opacity: 0.6; }
 .top__search { width: min(380px, 100%); flex: 0 1 380px; }
+.top__mic { flex: none; background: var(--fill-1); }
+.top__mic:hover { background: var(--fill-2); }
 .top__spacer { flex: 1; align-self: stretch; }
 .avatar {
   display: grid;
@@ -116,8 +119,8 @@ const accountMenu = computed<MenuEntry[]>(() => [
   overflow: hidden;
   border: 0;
   border-radius: 50%;
-  background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  background: var(--fill-3);
+  box-shadow: inset 0 0 0 1px var(--line);
   font-size: var(--fs-small);
   font-weight: 700;
   color: #fff;

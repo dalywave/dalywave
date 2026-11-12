@@ -88,6 +88,11 @@ function agent(s: SessionInfo) {
   const os = /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Linux/.test(ua) ? 'Linux' : ''
   return [browser, os].filter(Boolean).join(' · ')
 }
+// Своя сессия — первой; длинный хвост старых вкладок сворачивается
+const SESSIONS_SHOWN = 8
+const showAllSessions = ref(false)
+const orderedSessions = computed(() => [...(sessions.value ?? [])].sort((a, b) => Number(b.current) - Number(a.current)))
+const shownSessions = computed(() => (showAllSessions.value ? orderedSessions.value : orderedSessions.value.slice(0, SESSIONS_SHOWN)))
 const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword') : s.via === 'device' ? t('sessions.viaDevice') : 'daly.rest')
 </script>
 
@@ -98,7 +103,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
     </header>
 
     <AdminSection :title="t('people')" :hint="t('hint')">
-      <template v-if="waiting.length" #badge><UiBadge variant="new">{{ t('waiting', { n: waiting.length }) }}</UiBadge></template>
+      <template v-if="waiting.length" #badge><span class="ac__waiting tnum">{{ t('waiting', { n: waiting.length }) }}</span></template>
       <AdminState :loading="!users && !failed.users" :error="failed.users && !users" :rows="3" @retry="loadUsers">
         <div class="ap-table">
           <div v-for="u in users" :key="u.id" class="ac__user" :class="{ 'is-waiting': !u.roles.length && !u.disabled, 'is-disabled': u.disabled }">
@@ -107,14 +112,14 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
               <span v-else>{{ u.name.charAt(0).toUpperCase() }}</span>
             </span>
             <span class="ap-cell ac__main">
-              <b class="ac__name">{{ u.name }}<UiBadge v-if="u.id === auth.user?.id" variant="meta">{{ t('you') }}</UiBadge></b>
+              <b class="ac__name">{{ u.name }}<span v-if="u.id === auth.user?.id" class="ac__tag">{{ t('you') }}</span></b>
               <small>{{ [u.email, u.issuer ? 'daly.rest' : t('local'), u.lastLoginAt ? t('lastLogin', { when: formatRelative(u.lastLoginAt, lang) }) : null].filter(Boolean).join(' · ') }}</small>
             </span>
             <span class="ac__roles">
-              <UiBadge v-if="u.disabled" variant="danger">{{ t('disabled') }}</UiBadge>
-              <template v-else-if="u.roles.length">
-                <UiBadge v-for="r in u.roles" :key="r" :variant="r === 'admin' ? 'new' : 'meta'" :icon="r === 'admin' && u.idpAdmin ? 'ph:link-simple' : undefined">{{ t(`role.${r}`) }}</UiBadge>
-              </template>
+              <AdminStatus v-if="u.disabled" tone="bad">{{ t('disabled') }}</AdminStatus>
+              <span v-else-if="u.roles.length" class="ac__role">
+                <template v-for="(r, i) in u.roles" :key="r"><template v-if="i"> · </template>{{ t(`role.${r}`) }}<Icon v-if="r === 'admin' && u.idpAdmin" name="ph:link-simple" :title="t('idpAdmin')" class="ac__idp" /></template>
+              </span>
               <UiButton v-else variant="primary" size="sm" icon="ph:user-check" @click="setRoles(u, ['listener'], t('listenerGiven', { name: u.name }))">{{ t('give') }}</UiButton>
             </span>
             <UiMenu :items="userMenu(u)">
@@ -135,14 +140,17 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
             <span class="ap-num ap-hide-phone">{{ t('sessions.active') }}</span>
             <span />
           </div>
-          <div v-for="s in sessions" :key="s.id" class="ap-tr">
-            <span class="ap-cell"><b class="ac__name">{{ s.userName }}<UiBadge v-if="s.current" variant="success">{{ t('sessions.current') }}</UiBadge></b><small v-if="s.ip">{{ s.ip }}</small></span>
+          <div v-for="s in shownSessions" :key="s.id" class="ap-tr">
+            <span class="ap-cell"><b class="ac__name">{{ s.userName }}<span v-if="s.current" class="ac__tag">{{ t('sessions.current') }}</span></b><small v-if="s.ip">{{ s.ip }}</small></span>
             <span class="ac__where"><Icon :name="s.kind === 'device' ? 'ph:laptop' : 'ph:browser'" />{{ agent(s) }}</span>
             <span class="ap-muted ap-hide-phone">{{ via(s) }}</span>
             <span class="ap-num ap-muted ap-hide-phone">{{ formatRelative(s.lastSeenAt, lang) }}</span>
             <span class="ap-end">
-              <UiButton v-if="!s.current" size="sm" variant="ghost" icon="ph:sign-out" @click="revoke(s)">{{ t('sessions.revoke') }}</UiButton>
+              <UiIconButton v-if="!s.current" icon="ph:sign-out" :label="t('sessions.revoke')" size="sm" @click="revoke(s)" />
             </span>
+          </div>
+          <div v-if="orderedSessions.length > SESSIONS_SHOWN" class="ap-more">
+            <UiButton variant="ghost" size="sm" @click="showAllSessions = !showAllSessions">{{ showAllSessions ? t('sessions.less') : t('sessions.all', { n: orderedSessions.length }) }}</UiButton>
           </div>
         </div>
       </AdminState>
@@ -153,14 +161,18 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
 <style scoped>
 .ac__user { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 0; border-top: 1px solid var(--hair); }
 .ac__user:first-child { border-top: 0; }
-.ac__user.is-waiting { margin: 0 -12px; padding-inline: 12px; border-radius: var(--r-3); background: color-mix(in oklab, var(--accent) 8%, transparent); }
+.ac__user.is-waiting { margin: 0 -12px; padding-inline: 12px; border-radius: var(--r-3); background: var(--fill-1); }
 .ac__user.is-disabled { opacity: 0.6; }
-.ac__avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; overflow: hidden; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); font-weight: 700; }
+.ac__avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-2); font-weight: 700; color: var(--text-2); }
 .ac__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .ac__main { flex: 1; }
-.ac__name { display: flex; align-items: center; gap: 8px; }
+.ac__name { display: flex; align-items: baseline; gap: 8px; }
+.ac__tag { flex: none; font-size: var(--fs-caption); font-weight: 500; color: var(--text-3); }
+.ac__waiting { font-size: var(--fs-small); font-weight: 600; color: var(--warning); }
+.ac__role { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; }
+.ac__idp { font-size: 14px; color: var(--text-3); }
 .ac__roles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.ac__sessions { --cols: minmax(140px, 1fr) minmax(160px, 1.3fr) minmax(100px, 0.7fr) 120px 128px; }
+.ac__sessions { --cols: minmax(140px, 1fr) minmax(160px, 1.3fr) minmax(100px, 0.7fr) 120px 40px; }
 .ac__where { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
 .ac__where :deep(.iconify) { flex: none; font-size: 18px; color: var(--text-3); }
 @media (max-width: 699px) {
@@ -211,7 +223,9 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
       "browser": "Браузер",
       "viaPassword": "аварийный",
       "viaDevice": "приложение",
-      "revoke": "Завершить",
+      "revoke": "Завершить сессию",
+      "all": "Показать все {n}",
+      "less": "Свернуть",
       "revoked": "Сессия {name} завершена",
       "failed": "Не получилось завершить сессию",
       "empty": "Открытых сессий нет"
@@ -256,7 +270,9 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
       "browser": "Browser",
       "viaPassword": "emergency",
       "viaDevice": "app",
-      "revoke": "End",
+      "revoke": "End session",
+      "all": "Show all {n}",
+      "less": "Collapse",
       "revoked": "Session of {name} ended",
       "failed": "Couldn't end the session",
       "empty": "No open sessions"

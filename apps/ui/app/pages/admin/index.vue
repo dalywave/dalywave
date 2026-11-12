@@ -121,10 +121,10 @@ const fetcherVersion = computed(() => {
   <div class="ap">
     <header class="ap-head">
       <h1 class="ap-title">{{ t('title') }}</h1>
-      <div class="ap-head__side ov__pills">
-        <span v-if="health" class="ov__pill"><i class="ap-dot is-ok" />{{ t('health.ok', { version: health.version, uptime }) }}</span>
-        <span v-else-if="failed.health" class="ov__pill ap-bad"><i class="ap-dot is-bad" />{{ t('health.down') }}</span>
-        <span class="ov__pill"><i class="ap-dot" :class="bridge.live.state === 'open' ? 'is-ok' : ''" />{{ bridge.live.state === 'open' ? t('live.on') : t('live.off') }}</span>
+      <div class="ap-head__side ov__status">
+        <AdminStatus v-if="health" tone="ok">{{ t('health.ok', { version: health.version, uptime }) }}</AdminStatus>
+        <AdminStatus v-else-if="failed.health" tone="bad">{{ t('health.down') }}</AdminStatus>
+        <AdminStatus :tone="bridge.live.state === 'open' ? 'ok' : 'idle'">{{ bridge.live.state === 'open' ? t('live.on') : t('live.off') }}</AdminStatus>
       </div>
     </header>
 
@@ -205,7 +205,7 @@ const fetcherVersion = computed(() => {
 </template>
 
 <style scoped>
-.ov__pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: var(--r-pill); background: var(--fill-1); font-size: var(--fs-caption); font-weight: 600; color: var(--text-2); }
+.ov__status { gap: 6px 20px; font-size: var(--fs-caption); }
 .ov__count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--r-pill); background: color-mix(in oklab, var(--warning) 20%, transparent); font-size: 12px; font-weight: 700; color: var(--warning); }
 .ov__problem { --cols: 20px minmax(0, 1fr) auto; min-height: 56px; }
 .ov__picon { font-size: 20px; }
@@ -218,7 +218,7 @@ const fetcherVersion = computed(() => {
   .ap-stat:nth-child(4) { padding-left: 0; border-left: 0; }
 }
 @media (max-width: 699px) {
-  .ov__pills { width: 100%; }
+  .ov__status { width: 100%; }
   .ov__problem { --cols: 20px minmax(0, 1fr); }
   .ov__problem > :last-child { grid-column: 2; justify-self: start; }
   .ov__ptext { font-size: var(--fs-small); }

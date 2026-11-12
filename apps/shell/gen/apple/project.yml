@@ -78,6 +78,13 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
+        # «Распознать» (ShazamKit): микрофон — только пока открыт экран распознавания
+        NSMicrophoneUsageDescription: Чтобы узнать, какая песня играет рядом
+        # Быстрое действие на значке: долгое нажатие → «Распознать» (src/recognize.rs)
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: rest.daly.wave.recognize
+            UIApplicationShortcutItemTitle: Распознать
+            UIApplicationShortcutItemIconSymbolName: shazam.logo
     entitlements:
       path: dalywave-shell_iOS/dalywave-shell_iOS.entitlements
     settings:
@@ -91,6 +98,8 @@ targets:
         EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
       groups: [app]
     dependencies:
+      # «Поделиться → DalyWave» — расширение встраивается в приложение (PlugIns)
+      - target: dalywave-share
       - framework: libapp.a
         embed: false
       - sdk: CoreGraphics.framework
@@ -109,6 +118,9 @@ targets:
       - sdk: MediaPlayer.framework
       - sdk: AuthenticationServices.framework
       - sdk: SystemConfiguration.framework
+      # «Распознать»: ShazamKit, микрофон через AVAudioEngine, доступ — AVCaptureDevice
+      - sdk: ShazamKit.framework
+      - sdk: AVFoundation.framework
     preBuildScripts:
       # Своя фаза вместо `cargo tauri ios xcode-script`: работает из Xcode без запущенного CLI
       - script: |
@@ -118,6 +130,38 @@ targets:
         outputFiles:
           - $(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a
           - $(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a
+  # «Поделиться → DalyWave»: пункт в меню «Поделиться» iOS для ссылок и текста. Своего окна нет —
+  # открывает приложение ссылкой dalywave://share?url=… (ShareExtension/ShareViewController.swift)
+  dalywave-share:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: DalyWave
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
+    settings:
+      base:
+        PRODUCT_NAME: DalyWaveShare
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.share
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        ARCHS: [arm64]
+        APPLICATION_EXTENSION_API_ONLY: YES
   # Проверки на симуляторе: окно входа и снимки экрана (make ios-test)
   dalywave-shell_UITests:
     type: bundle.ui-testing

@@ -8,7 +8,6 @@ withDefaults(defineProps<{ greeting?: string }>(), {})
 
 const player = usePlayerStore()
 const ui = useUiStore()
-const toast = useToast()
 const lang = useLang()
 const { t } = useI18n()
 const { t: tl } = useI18n({ useScope: 'local' })
@@ -33,10 +32,6 @@ function onPlay() {
   if (preparing.value) return
   if (player.waveActive && player.current) return player.toggle()
   return player.startWave()
-}
-
-function savePreset() {
-  toast.show({ text: t('wave.preset.saveSoon'), icon: 'ph:bookmark-simple' })
 }
 
 const moreItems = computed<MenuEntry[]>(() => [
@@ -87,7 +82,7 @@ const moreItems = computed<MenuEntry[]>(() => [
     <div class="hero__below">
       <MusicMoodOrbs v-if="ui.isPhone" v-model="mood" variant="full" />
       <MusicWaveSettingsBar v-if="ui.isPhone" v-model="settings" variant="tokens" />
-      <MusicSavedCombos :active="player.activePreset" @select="player.applyPreset" @save="savePreset" />
+      <MusicSavedCombos />
     </div>
   </section>
 </template>
@@ -139,9 +134,9 @@ const moreItems = computed<MenuEntry[]>(() => [
   height: 8px;
   border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.18);
-  transition: background var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-spring), box-shadow var(--dur-3) var(--ease-out);
+  transition: background var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-spring);
 }
-.hero__dot.is-on { background: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent); transform: scale(1.15); }
+.hero__dot.is-on { background: var(--accent); transform: scale(1.15); }
 .hero__dot.is-next { animation: hero-dot 1.4s var(--ease-in-out) infinite; }
 @keyframes hero-dot {
   0%, 100% { background: rgba(255, 255, 255, 0.18); transform: scale(1); }
@@ -158,7 +153,7 @@ const moreItems = computed<MenuEntry[]>(() => [
 
 @media (max-width: 699px) {
   .hero { padding: 0 16px; }
-  .hero__stage { display: flex; flex-direction: column; justify-content: flex-end; height: 388px; min-height: 0; padding: 0 20px 20px; border-radius: 28px; }
+  .hero__stage { display: flex; flex-direction: column; justify-content: flex-end; height: min(388px, 50svh); min-height: 300px; padding: 0 20px 20px; border-radius: 28px; }
   .hero__wave::after { background: linear-gradient(0deg, rgba(2, 5, 9, 0.85) 0%, rgba(2, 5, 9, 0.35) 34%, transparent 55%); }
   .hero__play { position: absolute; left: 0; right: 0; top: 30%; justify-content: center; padding: 0; transform: translateY(-50%); }
   .hero__play--prep { flex-direction: column; gap: 14px; top: 34%; }

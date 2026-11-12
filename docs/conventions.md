@@ -32,7 +32,7 @@
 - Локально все значения лежат в `.env` в корне (не коммитится); `cargo test` берёт оттуда `DATABASE_URL`, если выполнить `set -a; . ./.env; set +a` или запускать через `make test`.
 - Вход: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_TITLE` (по умолчанию `daly.rest`), `OIDC_ADMIN_ROLES` (по умолчанию `admin`), `ADMIN_EMAILS`, `ADMIN_PASSWORD` (аварийный вход; пусто или короче 32 символов — выключен).
 - Хранилище: `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT` (если адрес для подписанных ссылок отличается от внутреннего), `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`.
-- Сервисы: `FETCHER_URL`, `ML_URL`, `LOG` (фильтр tracing), `LOG_FORMAT` (`pretty` | `json`).
+- Сервисы: `FETCHER_URL`, `ML_URL`, `LRCLIB_URL` (тексты песен, по умолчанию `https://lrclib.net`), `LOG` (фильтр tracing), `LOG_FORMAT` (`pretty` | `json`).
 - Выпуски приложений: `RELEASE_TOKEN` (токен конвейера выпусков, не короче 32 символов; пусто — выпускать нельзя).
 
 ## Rust

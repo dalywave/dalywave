@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT synced, instrumental, lines, plain, source, not_found_until\n           FROM track_lyrics WHERE track_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "synced",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "track_lyrics",
+            "name": "synced"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "instrumental",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "track_lyrics",
+            "name": "instrumental"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "lines",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "track_lyrics",
+            "name": "lines"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "plain",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_lyrics",
+            "name": "plain"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_lyrics",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "not_found_until",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "track_lyrics",
+            "name": "not_found_until"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "b9a50914fba8134db3ff0ec5f9f1f59e31e46454e136ba12cbc8d2be6fc8ca8b"
+}

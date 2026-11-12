@@ -27,7 +27,7 @@ const title = computed(() => (tab.value ? t(`player.${tab.value}`) : ''))
     <MusicDeviceList v-if="tab === 'devices'" :devices="player.devices" :playing="player.playing" variant="sheet" @select="player.selectDevice" />
     <div v-else class="pad">
       <MusicQueuePanel v-if="tab === 'queue'" />
-      <UiEmptyState v-else-if="tab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
+      <MusicLyricsView v-else-if="tab === 'lyrics'" variant="sheet" />
       <MusicAboutTrack v-else-if="tab === 'about'" :track="player.current?.track ?? null" />
     </div>
   </UiSheet>

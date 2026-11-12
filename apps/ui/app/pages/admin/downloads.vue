@@ -120,6 +120,7 @@ useAdminLive({
 }, loadAll)
 
 const jobOptions = computed(() => JOB_FILTERS.map(v => ({ value: v, label: v === 'all' ? t('all') : L.jobStatus(v) })))
+const laneOptions = computed(() => [{ value: '', label: t('jobs.anyLane') }, ...(lanes.value ?? []).map(l => ({ value: l.lane, label: l.title }))])
 const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable', 'failed', 'cancelled'] as HistoryFilter[]).map(v => ({ value: v, label: v === 'all' ? t('all') : L.acqStatus(v) })))
 </script>
 
@@ -127,13 +128,14 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
   <div class="ap">
     <header class="ap-head">
       <h1 class="ap-title">{{ t('title') }}</h1>
-      <span class="dl__live"><i class="ap-dot" :class="bridge.live.state === 'open' ? 'is-ok' : ''" />{{ bridge.live.state === 'open' ? t('liveOn') : t('liveOff') }}</span>
+      <AdminStatus class="dl__live" :tone="bridge.live.state === 'open' ? 'ok' : 'idle'">{{ bridge.live.state === 'open' ? t('liveOn') : t('liveOff') }}</AdminStatus>
     </header>
 
     <AdminSection :title="t('now.title')" :hint="active?.length ? t('now.summary', { running: runningCount, queued: `${formatNumber(ordered.length - runningCount, lang)}${ordered.length >= 200 ? '+' : ''}` }) : undefined">
       <AdminState :loading="!active && !failed.active" :error="failed.active && !active" :empty="!!active && !active.length" empty-icon="ph:check-circle" :empty-title="t('now.empty')" :rows="3" @retry="loadActive">
         <p v-if="waiting" class="dl__notice"><Icon name="ph:plugs" />{{ t('now.waiting') }}<NuxtLink to="/admin/sources" class="dl__link">{{ t('now.sources') }}</NuxtLink></p>
         <div class="ap-table">
+          <AdminAcqRow header />
           <AdminAcqRow v-for="a in shownActive" :key="a.acquisition.id" :acq="a" :names="names" @changed="loadActive" />
           <div v-if="ordered.length > 10" class="ap-more">
             <UiButton variant="ghost" size="sm" @click="showAllActive = !showAllActive">{{ showAllActive ? t('now.less') : t('now.all', { n: formatNumber(ordered.length, lang) }) }}</UiButton>
@@ -150,14 +152,12 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
 
     <AdminSection :title="t('jobs.title')">
       <template #tools>
-        <select v-model="laneFilter" class="ap-input ap-select" :aria-label="t('jobs.lane')">
-          <option value="">{{ t('jobs.anyLane') }}</option>
-          <option v-for="l in lanes ?? []" :key="l.lane" :value="l.lane">{{ l.title }}</option>
-        </select>
+        <AdminSelect v-model="laneFilter" :options="laneOptions" :label="t('jobs.lane')" align="end" />
         <UiSegmentedControl v-model="jobFilter" :options="jobOptions" :label="t('jobs.filter')" size="sm" />
       </template>
       <AdminState :loading="!jobs && !failed.jobs" :error="failed.jobs && !jobs" :empty="!!jobs && !jobs.length" empty-icon="ph:check-circle" :empty-title="t('jobs.empty')" @retry="loadJobs">
         <div class="ap-table">
+          <AdminJobRow header />
           <AdminJobRow v-for="j in jobs" :key="j.id" :job="j" :lanes="laneTitles" :names="names" />
           <div v-if="jobsCursor" class="ap-more"><UiButton variant="ghost" size="sm" :loading="moreJobs" @click="loadMoreJobs">{{ t('more') }}</UiButton></div>
         </div>
@@ -170,6 +170,7 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
       </template>
       <AdminState :loading="!history && !failed.history" :error="failed.history && !history" :empty="!!history && !history.length" empty-icon="ph:clock-counter-clockwise" :empty-title="t('history.empty')" @retry="loadHistory">
         <div class="ap-table">
+          <AdminAcqRow header />
           <AdminAcqRow v-for="a in history" :key="a.acquisition.id" :acq="a" :names="names" />
           <div v-if="historyCursor" class="ap-more"><UiButton variant="ghost" size="sm" :loading="moreHistory" @click="loadMoreHistory">{{ t('more') }}</UiButton></div>
         </div>
@@ -183,7 +184,7 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
 .dl__notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 10px 0; font-size: var(--fs-small); color: var(--warning); }
 .dl__notice :deep(.iconify) { font-size: 18px; }
 .dl__link { color: var(--text-1); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-.dl__live { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-2); }
+.dl__live { font-size: var(--fs-caption); }
 </style>
 
 <i18n lang="json">
@@ -196,7 +197,7 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
     "more": "Показать ещё",
     "now": {
       "title": "Сейчас",
-      "summary": "Качается {running}, ждут {queued}. Нажмите на запись — откроются кандидаты и попытки",
+      "summary": "Качается {running} · ждут {queued}",
       "waiting": "Качать некому: загрузчик не на связи.",
       "sources": "Источники",
       "all": "Показать все {n}",
@@ -206,7 +207,7 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
     },
     "lanes": { "title": "Полосы", "hint": "Полосы работают независимо: пауза одной не задерживает остальные" },
     "jobs": { "title": "Задачи", "filter": "Какие задачи", "lane": "Полоса", "anyLane": "Все полосы", "empty": "Таких задач нет" },
-    "history": { "title": "История скачиваний", "hint": "Чем закончились скачивания: кандидаты, оценки, проверка отпечатком", "filter": "Чем закончилось", "empty": "Пока ничего не скачивалось" }
+    "history": { "title": "История скачиваний", "hint": "Чем закончились: кандидаты, оценки, проверка отпечатком", "filter": "Чем закончилось", "empty": "Пока ничего не скачивалось" }
   },
   "en": {
     "title": "Downloads",
@@ -216,7 +217,7 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
     "more": "Show more",
     "now": {
       "title": "Now",
-      "summary": "{running} downloading, {queued} waiting. Tap a recording for candidates and attempts",
+      "summary": "{running} downloading · {queued} waiting",
       "waiting": "No one to download: the downloader is offline.",
       "sources": "Sources",
       "all": "Show all {n}",

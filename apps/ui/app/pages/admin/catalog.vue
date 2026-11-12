@@ -67,14 +67,24 @@ async function loadMore() {
 const STATUSES: AudioStatus[] = ['ready', 'queued', 'acquiring', 'disputed', 'unavailable', 'failed', 'none']
 const SOURCES = ['youtube_music', 'youtube', 'soundcloud', 'bandcamp', 'upload', 'other']
 const sourceLabel = (s: string) => t(`source.${s}`)
+const statusOptions = computed(() => [{ value: '' as const, label: t('anyStatus') }, ...STATUSES.map(s => ({ value: s, label: L.audio(s) }))])
+const sourceOptions = computed(() => [{ value: '', label: t('anySource') }, ...SOURCES.map(s => ({ value: s, label: sourceLabel(s) }))])
 
+// Кодек — строкой выше, битрейт и частота — подписью: колонка остаётся узкой и читается сверху вниз
 function format(r: AdminRecording) {
   const f = r.file
   if (!f) return null
-  const codec = qualityLabel({ codec: f.codec }) ?? f.codec
-  return [codec, f.lossless ? null : f.bitrateKbps ? `${f.bitrateKbps}\u00a0${t('kbps')}` : null].filter(Boolean).join(' · ')
+  return qualityLabel({ codec: f.codec }) ?? f.codec
 }
-const num = (v: number, digits = 1) => v.toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: digits, minimumFractionDigits: digits })
+function formatSub(r: AdminRecording) {
+  const f = r.file
+  if (!f) return ''
+  const rate = f.lossless ? null : f.bitrateKbps ? `${f.bitrateKbps}\u00a0${t('kbps')}` : null
+  const khz = f.sampleRate ? `${num(f.sampleRate / 1000)}\u00a0${t('khz')}` : f.container
+  return [rate, khz].filter(Boolean).join(' · ') + (r.files > 1 ? ` · ${t('files', { n: r.files })}` : '')
+}
+// Настоящий минус, а не дефис: «−5,8 LUFS»
+const num = (v: number, digits = 1) => v.toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: digits, minimumFractionDigits: digits }).replace('-', '−')
 function sourceLink(r: AdminRecording) {
   const ref = r.file?.sourceRef
   if (!ref) return null
@@ -121,16 +131,10 @@ function menu(r: AdminRecording): MenuEntry[] {
       <h1 class="ap-title">{{ t('title') }}</h1>
     </header>
 
-    <div class="cat__filters">
+    <div class="ap-filters cat__filters">
       <input v-model="q" class="ap-input cat__search" type="search" :placeholder="t('search')" :aria-label="t('search')">
-      <select v-model="status" class="ap-input ap-select" :aria-label="t('status')">
-        <option value="">{{ t('anyStatus') }}</option>
-        <option v-for="s in STATUSES" :key="s" :value="s">{{ L.audio(s) }}</option>
-      </select>
-      <select v-model="source" class="ap-input ap-select" :aria-label="t('sourceLabel')">
-        <option value="">{{ t('anySource') }}</option>
-        <option v-for="s in SOURCES" :key="s" :value="s">{{ sourceLabel(s) }}</option>
-      </select>
+      <AdminSelect v-model="status" :options="statusOptions" :label="t('status')" />
+      <AdminSelect v-model="source" :options="sourceOptions" :label="t('sourceLabel')" />
       <UiSegmentedControl v-model="verified" :options="[{ value: 'all', label: t('verifiedAll') }, { value: 'yes', label: t('verifiedYes') }, { value: 'no', label: t('verifiedNo') }]" :label="t('verifiedLabel')" size="sm" />
     </div>
 
@@ -152,10 +156,10 @@ function menu(r: AdminRecording): MenuEntry[] {
               <b>{{ r.track?.title ?? t('noTrack') }}</b>
               <small>{{ r.track ? artistNames(r.track.artists) : r.isrc }}<template v-if="r.tracks > 1"> · {{ t('sharedBy', { n: r.tracks }) }}</template></small>
             </span>
-            <span class="cat__status"><i class="ap-dot" :style="{ background: AUDIO_COLOR[r.audioStatus] }" />{{ L.audio(r.audioStatus) }}</span>
+            <AdminStatus :color="AUDIO_COLOR[r.audioStatus]" :tone="r.audioStatus === 'failed' ? 'bad' : r.audioStatus === 'none' || r.audioStatus === 'unavailable' ? 'idle' : 'ok'">{{ L.audio(r.audioStatus) }}</AdminStatus>
             <span class="ap-cell">
               <b>{{ format(r) ?? '—' }}</b>
-              <small v-if="r.file">{{ r.file.sampleRate ? `${num(r.file.sampleRate / 1000)}\u00a0${t('khz')}` : r.file.container }}<template v-if="r.files > 1"> · {{ t('files', { n: r.files }) }}</template></small>
+              <small v-if="r.file">{{ formatSub(r) }}</small>
             </span>
             <span class="ap-num ap-cell">
               <b>{{ r.file?.loudnessLufs != null ? `${num(r.file.loudnessLufs)}\u00a0LUFS` : '—' }}</b>
@@ -187,21 +191,23 @@ function menu(r: AdminRecording): MenuEntry[] {
 </template>
 
 <style scoped>
-.cat__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: -16px; }
 .cat__search { flex: 1 1 240px; max-width: 360px; }
-.cat { --cols: minmax(160px, 1.6fr) minmax(120px, 0.9fr) minmax(100px, 0.8fr) 104px minmax(110px, 1fr) 72px 72px 40px; }
+.cat { --cols: minmax(160px, 1.6fr) minmax(120px, 0.9fr) minmax(120px, 0.9fr) 104px minmax(110px, 1fr) 96px 72px 40px; }
 .cat__src { padding-left: 16px; }
 .cat .ap-cell b:only-child { font-weight: 500; }
-.cat__status { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-2); white-space: nowrap; }
 .cat__replace { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 12px; }
 .cat__replace .ap-input { flex: 1 1 280px; }
+@media (max-width: 1399px) {
+  .cat { --cols: minmax(150px, 1.5fr) minmax(110px, 0.9fr) minmax(110px, 0.8fr) 96px minmax(100px, 1fr) 88px 40px; }
+  .cat .ap-tr > :nth-child(7) { display: none; }
+}
 @media (max-width: 1199px) {
-  .cat { --cols: minmax(150px, 1.5fr) minmax(110px, 0.9fr) minmax(90px, 0.8fr) minmax(100px, 1fr) 64px 40px; }
+  .cat { --cols: minmax(150px, 1.5fr) minmax(110px, 0.9fr) minmax(90px, 0.8fr) minmax(100px, 1fr) 88px 40px; }
   .cat .ap-tr > :nth-child(4), .cat .ap-tr > :nth-child(7) { display: none; }
 }
 @media (max-width: 699px) {
   .cat__filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-bottom: -8px; }
-  .cat__filters .ap-input { width: 100%; height: 40px; }
+  .cat__filters .ap-input, .cat__filters .asl { width: 100%; height: 44px; }
   .cat__search { grid-column: 1 / -1; max-width: none; }
   .cat__filters > :last-child { grid-column: 1 / -1; justify-self: start; }
   .cat { --cols: minmax(0, 1fr) minmax(0, 0.8fr) 36px; }
@@ -231,7 +237,7 @@ function menu(r: AdminRecording): MenuEntry[] {
     "kbps": "кбит/с",
     "khz": "кГц",
     "peak": "пик {v} дБ",
-    "verified": "отпечаток совпал",
+    "verified": "сверен",
     "unverified": "без проверки",
     "actions": "Действия",
     "replace": "Заменить по ссылке",
@@ -266,7 +272,7 @@ function menu(r: AdminRecording): MenuEntry[] {
     "kbps": "kbps",
     "khz": "kHz",
     "peak": "peak {v} dB",
-    "verified": "fingerprint matched",
+    "verified": "verified",
     "unverified": "unverified",
     "actions": "Actions",
     "replace": "Replace from a link",

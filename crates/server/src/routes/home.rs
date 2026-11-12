@@ -20,9 +20,8 @@ use crate::{
 };
 
 const SHELF_SIZE: i64 = 20;
-/// Треков в «Радаре новинок» и сколько из одного релиза.
-const RADAR_SIZE: i64 = 30;
-const RADAR_PER_RELEASE: i64 = 3;
+/// Релизов в «Радаре новинок».
+const RADAR_SIZE: i64 = 20;
 
 /// Порядок полок по времени суток: утром — свежее (миксы, новинки), днём — открытия, вечером — любимое
 /// и забытое, ночью — миксы и знакомое. «Продолжить» всегда рядом с верхом.
@@ -71,8 +70,9 @@ pub fn shelf_order(part: DayPart) -> [&'static str; 8] {
     }
 }
 
-/// «Радар новинок»: до трёх самых популярных треков каждого релиза за 30 дней у подписок, лайкнутых
-/// артистов и тех, кого дослушивал хотя бы трижды за три месяца; «не рекомендовать» и «не нравится» — мимо.
+/// «Радар новинок»: релизы за 30 дней у подписок, лайкнутых артистов и тех, кого дослушивал хотя бы
+/// трижды за три месяца — по карточке на релиз, свежие первыми. Релиз заблокированного артиста и релиз,
+/// все треки которого под «не рекомендовать» или «не нравится», не показываются.
 async fn release_radar(st: &AppState, user: Uuid) -> AppResult<Vec<Uuid>> {
     Ok(sqlx::query_scalar!(
         r#"WITH mine AS (
@@ -87,29 +87,23 @@ async fn release_radar(st: &AppState, user: Uuid) -> AppResult<Vec<Uuid>> {
                WHERE p.user_id = $1 AND p.started_at > now() - interval '90 days'
                  AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)
                GROUP BY ta.artist_id HAVING count(*) >= 3
-           ), releases AS (
-               SELECT DISTINCT al.id, al.release_date FROM artist_releases r
-               JOIN albums al ON al.id = r.album_id
-               WHERE r.artist_id IN (SELECT artist_id FROM mine)
-                 AND al.release_date >= current_date - 30 AND al.release_date <= current_date
-                 AND NOT EXISTS (SELECT 1 FROM blocked_items b
-                                 WHERE b.user_id = $1 AND b.kind = 'artist' AND b.ref_id = al.artist_id)
            )
-           SELECT pick.id AS "id!" FROM releases rl
-           CROSS JOIN LATERAL (
-               SELECT t.id, t.rank FROM tracks t
-               WHERE t.album_id = rl.id
-                 AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = t.id)
-                 AND NOT COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f
-                                   WHERE f.user_id = $1 AND f.track_id = t.id AND f.kind IN ('dislike', 'undislike')
-                                   ORDER BY f.at DESC LIMIT 1), false)
-               ORDER BY t.rank DESC NULLS LAST, t.disc_number, t.track_position, t.id
-               LIMIT $2
-           ) pick
-           ORDER BY rl.release_date DESC, rl.id, pick.rank DESC NULLS LAST, pick.id
-           LIMIT $3"#,
+           SELECT al.id AS "id!" FROM albums al
+           WHERE al.id IN (SELECT r.album_id FROM artist_releases r WHERE r.artist_id IN (SELECT artist_id FROM mine))
+             AND al.release_date >= current_date - 30 AND al.release_date <= current_date
+             AND NOT EXISTS (SELECT 1 FROM blocked_items b
+                             WHERE b.user_id = $1 AND b.kind = 'artist' AND b.ref_id = al.artist_id)
+             -- Треки релиза могли ещё не загрузиться из Deezer: такой релиз показывается
+             AND (NOT EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id) OR EXISTS (
+                 SELECT 1 FROM tracks t
+                 WHERE t.album_id = al.id
+                   AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = t.id)
+                   AND NOT COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f
+                                     WHERE f.user_id = $1 AND f.track_id = t.id AND f.kind IN ('dislike', 'undislike')
+                                     ORDER BY f.at DESC LIMIT 1), false)))
+           ORDER BY al.release_date DESC, al.id DESC
+           LIMIT $2"#,
         user,
-        RADAR_PER_RELEASE,
         RADAR_SIZE,
     )
     .fetch_all(&st.db)
@@ -199,15 +193,22 @@ async fn continue_items(st: &AppState, user: Uuid) -> AppResult<Vec<ShelfItem>> 
 )]
 pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult<Json<Home>> {
     let user = principal.user.id;
+    let radar_ids = release_radar(&st, user).await?;
+    // Что уже на «Радаре», в «Новинках подписок» не повторяется: две полки одних и тех же обложек.
+    // «Не рекомендовать» артиста убирает его релизы и отсюда
     let new_release_ids = sqlx::query_scalar!(
         r#"SELECT al.id AS "id!" FROM albums al
            WHERE al.id IN (SELECT r.album_id FROM followed_artists f
                            JOIN artist_releases r ON r.artist_id = f.artist_id WHERE f.user_id = $1)
              AND al.release_date >= current_date - 60 AND al.release_date <= current_date
+             AND al.id <> ALL($3)
+             AND NOT EXISTS (SELECT 1 FROM blocked_items b
+                             WHERE b.user_id = $1 AND b.kind = 'artist' AND b.ref_id = al.artist_id)
            ORDER BY al.release_date DESC, al.id DESC
            LIMIT $2"#,
         user,
         SHELF_SIZE,
+        &radar_ids,
     )
     .fetch_all(&st.db)
     .await?;
@@ -250,7 +251,6 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
     .fetch_all(&st.db)
     .await?;
     let forgotten_ids = wave::forgotten(&st.db, user, SHELF_SIZE).await?;
-    let radar_ids = release_radar(&st, user).await?;
 
     let shelves = [
         shelf(
@@ -272,10 +272,10 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
             "release-radar",
             "Радар новинок",
             ShelfKind::ReleaseRadar,
-            views::tracks(&st.db, &radar_ids, user)
+            views::albums(&st.db, &radar_ids, user)
                 .await?
                 .into_iter()
-                .map(ShelfItem::Track)
+                .map(ShelfItem::Album)
                 .collect(),
         ),
         shelf(

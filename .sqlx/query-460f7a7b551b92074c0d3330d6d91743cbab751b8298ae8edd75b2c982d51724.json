@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT extract(year FROM started_at + make_interval(mins => $2))::int AS \"year!\",\n                  (sum(played_ms) / 60000)::bigint AS \"minutes!\"\n           FROM play_events WHERE user_id = $1 AND started_at < $3\n           GROUP BY 1 ORDER BY 1 DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "year!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "minutes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "460f7a7b551b92074c0d3330d6d91743cbab751b8298ae8edd75b2c982d51724"
+}

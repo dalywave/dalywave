@@ -66,6 +66,9 @@
     }
   },
   "plugins": {
+    "discord": {
+      "clientId": ""
+    },
     "deep-link": {
       "desktop": {
         "schemes": ["dalywave"]

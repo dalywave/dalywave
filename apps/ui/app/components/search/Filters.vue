@@ -9,20 +9,30 @@ const library = defineModel<boolean>('library', { required: true })
 const { t } = useI18n({ useScope: 'local' })
 const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
 
-// «По звучанию» — последний в ряду: выбранный, он не должен прятаться за краем узкого экрана
-const soundChip = ref<HTMLElement | null>(null)
-function revealSound() {
-  const chip = soundChip.value
-  const row = chip?.parentElement
-  if (type.value !== 'sound' || !chip || !row) return
-  row.scrollLeft = Math.max(0, chip.offsetLeft + chip.offsetWidth - row.clientWidth + 16)
+// Выбранный фильтр не прячется за краем узкого экрана и под затуханием у края
+const row = ref<HTMLElement | null>(null)
+function reveal(smooth = true) {
+  const el = row.value
+  const chip = el?.querySelector<HTMLElement>('.fchip:not(.fchip--scope).is-on')
+  if (!el || !chip || el.scrollWidth <= el.clientWidth) return
+  const box = el.getBoundingClientRect()
+  const c = chip.getBoundingClientRect()
+  const pad = 32
+  let dx = 0
+  if (c.right > box.right - pad) dx = c.right - box.right + pad
+  else if (c.left < box.left + pad) dx = c.left - box.left - pad
+  if (dx) el.scrollTo({ left: el.scrollLeft + dx, behavior: smooth ? 'smooth' : 'auto' })
 }
-onMounted(revealSound)
-watch(type, () => void nextTick(revealSound))
+// Ширина чипов окончательна только после загрузки шрифта
+onMounted(() => {
+  reveal(false)
+  void document.fonts?.ready.then(() => requestAnimationFrame(() => reveal(false)))
+})
+watch(type, () => void nextTick(() => reveal()))
 </script>
 
 <template>
-  <div v-edge-fade class="filters no-scrollbar" role="toolbar" :aria-label="t('label')">
+  <div ref="row" v-edge-fade class="filters no-scrollbar" role="toolbar" :aria-label="t('label')">
     <button type="button" class="fchip fchip--scope" :class="{ 'is-on': library }" :aria-pressed="library" @click="library = !library">
       <Icon :name="library ? 'ph:check-bold' : 'ph:books'" class="fchip__icon" />
       {{ t('library') }}
@@ -41,7 +51,7 @@ watch(type, () => void nextTick(revealSound))
     </button>
     <span class="filters__sep" aria-hidden="true" />
     <!-- Поиск словами по звучанию: «спокойный инструментал для работы» -->
-    <button ref="soundChip" type="button" class="fchip fchip--sound" :class="{ 'is-on': type === 'sound' }" :aria-pressed="type === 'sound'" @click="type = type === 'sound' ? 'all' : 'sound'">
+    <button type="button" class="fchip fchip--sound" :class="{ 'is-on': type === 'sound' }" :aria-pressed="type === 'sound'" @click="type = type === 'sound' ? 'all' : 'sound'">
       <Icon name="ph:waveform" class="fchip__icon" />
       {{ t('type.sound') }}
     </button>

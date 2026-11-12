@@ -47,7 +47,7 @@ async function toggle(l: Lane, paused: boolean) {
     </div>
     <div v-for="l in lanes" :key="l.lane" class="ap-tr" :class="{ 'is-paused': l.paused || !l.open }" role="row">
       <span role="cell" class="ap-cell">
-        <b class="lt__name">{{ l.title }}<UiBadge v-if="l.paused" variant="meta">{{ t('pausedLabel') }}</UiBadge><UiBadge v-else-if="!l.open" variant="meta" icon="ph:moon">{{ t('closed') }}</UiBadge></b>
+        <b class="lt__name">{{ l.title }}<span v-if="l.paused" class="lt__tag">{{ t('pausedLabel') }}</span><span v-else-if="!l.open" class="lt__tag">{{ t('closed') }}</span></b>
         <small class="lt__mode-sm">{{ laneMode(l) }}<template v-if="windowOf(l)"> · {{ windowOf(l) }}</template></small>
       </span>
       <span role="cell" class="ap-num">{{ l.queued ? formatNumber(l.queued, lang) : '—' }}</span>
@@ -64,7 +64,8 @@ async function toggle(l: Lane, paused: boolean) {
 
 <style scoped>
 .lt { --cols: minmax(150px, 1.6fr) repeat(4, minmax(52px, 0.45fr)) minmax(150px, 1.3fr) 52px; }
-.lt__name { display: flex; align-items: center; gap: 8px; }
+.lt__name { display: flex; align-items: baseline; gap: 8px; }
+.lt__tag { flex: none; font-size: var(--fs-caption); font-weight: 500; color: var(--text-3); }
 .ap-tr.is-paused .lt__name { color: var(--text-2); }
 .lt__mode { padding-left: 16px; font-size: var(--fs-caption); line-height: 1.5; }
 .lt__mode-sm { display: none; }
@@ -88,10 +89,10 @@ async function toggle(l: Lane, paused: boolean) {
     "state": "Включена",
     "pause": "пауза {s} с",
     "window": "только {w}",
-    "closed": "Вне расписания",
+    "closed": "вне расписания",
     "switchRunning": "«{title}» работает",
     "switchPaused": "«{title}» на паузе",
-    "pausedLabel": "На паузе",
+    "pausedLabel": "на паузе",
     "paused": "«{title}» на паузе",
     "resumed": "«{title}» снова работает",
     "failed": "Не получилось изменить полосу"
@@ -107,10 +108,10 @@ async function toggle(l: Lane, paused: boolean) {
     "state": "Enabled",
     "pause": "{s} s pause",
     "window": "only {w}",
-    "closed": "Off schedule",
+    "closed": "off schedule",
     "switchRunning": "“{title}” is running",
     "switchPaused": "“{title}” is paused",
-    "pausedLabel": "Paused",
+    "pausedLabel": "paused",
     "paused": "“{title}” paused",
     "resumed": "“{title}” running again",
     "failed": "Couldn't change the lane"

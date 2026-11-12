@@ -6,7 +6,7 @@
 //! следующим подходящим. Готово нужное — `ready`, готовое — первым в очереди. За [`WAIT`] не успели (или
 //! качать некому) — начало добирается лучшим по настройкам из того, что уже на сервере.
 //!
-//! Заготовки: раз в час под частые настройки слушателя (свои сочетания за месяц, сохранённые и «Моя волна»)
+//! Заготовки: раз в час под частые настройки слушателя (свои за месяц, сохранённые сочетания и «Моя волна»)
 //! подбирается по [`POOL_SIZE`] треков и качается в полосе «Открытия» в пределах суточного предела
 //! (`wave_pools`). Готовое из заготовок волна берёт первым — старт мгновенный.
 
@@ -19,7 +19,7 @@ use chrono::{DateTime, Duration, Utc};
 use dalywave_protocol::{
     catalog::AudioStatus,
     jobs::AcquireReason,
-    wave::{Reason, WaveActivity, WaveCharacter, WaveLanguage, WaveMood, WaveSettings},
+    wave::{Reason, WaveSettings},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -320,44 +320,13 @@ pub fn combo_key(s: &WaveSettings) -> String {
     key
 }
 
-/// Сохранённые сочетания интерфейса (`WAVE_PRESETS`): на сервере они пока не хранятся.
-pub fn saved_combos() -> [WaveSettings; 3] {
-    let s = |activity, character, mood, language| WaveSettings {
-        activity,
-        character,
-        mood,
-        language,
-        ..Default::default()
-    };
-    [
-        s(
-            WaveActivity::Work,
-            WaveCharacter::Mix,
-            WaveMood::Calm,
-            WaveLanguage::None,
-        ),
-        s(
-            WaveActivity::Road,
-            WaveCharacter::Fav,
-            WaveMood::Energetic,
-            WaveLanguage::Ru,
-        ),
-        s(
-            WaveActivity::Rest,
-            WaveCharacter::Rare,
-            WaveMood::Sad,
-            WaveLanguage::Any,
-        ),
-    ]
-}
-
-/// Под какие настройки держать заготовки: «Моя волна», свои за месяц (частые — первыми), сохранённые.
-/// Радио (с затравкой) не заготавливается.
-pub fn combos(recent: Vec<WaveSettings>) -> Vec<WaveSettings> {
+/// Под какие настройки держать заготовки: «Моя волна», свои за месяц (частые — первыми), сохранённые
+/// сочетания слушателя (`wave_presets`). Радио (с затравкой) не заготавливается.
+pub fn combos(recent: Vec<WaveSettings>, saved: Vec<WaveSettings>) -> Vec<WaveSettings> {
     let mut seen = HashSet::new();
     std::iter::once(WaveSettings::default())
         .chain(recent)
-        .chain(saved_combos())
+        .chain(saved)
         .filter(|s| s.seed.is_none())
         .filter(|s| seen.insert(combo_key(s)))
         .take(POOL_COMBOS)
@@ -435,7 +404,8 @@ async fn refill_user(env: &Env<'_>, user: Uuid) -> AppResult<(usize, i64)> {
     .await?;
     let mut cap = (POOL_DAILY_CAP - used).max(0);
     let (mut picked_n, mut queued) = (0usize, 0i64);
-    for settings in combos(recent) {
+    let saved = crate::routes::wave_presets::settings_of(env.db, user).await?;
+    for settings in combos(recent, saved) {
         let key = combo_key(&settings);
         let have = sqlx::query!(
             r#"SELECT p.track_id, t.recording_id FROM wave_pools p JOIN tracks t ON t.id = p.track_id
@@ -504,7 +474,9 @@ async fn refill_user(env: &Env<'_>, user: Uuid) -> AppResult<(usize, i64)> {
 
 #[cfg(test)]
 mod tests {
-    use dalywave_protocol::wave::{ReasonKind, SeedKind, WaveSeed};
+    use dalywave_protocol::wave::{
+        ReasonKind, SeedKind, WaveActivity, WaveCharacter, WaveLanguage, WaveMood, WaveSeed,
+    };
 
     use super::*;
 
@@ -601,23 +573,33 @@ mod tests {
             tempo: Some(170),
             ..Default::default()
         };
-        let list = combos(vec![
-            work.clone(),
-            radio,
-            work.clone(),
-            WaveSettings::default(),
-            run.clone(),
-        ]);
+        let night = WaveSettings {
+            activity: WaveActivity::Rest,
+            character: WaveCharacter::Rare,
+            mood: WaveMood::Sad,
+            language: WaveLanguage::Any,
+            ..Default::default()
+        };
+        let list = combos(
+            vec![
+                work.clone(),
+                radio.clone(),
+                work.clone(),
+                WaveSettings::default(),
+                run.clone(),
+            ],
+            vec![night, work.clone(), radio],
+        );
         let keys: Vec<String> = list.iter().map(combo_key).collect();
         assert_eq!(keys[0], "any:mix:any:any", "«Моя волна» — всегда и первой");
         assert_eq!(keys[1], "work:new:calm:any");
         assert_eq!(keys[2], "sport:mix:any:any:170", "темп бега — часть ключа");
+        assert_eq!(keys[3], "rest:rare:sad:any", "сохранённые — после своих");
         assert_eq!(
             keys.len(),
-            6,
+            4,
             "повторы и радио не заготавливаются: {keys:?}"
         );
-        assert!(keys.contains(&"work:mix:calm:none".to_string()));
         // Сочетаний не больше предела
         let many: Vec<WaveSettings> = [
             WaveActivity::Wake,
@@ -634,6 +616,6 @@ mod tests {
             ..Default::default()
         })
         .collect();
-        assert_eq!(combos(many).len(), POOL_COMBOS);
+        assert_eq!(combos(many, Vec::new()).len(), POOL_COMBOS);
     }
 }

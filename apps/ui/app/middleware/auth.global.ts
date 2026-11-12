@@ -1,6 +1,8 @@
 // Кто может открыть страницу. Вход — только через daly.rest (или аварийный пароль);
 // человек без ролей видит «ждём доступа»; админка — только администраторам
 export default defineNuxtRouteMiddleware(async (to) => {
+  // Мини-плеер приложения — только вид плеера из движка: входа и данных сервера ему не нужно
+  if (isMiniWindow()) return to.path === '/mini' ? undefined : navigateTo('/mini')
   const auth = useAuthStore()
   const bridge = useBridge()
   const isAuthPage = to.path === '/login' || to.path === '/waiting'

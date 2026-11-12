@@ -31,7 +31,6 @@ const name = computed(() => t(`transition.${props.mode}`))
   <UiTooltip v-if="icon" :disabled="!tooltip">
     <button v-bind="$attrs" type="button" class="mode-ib" :class="`mode-ib--${size}`" :aria-label="`${t('transition.title')}: ${name}`">
       <Icon :name="ICONS[mode]" class="mode-ib__icon" />
-      <span v-if="mode !== 'gapless'" class="mode-ib__dot" aria-hidden="true" />
     </button>
     <template #content>
       <span class="tooltip__muted">{{ t('transition.title') }}</span>{{ name }}

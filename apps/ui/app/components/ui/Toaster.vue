@@ -3,6 +3,16 @@ import { ToastAction, ToastProvider, ToastRoot, ToastTitle, ToastViewport } from
 import type { ToastItem } from '~/composables/useToast'
 
 const { toasts, remove } = useToast()
+const ui = useUiStore()
+const player = usePlayerStore()
+
+// Над тем, что внизу экрана: на телефоне — над мини-плеером и вкладками (или над нижним рядом
+// раскрытого плеера), на большом экране — над панелью плеера
+const bottom = computed(() => {
+  if (!ui.isPhone) return 'calc(var(--bar-h) + 16px)'
+  if (ui.playerOpen) return '76px'
+  return player.current ? 'calc(var(--tabbar-h) + var(--mini-h) + 18px)' : 'calc(var(--tabbar-h) + 12px)'
+})
 
 function duration(t: ToastItem) {
   return t.duration ?? (t.undo || t.action ? 5000 : 2600)
@@ -44,7 +54,7 @@ function onOpen(t: ToastItem, open: boolean) {
         <button type="button" class="toast__action" @click="act(t)">{{ t.action.label }}</button>
       </ToastAction>
     </ToastRoot>
-    <ToastViewport class="toast-viewport" />
+    <ToastViewport class="toast-viewport" :style="{ '--toast-bottom': bottom }" />
   </ToastProvider>
 </template>
 

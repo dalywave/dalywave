@@ -54,6 +54,19 @@ watch(() => route.path, () => {
   if (!ui.isPhone) ui.playerOpen = false
   else if (ui.playerOpen) void ui.collapsePlayer()
 })
+
+// Смена страницы: новая проявляется коротким подъёмом. Старая уходит сразу — без ожидания
+// и без <Transition>, которому нужен один корень у каждой страницы
+const page = ref<HTMLElement | null>(null)
+watch(() => route.path, () => {
+  if (ui.reducedMotion) return
+  void nextTick(() => {
+    // На телефоне — только прозрачность: transform на <main> сломал бы закреплённые шапки страниц
+    if (ui.isPhone) phoneMain.value?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })
+    else page.value?.animate?.([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' })
+  })
+})
+const phoneMain = ref<HTMLElement | null>(null)
 </script>
 
 <template>
@@ -74,7 +87,7 @@ watch(() => route.path, () => {
         <div class="app__stage">
           <main ref="main" class="app__main thin-scrollbar" @scroll.passive="onScroll">
             <ShellTopBar :scrolled="scrolled" />
-            <div class="page">
+            <div ref="page" class="page">
               <slot />
             </div>
           </main>
@@ -85,7 +98,7 @@ watch(() => route.path, () => {
       <MusicNowPlayingBar class="app__bar" />
     </template>
     <template v-else>
-      <main class="app__main app__main--phone">
+      <main ref="phoneMain" class="app__main app__main--phone">
         <slot />
       </main>
       <MusicMiniPlayer />
@@ -93,6 +106,8 @@ watch(() => route.path, () => {
       <MusicFullPlayer variant="phone" />
       <ShellPhoneSheets />
     </template>
+    <!-- «Распознать»: экран прослушивания и лист результата (приложение для iPhone и Mac) -->
+    <RecognizeLayer />
   </div>
 </template>
 

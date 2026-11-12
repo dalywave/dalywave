@@ -65,7 +65,7 @@ function statsLine(i: AdminImport): string {
           <div v-for="i in data.items" :key="i.id" class="ap-tr">
             <span class="ap-cell"><b>{{ i.title }}</b><small>{{ t(`kind.${i.kind}`) }} · {{ i.userName }}<template v-if="statsLine(i)"> · {{ statsLine(i) }}</template></small></span>
             <span class="ap-cell">
-              <b :class="i.status === 'done' ? 'ap-ok' : i.status === 'failed' ? 'ap-bad' : i.status === 'cancelled' ? 'ap-muted' : 'ap-on'">{{ i.status === 'running' ? t(`phase.${i.phase}`) : t(`status.${i.status}`) }}</b>
+              <AdminStatus :tone="i.status === 'done' ? 'ok' : i.status === 'failed' ? 'bad' : i.status === 'cancelled' ? 'idle' : 'on'" :pulse="i.status === 'running'">{{ i.status === 'running' ? t(`phase.${i.phase}`) : t(`status.${i.status}`) }}</AdminStatus>
               <span v-if="i.status === 'running'" class="im__bar"><i :style="{ width: `${pct(i.processed, i.total)}%` }" /></span>
               <small v-else-if="i.error" class="ap-bad">{{ i.error }}</small>
             </span>

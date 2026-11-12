@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import type { MenuEntry } from '~/types/ui'
-import { colorsFromPalette } from '~/utils/cover-colors'
 
-// Альбом: обложка, кто и когда, сколько уже на сервере, треки по порядку
+// Альбом: обложка, кто и когда, треки по порядку
 const route = useRoute()
 const bridge = useBridge()
 const library = useLibraryStore()
-const offline = useOfflineStore()
-const toast = useToast()
+const shareMenu = useShare()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
@@ -19,7 +17,6 @@ const { playAlbum, isContext, isPlayingContext, loading } = usePlayActions()
 useHead({ title: () => data.value?.album.title ?? t('title') })
 
 const album = computed(() => data.value?.album ?? null)
-const glow = computed(() => colorsFromPalette(album.value?.palette)?.vivid ?? null)
 const saved = computed(() => (album.value ? library.isSaved(album.value) : false))
 const playing = computed(() => !!album.value && isPlayingContext('album', album.value.id))
 const multiDisc = computed(() => new Set(data.value?.tracks.map(tr => tr.discNumber)).size > 1)
@@ -32,7 +29,9 @@ const discs = computed(() => {
 })
 const releaseDate = computed(() => {
   const d = album.value?.releaseDate
-  return d ? new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d)) : null
+  if (!d) return null
+  const date = new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d))
+  return t(new Date(d) > new Date() ? 'upcoming' : 'released', { date })
 })
 
 function play() {
@@ -43,58 +42,39 @@ const moreItems = computed<MenuEntry[]>(() => {
   const a = album.value
   if (!a) return []
   return [
-    { label: t('shuffle'), icon: 'ph:shuffle', onSelect: () => playAlbum(a.id, { shuffle: true }) },
-    { label: tg('track.radio'), icon: 'ph:waveform', onSelect: () => toast.show({ text: t('radioSoon'), icon: 'ph:waveform' }) },
-    // Приложение: скачать альбом на устройство
-    ...(offline.available
-      ? [offline.isPinned('album', a.id)
-          ? { label: tg('offline.remove'), icon: 'ph:x-circle', onSelect: () => offline.unpin('album', a.id, a.title) }
-          : { label: tg('offline.downloadAll'), icon: 'ph:arrow-circle-down', onSelect: () => offline.pin('album', a.id, a.title) }]
-      : []),
-    { kind: 'separator' },
     { label: t('toArtist'), icon: 'ph:user', onSelect: () => navigateTo(`/artist/${a.artist.id}`) },
-    { label: t('copyLink'), icon: 'ph:link', onSelect: () => copyLink() },
+    shareMenu.entry('album', a.id, a.title),
   ]
 })
 
-async function copyLink() {
-  try {
-    await navigator.clipboard.writeText(location.href)
-    toast.show({ text: t('linkCopied'), icon: 'ph:link' })
-  }
-  catch {
-    toast.error(t('linkFailed'))
-  }
-}
 </script>
 
 <template>
   <div class="album">
-    <MusicPageState v-if="state !== 'ready'" :state="state" @retry="load" />
+    <template v-if="state !== 'ready'">
+      <MusicPhoneNav />
+      <MusicPageState :state="state" @retry="load" />
+    </template>
     <template v-else-if="data && album">
-      <MusicPageHeader :kicker="`${tg(`record.${album.recordType}`)}${album.releaseDate ? ` · ${formatYear(album.releaseDate)}` : ''}`" :title="album.title" :glow="glow">
+      <MusicPageHeader :kicker="`${tg(`record.${album.recordType}`)}${album.releaseDate ? ` · ${formatYear(album.releaseDate)}` : ''}`" :title="album.title">
         <template #art>
-          <MusicCoverArt :image="album.image" size="large" :alt="album.title" ambient eager />
+          <MusicCoverArt :image="album.image" size="large" :alt="album.title" eager />
         </template>
         <template #sub>
-          <NuxtLink :to="`/artist/${album.artist.id}`">{{ album.artist.name }}</NuxtLink>
+          <NuxtLink :to="`/artist/${album.artist.id}`" class="album__artist ellipsis">{{ album.artist.name }}</NuxtLink>
           <UiBadge v-if="album.explicit" variant="explicit" />
         </template>
-        <template #meta>
+        <template v-if="data.tracks.length" #meta>
           <span>{{ formatCount(data.tracks.length, 'track', lang) }}</span>
           <span>{{ formatLongDuration(data.totalDurationMs, lang) }}</span>
         </template>
-        <template v-if="data.tracks.length" #status>
-          <span class="ready" :class="{ 'is-full': data.readyTracks >= data.tracks.length }">
-            <Icon :name="data.readyTracks >= data.tracks.length ? 'ph:check-circle-fill' : 'ph:cloud-arrow-down'" />
-            {{ data.readyTracks >= data.tracks.length ? t('allReady') : t('ready', { n: data.readyTracks, total: data.tracks.length }) }}
-          </span>
-        </template>
         <template #actions>
-          <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :loading="loading === `album:${album.id}`" @click="play">
+          <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :loading="loading === `album:${album.id}`" :disabled="!data.tracks.length" @click="play">
             {{ playing ? tg('common.pause') : isContext('album', album.id) ? t('resume') : tg('common.play') }}
           </UiButton>
-          <UiButton size="lg" icon="ph:shuffle" @click="playAlbum(album.id, { shuffle: true })">{{ t('shuffle') }}</UiButton>
+          <UiButton size="lg" icon="ph:shuffle" :disabled="!data.tracks.length" @click="playAlbum(album.id, { shuffle: true })">{{ t('shuffle') }}</UiButton>
+        </template>
+        <template #tools>
           <UiIconButton
             :icon="saved ? 'ph:check-circle-fill' : 'ph:plus-circle'"
             :label="saved ? t('unsave') : t('save')"
@@ -117,7 +97,7 @@ async function copyLink() {
       <p v-if="!data.tracks.length" class="album__empty">{{ t('noTracks') }}</p>
 
       <footer class="album__foot">
-        <span v-if="releaseDate">{{ t('released', { date: releaseDate }) }}</span>
+        <span v-if="releaseDate">{{ releaseDate }}</span>
         <span v-if="data.label">℗ {{ data.label }}</span>
         <span v-if="data.genres.length">{{ data.genres.join(', ') }}</span>
         <ShellDevMockNote :sections="['catalog']" what="альбом" />
@@ -128,10 +108,7 @@ async function copyLink() {
 
 <style scoped>
 .album { display: flex; flex-direction: column; gap: 28px; }
-.ready { display: inline; }
-.ready :deep(.iconify) { margin-right: 5px; vertical-align: -2px; }
-.ready :deep(.iconify) { color: var(--text-3); }
-.ready.is-full :deep(.iconify) { color: var(--success); }
+.album__artist { min-width: 0; }
 .album__disc { display: flex; flex-direction: column; gap: 4px; }
 .album__disc-title { display: flex; align-items: center; gap: 8px; margin: 8px 10px 4px; font-size: var(--fs-small); font-weight: 650; color: var(--text-2); }
 .album__empty { color: var(--text-3); }
@@ -152,15 +129,10 @@ async function copyLink() {
     "save": "Добавить в медиатеку",
     "unsave": "Убрать из медиатеки",
     "toArtist": "Перейти к артисту",
-    "copyLink": "Скопировать ссылку",
-    "linkCopied": "Ссылка скопирована",
-    "linkFailed": "Не получилось скопировать ссылку",
-    "radioSoon": "Волна по альбому появится вместе с рекомендациями",
-    "allReady": "Весь на сервере",
-    "ready": "{n} из {total} на сервере",
     "disc": "Диск {n}",
-    "noTracks": "Треков пока нет: альбом анонсирован или сервер ещё не получил список",
-    "released": "Вышел {date}"
+    "noTracks": "Треков пока нет",
+    "released": "Вышел {date}",
+    "upcoming": "Выйдет {date}"
   },
   "en": {
     "title": "Album",
@@ -169,15 +141,10 @@ async function copyLink() {
     "save": "Add to library",
     "unsave": "Remove from library",
     "toArtist": "Go to artist",
-    "copyLink": "Copy link",
-    "linkCopied": "Link copied",
-    "linkFailed": "Couldn't copy the link",
-    "radioSoon": "Album radio arrives with recommendations",
-    "allReady": "All on the server",
-    "ready": "{n} of {total} on the server",
     "disc": "Disc {n}",
-    "noTracks": "No tracks yet: the album is announced or the server hasn't got the list",
-    "released": "Released {date}"
+    "noTracks": "No tracks yet",
+    "released": "Released {date}",
+    "upcoming": "Out {date}"
   }
 }
 </i18n>

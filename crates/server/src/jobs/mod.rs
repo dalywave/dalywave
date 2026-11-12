@@ -37,6 +37,8 @@ pub mod lanes {
     pub const SCOUT: &str = "scout";
     pub const MIRROR: &str = "mirror";
     pub const MAINTENANCE: &str = "maintenance";
+    /// Тексты песен заранее, для ближайших треков очереди.
+    pub const LYRICS: &str = "lyrics";
 
     /// Полосы скачивания аудио в порядке важности: загрузчик берёт задачи именно так.
     pub const ACQUIRE: [&str; 5] = [NOW, WAVE, LIBRARY, DISCOGRAPHY, DISCOVERY];

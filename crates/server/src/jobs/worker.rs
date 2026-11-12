@@ -29,10 +29,14 @@ use crate::{
     config::Config,
     deezer::{Deezer, DeezerError},
     jobs,
+    lyrics::lrclib::Lrclib,
     ml::Ml,
     reco,
     storage::{Storage, StorageError},
 };
+
+/// Промежуток между запросами воркера к LRCLIB (интервал полосы «Тексты» — сверху).
+const LRCLIB_GAP: Duration = Duration::from_secs(1);
 
 /// Всё, что нужно обработчикам задач.
 pub struct Context {
@@ -46,6 +50,8 @@ pub struct Context {
     pub fetcher: reqwest::Client,
     /// Сервис анализа звука: анализы этого процесса идут по одному
     pub ml: Arc<Ml>,
+    /// Тексты песен: запросы процесса не чаще раза в секунду
+    pub lrclib: Arc<Lrclib>,
     /// Виды задач на паузе после сбоя исполнителя (YouTube заподозрил бота, сервис анализа лежит)
     pub cooldowns: Cooldowns,
 }
@@ -79,6 +85,7 @@ impl Context {
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(15 * 60))
             .build()?;
+        let lrclib = Arc::new(Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?);
         Ok(Self {
             db,
             config,
@@ -87,6 +94,7 @@ impl Context {
             http,
             fetcher,
             ml,
+            lrclib,
             cooldowns: Cooldowns::default(),
         })
     }
@@ -573,6 +581,11 @@ impl Worker {
                             "recommendations scheduled"
                         ),
                         Err(e) => tracing::warn!(error = %e, "could not schedule recommendations"),
+                    }
+                    match crate::rewind::warm(&self.ctx.db, chrono::Utc::now()).await {
+                        Ok(0) => {}
+                        Ok(n) => tracing::info!(users = n, "year in review warmed up"),
+                        Err(e) => tracing::warn!(error = %e, "could not warm up year in review"),
                     }
                     match jobs::cleanup(&self.ctx.db).await {
                         Ok(0) => {}

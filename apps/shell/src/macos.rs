@@ -1,4 +1,4 @@
-//! macOS: замер «светофора», который система рисует поверх интерфейса.
+//! macOS: замер «светофора», который система рисует поверх интерфейса, и окно без него (мини-плеер).
 
 use objc2::MainThreadMarker;
 use objc2_app_kit::{NSWindow, NSWindowButton};
@@ -28,4 +28,27 @@ pub fn traffic_lights(window: &WebviewWindow) -> Option<Rect> {
         width: last.origin.x + last.size.width - first.origin.x,
         height: first.size.height,
     })
+}
+
+/// Спрятать «светофор»: окно мини-плеера рисует свои кнопки, а скругление и тень остаются
+/// системными. Только на главном потоке.
+pub fn hide_window_buttons(window: &WebviewWindow) {
+    if MainThreadMarker::new().is_none() {
+        return;
+    }
+    let Ok(ptr) = window.ns_window() else { return };
+    if ptr.is_null() {
+        return;
+    }
+    // SAFETY: Tauri отдаёт живой NSWindow этого окна; обращаемся к нему с главного потока
+    let ns_window: &NSWindow = unsafe { &*(ptr as *const NSWindow) };
+    for kind in [
+        NSWindowButton::CloseButton,
+        NSWindowButton::MiniaturizeButton,
+        NSWindowButton::ZoomButton,
+    ] {
+        if let Some(button) = ns_window.standardWindowButton(kind) {
+            button.setHidden(true);
+        }
+    }
 }

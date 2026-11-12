@@ -42,8 +42,6 @@ const quality = computed(() => {
   return qualityLabel(player.source) ?? t('player.quality')
 })
 const bpm = computed(() => (player.source?.bpm ? `${Math.round(player.source.bpm)} BPM` : null))
-const liveStatus = computed(() => (track.value ? library.statusOf(track.value) : 'none'))
-const statusLabel = computed(() => (track.value ? t(`track.status.${liveStatus.value}`) : ''))
 
 const mood = computed({
   get: () => player.wave.mood,
@@ -234,7 +232,6 @@ onBeforeUnmount(() => {
           <div class="fp__chips">
             <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
             <UiBadge v-if="bpm" variant="meta">{{ bpm }}</UiBadge>
-            <UiBadge v-if="!player.source?.preview && !player.pending" variant="meta" :icon="liveStatus === 'ready' ? 'ph:check-circle-fill' : 'ph:cloud-arrow-down'">{{ statusLabel }}</UiBadge>
           </div>
         </div>
         <div v-if="player.waveActive" class="fp__reactions">
@@ -299,6 +296,8 @@ onBeforeUnmount(() => {
                   <div class="pp__artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</div>
                 </div>
                 <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
+                <!-- Альбом и плейлист: сердце у названия, как в Spotify; в ряду кнопок — перемешивание и повтор -->
+                <span v-if="player.modesAvailable" class="pp__like"><UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="lg" :tone="liked ? 'liked' : 'solid'" :pressed="liked" :tooltip="false" @click="player.toggleLike()" /></span>
               </div>
               <div v-if="entry?.reason" class="pp__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
             </div>
@@ -316,7 +315,8 @@ onBeforeUnmount(() => {
             />
 
             <div class="pp__controls">
-              <UiIconButton icon="ph:thumbs-down" :label="t('player.dislike')" size="xl" tone="solid" :tooltip="false" @click="player.dislike()" />
+              <MusicPlayModeButton v-if="player.modesAvailable" kind="shuffle" size="lg" />
+              <UiIconButton v-else icon="ph:thumbs-down" :label="t('player.dislike')" size="xl" tone="solid" :tooltip="false" @click="player.dislike()" />
               <UiIconButton icon="ph:skip-back-fill" :label="t('player.prev')" size="xl" tone="solid" :tooltip="false" @click="player.prev()" />
               <MusicWavePlayButton
                 variant="soft"
@@ -328,13 +328,15 @@ onBeforeUnmount(() => {
                 @click="player.toggle()"
               />
               <UiIconButton icon="ph:skip-forward-fill" :label="t('player.next')" size="xl" tone="solid" :tooltip="false" @click="player.next('skipped')" />
-              <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="xl" :tone="liked ? 'liked' : 'solid'" :tooltip="false" @click="player.toggleLike()" />
+              <MusicPlayModeButton v-if="player.modesAvailable" kind="repeat" size="lg" />
+              <UiIconButton v-else :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="xl" :tone="liked ? 'liked' : 'solid'" :tooltip="false" @click="player.toggleLike()" />
             </div>
 
             <MusicConnectChip class="pp__connect" />
             <div class="pp__secondary">
               <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
               <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
+              <MusicSleepTimerButton />
               <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" @click="ui.openPanel('lyrics')" />
               <UiIconButton icon="ph:queue" :label="t('player.queue')" size="lg" :tooltip="false" @click="ui.openPanel('queue')" />
             </div>
@@ -372,7 +374,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   transform: translateX(-50%);
 }
-.fp__dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.fp__dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--accent); }
 .fp__dot--any { background: var(--brand-gradient); }
 .fp__mood {
   position: absolute;
@@ -487,6 +489,11 @@ onBeforeUnmount(() => {
 .pp__scrub { margin-top: clamp(14px, 2.4vh, 20px); flex: none; }
 .pp__controls { display: flex; align-items: center; justify-content: space-between; margin-top: clamp(8px, 2.1vh, 18px); padding: 0 4px; flex: none; }
 .pp__controls :deep(.ib__icon) { font-size: 28px; }
+/* Перемешивание и повтор — тише главных кнопок, как в Spotify и Apple Music */
+.pp__controls :deep(.ib--lg .ib__icon) { font-size: 24px; }
+.pp__like { display: inline-grid; flex: none; margin: -7px -8px 0 -4px; }
+/* С сердцем значок качества прижат к нему, а не висит посередине */
+.pp__titlerow:has(.pp__like) .pp__titles { flex: 1; }
 .pp__connect { justify-content: center; margin-top: clamp(8px, 1.6vh, 14px); flex: none; }
 .pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 10px; flex: none; }
 @media (prefers-reduced-motion: reduce) {

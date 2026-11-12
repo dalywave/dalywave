@@ -18,6 +18,9 @@
 //! растягивает его по карте темпа (Signalsmith Stretch) и стартует ровно на кадре сильной доли
 //! уходящего; автоматику (громкости, эквалайзер, фильтры, эхо) ведёт микшер.
 //!
+//! Эквалайзер (10 полос, [`EqSettings`]) и таймер сна ([`SleepTimer`], затухание и пауза) — на
+//! общем выходе микшера.
+//!
 //! Ссылки на файлы — подписанные и живут несколько часов. Если ссылка перестала работать посреди
 //! трека или её ещё нет ([`SourceSpec::Deferred`]), движок просит новую у [`Resolver`] вызывающего
 //! и продолжает с той же позиции. Кэш — в памяти (текущий, следующий и предыдущий треки);
@@ -27,6 +30,7 @@ mod controller;
 mod deck;
 mod decode;
 pub mod devices;
+mod eq;
 mod error;
 mod fx;
 mod meter;
@@ -50,6 +54,7 @@ use crossbeam_channel::{Receiver, Sender};
 
 pub use dalywave_transitions as transitions;
 pub use dalywave_transitions::Analysis;
+pub use eq::{EQ_BANDS, EQ_BANDS_HZ, EQ_MAX_DB, EqPreset, EqSettings};
 pub use error::AudioError;
 pub use mixer::equal_power;
 
@@ -165,6 +170,10 @@ pub struct EngineConfig {
     /// даёт дорожки уходящего и входящего по отдельности (сверка долей по атакам).
     #[doc(hidden)]
     pub dj_solo: DjSolo,
+    /// Эквалайзер с запуска (приложение помнит его между запусками); None — выключен.
+    pub eq: Option<EqSettings>,
+    /// Таймер сна: за сколько до конца звук затухает, мс.
+    pub sleep_fade_ms: u32,
 }
 
 /// Какая дека слышна во время перехода (только для проверок).
@@ -195,8 +204,33 @@ impl Default for EngineConfig {
             resolver: None,
             analysis: None,
             dj_solo: DjSolo::Both,
+            eq: None,
+            sleep_fade_ms: 15_000,
         }
     }
+}
+
+/// Таймер сна: когда остановить музыку. Последние секунды ([`EngineConfig::sleep_fade_ms`]) звук
+/// плавно затухает, затем пауза.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SleepTimer {
+    /// Через `ms` от команды (по часам, пауза его не останавливает).
+    After { ms: u64 },
+    /// В конце текущего трека; следующий встаёт в начало и ждёт на паузе.
+    EndOfTrack,
+}
+
+/// Что с таймером сна.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SleepStatus {
+    /// None — таймера нет.
+    pub timer: Option<SleepTimer>,
+    /// Сколько осталось до паузы, мс (для конца трека — по позиции, если длина известна).
+    pub remaining_ms: Option<u64>,
+    /// Звук уже затухает.
+    pub fading: bool,
+    /// Таймер сработал: музыка на паузе.
+    pub finished: bool,
 }
 
 /// Откуда брать байты трека.
@@ -350,6 +384,8 @@ pub enum Event {
         channels: u16,
         reason: String,
     },
+    /// Таймер сна: поставили, сняли, началось затухание или сработал.
+    Sleep(SleepStatus),
 }
 
 /// Снимок состояния для синхронных запросов (интерфейс, «Сейчас играет»).
@@ -378,6 +414,14 @@ pub struct Snapshot {
     /// Устройство, к которому привязан поток ([`devices::OutputDevice::id`]); None — поток
     /// следует за устройством по умолчанию (или тестовый захват).
     pub output_device: Option<String>,
+    pub eq: Option<EqSettings>,
+    /// Таймер сна, если он стоит.
+    pub sleep: Option<SleepStatus>,
+    /// Повтор одного трека ([`Engine::set_repeat_one`]).
+    pub repeat_one: bool,
+    /// Есть куда перейти командой «следующий» / «предыдущий» по очереди движка (повтор не в счёт).
+    pub has_next: bool,
+    pub has_previous: bool,
 }
 
 pub(crate) enum Command {
@@ -404,6 +448,9 @@ pub(crate) enum Command {
         reason: String,
     },
     SetOutputDevice(Option<String>),
+    SetEq(Option<EqSettings>),
+    SetSleep(Option<SleepTimer>),
+    SetRepeatOne(bool),
     Stop,
     Shutdown,
 }
@@ -457,6 +504,11 @@ impl Engine {
             output_frames: 0,
             output_reopens: 0,
             output_device: None,
+            eq: config.eq,
+            sleep: None,
+            repeat_one: false,
+            has_next: false,
+            has_previous: false,
         }));
         let capture = Arc::new(Mutex::new(Vec::new()));
         // Устройство открывается в потоке контроллера (cpal::Stream не везде Send),
@@ -575,6 +627,22 @@ impl Engine {
     }
     pub fn stop(&self) {
         self.send(Command::Stop);
+    }
+    /// Эквалайзер на общем выходе; None или плоский — звук идёт мимо, бит в бит. Смена плавная.
+    pub fn set_eq(&self, eq: Option<EqSettings>) {
+        self.send(Command::SetEq(eq));
+    }
+    /// Таймер сна; None — снять (затухание, если началось, отыгрывается обратно). Ход —
+    /// событиями [`Event::Sleep`].
+    pub fn set_sleep(&self, timer: Option<SleepTimer>) {
+        self.send(Command::SetSleep(timer));
+    }
+
+    /// Повтор одного трека: в конце текущего движок сам начинает его заново — тот же файл
+    /// готовится заранее и склеивается без паузы (или переходом, как обычный следующий).
+    /// «Следующий» и «предыдущий» с пульта повтор пропускают.
+    pub fn set_repeat_one(&self, on: bool) {
+        self.send(Command::SetRepeatOne(on));
     }
 
     pub fn snapshot(&self) -> Snapshot {

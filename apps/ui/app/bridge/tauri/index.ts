@@ -10,6 +10,7 @@ import { NativeAudioEngine } from './audio'
 import { createTauriDownloader } from './downloader'
 import { createOfflineBridge, haptic, withOffline } from './offline'
 import { createTauriOutputs } from './outputs'
+import { createTauriRecognizer } from './recognize'
 import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell, type UpdateState } from './shell'
 
 export function isTauri(): boolean {
@@ -125,7 +126,16 @@ export function createTauriBridge(): Bridge {
   offline.onStatus(s => (forceOffline = s.settings.forceOffline))
   void offline.status().then(s => (forceOffline = s.settings.forceOffline)).catch(() => {})
 
-  return withOffline(createWebBridge({
+  // Мини-плеер — окно оболочки на компьютере (apps/shell/src/mini.rs)
+  const miniPlayer = platform === 'macos' || platform === 'windows'
+    ? {
+        open: async () => (await loadShell()).mini.open(),
+        close: async () => (await loadShell()).mini.close(),
+        toggle: async () => (await loadShell()).mini.toggle(),
+      }
+    : null
+
+  const bridge = withOffline(createWebBridge({
     kind: 'tauri',
     offline,
     haptic,
@@ -209,6 +219,8 @@ export function createTauriBridge(): Bridge {
         return on(shell => shell.on('media:command', (c) => {
           if (c.action === 'seek') cb({ action: 'seek', positionMs: c.positionMs })
           else if (c.action === 'seekBy') cb({ action: 'seekBy', offsetMs: c.offsetMs })
+          else if (c.action === 'setShuffle') cb({ action: 'setShuffle', shuffle: c.shuffle })
+          else if (c.action === 'setRepeat') cb({ action: 'setRepeat', mode: c.mode })
           else cb({ action: c.action })
         }))
       },
@@ -227,4 +239,7 @@ export function createTauriBridge(): Bridge {
       void loadShell().then(shell => shell.setLocale(locale)).catch(() => {})
     },
   }), offline)
+  bridge.miniPlayer = miniPlayer
+  bridge.recognizer = createTauriRecognizer(platform, loadShell)
+  return bridge
 }

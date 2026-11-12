@@ -1229,6 +1229,46 @@ pub async fn offline_downloads(app: AppHandle) -> ShellResult<Vec<TrackDownload>
         .collect())
 }
 
+/// Умный запас волны: какие треки в нём и какие уже на устройстве.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReserveList {
+    /// В порядке загрузки: любимое и новое через одно, лучшие первыми.
+    pub track_ids: Vec<Uuid>,
+    pub ready_ids: Vec<Uuid>,
+    pub built_at: Option<String>,
+}
+
+/// Состав умного запаса — для страницы «Запас для волны».
+#[tauri::command]
+pub async fn offline_reserve(app: AppHandle) -> ShellResult<ReserveList> {
+    let off = app.state::<Offline>();
+    let ctx = off.ctx(&app)?;
+    let store = ctx.store();
+    let ready: std::collections::HashSet<Uuid> = store
+        .files()
+        .map_err(ShellError::internal)?
+        .into_iter()
+        .filter(|f| f.state == FileState::Ready)
+        .map(|f| f.track_id)
+        .collect();
+    let track_ids: Vec<Uuid> = store
+        .reserve()
+        .map_err(ShellError::internal)?
+        .into_iter()
+        .map(|r| r.track_id)
+        .collect();
+    Ok(ReserveList {
+        ready_ids: track_ids
+            .iter()
+            .copied()
+            .filter(|id| ready.contains(id))
+            .collect(),
+        track_ids,
+        built_at: store.meta("set.built_at").ok().flatten(),
+    })
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalSource {

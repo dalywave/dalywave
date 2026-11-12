@@ -35,7 +35,7 @@ pub fn sized_source(source: &str, size: u32) -> String {
     path = "/api/images/{kind}/{id}/{file}",
     tag = "catalog",
     params(
-        ("kind" = String, Path, description = "albums или artists"),
+        ("kind" = String, Path, description = "albums, artists или playlists (своя обложка плейлиста)"),
         ("id" = Uuid, Path, description = "id альбома или артиста"),
         ("file" = String, Path, description = "250.jpg, 500.jpg или 1000.jpg"),
     ),
@@ -49,16 +49,17 @@ pub async fn image(
     State(st): State<AppState>,
     Path((kind, id, file)): Path<(String, Uuid, String)>,
 ) -> AppResult<Response> {
-    let owner = match kind.as_str() {
-        "albums" => ImageOwner::Album,
-        "artists" => ImageOwner::Artist,
-        _ => return Err(AppError::NotFound),
-    };
     let size: u32 = file
         .strip_suffix(".jpg")
         .and_then(|s| s.parse().ok())
         .filter(|s| IMAGE_SIZES.contains(s))
         .ok_or(AppError::NotFound)?;
+    let owner = match kind.as_str() {
+        "albums" => ImageOwner::Album,
+        "artists" => ImageOwner::Artist,
+        "playlists" => return playlist_cover(&st, id, size).await,
+        _ => return Err(AppError::NotFound),
+    };
     let row = match owner {
         ImageOwner::Album => sqlx::query!(
             "SELECT cover_key AS key, cover_source AS source FROM albums WHERE id = $1",
@@ -80,17 +81,7 @@ pub async fn image(
     let mut force = false;
     if let Some(key) = key {
         match st.storage.get(&keys::image(&key, size)).await {
-            Ok(object) => {
-                let mut res = Body::from_stream(object.stream).into_response();
-                let headers = res.headers_mut();
-                headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
-                headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(IMMUTABLE));
-                headers.insert(header::CONTENT_LENGTH, HeaderValue::from(object.size));
-                if let Some(etag) = object.e_tag.and_then(|e| HeaderValue::from_str(&e).ok()) {
-                    headers.insert(header::ETAG, etag);
-                }
-                return Ok(res);
-            }
+            Ok(object) => return Ok(jpeg(object)),
             // Запись в базе есть, а файла нет (хранилище почистили): копия делается заново
             Err(StorageError::NotFound) => force = true,
             Err(e) => tracing::warn!(%id, error = %e, "could not read an image from storage"),
@@ -109,6 +100,33 @@ pub async fn image(
         ],
     )
         .into_response())
+}
+
+fn jpeg(object: crate::storage::Object) -> Response {
+    let mut res = Body::from_stream(object.stream).into_response();
+    let headers = res.headers_mut();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(IMMUTABLE));
+    headers.insert(header::CONTENT_LENGTH, HeaderValue::from(object.size));
+    if let Some(etag) = object.e_tag.and_then(|e| HeaderValue::from_str(&e).ok()) {
+        headers.insert(header::ETAG, etag);
+    }
+    res
+}
+
+/// Своя обложка плейлиста: источника вне хранилища у неё нет. Адрес открыт, как и у обложек
+/// каталога (`<img>` в приложениях не шлёт токен), — угадать его нельзя: в нём id плейлиста.
+async fn playlist_cover(st: &AppState, id: Uuid, size: u32) -> AppResult<Response> {
+    let key = sqlx::query_scalar!("SELECT cover_key FROM playlists WHERE id = $1", id)
+        .fetch_optional(&st.db)
+        .await?
+        .flatten()
+        .ok_or(AppError::NotFound)?;
+    match st.storage.get(&keys::image(&key, size)).await {
+        Ok(object) => Ok(jpeg(object)),
+        Err(StorageError::NotFound) => Err(AppError::NotFound),
+        Err(e) => Err(AppError::Unavailable(format!("хранилище не ответило: {e}"))),
+    }
 }
 
 #[cfg(test)]

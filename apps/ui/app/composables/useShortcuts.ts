@@ -1,7 +1,8 @@
-/** Горячие клавиши приложения: пробел, ⇧← ⇧→, L, ⌘K. Не мешают вводу текста */
+/** Горячие клавиши приложения: пробел, ⇧← ⇧→, L, S (перемешивание), R (повтор), ⌘K, ⌘⇧M (мини-плеер). Не мешают вводу текста */
 export function useShortcuts() {
   const player = usePlayerStore()
   const ui = useUiStore()
+  const bridge = useBridge()
 
   function typing(e: KeyboardEvent) {
     const el = e.target as HTMLElement | null
@@ -14,6 +15,12 @@ export function useShortcuts() {
     if (mod && e.key.toLowerCase() === 'k') {
       e.preventDefault()
       ui.focusSearch()
+      return
+    }
+    // Мини-плеер: приложение для компьютера
+    if (mod && e.shiftKey && e.key.toLowerCase() === 'm' && bridge.miniPlayer) {
+      e.preventDefault()
+      void bridge.miniPlayer.open()
       return
     }
     if (typing(e) || mod || e.altKey || e.defaultPrevented) return
@@ -32,6 +39,12 @@ export function useShortcuts() {
     }
     else if (e.key.toLowerCase() === 'l' && !e.shiftKey && player.current) {
       void player.toggleLike()
+    }
+    // S и R — по месту клавиши, чтобы работали и в русской раскладке
+    else if ((e.code === 'KeyS' || e.code === 'KeyR') && !e.shiftKey && player.current && player.modesAvailable) {
+      e.preventDefault()
+      if (e.code === 'KeyS') player.toggleShuffle()
+      else player.cycleRepeat()
     }
   }
 

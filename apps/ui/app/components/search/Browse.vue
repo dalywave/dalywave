@@ -11,11 +11,12 @@ const player = usePlayerStore()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
 
-const MOODS: { mood: Exclude<WaveMood, 'any'>, from: string, to: string }[] = [
-  { mood: 'energetic', from: 'var(--mood-energetic-1)', to: '#b8410f' },
-  { mood: 'happy', from: 'var(--mood-happy-1)', to: '#a3247a' },
-  { mood: 'calm', from: 'var(--mood-calm-1)', to: '#15608c' },
-  { mood: 'sad', from: 'var(--mood-sad-1)', to: '#3d3591' },
+// Плитки — ровной заливкой, как у Spotify: цвет несут шар настроения и фото артиста, не градиент
+const MOODS: { mood: Exclude<WaveMood, 'any'>, tile: string }[] = [
+  { mood: 'energetic', tile: '#9a3a12' },
+  { mood: 'happy', tile: '#8a2468' },
+  { mood: 'calm', tile: '#14557a' },
+  { mood: 'sad', tile: '#363080' },
 ]
 
 interface Genre { id: string, query: string, seed: string, color: string }
@@ -96,7 +97,7 @@ onMounted(() => void loadArt())
         type="button"
         class="tile"
         :class="{ 'is-busy': pending === m.mood, 'is-on': isOn(m.mood) }"
-        :style="{ '--from': m.from, '--to': m.to }"
+        :style="{ '--tile': m.tile }"
         :aria-pressed="isOn(m.mood)"
         @click="playMood(m.mood)"
       >
@@ -109,7 +110,7 @@ onMounted(() => void loadArt())
         :key="g.id"
         type="button"
         class="tile"
-        :style="{ '--from': `color-mix(in oklab, ${g.color} 48%, #0b0c10)`, '--to': `color-mix(in oklab, ${g.color} 78%, #0b0c10)` }"
+        :style="{ '--tile': `color-mix(in oklab, ${g.color} 62%, #0b0c10)` }"
         @click="openGenre(g)"
       >
         <span class="tile__name">{{ t(`genre.${g.id}`) }}</span>
@@ -130,7 +131,7 @@ onMounted(() => void loadArt())
   padding: 0;
   border: 0;
   border-radius: var(--r-3);
-  background: linear-gradient(135deg, var(--from) 0%, var(--to) 100%);
+  background: var(--tile);
   text-align: left;
   color: #fff;
   isolation: isolate;
@@ -150,7 +151,7 @@ onMounted(() => void loadArt())
   height: 76px;
   border-radius: 50%;
   background: radial-gradient(110% 110% at 30% 22%, var(--o3) 0%, var(--o2) 42%, var(--o1) 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), -6px 8px 18px -6px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 .tile__art {
   position: absolute;
@@ -158,7 +159,7 @@ onMounted(() => void loadArt())
   bottom: -6px;
   width: 72px;
   border-radius: var(--r-1);
-  box-shadow: -4px 6px 16px -4px rgba(0, 0, 0, 0.55);
+  box-shadow: -2px 4px 12px -4px rgba(0, 0, 0, 0.45);
   transform: rotate(24deg);
 }
 .tile__on { position: absolute; left: 16px; bottom: 12px; z-index: 2; font-size: 20px; }

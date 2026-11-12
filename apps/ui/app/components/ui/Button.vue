@@ -66,8 +66,8 @@ const attrs = computed(() => {
 .btn:disabled { cursor: default; }
 .btn.is-focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-.btn--primary { background: var(--text-1); color: var(--on-light); box-shadow: 0 6px 20px -10px rgba(255, 255, 255, 0.35); }
-.btn--primary:hover, .btn--primary.is-hover { background: #fff; box-shadow: 0 8px 26px -8px rgba(255, 255, 255, 0.45); }
+.btn--primary { background: var(--text-1); color: var(--on-light); }
+.btn--primary:hover, .btn--primary.is-hover { background: #fff; }
 .btn--primary:active, .btn--primary.is-pressed { background: #dfe3ea; }
 .btn--primary:disabled { background: var(--fill-2); color: var(--text-4); box-shadow: none; }
 

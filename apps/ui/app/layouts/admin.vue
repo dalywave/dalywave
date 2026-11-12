@@ -59,7 +59,7 @@ onMounted(() => void nextTick(revealTab))
     <aside v-if="!ui.isPhone" class="adm__side thin-scrollbar" :aria-label="t('admin.title')">
       <div class="adm__brand">
         <BrandLogo />
-        <UiBadge variant="meta">{{ t('admin.title') }}</UiBadge>
+        <span class="adm__brand-sub">{{ t('admin.title') }}</span>
       </div>
       <nav class="adm__nav" :aria-label="t('admin.sections')">
         <div v-for="g in GROUPS" :key="g.key ?? 'top'" class="adm__group">
@@ -107,9 +107,10 @@ onMounted(() => void nextTick(revealTab))
 </template>
 
 <style scoped>
-.adm { position: relative; z-index: 1; display: grid; grid-template-columns: 232px minmax(0, 1fr); height: 100vh; height: 100dvh; }
-.adm__side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 22px 12px 12px; background: rgba(10, 11, 15, 0.62); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); border-right: 1px solid var(--hair); }
-.adm__brand { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 4px; }
+.adm { position: relative; z-index: 1; display: grid; background: var(--ink-1); grid-template-columns: 232px minmax(0, 1fr); height: 100vh; height: 100dvh; }
+.adm__side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 22px 12px 12px; border-right: 1px solid var(--hair); }
+.adm__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 4px; }
+.adm__brand-sub { font-size: var(--fs-small); font-weight: 600; color: var(--text-3); }
 .adm__nav { display: flex; flex: 1; flex-direction: column; gap: 16px; }
 .adm__group { display: flex; flex-direction: column; gap: 2px; }
 .adm__group-title { padding: 0 12px 6px; font-size: 11px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
@@ -122,12 +123,13 @@ onMounted(() => void nextTick(revealTab))
 .adm__link.is-active { color: var(--text-1); background: var(--fill-2); }
 .adm__count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: color-mix(in oklab, var(--warning) 22%, transparent); font-size: 11px; font-weight: 700; color: var(--warning); }
 .adm__main { min-width: 0; overflow-y: auto; }
-.adm__phone { position: sticky; top: 0; z-index: 5; background: rgba(8, 9, 12, 0.86); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border-bottom: 1px solid var(--hair); }
+.adm__phone { position: sticky; top: 0; z-index: 5; background: var(--ink-1); border-bottom: 1px solid var(--hair); }
 .adm__phone-bar { display: flex; align-items: center; gap: 8px; padding: calc(var(--safe-top) + 4px) 8px 0; }
 .adm__phone-title { font-size: var(--fs-h4); font-weight: 700; }
 .adm__tabs { display: flex; gap: 4px; overflow-x: auto; padding: 4px 12px 8px; scrollbar-width: none; scroll-padding-inline: 12px; }
 .adm__tabs::-webkit-scrollbar { display: none; }
-.adm__tab { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: 600; color: var(--text-2); white-space: nowrap; transition: color var(--dur-1), background-color var(--dur-1); -webkit-tap-highlight-color: transparent; }
+.adm__tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: 600; color: var(--text-2); white-space: nowrap; transition: color var(--dur-1), background-color var(--dur-1); -webkit-tap-highlight-color: transparent; }
+.adm__tab::before { content: ''; position: absolute; inset: -4px -2px; }
 .adm__tab:active { background: var(--fill-2); }
 .adm__tab.is-active { color: var(--ink-1, #08090c); background: var(--text-1); }
 .adm__tab.is-active .adm__count { background: rgba(0, 0, 0, 0.12); color: inherit; }
@@ -192,25 +194,37 @@ onMounted(() => void nextTick(revealTab))
 /* Две колонки разделов на широком экране */
 .ap-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
 
-/* Точка состояния */
+/* Точка состояния: плоская, без свечения — цвет и есть сигнал */
 .ap-dot { display: inline-block; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--text-4); }
-.ap-dot.is-ok { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.ap-dot.is-ok { background: var(--success); }
 .ap-dot.is-warn { background: var(--warning); }
 .ap-dot.is-bad { background: var(--danger); }
-.ap-dot.is-on { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: ap-pulse 1.6s var(--ease-in-out) infinite; }
+.ap-dot.is-on { background: var(--accent); }
+.ap-dot.is-pulse { animation: ap-pulse 1.6s var(--ease-in-out) infinite; }
 @keyframes ap-pulse { 50% { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .ap-dot.is-on { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ap-dot.is-pulse { animation: none; } }
+
+/* Строка фильтров над таблицей страницы */
+.ap-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: -16px; }
+
+/* Подпись группы строк внутри таблицы (день в журнале) */
+.ap-group { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 20px 0 6px; border-bottom: 1px solid var(--hair); font-size: var(--fs-caption); font-weight: 650; color: var(--text-2); }
+.ap-group:first-child { padding-top: 0; }
+.ap-group + .ap-tr { border-top: 0; }
 
 /* Поле ввода админки */
 .ap-input { height: 36px; min-width: 0; padding: 0 12px; border: 0; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-1); font: inherit; font-size: var(--fs-small); transition: box-shadow var(--dur-1); }
 .ap-input::placeholder { color: var(--text-3); }
 .ap-input:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ap-input:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
-.ap-select { appearance: none; padding-right: 32px; background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%); background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px; background-size: 5px 5px; background-repeat: no-repeat; }
-.ap-select option { background: var(--ink-3, #14171d); color: var(--text-1); }
 
 @media (max-width: 1099px) {
   .ap-cols { grid-template-columns: minmax(0, 1fr); }
+}
+/* Под палец: маленькие кнопки в строках таблиц ловят касание на 44 pt, не меняя вида */
+@media (pointer: coarse) {
+  .ap .ib--sm::before, .ap .btn--sm::before { content: ''; position: absolute; inset: -6px; }
+  .ap .btn--sm { position: relative; }
 }
 @media (max-width: 699px) {
   .ap { gap: 32px; padding: 20px 16px 72px; }
@@ -224,5 +238,7 @@ onMounted(() => void nextTick(revealTab))
   .ap-tools { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .ap-tools::-webkit-scrollbar { display: none; }
   .ap-tools > * { flex: none; }
+  .ap-filters { margin-bottom: -8px; }
+  .ap-filters > .asl { flex: 1 1 140px; }
 }
 </style>

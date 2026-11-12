@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import type { AcquisitionStatus, AdminAcquisition } from '~/api/types'
+import type { Acquisition, AcquisitionStatus, AdminAcquisition } from '~/api/types'
 
 // Скачивание одной записи строкой: трек, шаг (ищет → качает → проверяет → обрабатывает), зачем,
-// кто качает. По нажатию раскрывается история: кандидаты с оценками и попытки
+// кто качает. По нажатию раскрывается история: кандидаты с оценками и попытки.
+// Место под кнопку отмены есть всегда — колонки идущих и законченных совпадают с шапкой
 const props = defineProps<{
-  acq: AdminAcquisition
+  acq?: AdminAcquisition
   names?: Record<string, string>
+  /** Строка-шапка с названиями колонок */
+  header?: boolean
 }>()
 const emit = defineEmits<{ changed: [] }>()
 const bridge = useBridge()
@@ -14,18 +17,25 @@ const lang = useLang()
 const L = useAdminLabels()
 const { t } = useI18n({ useScope: 'local' })
 
-const a = computed(() => props.acq.acquisition)
+const a = computed(() => props.acq?.acquisition ?? EMPTY)
+const EMPTY = { status: 'queued' } as Acquisition
 const STEPS: AcquisitionStatus[] = ['matching', 'downloading', 'verifying', 'processing']
 const step = computed(() => STEPS.indexOf(a.value.status))
 const active = computed(() => ACQ_ACTIVE.includes(a.value.status))
-const tone = computed(() => (a.value.status === 'ready' ? 'ap-ok' : a.value.status === 'disputed' ? 'ap-warn' : ['failed', 'unavailable'].includes(a.value.status) ? 'ap-bad' : active.value && a.value.status !== 'queued' ? 'ap-on' : ''))
-const title = computed(() => props.acq.track?.title ?? t('noTrack'))
-const artists = computed(() => (props.acq.track ? artistNames(props.acq.track.artists) : ''))
+const tone = computed<StatusTone>(() => {
+  const s = a.value.status
+  if (s === 'ready') return 'ok'
+  if (s === 'disputed') return 'warn'
+  if (s === 'failed') return 'bad'
+  return active.value && s !== 'queued' ? 'on' : 'idle'
+})
+const title = computed(() => props.acq?.track?.title ?? t('noTrack'))
+const artists = computed(() => (props.acq?.track ? artistNames(props.acq.track.artists) : ''))
 const open = ref(false)
 const busy = ref(false)
 
 async function cancel() {
-  if (!props.acq.jobId) return
+  if (!props.acq?.jobId) return
   busy.value = true
   try {
     await bridge.admin.cancelJob(props.acq.jobId)
@@ -42,7 +52,19 @@ async function cancel() {
 </script>
 
 <template>
-  <div class="ar" :class="{ 'is-open': open }">
+  <div v-if="header" class="ar ar--head" aria-hidden="true">
+    <div class="ar__row">
+      <div class="ar__main">
+        <span>{{ t('col.track') }}</span>
+        <span>{{ t('col.state') }}</span>
+        <span class="ap-hide-phone">{{ t('col.why') }}</span>
+        <span class="ar__time ap-hide-phone">{{ t('col.updated') }}</span>
+        <span />
+      </div>
+      <span class="ar__action" />
+    </div>
+  </div>
+  <div v-else-if="acq" class="ar" :class="{ 'is-open': open }">
     <div class="ar__row">
       <button type="button" class="ar__main" :aria-expanded="open" @click="open = !open">
         <span class="ap-cell">
@@ -50,11 +72,9 @@ async function cancel() {
           <small>{{ artists }}</small>
         </span>
         <span class="ar__state">
-          <span class="ar__status" :class="tone">
-            <span v-if="active" class="ap-dot" :class="{ 'is-on': a.status !== 'queued' }" />
-            {{ L.acqStatus(a.status) }}
-            <template v-if="a.status === 'queued' && a.queuePosition != null"> · {{ t('position', { n: a.queuePosition + 1 }) }}</template>
-          </span>
+          <AdminStatus :tone="tone" :pulse="tone === 'on'">
+            {{ L.acqStatus(a.status) }}<template v-if="a.status === 'queued' && a.queuePosition != null"> · <span class="tnum">{{ t('position', { n: a.queuePosition + 1 }) }}</span></template>
+          </AdminStatus>
           <span v-if="active && a.status !== 'queued'" class="ar__steps" aria-hidden="true">
             <i v-for="(s, i) in STEPS" :key="s" :class="{ 'is-done': i < step, 'is-now': i === step }" />
           </span>
@@ -67,7 +87,9 @@ async function cancel() {
         <span class="ar__time ap-muted tnum ap-hide-phone">{{ formatRelative(a.updatedAt, lang) }}</span>
         <Icon name="ph:caret-down" class="ar__caret" />
       </button>
-      <UiIconButton v-if="active && acq.jobId" icon="ph:x" :label="t('cancel')" size="sm" :disabled="busy" @click="cancel" />
+      <span class="ar__action">
+        <UiIconButton v-if="active && acq.jobId" icon="ph:x" :label="t('cancel')" size="sm" :disabled="busy" @click="cancel" />
+      </span>
     </div>
     <div v-if="open" class="ar__detail">
       <AdminAcquisition :acq="acq" :names="names" />
@@ -79,15 +101,19 @@ async function cancel() {
 .ar { border-top: 1px solid var(--hair); }
 .ar:first-child { border-top: 0; }
 .ar__row { display: flex; align-items: center; gap: 8px; }
-.ar__main { display: grid; flex: 1; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) 84px 16px; align-items: center; gap: 16px; min-width: 0; min-height: 56px; padding: 8px 8px; margin: 0 -8px; border: 0; border-radius: var(--r-3); background: none; color: inherit; font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; transition: background-color var(--dur-1); }
-.ar__main:hover { background: var(--fill-1); }
+.ar__action { display: flex; flex: none; justify-content: flex-end; width: 32px; }
+.ar--head .ar__main { min-height: 32px; padding-top: 0; padding-bottom: 6px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-3); cursor: default; }
+.ar--head { border-bottom: 1px solid var(--hair); }
+.ar--head + .ar { border-top: 0; }
+.ar__main { display: grid; flex: 1; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) 96px 16px; align-items: center; gap: 16px; min-width: 0; min-height: 56px; padding: 8px 8px; margin: 0 -8px; border: 0; border-radius: var(--r-3); background: none; color: inherit; font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; transition: background-color var(--dur-1); }
+.ar:not(.ar--head) .ar__main:hover { background: var(--fill-1); }
 .ar__main:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .ar__state { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.ar__status { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
 .ar__steps { display: flex; gap: 3px; width: 120px; }
 .ar__steps i { flex: 1; height: 3px; border-radius: 2px; background: var(--fill-3); }
 .ar__steps i.is-done { background: var(--accent); }
 .ar__steps i.is-now { background: var(--accent); animation: ap-pulse 1.4s var(--ease-in-out) infinite; }
+.ar__steps { margin-left: 16px; }
 .ar__error { overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-caption); }
 .ar__meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-caption); color: var(--text-2); }
 .ar__meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -98,6 +124,7 @@ async function cancel() {
 @media (prefers-reduced-motion: reduce) { .ar__steps i.is-now { animation: none; } }
 @media (max-width: 699px) {
   .ar__main { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) 16px; gap: 10px; }
+  .ar__row { gap: 4px; }
 }
 </style>
 
@@ -105,6 +132,7 @@ async function cancel() {
 {
   "ru": {
     "noTrack": "Трек удалён из каталога",
+    "col": { "track": "Запись", "state": "Состояние", "why": "Зачем · кто", "updated": "Обновлено" },
     "position": "{n}-я",
     "cancel": "Отменить скачивание",
     "cancelled": "«{title}» больше не качается",
@@ -112,6 +140,7 @@ async function cancel() {
   },
   "en": {
     "noTrack": "Track removed from the catalog",
+    "col": { "track": "Recording", "state": "State", "why": "Why · who", "updated": "Updated" },
     "position": "#{n}",
     "cancel": "Cancel download",
     "cancelled": "“{title}” is no longer downloading",

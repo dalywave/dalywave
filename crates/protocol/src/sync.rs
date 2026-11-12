@@ -14,6 +14,7 @@ use uuid::Uuid;
 use crate::{
     catalog::{ArtistRole, AudioStatus, ImageSet, RecordType},
     library::{BlockedKind, DownloadPolicy, PlaylistKind},
+    wave::WaveSettings,
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, IntoParams)]
@@ -45,6 +46,8 @@ pub enum SyncEntity {
     DeviceSets,
     /// Признаки звучания записи — для волны без сети.
     TrackFeatures,
+    /// Сохранённые сочетания настроек волны.
+    WavePresets,
 }
 
 names!(SyncEntity {
@@ -61,6 +64,7 @@ names!(SyncEntity {
     DeviceDownloads => "deviceDownloads",
     DeviceSets => "deviceSets",
     TrackFeatures => "trackFeatures",
+    WavePresets => "wavePresets",
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -255,6 +259,19 @@ pub struct SyncTrackFeatures {
     pub party: Option<f32>,
 }
 
+/// Сохранённое сочетание настроек волны.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncWavePreset {
+    pub id: Uuid,
+    pub rev: i64,
+    pub name: String,
+    pub icon: String,
+    pub settings: WaveSettings,
+    pub position: f64,
+    pub created_at: DateTime<Utc>,
+}
+
 /// Удаление строки. `key` — ключ строки в camelCase, например `{ "trackId": … }` у `likedTracks`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -289,6 +306,8 @@ pub struct SyncPage {
     pub device_sets: Vec<SyncDeviceSetItem>,
     #[serde(default)]
     pub track_features: Vec<SyncTrackFeatures>,
+    #[serde(default)]
+    pub wave_presets: Vec<SyncWavePreset>,
     pub tombstones: Vec<SyncTombstone>,
 }
 

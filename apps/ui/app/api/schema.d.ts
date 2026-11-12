@@ -1119,6 +1119,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/lyrics/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_lyrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/history": {
         parameters: {
             query?: never;
@@ -1183,6 +1199,38 @@ export interface paths {
         patch: operations["update"];
         trace?: never;
     };
+    "/api/playlists/{id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_cover"];
+        post?: never;
+        delete: operations["remove_cover"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["duplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/playlists/{id}/items": {
         parameters: {
             query?: never;
@@ -1193,6 +1241,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["add_items"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/items/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remove_items"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1247,6 +1311,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recognize/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recognize_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recognize/history/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["recognize_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recognize/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recognize_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases": {
         parameters: {
             query?: never;
@@ -1279,6 +1391,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/resolve-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolve_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rewind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["years"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rewind/{year}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["year"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rewind/{year}/playlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["playlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search": {
         parameters: {
             query?: never;
@@ -1305,6 +1481,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["sound_search"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/share/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["card"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1439,6 +1631,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tracks/{id}/lyrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["track_lyrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/{id}/similar": {
         parameters: {
             query?: never;
@@ -1485,6 +1693,54 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/wave/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_get_wave_presets"];
+        put?: never;
+        post: operations["create_post_wave_presets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/wave/presets/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["reorder"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/wave/presets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove_delete_wave_presets_id_"];
+        options?: never;
+        head?: never;
+        patch: operations["update_patch_wave_presets_id_"];
         trace?: never;
     };
     "/api/wave/sessions": {
@@ -2404,6 +2660,11 @@ export interface components {
             /** @description `dwk_…`: `fetcher worker --token` или файл `~/.config/dalywave/downloader-token`. */
             token: string;
         };
+        /** @description Копия плейлиста или микса — обычный плейлист человека. */
+        DuplicatePlaylist: {
+            /** @description Название копии; без него — как у исходного. */
+            title?: string | null;
+        };
         /**
          * @description Почему прослушивание закончилось.
          * @enum {string}
@@ -3117,6 +3378,11 @@ export interface components {
             items: components["schemas"]["LikedTrack"][];
             nextCursor: string | null;
         };
+        /**
+         * @description Откуда ссылка.
+         * @enum {string}
+         */
+        LinkSource: "dalywave" | "deezer" | "spotify" | "apple" | "youtube" | "soundcloud" | "bandcamp";
         /** @enum {string} */
         ListFormat: "text" | "csv" | "m3u";
         /** @description Импорт списка. Формат без указания определяется по тексту. */
@@ -3150,6 +3416,33 @@ export interface components {
             topGenres: components["schemas"]["TopGenre"][];
             /** Format: int64 */
             tracks: number;
+        };
+        /** @description Трек, в тексте которого нашлась строчка. */
+        LyricsHit: {
+            /** @description Строка текста, где нашлось. */
+            line: string;
+            track: components["schemas"]["Track"];
+        };
+        /**
+         * @description Что известно о тексте трека.
+         * @enum {string}
+         */
+        LyricsKind: "synced" | "plain" | "instrumental" | "none";
+        /** @description Строка синхронного текста. Пустой `text` — проигрыш без слов. */
+        LyricsLine: {
+            /**
+             * Format: int32
+             * @description Начало строки от начала трека, мс.
+             */
+            tMs: number;
+            text: string;
+        };
+        LyricsPayload: {
+            /** Format: uuid */
+            trackId: string;
+        };
+        LyricsSearchResults: {
+            items: components["schemas"]["LyricsHit"][];
         };
         /** @description Кто вошёл. Отвечает и людям без ролей: интерфейс показывает им «ждём доступа». */
         Me: {
@@ -3275,6 +3568,13 @@ export interface components {
             /** @description Треки в этом порядке. */
             trackIds?: string[];
         };
+        /** @description Новое сочетание — в конец ряда. */
+        NewWavePreset: {
+            icon: string;
+            /** @description 1–40 символов. */
+            name: string;
+            settings: components["schemas"]["WaveSettings"];
+        };
         NewWaveSession: {
             settings?: components["schemas"]["WaveSettings"];
         };
@@ -3362,6 +3662,9 @@ export interface components {
              * @description Позиция на момент `at`.
              */
             positionMs?: number;
+            repeat?: components["schemas"]["RepeatMode"];
+            /** @description Перемешивание очереди альбома или плейлиста. */
+            shuffle?: boolean;
             transition?: components["schemas"]["TransitionMode"];
             upcoming?: components["schemas"]["QueueItem"][];
             /**
@@ -3408,6 +3711,7 @@ export interface components {
             durationMs: number;
             /** Format: uuid */
             id: string;
+            image?: components["schemas"]["ImageSet"] | null;
             kind: components["schemas"]["PlaylistKind"];
             pinned: boolean;
             title: string;
@@ -3559,6 +3863,36 @@ export interface components {
          * @enum {string}
          */
         RecoTask: "scout" | "taste" | "analysis" | "model";
+        /** @description Распознанная песня из истории. */
+        Recognition: {
+            artist: string;
+            artworkUrl: string | null;
+            /** Format: uuid */
+            id: string;
+            isrc: string | null;
+            /** Format: date-time */
+            recognizedAt: string;
+            /** @description Как прислал Shazam. */
+            title: string;
+            track: components["schemas"]["Track"] | null;
+        };
+        RecognitionPage: {
+            items: components["schemas"]["Recognition"][];
+            nextCursor: string | null;
+        };
+        /** @description Что узнал Shazam. */
+        RecognizeRequest: {
+            appleMusicId?: string | null;
+            /** @description Артист (до 300 символов). */
+            artist: string;
+            /** @description Обложка от Shazam, только `https://`. */
+            artworkUrl?: string | null;
+            /** @description ISRC записи: по нему трек находится точнее всего. */
+            isrc?: string | null;
+            shazamId?: string | null;
+            /** @description Название (до 300 символов). */
+            title: string;
+        };
         /**
          * @description Тип релиза у Deezer.
          * @enum {string}
@@ -3638,6 +3972,12 @@ export interface components {
         }) | (components["schemas"]["RemoteTransition"] & {
             /** @enum {string} */
             action: "setTransition";
+        }) | (components["schemas"]["RemoteShuffle"] & {
+            /** @enum {string} */
+            action: "setShuffle";
+        }) | (components["schemas"]["RemoteRepeat"] & {
+            /** @enum {string} */
+            action: "setRepeat";
         }) | {
             /** @enum {string} */
             action: "dislike";
@@ -3695,9 +4035,15 @@ export interface components {
         RemoteQueueItem: {
             uid: string;
         };
+        RemoteRepeat: {
+            mode: components["schemas"]["RepeatMode"];
+        };
         RemoteSeek: {
             /** Format: int32 */
             positionMs: number;
+        };
+        RemoteShuffle: {
+            shuffle: boolean;
         };
         RemoteTrack: {
             track: components["schemas"]["Track"];
@@ -3715,6 +4061,15 @@ export interface components {
         RemoteWave: {
             settings?: components["schemas"]["WaveSettings"] | null;
         };
+        /** @description Убрать несколько позиций разом (выбранные в списке). */
+        RemovePlaylistItems: {
+            itemIds: string[];
+        };
+        /**
+         * @description Повтор: выключен, вся очередь по кругу (альбом, плейлист) или один трек.
+         * @enum {string}
+         */
+        RepeatMode: "off" | "all" | "one";
         /**
          * @description Скачать запись заново: по ссылке (YouTube, SoundCloud, Bandcamp…) или поиском, если ссылки нет.
          *     Файл, выбранный человеком, заменяет основной.
@@ -3727,12 +4082,28 @@ export interface components {
          * @enum {string}
          */
         ResolveAction: "choose" | "url" | "unavailable" | "retry";
+        /** @description Ссылка или текст, в котором она есть (так приходит «Поделиться» из других приложений). */
+        ResolveLinkRequest: {
+            url: string;
+        };
         ResolveRequest: {
             action: components["schemas"]["ResolveAction"];
             /** @description Для `url`. */
             url?: string | null;
             /** @description Для `choose`: id видео YouTube (11 символов). */
             videoId?: string | null;
+        };
+        /** @description Найденное по ссылке: заполнено поле своего вида (`track`, `album`, `artist` или `playlistId`). */
+        ResolvedLink: {
+            album: components["schemas"]["AlbumSummary"] | null;
+            artist: components["schemas"]["ArtistSummary"] | null;
+            kind: components["schemas"]["ShareKind"];
+            /** Format: uuid */
+            playlistId: string | null;
+            /** @description Текст, по которому искали в каталоге (для ссылок не на Deezer и не на DalyWave). */
+            query: string | null;
+            source: components["schemas"]["LinkSource"];
+            track: components["schemas"]["Track"] | null;
         };
         /**
          * @description Отчёт о задании: `result` — тот же объект, что отдаёт `POST /v1/acquire` сервиса fetcher
@@ -3745,6 +4116,241 @@ export interface components {
         Resync: {
             /** @description Почему: `lagged` — клиент не успевал читать события. */
             reason: string;
+        };
+        /** @description `GET /api/rewind/{year}`. */
+        Rewind: {
+            /** Format: int64 */
+            artists: number;
+            /** @description Год закончился: итоги окончательные. Иначе — «по сей день». */
+            complete: boolean;
+            /** Format: date-time */
+            computedAt: string;
+            /**
+             * Format: int64
+             * @description Дней, когда что-то играло.
+             */
+            days: number;
+            /**
+             * Format: int64
+             * @description Дней в году на сегодня (для «N из M дней»).
+             */
+            daysInRange: number;
+            discoveries: components["schemas"]["RewindDiscovery"][];
+            firstTrack: components["schemas"]["RewindFirst"] | null;
+            genres: components["schemas"]["RewindGenre"][];
+            /**
+             * Format: int64
+             * @description Лайков за год.
+             */
+            likes: number;
+            /** Format: int64 */
+            minutes: number;
+            /** @description Двенадцать месяцев по порядку. */
+            months: components["schemas"]["RewindMonth"][];
+            moods: components["schemas"]["RewindMood"][];
+            /**
+             * Format: int64
+             * @description Артистов, которых до этого года не слушали.
+             */
+            newArtists: number;
+            personality: components["schemas"]["RewindPersonality"];
+            /**
+             * Format: uuid
+             * @description Плейлист «Твои лучшие треки {год}», если уже сохранён.
+             */
+            playlistId: string | null;
+            /**
+             * Format: int64
+             * @description Прослушиваний (от 30 секунд или до конца).
+             */
+            plays: number;
+            /** @description Сезон итогов: с 1 декабря и после конца года — карточка на главной. */
+            season: boolean;
+            streak: components["schemas"]["RewindStreak"] | null;
+            topAlbums: components["schemas"]["RewindAlbum"][];
+            topArtists: components["schemas"]["RewindArtist"][];
+            topDay: components["schemas"]["RewindDay"] | null;
+            topTracks: components["schemas"]["RewindTrack"][];
+            trackOfYear: components["schemas"]["RewindTrackOfYear"] | null;
+            /** Format: int64 */
+            tracks: number;
+            /**
+             * Format: int64
+             * @description Сессий «Моей волны» и радио за год.
+             */
+            waveSessions: number;
+            /** Format: int32 */
+            year: number;
+        };
+        RewindAlbum: {
+            album: components["schemas"]["AlbumSummary"];
+            /** Format: int64 */
+            minutes: number;
+            /** Format: int64 */
+            plays: number;
+        };
+        RewindArtist: {
+            artist: components["schemas"]["ArtistSummary"];
+            /** Format: int64 */
+            minutes: number;
+            /** Format: int64 */
+            plays: number;
+        };
+        /** @description День, когда слушали больше всего. */
+        RewindDay: {
+            /**
+             * Format: date
+             * @description Дата по времени слушателя.
+             */
+            date: string;
+            /** Format: int64 */
+            minutes: number;
+            /** Format: int64 */
+            plays: number;
+            track: components["schemas"]["Track"] | null;
+            /**
+             * Format: int64
+             * @description Сколько раз он играл в тот день.
+             */
+            trackPlays: number;
+        };
+        /** @description Открытие года: артист, которого впервые услышали в этом году, и он стал любимым. */
+        RewindDiscovery: {
+            artist: components["schemas"]["ArtistSummary"];
+            /**
+             * Format: date
+             * @description Первое прослушивание (дата по времени слушателя).
+             */
+            firstHeard: string;
+            /**
+             * Format: int64
+             * @description Лайкнутых треков артиста.
+             */
+            likes: number;
+            /** Format: int64 */
+            plays: number;
+        };
+        RewindFirst: {
+            /** Format: date-time */
+            at: string;
+            track: components["schemas"]["Track"];
+        };
+        /** @description Жанр года: стиль Discogs из анализа звука (по-русски), а без анализа — жанр Deezer. */
+        RewindGenre: {
+            /** @description Как есть: «Hip Hop---Trap» или «Rap/Hip Hop». */
+            id: string;
+            /** @description «Трэп». */
+            name: string;
+            /**
+             * Format: float
+             * @description Доля времени прослушивания, 0..1.
+             */
+            share: number;
+        };
+        RewindMonth: {
+            /** Format: int64 */
+            minutes: number;
+            /**
+             * Format: int32
+             * @description 1..12
+             */
+            month: number;
+        };
+        /** @description Настроение года по анализу звука: `happy`, `sad`, `aggressive`, `relaxed`, `party`. */
+        RewindMood: {
+            id: string;
+            /**
+             * Format: float
+             * @description Средняя вероятность по времени прослушивания, 0..1.
+             */
+            score: number;
+        };
+        /**
+         * @description Характер слушателя: `night_owl` (ночной слушатель), `early_bird` (утро), `explorer` (много нового),
+         *     `loyal` (переслушивает любимое), `wave_rider` (слушает волну), `balanced` (всего понемногу).
+         */
+        RewindPersonality: {
+            id: string;
+            /**
+             * Format: float
+             * @description Доля времени утром (5–12).
+             */
+            morningShare: number;
+            /**
+             * Format: float
+             * @description Доля времени ночью (23–5).
+             */
+            nightShare: number;
+            /**
+             * Format: float
+             * @description Доля треков года, которые до этого года не играли.
+             */
+            noveltyShare: number;
+            /** @description Время суток с наибольшей долей: `morning`, `day`, `evening`, `night`. */
+            peakPart: string;
+            /**
+             * Format: float
+             * @description Доля прослушиваний-повторов: 1 − треков / прослушиваний.
+             */
+            repeatShare: number;
+            /**
+             * Format: float
+             * @description Доля времени в «Моей волне» и радио.
+             */
+            waveShare: number;
+        };
+        RewindStreak: {
+            /**
+             * Format: int64
+             * @description Дней подряд.
+             */
+            days: number;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        RewindTrack: {
+            /** Format: int64 */
+            minutes: number;
+            /**
+             * Format: int64
+             * @description Прослушиваний (от 30 секунд или до конца).
+             */
+            plays: number;
+            track: components["schemas"]["Track"];
+        };
+        /** @description Трек года: самый слушаемый, с историей — когда впервые и в каком месяце его было больше всего. */
+        RewindTrackOfYear: {
+            /**
+             * Format: date
+             * @description Первое прослушивание в году.
+             */
+            firstPlayed: string;
+            /** Format: int64 */
+            minutes: number;
+            /**
+             * Format: int32
+             * @description 1..12
+             */
+            peakMonth: number;
+            /** Format: int64 */
+            plays: number;
+            track: components["schemas"]["Track"];
+        };
+        RewindYear: {
+            /** Format: int64 */
+            minutes: number;
+            /** Format: int32 */
+            year: number;
+        };
+        /** @description `GET /api/rewind`: годы, за которые есть прослушивания (новые первыми), и текущий год слушателя. */
+        RewindYears: {
+            /** Format: int32 */
+            current: number;
+            /** @description Сезон итогов текущего года (с 1 декабря). */
+            season: boolean;
+            years: components["schemas"]["RewindYear"][];
         };
         /**
          * @description Роль в DalyWave. Роли совмещаются; человек без ролей видит экран «ждём доступа».
@@ -3886,6 +4492,27 @@ export interface components {
             items: components["schemas"]["SessionInfo"][];
             nextCursor: string | null;
         };
+        /** @description Карточка для ссылки: то же видят превью в мессенджерах и статус в Discord. */
+        ShareCard: {
+            /** Format: uuid */
+            id: string;
+            /** @description Публичный адрес обложки (у Deezer), который открывается без входа; `null` — обложки нет. */
+            image: string | null;
+            kind: components["schemas"]["ShareKind"];
+            /**
+             * @description Трек — исполнители через запятую, альбом — главный исполнитель, плейлист — описание,
+             *     артист — пусто.
+             */
+            subtitle: string;
+            title: string;
+            /** @description Ссылка на страницу в DalyWave. */
+            url: string;
+        };
+        /**
+         * @description Что открывает ссылка `https://wave.daly.rest/{kind}/{id}`.
+         * @enum {string}
+         */
+        ShareKind: "track" | "album" | "artist" | "playlist";
         Shelf: {
             /**
              * @description Постоянный id полки: `continue`, `daily-mixes`, `new-releases`, `discover-weekly`, `recent-likes`,
@@ -4160,7 +4787,7 @@ export interface components {
          * @description Таблица локальной базы.
          * @enum {string}
          */
-        SyncEntity: "artists" | "albums" | "tracks" | "recordings" | "likedTracks" | "savedAlbums" | "followedArtists" | "blockedItems" | "playlists" | "playlistItems" | "deviceDownloads" | "deviceSets" | "trackFeatures";
+        SyncEntity: "artists" | "albums" | "tracks" | "recordings" | "likedTracks" | "savedAlbums" | "followedArtists" | "blockedItems" | "playlists" | "playlistItems" | "deviceDownloads" | "deviceSets" | "trackFeatures" | "wavePresets";
         SyncFollowedArtist: {
             /** Format: uuid */
             artistId: string;
@@ -4199,6 +4826,7 @@ export interface components {
             tombstones: components["schemas"]["SyncTombstone"][];
             trackFeatures?: components["schemas"]["SyncTrackFeatures"][];
             tracks: components["schemas"]["SyncTrack"][];
+            wavePresets?: components["schemas"]["SyncWavePreset"][];
         };
         SyncPlaylist: {
             /** Format: date-time */
@@ -4310,6 +4938,20 @@ export interface components {
             valence: number | null;
             /** Format: float */
             voice: number | null;
+        };
+        /** @description Сохранённое сочетание настроек волны. */
+        SyncWavePreset: {
+            /** Format: date-time */
+            createdAt: string;
+            icon: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: double */
+            position: number;
+            /** Format: int64 */
+            rev: number;
+            settings: components["schemas"]["WaveSettings"];
         };
         /** @description «Меньше такого»: приглушённое направление звучания. Переживает ночной пересчёт граней. */
         TasteDamper: {
@@ -4510,6 +5152,18 @@ export interface components {
             /** @description До 500 id; неизвестные пропускаются. */
             ids: string[];
         };
+        /** @description Ответ `GET /api/tracks/{id}/lyrics`. */
+        TrackLyrics: {
+            kind: components["schemas"]["LyricsKind"];
+            /** @description Строки по возрастанию времени — только у `synced`, иначе пусто. */
+            lines: components["schemas"]["LyricsLine"][];
+            /** @description Текст целиком — у `plain` (и у `synced`, если источник его дал). */
+            plain: string | null;
+            /** @description Откуда текст: `lrclib`. */
+            source: string | null;
+            /** Format: uuid */
+            trackId: string;
+        };
         /** @description Свежая ссылка на 30-секундное превью Deezer. */
         TrackPreview: {
             /** @description `null` — у трека нет превью или его нет у Deezer. */
@@ -4651,6 +5305,37 @@ export interface components {
          * @enum {string}
          */
         WavePrepState: "preparing" | "ready";
+        /** @description Сохранённое сочетание настроек волны: запускает волну в одно нажатие. */
+        WavePreset: {
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Имя иконки Phosphor без префикса: `laptop`, `moon-stars`. */
+            icon: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * Format: double
+             * @description Порядок карточек — по возрастанию.
+             */
+            position: number;
+            /** @description Без затравки: радио не сохраняется. */
+            settings: components["schemas"]["WaveSettings"];
+        };
+        /** @description Сочетания по порядку карточек. */
+        WavePresetList: {
+            items: components["schemas"]["WavePreset"][];
+        };
+        /** @description Новый порядок: названные сочетания — первыми в этом порядке, остальные — после, как были. */
+        WavePresetOrder: {
+            ids: string[];
+        };
+        /** @description Правка сочетания: переданные поля меняются. */
+        WavePresetPatch: {
+            icon?: string | null;
+            name?: string | null;
+            settings?: components["schemas"]["WaveSettings"] | null;
+        };
         /** @description Затравка: `id` — для трека, артиста, альбома и плейлиста, `text` — для описания словами. */
         WaveSeed: {
             /** Format: uuid */
@@ -6678,7 +7363,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description albums или artists */
+                /** @description albums, artists или playlists (своя обложка плейлиста) */
                 kind: string;
                 /** @description id альбома или артиста */
                 id: string;
@@ -7442,6 +8127,40 @@ export interface operations {
             };
         };
     };
+    search_lyrics: {
+        parameters: {
+            query: {
+                /** @description Строчка песни, от 3 символов. */
+                q: string;
+                /** @description До 50, по умолчанию 20. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Треки, в тексте которых есть строчка (среди уже взятых текстов), и строка, где она нашлась */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LyricsSearchResults"];
+                };
+            };
+            /** @description Строчка короче 3 символов */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     history: {
         parameters: {
             query?: {
@@ -7647,6 +8366,147 @@ export interface operations {
             };
         };
     };
+    set_cover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Картинка: JPEG, PNG или WebP, до 15 МБ. Обрезается по центру до квадрата */
+        requestBody: {
+            content: {
+                "image/jpeg": number[];
+            };
+        };
+        responses: {
+            /** @description Плейлист со своей обложкой */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Это не картинка */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Плейлист собирается сам (микс) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Файл больше 15 МБ */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove_cover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Своей обложки больше нет — снова мозаика */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Плейлист собирается сам (микс) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    duplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста или микса */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicatePlaylist"];
+            };
+        };
+        responses: {
+            /** @description Копия — обычный плейлист с теми же треками, описанием и обложкой */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     add_items: {
         parameters: {
             query?: never;
@@ -7683,6 +8543,58 @@ export interface operations {
             };
             /** @description Нет такого плейлиста */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove_items: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovePlaylistItems"];
+            };
+        };
+        responses: {
+            /** @description Позиции убраны; чужих и уже убранных среди них не было или они пропущены */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Пустой список или больше 500 позиций */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Плейлист собирается сам (микс) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7831,6 +8743,112 @@ export interface operations {
             };
         };
     };
+    recognize_history: {
+        parameters: {
+            query?: {
+                /** @description `nextCursor` из предыдущей страницы. */
+                cursor?: string;
+                /** @description Сколько вернуть: 1–200, по умолчанию 50. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description История распознанного, новые первыми */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecognitionPage"];
+                };
+            };
+            /** @description Неверный cursor или limit */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    recognize_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id записи истории */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запись убрана из истории */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такой записи у этого человека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    recognize_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecognizeRequest"];
+            };
+        };
+        responses: {
+            /** @description Распознанное записано в историю; `track` — трек каталога (по ISRC, затем поиском) или `null`, если не нашёлся. Аудио скачивается при первом воспроизведении */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recognition"];
+                };
+            };
+            /** @description Пустые или слишком длинные название и артист, artworkUrl не https */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Deezer не ответил: в историю не записано, стоит повторить */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     register: {
         parameters: {
             query?: never;
@@ -7924,6 +8942,159 @@ export interface operations {
             };
         };
     };
+    resolve_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Что нашлось в каталоге по ссылке */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolvedLink"];
+                };
+            };
+            /** @description Ссылка понятна, но в каталоге такого нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `unsupported_link`: не ссылка на музыку из известных сервисов */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Сервис по ссылке или Deezer не ответил */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    years: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Годы с прослушиваниями (новые первыми); текущий — всегда */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewindYears"];
+                };
+            };
+        };
+    };
+    year: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Год по времени слушателя */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Итоги года; текущий — «по сей день» (`complete: false`). Без прослушиваний — нули и пустые списки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rewind"];
+                };
+            };
+            /** @description Год ещё не наступил */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    playlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Год по времени слушателя */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Уже был — обновлён по свежим итогам */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Плейлист «Твои лучшие треки {год}» создан */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description За этот год ещё нечего собрать */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Год ещё не наступил */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     search: {
         parameters: {
             query: {
@@ -8004,6 +9175,40 @@ export interface operations {
             };
             /** @description Сервис анализа не ответил */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description track, album, artist или playlist */
+                kind: components["schemas"]["ShareKind"];
+                /** @description id сущности */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ссылка, название, подпись и публичная обложка */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareCard"];
+                };
+            };
+            /** @description Нет такого (или плейлист чужой) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8261,6 +9466,47 @@ export interface operations {
             };
         };
     };
+    track_lyrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Текст трека: строки с временем (`synced`), простой текст (`plain`), «без слов» (`instrumental`) или «не нашли» (`none`). Берётся у LRCLIB при первом запросе и хранится; «не нашли» — 30 дней */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackLyrics"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description LRCLIB не ответил или просит подождать: стоит повторить позже */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     similar: {
         parameters: {
             query?: {
@@ -8398,6 +9644,158 @@ export interface operations {
             };
             /** @description Версия — не SemVer */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_get_wave_presets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сохранённые сочетания по порядку карточек */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WavePresetList"];
+                };
+            };
+        };
+    };
+    create_post_wave_presets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWavePreset"];
+            };
+        };
+        responses: {
+            /** @description Сочетание сохранено в конец ряда */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WavePreset"];
+                };
+            };
+            /** @description Пустое или длинное название, неверная иконка, радио в настройках, сочетаний уже 24 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WavePresetOrder"];
+            };
+        };
+        responses: {
+            /** @description Сочетания в новом порядке */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WavePresetList"];
+                };
+            };
+        };
+    };
+    remove_delete_wave_presets_id_: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id сочетания */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сочетание удалено */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого сочетания */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_patch_wave_presets_id_: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id сочетания */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WavePresetPatch"];
+            };
+        };
+        responses: {
+            /** @description Сочетание после правки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WavePreset"];
+                };
+            };
+            /** @description Пустое или длинное название, неверная иконка, радио в настройках */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого сочетания */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

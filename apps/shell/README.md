@@ -17,7 +17,9 @@ src/tray.rs       значок в строке меню и трее
 src/downloader.rs загрузчик музыки для сервера (sidecar dalywave-fetcher): запуск, статус, пауза
 src/updates.rs    автообновление: проверка, скачивание в фоне, «Обновление готово — Перезапустить»
 src/settings.rs   адрес сервера, язык меню, загрузчик вкл/пауза (settings.json в папке настроек)
-gen/apple/        Xcode-проект iPhone и iPad (xcodegen, project.yml)
+src/discord.rs    статус «Слушает DalyWave» в Discord (Rich Presence, только компьютеры)
+src/links.rs      ссылки dalywave:// для интерфейса, в том числе «Поделиться → DalyWave»
+gen/apple/        Xcode-проект iPhone и iPad (xcodegen, project.yml), расширение «Поделиться» (ShareExtension/)
 scripts/          значки, сборка Rust для Xcode (build-ios.sh), пересборка Xcode-проекта
 harness/          стенд: страница со всеми командами моста и заглушка сервера для входа
 ```
@@ -174,6 +176,25 @@ security add-generic-password -s dalywave-release-token -a "$USER" -w   # спр
 
 В GitHub — секрет `DALYWAVE_RELEASE_TOKEN` (Settings → Secrets → Actions) рядом с
 `TAURI_SIGNING_PRIVATE_KEY` и `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+
+## Статус в Discord
+
+«Слушает DalyWave»: трек, исполнители, обложка, полоса прогресса и кнопка «Слушать в DalyWave».
+Нужно приложение Discord — один раз, минуты две:
+
+1. https://discord.com/developers/applications → **New Application** → имя **DalyWave** (это имя
+   Discord пишет в «Слушает …») → согласиться с условиями → **Create**.
+2. **General Information** → **App Icon** → загрузить `design/brand/icon-1024.png` → **Save Changes**.
+3. Там же скопировать **Application ID** (число) и вписать в `tauri.conf.json`:
+   `"plugins": { "discord": { "clientId": "<Application ID>" } }`. Это не секрет — его видит любой
+   клиент Discord. Для проверки без пересборки — переменная `DALYWAVE_DISCORD_CLIENT_ID`.
+4. Собрать приложение. В «Настройках» появится «Интеграции → Статус в Discord» (по умолчанию включён).
+   В Discord: «Настройки» → «Конфиденциальность активности» → «Показывать текущую активность» —
+   включено.
+
+Картинки в Rich Presence загружать не нужно: обложка — публичный адрес Deezer, значок —
+`https://wave.daly.rest/icon-512.png`. На паузе дольше 30 с статус пропадает; Discord запустили позже —
+статус появится сам.
 
 ## iPhone и iPad
 

@@ -33,6 +33,9 @@ pub enum AppError {
     InvalidGrant(String),
     #[error("{message}")]
     Conflict { code: &'static str, message: String },
+    /// 422 со своим кодом: запрос понятен, но выполнить его нельзя (например, ссылка не на музыку).
+    #[error("{message}")]
+    Unprocessable { code: &'static str, message: String },
     #[error("метод не поддерживается")]
     MethodNotAllowed,
     #[error("слишком большое тело запроса")]
@@ -70,6 +73,7 @@ impl AppError {
             Self::BadRequest(_) => (StatusCode::BAD_REQUEST, "bad_request"),
             Self::InvalidGrant(_) => (StatusCode::BAD_REQUEST, "invalid_grant"),
             Self::Conflict { code, .. } => (StatusCode::CONFLICT, code),
+            Self::Unprocessable { code, .. } => (StatusCode::UNPROCESSABLE_ENTITY, code),
             Self::MethodNotAllowed => (StatusCode::METHOD_NOT_ALLOWED, "method_not_allowed"),
             Self::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
             Self::UnsupportedMediaType => {

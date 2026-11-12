@@ -1,40 +1,143 @@
 <script setup lang="ts">
-import { MOOD_ORB, WAVE_PRESETS } from '~/utils/wave-options'
+import type { WavePreset } from '~/api/types'
+import type { WaveSettings } from '~/bridge/types'
+import type { MenuEntry } from '~/types/ui'
+import { MOOD_ORB, fromApiSettings, presetIcon, presetMeta, sameSettings, suggestIcon, suggestPresetName } from '~/utils/wave-options'
 
-// Сохранённые сочетания запускают волну в одно нажатие
-defineProps<{ active?: string | null }>()
-const emit = defineEmits<{ select: [id: string], save: [] }>()
-const { t } = useI18n()
+// Сохранённые сочетания запускают волну в одно нажатие; последняя карточка сохраняет текущие настройки.
+// Правый клик или долгое нажатие по сочетанию — переименовать или удалить
+const MAX = 24
+
+const player = usePlayerStore()
+const presets = useWavePresetsStore()
+const toast = useToast()
+const lang = useLang()
+const { t } = useI18n({ useScope: 'local' })
+
+onMounted(() => void presets.load().catch(() => {}))
+
+const list = computed(() => presets.items.map(p => ({ p, set: fromApiSettings(p.settings) })))
+const activeId = computed(() => list.value.find(x => sameSettings(x.set, player.wave))?.p.id ?? null)
+
+const cards = new Map<string, HTMLElement>()
+const saveCard = ref<HTMLElement | null>(null)
+function cardRef(id: string, el: unknown) {
+  if (el instanceof HTMLElement) cards.set(id, el)
+  else cards.delete(id)
+}
+
+const editorOpen = ref(false)
+const busy = ref(false)
+const anchor = ref<HTMLElement | null>(null)
+const editing = ref<{ id: string | null, name: string, icon: string }>({ id: null, name: '', icon: 'ph:sparkle' })
+
+function current(): WaveSettings {
+  const w = player.wave
+  return { mood: w.mood, activity: w.activity, character: w.character, language: w.language }
+}
+
+function openSave() {
+  const set = current()
+  editing.value = { id: null, name: suggestPresetName(set, lang.value), icon: suggestIcon(set) }
+  anchor.value = saveCard.value
+  editorOpen.value = true
+}
+
+function openEdit(p: WavePreset) {
+  editing.value = { id: p.id, name: p.name, icon: presetIcon(p.icon) }
+  anchor.value = cards.get(p.id) ?? null
+  editorOpen.value = true
+}
+
+async function submit(v: { name: string, icon: string }) {
+  const icon = v.icon.replace(/^ph:/, '')
+  busy.value = true
+  try {
+    const id = editing.value.id
+    if (id) {
+      await presets.update(id, { name: v.name, icon })
+    }
+    else {
+      await presets.create({ name: v.name, icon, settings: current() })
+      toast.show({ text: t('savedToast', { name: v.name }), icon: 'ph:bookmark-simple' })
+    }
+    editorOpen.value = false
+  }
+  catch {
+    toast.error(t('failed'))
+  }
+  finally {
+    busy.value = false
+  }
+}
+
+async function remove(p: WavePreset) {
+  try {
+    const undo = await presets.remove(p.id)
+    toast.show({
+      text: t('removed', { name: p.name }),
+      icon: 'ph:trash',
+      undo: () => void undo().catch(() => toast.error(t('failed'))),
+    })
+  }
+  catch {
+    toast.error(t('failed'))
+  }
+}
+
+function menu(p: WavePreset, set: WaveSettings): MenuEntry[] {
+  return [
+    { kind: 'heading', label: p.name, hint: presetMeta(set, lang.value) },
+    { label: t('rename'), icon: 'ph:pencil-simple', onSelect: () => openEdit(p) },
+    { label: t('remove'), icon: 'ph:trash', danger: true, onSelect: () => void remove(p) },
+  ]
+}
+
+const swatch = (set: WaveSettings) => {
+  const [p1, p2, p3] = MOOD_ORB[set.mood]
+  return { '--p1': p1, '--p2': p2, '--p3': p3 }
+}
 </script>
 
 <template>
-  <div v-edge-fade class="combos no-scrollbar" role="group" :aria-label="t('wave.preset.saved')">
-    <button
-      v-for="p in WAVE_PRESETS"
-      :key="p.id"
-      type="button"
-      class="combo"
-      :class="{ 'is-active': active === p.id }"
-      :aria-pressed="active === p.id"
-      @click="emit('select', p.id)"
-    >
-      <span class="combo__swatch" :style="{ '--p1': MOOD_ORB[p.set.mood][0], '--p2': MOOD_ORB[p.set.mood][1], '--p3': MOOD_ORB[p.set.mood][2] }">
-        <Icon :name="p.icon" />
-      </span>
+  <div v-edge-fade class="combos no-scrollbar" role="group" :aria-label="t('label')">
+    <UiContextMenu v-for="{ p, set } in list" :key="p.id" :items="menu(p, set)">
+      <button
+        :ref="el => cardRef(p.id, el)"
+        type="button"
+        class="combo"
+        :class="{ 'is-active': activeId === p.id }"
+        :aria-pressed="activeId === p.id"
+        @click="player.applyPreset(set)"
+      >
+        <span class="combo__swatch" :style="swatch(set)">
+          <Icon :name="presetIcon(p.icon)" />
+        </span>
+        <span class="combo__text">
+          <span class="combo__title">{{ p.name }}<span v-if="activeId === p.id" class="combo__now"> · {{ t('now') }}</span></span>
+          <span class="combo__meta">{{ presetMeta(set, lang) }}</span>
+        </span>
+        <Icon name="ph:play-fill" class="combo__go" />
+      </button>
+    </UiContextMenu>
+    <button v-if="presets.items.length < MAX" ref="saveCard" type="button" class="combo combo--save" @click="openSave">
+      <span class="combo__swatch combo__swatch--save"><Icon name="ph:plus" /></span>
       <span class="combo__text">
-        <span class="combo__title">{{ t(p.titleKey) }}<span v-if="active === p.id" class="combo__now"> · {{ t('wave.preset.current') }}</span></span>
-        <span class="combo__meta">{{ t(p.metaKey) }}</span>
-      </span>
-      <Icon name="ph:play-fill" class="combo__go" />
-    </button>
-    <button type="button" class="combo combo--add" @click="emit('save')">
-      <span class="combo__swatch combo__swatch--add"><Icon name="ph:plus" /></span>
-      <span class="combo__text">
-        <span class="combo__title">{{ t('wave.preset.save') }}</span>
-        <span class="combo__meta">{{ t('wave.preset.saveMeta') }}</span>
+        <span class="combo__title">{{ t('save') }}</span>
+        <span class="combo__meta">{{ t('saveMeta') }}</span>
       </span>
     </button>
   </div>
+  <MusicPresetEditor
+    v-model:open="editorOpen"
+    :title="editing.id ? t('editTitle') : t('saveTitle')"
+    :submit-label="editing.id ? t('done') : t('save')"
+    :name="editing.name"
+    :icon="editing.icon"
+    :anchor="anchor"
+    :busy="busy"
+    @submit="submit"
+  />
 </template>
 
 <style scoped>
@@ -53,10 +156,13 @@ const { t } = useI18n()
   background: var(--fill-1);
   box-shadow: inset 0 0 0 1px var(--hair);
   text-align: left;
+  -webkit-touch-callout: none;
+  user-select: none;
   transition: background-color var(--dur-1), box-shadow var(--dur-1);
 }
 .combo:hover { background: var(--fill-2); box-shadow: inset 0 0 0 1px var(--line); }
 .combo:active { background: var(--fill-3); }
+.combo:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--focus); }
 .combo.is-active { box-shadow: inset 0 0 0 1px var(--accent-line); }
 .combo__swatch {
   position: relative;
@@ -68,12 +174,14 @@ const { t } = useI18n()
   border-radius: 10px;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.92);
-  background: radial-gradient(120% 90% at 20% 110%, var(--p2), transparent 60%), radial-gradient(100% 80% at 90% 0%, var(--p3), transparent 55%), var(--p1);
+  background: color-mix(in oklab, var(--p2) 55%, var(--p1));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   font-size: 16px;
 }
-.combo__swatch--add { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--text-2); }
-.combo--add { background: transparent; color: var(--text-2); }
+/* «Сохранить» — без цвета: это действие, а не сочетание */
+.combo--save { flex: 0 1 auto; background: transparent; }
+.combo--save:hover { background: var(--fill-1); }
+.combo__swatch--save { background: var(--fill-2); box-shadow: none; color: var(--text-2); }
 .combo__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .combo__title { font-size: var(--fs-body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .combo__now { color: var(--accent); font-weight: 500; }
@@ -83,6 +191,40 @@ const { t } = useI18n()
 
 @media (max-width: 699px) {
   .combos { gap: 8px; margin: 0 -16px; padding: 0 16px; }
+  .combo { min-height: 56px; }
   .combo__go { display: none; }
 }
 </style>
+
+<i18n lang="json">
+{
+  "ru": {
+    "label": "Сохранённые сочетания",
+    "now": "сейчас",
+    "save": "Сохранить",
+    "saveMeta": "текущие настройки",
+    "saveTitle": "Сохранить сочетание",
+    "editTitle": "Сочетание",
+    "done": "Готово",
+    "rename": "Переименовать",
+    "remove": "Удалить",
+    "removed": "«{name}» удалено",
+    "savedToast": "«{name}» сохранено",
+    "failed": "Не получилось — попробуйте ещё раз"
+  },
+  "en": {
+    "label": "Saved mixes",
+    "now": "now",
+    "save": "Save",
+    "saveMeta": "current settings",
+    "saveTitle": "Save this mix",
+    "editTitle": "Mix",
+    "done": "Done",
+    "rename": "Rename",
+    "remove": "Delete",
+    "removed": "“{name}” deleted",
+    "savedToast": "“{name}” saved",
+    "failed": "Something went wrong — try again"
+  }
+}
+</i18n>

@@ -57,7 +57,8 @@ pub async fn guard(State(st): State<AppState>, req: Request, next: Next) -> Resp
     if !req.method().is_safe() {
         // Длину знает и само тело: внутри процесса Content-Length может не быть
         let body = HttpBody::size_hint(req.body()).lower() > 0;
-        let raw = raw_upload(req.uri().path());
+        // Без тела проверять тип нечего: DELETE обложки идёт как обычный запрос
+        let raw = (body || has_body(req.headers())) && raw_upload(req.uri().path());
         if let Err(e) = check_unsafe(&st.config, req.headers(), body && !raw, raw) {
             return e.into_response();
         }
@@ -69,6 +70,13 @@ pub async fn guard(State(st): State<AppState>, req: Request, next: Next) -> Resp
 /// только после preflight, а CORS для чужих сайтов закрыт; Origin проверяется как обычно.
 fn raw_upload(path: &str) -> bool {
     let path = path.strip_prefix("/api").unwrap_or(path);
+    // Своя обложка плейлиста — тоже сам файл картинки
+    if let Some(id) = path
+        .strip_prefix("/playlists/")
+        .and_then(|r| r.strip_suffix("/cover"))
+    {
+        return !id.is_empty() && !id.contains('/');
+    }
     let Some(rest) = path.strip_prefix("/imports/") else {
         return false;
     };
@@ -172,6 +180,7 @@ mod tests {
             deezer: Default::default(),
             fetcher: Default::default(),
             ml: Default::default(),
+            lrclib: Default::default(),
             release_token: None,
         }
     }
@@ -203,6 +212,9 @@ mod tests {
         assert!(raw_upload("/imports/spotify"));
         assert!(raw_upload("/api/imports/0193/files"));
         assert!(!raw_upload("/imports/list"));
+        assert!(raw_upload("/api/playlists/0193/cover"));
+        assert!(!raw_upload("/playlists//cover"));
+        assert!(!raw_upload("/playlists/a/b/cover"));
         assert!(!raw_upload("/imports/a/b/files"));
         let cookie = ("cookie", "dw_session=dws_x");
         let origin = ("origin", "https://wave.daly.rest");

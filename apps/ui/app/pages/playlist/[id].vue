@@ -1,12 +1,18 @@
 <script setup lang="ts">
+import type { PlaylistItem, Track } from '~/api/types'
 import type { MenuEntry } from '~/types/ui'
 
-// Плейлист: обложка, описание, треки с альбомами
+// Плейлист: обложка, описание, треки с альбомами. Свой — «Изменить» (название, описание, обложка,
+// порядок), «Добавить треки», убрать из меню трека или выделением. Микс только для чтения:
+// его можно «Сохранить как плейлист»
 const route = useRoute()
+const router = useRouter()
 const bridge = useBridge()
 const toast = useToast()
-const offline = useOfflineStore()
+const shareMenu = useShare()
+const ui = useUiStore()
 const lang = useLang()
+const pla = usePlaylistActions()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
 
@@ -15,75 +21,163 @@ const { data, state, load } = useLoad(() => bridge.playlists.get(id.value), () =
 const { playPlaylist, isContext, isPlayingContext, loading } = usePlayActions()
 useHead({ title: () => data.value?.playlist.title ?? t('title') })
 
-const pl = computed(() => data.value?.playlist ?? null)
-const tracks = computed(() => data.value?.items.map(i => i.track) ?? [])
+const library = useLibraryStore()
+const pl = computed(() => {
+  const p = data.value?.playlist
+  if (!p) return null
+  // Закрепление и обложка меняются из меню и боковой панели — берём свежую карточку из медиатеки
+  const fresh = library.playlists?.find(x => x.id === p.id)
+  return fresh ? { ...p, pinned: fresh.pinned, image: fresh.image, title: fresh.title, description: fresh.description } : p
+})
+const items = computed(() => data.value?.items ?? [])
+const tracks = computed(() => items.value.map(i => i.track))
 const playing = computed(() => !!pl.value && isPlayingContext('playlist', pl.value.id))
-const ready = computed(() => tracks.value.filter(tr => tr.audioStatus === 'ready').length)
 const kindKey = computed(() => (pl.value?.kind === 'mix' ? 'kind.mix' : pl.value?.kind === 'smart' ? 'kind.smart' : 'kind.user'))
+const mine = computed(() => !!pl.value && pla.editable(pl.value))
+
+// Правка — в адресе (?edit=1): «Изменить» из меню в боковой панели открывает сразу её
+const editing = computed(() => mine.value && route.query.edit === '1')
+function startEdit() {
+  void router.replace({ query: { ...route.query, edit: '1' } })
+}
+async function finishEdit() {
+  await router.replace({ query: { ...route.query, edit: undefined } })
+  await refresh()
+}
+
+/** Перечитать без состояния «загрузка»: список не мигает */
+async function refresh() {
+  try {
+    data.value = await bridge.playlists.get(id.value)
+  }
+  catch {
+    // Останется прежнее; следующий заход перечитает
+  }
+}
+
+const addOpen = ref(false)
 
 const moreItems = computed<MenuEntry[]>(() => {
-  const p = pl.value
-  if (!p) return []
+  if (!pl.value) return []
   return [
-    { label: t('shuffle'), icon: 'ph:shuffle', onSelect: () => playPlaylist(p.id, { shuffle: true }) },
-    { label: p.pinned ? t('unpin') : t('pin'), icon: 'ph:push-pin', onSelect: () => toast.show({ text: t('editSoon'), icon: 'ph:push-pin' }) },
-    { label: t('edit'), icon: 'ph:pencil-simple', onSelect: () => toast.show({ text: t('editSoon'), icon: 'ph:pencil-simple' }) },
-    // Приложение: скачать плейлист на устройство
-    ...(offline.available
-      ? [offline.isPinned('playlist', p.id)
-          ? { label: tg('offline.remove'), icon: 'ph:x-circle', onSelect: () => offline.unpin('playlist', p.id, p.title) }
-          : { label: tg('offline.downloadAll'), icon: 'ph:arrow-circle-down', onSelect: () => offline.pin('playlist', p.id, p.title) }]
-      : []),
+    ...(mine.value ? [{ label: t('addTracks'), icon: 'ph:plus', onSelect: () => (addOpen.value = true) }] : []),
+    ...pla.menuFor(pl.value, { page: true }),
+    { kind: 'separator' },
+    shareMenu.entry('playlist', pl.value.id, pl.value.title),
   ]
 })
+
+
+// ---------- Убрать из плейлиста (не в режиме правки) ----------
+
+function setItems(next: PlaylistItem[]) {
+  if (data.value) data.value = { ...data.value, items: next }
+}
+
+/** Вернуть убранные на прежние места: каждую — после той, что стояла перед ней */
+async function restore(removed: { item: PlaylistItem, prev: string | null }[]) {
+  const p = pl.value
+  if (!p) return
+  const moved = new Map<string, string>()
+  try {
+    for (const r of removed) {
+      const after = r.prev ? (moved.get(r.prev) ?? r.prev) : null
+      const res = await bridge.playlists.addItems(p.id, after ? { trackIds: [r.item.track.id], afterItemId: after } : { trackIds: [r.item.track.id], atStart: true })
+      if (res.items[0]) moved.set(r.item.id, res.items[0].id)
+    }
+  }
+  catch {
+    toast.error(tg('pl.failed'))
+  }
+  await refresh()
+}
+
+async function removeIndices(indices: number[]) {
+  const p = pl.value
+  if (!p || !indices.length) return
+  const all = items.value
+  const removed = indices.map(i => ({ item: all[i]!, prev: all[i - 1]?.id ?? null })).filter(r => !!r.item)
+  const ids = new Set(removed.map(r => r.item.id))
+  setItems(all.filter(i => !ids.has(i.id)))
+  try {
+    if (removed.length === 1) await bridge.playlists.removeItem(p.id, removed[0]!.item.id)
+    else await bridge.playlists.removeItems(p.id, [...ids])
+  }
+  catch {
+    setItems(all)
+    toast.error(tg('pl.failed'))
+    return
+  }
+  void library.loadPlaylists(true).catch(() => {})
+  toast.show({
+    text: removed.length === 1 ? tg('pl.removed', { title: removed[0]!.item.track.title }) : tg('pl.removedMany', { n: formatCount(removed.length, 'track', lang.value) }),
+    icon: 'ph:minus-circle',
+    undo: () => void restore(removed),
+  })
+}
+
+function extraMenu(_track: Track, index: number): MenuEntry[] {
+  return [{ label: tg('pl.removeFrom'), icon: 'ph:minus-circle', danger: true, onSelect: () => void removeIndices([index]) }]
+}
 </script>
 
 <template>
   <div class="playlist">
-    <MusicPageState v-if="state !== 'ready'" :state="state" @retry="load" />
+    <template v-if="state !== 'ready'">
+      <MusicPhoneNav fallback="/library" />
+      <MusicPageState :state="state" @retry="load" />
+    </template>
+    <MusicPlaylistEditor v-else-if="data && editing" :key="`edit:${data.playlist.id}`" :detail="data" @done="finishEdit" />
     <template v-else-if="data && pl">
-      <MusicPageHeader :kicker="t(kindKey)" :title="pl.title">
+      <MusicPageHeader :kicker="t(kindKey)" :title="pl.title" back="/library">
         <template #art>
-          <MusicPlaylistCover :id="pl.id" :title="pl.title" :covers="pl.covers" :kind="pl.kind" :generated="pl.kind === 'mix'" />
+          <MusicPlaylistCover :id="pl.id" :title="pl.title" :covers="pl.covers" :image="pl.image" :kind="pl.kind" :generated="pl.kind === 'mix'" />
         </template>
         <template v-if="pl.description" #sub>
           <span class="playlist__desc">{{ pl.description }}</span>
         </template>
-        <template #meta>
-          <span v-if="pl.pinned" class="pinned"><Icon name="ph:push-pin-fill" />{{ t('pinned') }}</span>
+        <template v-if="pl.tracksCount" #meta>
           <span>{{ formatCount(pl.tracksCount, 'track', lang) }}</span>
           <span>{{ formatLongDuration(pl.durationMs, lang) }}</span>
-        </template>
-        <template v-if="tracks.length && ready < tracks.length" #status>
-          <span class="ready"><Icon name="ph:cloud-arrow-down" />{{ t('ready', { n: ready, total: tracks.length }) }}</span>
         </template>
         <template #actions>
           <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :loading="loading === `playlist:${pl.id}`" :disabled="!tracks.length" @click="playPlaylist(pl.id)">
             {{ playing ? tg('common.pause') : isContext('playlist', pl.id) ? t('resume') : tg('common.play') }}
           </UiButton>
           <UiButton size="lg" icon="ph:shuffle" :disabled="!tracks.length" @click="playPlaylist(pl.id, { shuffle: true })">{{ t('shuffle') }}</UiButton>
-          <MusicDownloadButton kind="playlist" :ref-id="pl.id" :title="pl.title" />
+        </template>
+        <template #tools>
+          <UiIconButton v-if="mine && !ui.isPhone" icon="ph:plus" :label="t('addTracks')" size="lg" @click="addOpen = true" />
+          <UiIconButton v-if="mine && !ui.isPhone" icon="ph:pencil-simple" :label="tg('pl.edit')" size="lg" @click="startEdit" />
+          <UiIconButton v-if="!mine && !ui.isPhone" icon="ph:plus-circle" :label="tg('pl.saveAs')" size="lg" @click="pla.duplicate(pl)" />
+          <MusicDownloadButton v-if="tracks.length" kind="playlist" :ref-id="pl.id" :title="pl.title" />
           <UiMenu :items="moreItems" align="start">
             <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />
           </UiMenu>
         </template>
       </MusicPageHeader>
 
-      <MusicTrackList v-if="tracks.length" :tracks="tracks" variant="wide" :context="{ type: 'playlist', id: pl.id, title: pl.title }" :label="pl.title" />
-      <UiEmptyState v-else icon="ph:playlist" :title="t('empty')" :text="t('emptyText')">
-        <UiButton to="/search" icon="ph:magnifying-glass">{{ t('find') }}</UiButton>
+      <MusicTrackList
+        v-if="tracks.length"
+        :tracks="tracks"
+        variant="wide"
+        :context="{ type: 'playlist', id: pl.id, title: pl.title }"
+        :label="pl.title"
+        :extra-menu="mine ? extraMenu : undefined"
+        :remove-many="mine ? removeIndices : undefined"
+      />
+      <UiEmptyState v-else-if="mine" icon="ph:playlist" :title="t('empty')" :text="t('emptyMine')">
+        <UiButton variant="primary" icon="ph:plus" @click="addOpen = true">{{ t('addTracks') }}</UiButton>
       </UiEmptyState>
-      <ShellDevMockNote :sections="['library']" what="плейлист" class="playlist__note" />
+      <UiEmptyState v-else icon="ph:playlist" :title="t('empty')" />
+      <MusicPlaylistAddTracks v-if="mine" v-model:open="addOpen" :detail="data" @added="refresh" />
     </template>
   </div>
 </template>
 
 <style scoped>
 .playlist { display: flex; flex-direction: column; gap: 28px; }
-.playlist__desc { font-size: var(--fs-body); font-weight: 450; color: var(--text-2); }
-.pinned { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
-.ready :deep(.iconify) { margin-right: 5px; vertical-align: -2px; color: var(--text-3); }
-.playlist__note { align-self: center; }
+.playlist__desc { display: -webkit-box; overflow: hidden; font-size: var(--fs-body); font-weight: 450; color: var(--text-2); text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 @media (max-width: 699px) {
   .playlist { gap: 20px; }
   .playlist > :deep(.tl) { padding: 0 8px; }
@@ -97,30 +191,18 @@ const moreItems = computed<MenuEntry[]>(() => {
     "kind": { "user": "Плейлист", "smart": "Умная подборка", "mix": "Микс" },
     "resume": "Продолжить",
     "shuffle": "Перемешать",
-    "pinned": "Закреплён",
-    "pin": "Закрепить",
-    "unpin": "Открепить",
-    "edit": "Изменить",
-    "editSoon": "Редактор плейлистов появится вместе с синхронизацией медиатеки",
-    "ready": "{n} из {total} на сервере",
+    "addTracks": "Добавить треки",
     "empty": "В плейлисте пока пусто",
-    "emptyText": "Добавьте треки через меню трека → «В плейлист»",
-    "find": "Найти музыку"
+    "emptyMine": "Найдите треки или возьмите из подходящих"
   },
   "en": {
     "title": "Playlist",
     "kind": { "user": "Playlist", "smart": "Smart playlist", "mix": "Mix" },
     "resume": "Resume",
     "shuffle": "Shuffle",
-    "pinned": "Pinned",
-    "pin": "Pin",
-    "unpin": "Unpin",
-    "edit": "Edit",
-    "editSoon": "The playlist editor arrives with library sync",
-    "ready": "{n} of {total} on the server",
+    "addTracks": "Add tracks",
     "empty": "This playlist is empty",
-    "emptyText": "Add tracks from a track's menu → “Add to playlist”",
-    "find": "Find music"
+    "emptyMine": "Search for tracks or pick from suggestions"
   }
 }
 </i18n>

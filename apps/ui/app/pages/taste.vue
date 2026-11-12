@@ -132,6 +132,20 @@ async function reset() {
   }
 }
 
+// Телефон: название уехало под верхнюю строку — она показывает его сама
+const titleEl = ref<HTMLElement | null>(null)
+const condensed = ref(false)
+let io: IntersectionObserver | null = null
+watch(titleEl, (el) => {
+  io?.disconnect()
+  if (!el) return
+  io = new IntersectionObserver(([e]) => {
+    if (e) condensed.value = !e.isIntersecting && e.boundingClientRect.top < 100
+  }, { rootMargin: '-100px 0px 0px 0px' })
+  io.observe(el)
+})
+onBeforeUnmount(() => io?.disconnect())
+
 const analyzedShare = computed(() => {
   const k = knows.value
   if (!k) return 0
@@ -142,13 +156,14 @@ const analyzedShare = computed(() => {
 
 <template>
   <div class="taste">
+    <MusicPhoneNav :title="t('title')" :condensed="condensed" />
     <MusicPageState v-if="state !== 'ready'" :state="state === 'missing' ? 'error' : state" @retry="load" />
 
     <template v-else-if="data">
       <!-- Отпечаток: доли граней одной полосой -->
       <header class="head">
         <div class="head__kicker">{{ t('kicker') }}</div>
-        <h1 class="head__title">{{ t('title') }}</h1>
+        <h1 ref="titleEl" class="head__title">{{ t('title') }}</h1>
         <p v-if="facets.length" class="head__sub">{{ t('sub', { n: facets.length, word: facetsWord }) }}</p>
         <p v-else class="head__sub">{{ t('subEmpty') }}</p>
         <div v-if="facets.length" class="print" role="img" :aria-label="facets.map(f => `${f.label} ${Math.round(f.share * 100)} %`).join(', ')">
@@ -183,6 +198,11 @@ const analyzedShare = computed(() => {
         </div>
       </section>
       <UiEmptyState v-else icon="ph:fingerprint" :title="t('emptyTitle')" :text="t('emptyText')" />
+
+      <!-- Итоги года: всегда, с прошлыми годами -->
+      <section class="sec">
+        <RewindCard past-years />
+      </section>
 
       <!-- Месяц в цифрах -->
       <section v-if="stats" class="sec">
@@ -306,8 +326,8 @@ const analyzedShare = computed(() => {
 .head__title { margin: 0; font-size: var(--fs-display); font-weight: 750; letter-spacing: var(--tr-display); line-height: 1; }
 .head__sub { margin: 4px 0 0; font-size: var(--fs-h4); color: var(--text-2); }
 .print { display: flex; gap: 4px; height: 12px; margin-top: 20px; }
-.print__seg { min-width: 6px; border-radius: var(--r-pill); background: var(--c); box-shadow: 0 0 18px -4px color-mix(in oklab, var(--c) 80%, transparent); transition: flex-grow var(--dur-4) var(--ease-out), opacity var(--dur-3); }
-.print__seg.is-damped { opacity: 0.35; box-shadow: none; }
+.print__seg { min-width: 6px; border-radius: var(--r-pill); background: var(--c); transition: flex-grow var(--dur-4) var(--ease-out), opacity var(--dur-3); }
+.print__seg.is-damped { opacity: 0.35; }
 
 .sec { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .sec__title { margin: 0; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); }
@@ -323,18 +343,17 @@ const analyzedShare = computed(() => {
 
 .month { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 16px; }
 .big, .card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 20px; border-radius: var(--r-5); background: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair); }
-.big { background: radial-gradient(120% 100% at 0% 0%, color-mix(in oklab, var(--brand-2) 18%, transparent), transparent 60%), var(--ink-2); }
 .big__main { font-size: 56px; font-weight: 750; letter-spacing: var(--tr-display); line-height: 1; }
 .big__main small { margin: 0 10px 0 4px; font-size: 20px; font-weight: 650; letter-spacing: 0; color: var(--text-2); }
 .big__sub { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: var(--fs-small); color: var(--text-2); }
-.big__delta { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border-radius: var(--r-pill); font-weight: 650; }
-.big__delta.is-up { background: color-mix(in oklab, var(--success) 14%, transparent); color: var(--success); }
-.big__delta.is-down { background: var(--fill-2); color: var(--text-2); }
+.big__delta { display: inline-flex; align-items: center; gap: 2px; font-weight: 650; }
+.big__delta.is-up { color: var(--success); }
+.big__delta.is-down { color: var(--text-2); }
 .parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: auto; padding-top: 8px; }
 .parts__col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .parts__bar { display: flex; align-items: flex-end; width: 100%; height: 56px; overflow: hidden; border-radius: var(--r-2); background: var(--fill-1); }
 .parts__bar i { width: 100%; border-radius: var(--r-2); background: var(--fill-3); }
-.parts__col.is-peak .parts__bar i { background: var(--brand-gradient); }
+.parts__col.is-peak .parts__bar i { background: var(--accent); }
 .parts__col.is-peak .parts__icon, .parts__col.is-peak .parts__label { color: var(--text-1); }
 .parts__icon { font-size: 16px; color: var(--text-2); }
 .parts__label { font-size: var(--fs-micro); color: var(--text-3); }
@@ -386,7 +405,9 @@ const analyzedShare = computed(() => {
   .facets, .blocked { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 699px) {
-  .taste { gap: 36px; padding: 8px 16px 0; }
+  .taste { gap: 36px; padding: 0 16px; }
+  /* Верхняя строка — во всю ширину и вплотную к заголовку */
+  .taste > .pn { margin: calc(var(--safe-top) * -1) -16px -24px; }
   .head__title { font-size: 34px; }
   .head__sub { font-size: 15px; }
   .facets, .month, .blocked { grid-template-columns: minmax(0, 1fr); }

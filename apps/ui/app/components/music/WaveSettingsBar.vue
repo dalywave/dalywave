@@ -29,7 +29,7 @@ function valueLabel(group: Group, long = false) {
 function items(group: Group): MenuEntry[] {
   const g = GROUPS.find(x => x.key === group)!
   return [
-    { kind: 'heading', label: t(g.labelKey), hint: group === 'activity' ? 'задаёт ход сессии' : undefined },
+    { kind: 'heading', label: t(g.labelKey) },
     ...g.options.map(o => ({
       label: t(o.key),
       icon: o.icon,
@@ -112,7 +112,7 @@ const mood = computed({
 
 /* Узкая колонка (открыта правая панель): в ряд четыре ячейки не помещаются — док встаёт сеткой 2×2
    на всю ширину карточки, разделители — между колонками и между строками */
-@container main (max-width: 820px) {
+@container main (max-width: 700px) {
   .dock { display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); width: 100%; }
   .dock__cell { border-radius: 0; }
   .dock > :nth-child(odd)::before { display: none; }

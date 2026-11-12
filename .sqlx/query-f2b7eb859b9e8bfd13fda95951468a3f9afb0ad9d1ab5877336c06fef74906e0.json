@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlists p SET cover_key = NULL, updated_at = now()\n         FROM (SELECT cover_key FROM playlists WHERE id = $1) old\n         WHERE p.id = $1 RETURNING old.cover_key",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cover_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "cover_key"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "f2b7eb859b9e8bfd13fda95951468a3f9afb0ad9d1ab5877336c06fef74906e0"
+}

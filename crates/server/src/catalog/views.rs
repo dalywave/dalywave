@@ -18,6 +18,8 @@ use crate::crypto::sha256;
 pub enum ImageKind {
     Albums,
     Artists,
+    /// Своя обложка плейлиста.
+    Playlists,
 }
 
 impl ImageKind {
@@ -25,6 +27,7 @@ impl ImageKind {
         match self {
             Self::Albums => "albums",
             Self::Artists => "artists",
+            Self::Playlists => "playlists",
         }
     }
 }

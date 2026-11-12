@@ -40,6 +40,8 @@ pub mod kind {
     pub const IMPORT_APPLY: &str = "import_apply";
     /// Свой аудиофайл: теги, сопоставление, проверка отпечатком, громкость, замена копии хуже.
     pub const IMPORT_FILE: &str = "import_file";
+    /// Взять текст трека у LRCLIB заранее, пока трек ещё в очереди (полоса «Тексты»).
+    pub const LYRICS: &str = "lyrics";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -263,6 +265,12 @@ pub struct RefreshArtistPayload {
 #[serde(rename_all = "camelCase")]
 pub struct SyncDiscographyPayload {
     pub artist_id: Uuid,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LyricsPayload {
+    pub track_id: Uuid,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

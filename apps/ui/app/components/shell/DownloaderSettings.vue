@@ -10,6 +10,7 @@ const toast = useToast()
 const lang = useLang()
 const route = useRoute()
 const dl = useDownloader()
+const ui = useUiStore()
 const { t } = useI18n({ useScope: 'local' })
 
 const pc = bridge.platform === 'windows'
@@ -40,6 +41,9 @@ const state = computed(() => {
   return t(`state.${v.kind}`)
 })
 
+/** Вне приложения раздел — подсказка администратору с компьютера; остальным и на телефоне он лишний */
+const shown = computed(() => dl.available || (auth.isAdmin && !ui.isPhone))
+
 /** Пауза имеет смысл, пока загрузчик работает или вот-вот начнёт */
 const canPause = computed(() => enabled.value && ['working', 'idle', 'paused', 'offline', 'resting', 'starting', 'restarting'].includes(view.value.kind))
 
@@ -64,7 +68,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <SettingsGroup id="downloader" class="dls" :title="!dl.available ? t('titleWeb') : pc ? t('titlePc') : t('titleMac')">
+  <SettingsGroup v-if="shown" id="downloader" class="dls" :title="!dl.available ? t('titleWeb') : pc ? t('titlePc') : t('titleMac')">
     <SettingsRow v-if="!dl.available" :title="t('web')" />
 
     <template v-else>
@@ -119,7 +123,7 @@ onMounted(() => {
 
 /* Ход задания — подстрока цветом настроения */
 .bar { position: relative; flex: 1; height: 4px; margin-bottom: 4px; overflow: hidden; border-radius: var(--r-pill); background: var(--fill-3); }
-.bar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent-gradient, var(--accent)); transition: width var(--dur-3) var(--ease-out); }
+.bar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); transition: width var(--dur-3) var(--ease-out); }
 
 .value { font-size: var(--fs-small); color: var(--text-2); text-align: right; }
 .tnum { font-variant-numeric: tabular-nums; }

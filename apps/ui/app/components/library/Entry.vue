@@ -57,6 +57,7 @@ function play() {
         :id="item.playlist.id"
         :title="item.playlist.title"
         :covers="item.playlist.covers"
+        :image="item.playlist.image"
         :kind="item.playlist.kind"
         :show-title="layout === 'grid'"
         class="le__cover"

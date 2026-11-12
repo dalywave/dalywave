@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import type { FollowedArtist, PlaylistKind, SavedAlbum, Track } from '~/api/types'
+import type { FollowedArtist, SavedAlbum, Track } from '~/api/types'
 import type { LibraryItem } from '~/components/library/Entry.vue'
 import type { MenuEntry } from '~/types/ui'
 
 // Медиатека как «Your Library» в Spotify и Apple Music: цветной ряд «Любимые треки», «Моя волна»,
 // «Недавно добавленные»; ниже — всё сохранённое одним списком с фильтрами, сортировкой и видом
 // «сетка/список». Закреплённые плейлисты всегда первыми
-type Filter = 'playlists' | 'albums' | 'artists' | 'downloaded'
+type Filter = 'playlists' | 'albums' | 'artists' | 'downloaded' | 'recent'
 type Sort = 'added' | 'title'
 type View = 'grid' | 'list'
 
 // «Скачанное» — только в приложении: закреплённое на этом устройстве
 const BASE_FILTERS: Filter[] = ['playlists', 'albums', 'artists']
-const KIND_OF: Record<Exclude<Filter, 'downloaded'>, LibraryItem['kind']> = { playlists: 'playlist', albums: 'album', artists: 'artist' }
+const KIND_OF: Record<Exclude<Filter, 'downloaded' | 'recent'>, LibraryItem['kind']> = { playlists: 'playlist', albums: 'album', artists: 'artist' }
 
 const route = useRoute()
 const router = useRouter()
@@ -26,14 +26,17 @@ const offline = useOfflineStore()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
-const { playAlbum, playArtist, playPlaylist } = usePlayActions()
+const { playAlbum, playArtist } = usePlayActions()
+const pla = usePlaylistActions()
+const pui = usePlaylistUi()
 useHead({ title: () => t('title') })
 
 const FILTERS = computed<Filter[]>(() => (offline.available ? [...BASE_FILTERS, 'downloaded'] : BASE_FILTERS))
 
 // Фильтр живёт в адресе (?tab=albums): ссылки из других мест открывают нужный раздел
 const filter = computed<Filter | null>({
-  get: () => (FILTERS.value as string[]).includes(String(route.query.tab)) ? route.query.tab as Filter : null,
+  // «Недавно добавленные» — без своего чипа: открывается плиткой, виден как включённый чип с крестиком
+  get: () => ([...FILTERS.value, 'recent'] as string[]).includes(String(route.query.tab)) ? route.query.tab as Filter : null,
   set: v => void router.replace({ query: { ...route.query, tab: v ?? undefined } }),
 })
 function toggleFilter(f: Filter) {
@@ -95,18 +98,18 @@ const ready = computed(() => !!library.playlists && !!albums.value && !!artists.
 
 // ---------- Всё сохранённое одним списком ----------
 
-const KIND_LABEL: Record<PlaylistKind, string> = { user: 'playlist', system: 'playlist', mix: 'mix', smart: 'smart' }
 
 const items = computed<LibraryItem[]>(() => {
   const out: LibraryItem[] = []
   for (const p of library.playlists ?? []) {
+    if (pui.hidden.has(p.id)) continue
     out.push({
       key: `playlist:${p.id}`,
       kind: 'playlist',
       id: p.id,
       title: p.title,
-      sub: `${t(`kind.${KIND_LABEL[p.kind]}`)} · ${formatCount(p.tracksCount, 'track', lang.value)}`,
-      short: formatCount(p.tracksCount, 'track', lang.value),
+      sub: pla.subOf(p),
+      short: p.tracksCount ? formatCount(p.tracksCount, 'track', lang.value) : pla.subOf(p),
       pinned: p.pinned,
       added: p.createdAt,
       playlist: p,
@@ -154,7 +157,12 @@ const sorted = computed(() => [...items.value].sort((a, b) => {
 const visible = computed(() => {
   const f = filter.value
   if (!f) return sorted.value
-  if (f === 'downloaded') return [...sorted.value.filter(i => offline.isPinned(i.kind, i.id)), ...pinnedOutside.value]
+  if (f === 'recent') return newest.value.slice(0, RECENT_LIMIT)
+  if (f === 'downloaded') {
+    // Альбом из медиатеки и он же, догруженный отдельно, — один раз (догрузка может прийти позже списка)
+    const seen = new Set<string>()
+    return [...sorted.value.filter(i => offline.isPinned(i.kind, i.id)), ...pinnedOutside.value].filter(i => !seen.has(i.key) && !!seen.add(i.key))
+  }
   return sorted.value.filter(i => i.kind === KIND_OF[f])
 })
 
@@ -192,8 +200,8 @@ watch([filter, pinnedTrackIds], async ([f, ids]) => {
 const deviceSummary = computed(() => {
   const s = offline.status
   if (!s) return ''
-  const n = [...offline.tracks.values()].filter(d => d.state === 'ready').length
-  return t('device', { tracks: formatCount(n, 'track', lang.value), size: formatBytes(s.usage.totalBytes, lang.value) })
+  // Только скачанное вручную: умный запас волны живёт сам по себе и здесь не показывается
+  return t('deviceSize', { size: formatBytes(s.usage.pinnedBytes, lang.value) })
 })
 const downloadedEmpty = computed(() => !visible.value.length && !likedPinned.value && !pinnedTracks.value.length)
 
@@ -215,10 +223,10 @@ function onWave() {
 }
 
 const listEl = ref<HTMLElement | null>(null)
+// «Недавно добавленные»: отдельный срез — последние сохранённые альбомы и плейлисты, новые сверху
+const RECENT_LIMIT = 40
 function showRecent() {
-  filter.value = null
-  sort.value = 'added'
-  void nextTick(() => listEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  filter.value = 'recent'
 }
 
 // ---------- Сортировка ----------
@@ -239,17 +247,8 @@ function onContext(target: EventTarget | null) {
 }
 
 function menuFor(i: LibraryItem): MenuEntry[] {
-  const head: MenuEntry = { kind: 'heading', label: i.title, hint: i.sub, image: i.image ?? i.playlist?.covers[0] ?? null, round: i.kind === 'artist' }
-  if (i.kind === 'playlist' && i.playlist) {
-    const p = i.playlist
-    return [
-      head,
-      { label: tg('common.play'), icon: 'ph:play', onSelect: () => playPlaylist(p.id) },
-      { label: tg('common.shuffle'), icon: 'ph:shuffle', onSelect: () => playPlaylist(p.id, { shuffle: true }) },
-      { kind: 'separator' },
-      { label: p.pinned ? t('unpin') : t('pin'), icon: p.pinned ? 'ph:push-pin-slash' : 'ph:push-pin', onSelect: () => library.setPinned(p, !p.pinned) },
-    ]
-  }
+  const head: MenuEntry = { kind: 'heading', label: i.title, hint: i.sub, image: i.image ?? i.playlist?.image ?? i.playlist?.covers[0] ?? null, round: i.kind === 'artist' }
+  if (i.kind === 'playlist' && i.playlist) return pla.menuFor(i.playlist)
   if (i.kind === 'album') {
     const s = albums.value?.find(a => a.album.id === i.id)
     return [
@@ -305,11 +304,19 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
         <template v-else>{{ initial }}</template>
       </NuxtLink>
       <h1 class="lib__title">{{ t('title') }}</h1>
-      <!-- Новый плейлист: форма во всплывающей панели -->
-      <UiPopover v-model:open="createOpen" :title="t('newPlaylist')" side="bottom" align="end" :width="300">
+      <!-- Новый плейлист: на телефоне — лист снизу, на компьютере — всплывающая панель у кнопки -->
+      <template v-if="ui.isPhone">
+        <UiIconButton icon="ph:plus" :label="t('newPlaylist')" size="lg" :tooltip="false" class="lib__plus" @click="createOpen = true" />
+        <UiSheet v-model:open="createOpen" :title="t('newPlaylist')">
+          <form class="newpl newpl--sheet" @submit.prevent="create">
+            <input v-model="newTitle" class="newpl__input" :placeholder="t('newPlaceholder')" :aria-label="t('newPlaylist')" maxlength="120" enterkeyhint="done" autofocus>
+            <UiButton type="submit" variant="primary" size="lg" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('create') }}</UiButton>
+          </form>
+        </UiSheet>
+      </template>
+      <UiPopover v-else v-model:open="createOpen" :title="t('newPlaylist')" side="bottom" align="end" :width="300">
         <template #trigger>
-          <UiIconButton v-if="ui.isPhone" icon="ph:plus" :label="t('newPlaylist')" size="lg" :tooltip="false" class="lib__plus" />
-          <UiButton v-else size="sm" icon="ph:plus">{{ t('newPlaylist') }}</UiButton>
+          <UiButton size="sm" icon="ph:plus">{{ t('newPlaylist') }}</UiButton>
         </template>
         <form class="newpl" @submit.prevent="create">
           <input v-model="newTitle" class="newpl__input" :placeholder="t('newPlaceholder')" :aria-label="t('newPlaylist')" maxlength="120" autofocus>
@@ -322,6 +329,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     <div ref="chipsEl" v-edge-fade class="chips no-scrollbar" role="toolbar" :aria-label="t('filters')">
       <button v-if="filter" type="button" class="chip chip--clear" :aria-label="t('showAll')" @click="filter = null">
         <Icon name="ph:x-bold" />
+      </button>
+      <button v-if="filter === 'recent'" type="button" class="chip is-on" aria-pressed="true" @click="filter = null">
+        {{ t('filter.recent') }}
       </button>
       <button
         v-for="f in FILTERS"
@@ -341,14 +351,15 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     </UiEmptyState>
 
     <template v-else>
-      <div v-if="showTiles" class="tiles">
+      <div v-if="showTiles" class="tiles" :class="{ 'tiles--two': !newest.length }">
         <LibraryTile tone="liked" icon="ph:heart-fill" :title="tg('nav.liked')" :meta="formatCount(library.likedCount, 'track', lang)" to="/liked" />
         <LibraryTile tone="wave" :icon="waveOn ? 'ph:pause-fill' : 'ph:play-fill'" :title="t('wave')" :meta="waveOn ? t('wavePlaying') : t('waveListen')" :active="player.waveActive" @click="onWave" />
-        <LibraryTile tone="recent" icon="ph:sparkle-fill" :title="t('recent')" :meta="newest[0]?.title" :covers="recentCovers" @click="showRecent" />
+        <LibraryTile v-if="newest.length" tone="recent" icon="ph:sparkle-fill" :title="t('recent')" :meta="newest[0]?.title" :covers="recentCovers" @click="showRecent" />
       </div>
+      <RewindCard v-if="filter === null" class="lib__rewind" />
 
       <!-- Скачанное: сколько на устройстве, все лайки, отдельные треки -->
-      <div v-if="filter === 'downloaded' && offline.status" class="dl">
+      <div v-if="filter === 'downloaded' && offline.status && !downloadedEmpty" class="dl">
         <p class="dl__sum">
           <Icon name="ph:arrow-circle-down-fill" class="dl__icon" />
           <span class="ellipsis">{{ deviceSummary }}</span>
@@ -366,7 +377,8 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
       <section ref="listEl" class="list" :aria-label="filter ? t(`filter.${filter}`) : t('all')">
         <!-- Сортировка слева, вид справа -->
         <div v-if="visible.length" class="list__bar">
-          <UiMenu :items="sortItems" align="start">
+          <span v-if="filter === 'recent'" class="sortbtn sortbtn--static">{{ t('sort.added') }}</span>
+          <UiMenu v-else :items="sortItems" align="start">
             <button type="button" class="sortbtn">
               <Icon name="ph:arrows-down-up" />{{ t(`sort.${sort}`) }}
             </button>
@@ -412,6 +424,12 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
           <UiButton icon="ph:plus" @click="createOpen = true">{{ t('newPlaylist') }}</UiButton>
         </UiEmptyState>
       </section>
+
+      <!-- Умный запас волны — тихой строкой внизу «Скачанного», сам список на отдельной странице -->
+      <NuxtLink v-if="filter === 'downloaded' && (offline.status?.reserve.ready ?? 0) > 0" to="/downloads/reserve" class="rsvrow">
+        <span class="ellipsis">{{ t('reserve', { n: formatCount(offline.status!.reserve.ready, 'track', lang) }) }}</span>
+        <Icon name="ph:caret-right" class="rsvrow__chev" aria-hidden="true" />
+      </NuxtLink>
     </template>
   </div>
 </template>
@@ -421,13 +439,15 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 
 .lib__head { display: flex; align-items: center; gap: 12px; min-height: 44px; }
 .lib__title { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
-.lib__avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; overflow: hidden; border-radius: 50%; background: radial-gradient(120% 120% at 25% 15%, #4b5568, #222834); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); font-size: 15px; font-weight: 700; }
+.lib__avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--hair); font-size: 15px; font-weight: 700; }
 .lib__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .lib__avatar:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .newpl { display: flex; flex-direction: column; gap: 8px; padding: 0 6px 6px; }
 .newpl__input { height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-1); font: inherit; }
 .newpl__input:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--focus); }
+.newpl--sheet { gap: 12px; padding: 4px 16px 16px; }
+.newpl--sheet .newpl__input { height: 48px; padding: 0 16px; font-size: 16px; }
 
 /* Фильтры — как в Spotify: заливка, выбранный — светлый */
 .chips { display: flex; align-items: center; gap: 8px; min-width: 0; margin-block: -6px; padding-block: 6px; overflow-x: auto; overscroll-behavior-x: contain; }
@@ -458,6 +478,8 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 .chip--clear { width: 32px; padding: 0; font-size: 14px; color: var(--text-2); }
 
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+/* Пустая медиатека: «Недавно добавленных» нет — две плитки на всю ширину */
+.tiles--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .dl { display: flex; flex-direction: column; gap: 16px; }
 .dl__sum { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font-size: var(--fs-small); color: var(--text-2); }
@@ -466,6 +488,10 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 .dl__link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .dl__link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .dl__tracks { display: flex; flex-direction: column; gap: 8px; }
+.rsvrow { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 0; border-top: 1px solid var(--hair); font-size: var(--fs-small); color: var(--text-2); transition: color var(--dur-1); }
+.rsvrow:hover { color: var(--text-1); }
+.rsvrow:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.rsvrow__chev { flex: none; margin-left: auto; font-size: 14px; color: var(--text-3); }
 .dl__h2 { margin: 0; font-size: var(--fs-h4, 18px); font-weight: 700; }
 
 .list { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 72px; }
@@ -494,6 +520,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
   .lib__plus { margin-right: -6px; }
   .chips { --fade-w: 16px; margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; }
   .tiles { gap: 10px; }
+  .tiles--two :deep(.tile) { aspect-ratio: auto; min-height: 120px; }
   .list { gap: 4px; }
   .items--grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; }
   .skel-row { min-height: 72px; }
@@ -508,7 +535,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "all": "Всё",
     "filters": "Что показать",
     "showAll": "Показать всё",
-    "filter": { "playlists": "Плейлисты", "albums": "Альбомы", "artists": "Артисты", "downloaded": "Скачанное" },
+    "filter": { "playlists": "Плейлисты", "albums": "Альбомы", "artists": "Артисты", "downloaded": "Скачанное", "recent": "Недавно добавленные" },
     "kind": { "playlist": "Плейлист", "mix": "Микс", "smart": "Подборка" },
     "wave": "Моя волна",
     "waveListen": "Слушать",
@@ -528,8 +555,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "created": "Плейлист «{title}» создан",
     "createFailed": "Не получилось создать плейлист — попробуйте ещё раз",
     "find": "Найти музыку",
-    "device": "На устройстве: {tracks} · {size}",
+    "deviceSize": "На устройстве: {size}",
     "downloadSettings": "Загрузки",
+    "reserve": "Запас для волны · {n}",
     "tracks": "Треки",
     "empty": {
       "playlists": "Соберите первый плейлист",
@@ -547,7 +575,7 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "all": "All",
     "filters": "Show",
     "showAll": "Show all",
-    "filter": { "playlists": "Playlists", "albums": "Albums", "artists": "Artists", "downloaded": "Downloaded" },
+    "filter": { "playlists": "Playlists", "albums": "Albums", "artists": "Artists", "downloaded": "Downloaded", "recent": "Recently added" },
     "kind": { "playlist": "Playlist", "mix": "Mix", "smart": "Smart playlist" },
     "wave": "My Wave",
     "waveListen": "Listen",
@@ -567,8 +595,9 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
     "created": "Playlist “{title}” created",
     "createFailed": "Couldn't create the playlist — try again",
     "find": "Find music",
-    "device": "On this device: {tracks} · {size}",
+    "deviceSize": "On this device: {size}",
     "downloadSettings": "Downloads",
+    "reserve": "Wave reserve · {n}",
     "tracks": "Tracks",
     "empty": {
       "playlists": "Make your first playlist",

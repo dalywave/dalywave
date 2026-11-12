@@ -80,8 +80,8 @@ const style = computed(() => ({
 /* Ромб перехода: у волны — над чертой во всю высоту, у линии — на самой полосе с вырезом вокруг */
 .sm__marker { position: absolute; top: 0; bottom: 0; left: calc(var(--x) * 100%); width: 0; }
 .sm__marker::after { content: ''; position: absolute; left: -3px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 1.5px; background: var(--accent); transform: rotate(45deg); }
-.sm--line .sm__marker::after { box-shadow: 0 0 0 1.5px var(--ink-2), 0 0 6px var(--accent); }
+.sm--line .sm__marker::after { box-shadow: 0 0 0 1.5px var(--ink-2); }
 .sm--wave .sm__marker { top: -5px; }
 .sm--wave .sm__marker::before { content: ''; position: absolute; left: -0.5px; top: 5px; bottom: 0; width: 1px; background: var(--accent); }
-.sm--wave .sm__marker::after { top: 0; margin-top: 0; box-shadow: 0 0 6px var(--accent); }
+.sm--wave .sm__marker::after { top: 0; margin-top: 0; }
 </style>

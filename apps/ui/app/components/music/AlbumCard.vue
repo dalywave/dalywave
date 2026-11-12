@@ -25,7 +25,7 @@ const playing = computed(() => isPlayingContext('album', props.album.id))
       <MusicPlayButton class="card__play" :playing="playing" :loading="loading === `album:${album.id}`" :size="44" :label="`${t('common.play')}: ${album.title}`" @click="playAlbum(album.id)" />
     </div>
     <div class="card__body">
-      <div class="card__title">{{ album.title }}<UiBadge v-if="album.explicit" variant="explicit" class="card__e" /></div>
+      <div class="card__title"><span class="card__name">{{ album.title }}</span><UiBadge v-if="album.explicit" variant="explicit" class="card__e" /></div>
       <div class="card__sub">{{ sub }}</div>
     </div>
   </div>
@@ -43,6 +43,7 @@ const playing = computed(() => isPlayingContext('album', props.album.id))
 .card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 2px; }
 .card__title { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; font-size: var(--fs-body); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .card__e { flex: none; }
+.card__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .card__sub { overflow: hidden; font-size: var(--fs-small); color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
 .card__sub a { position: relative; z-index: 2; }
 .card__sub a:hover { color: var(--text-1); }

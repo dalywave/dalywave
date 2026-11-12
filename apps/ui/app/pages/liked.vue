@@ -57,10 +57,12 @@ function play(shuffle = false) {
 
 <template>
   <div class="liked">
-    <MusicPageState v-if="state === 'loading'" state="loading" />
-    <MusicPageState v-else-if="state === 'error'" state="error" @retry="load" />
+    <template v-if="state !== 'ready'">
+      <MusicPhoneNav fallback="/library" />
+      <MusicPageState :state="state" @retry="load" />
+    </template>
     <template v-else>
-      <MusicPageHeader :kicker="t('kicker')" :title="t('title')" glow="#ff3d7a">
+      <MusicPageHeader :kicker="t('kicker')" :title="t('title')" back="/library">
         <template #art>
           <div class="liked__art"><Icon name="ph:heart-fill" /></div>
         </template>
@@ -72,6 +74,8 @@ function play(shuffle = false) {
         <template #actions>
           <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :disabled="!liked.length" @click="play()">{{ playing ? tg('common.pause') : tg('common.play') }}</UiButton>
           <UiButton size="lg" icon="ph:shuffle" :disabled="!liked.length" @click="play(true)">{{ t('shuffle') }}</UiButton>
+        </template>
+        <template v-if="liked.length" #tools>
           <MusicDownloadButton kind="liked" :title="t('title')" />
         </template>
       </MusicPageHeader>
@@ -117,7 +121,7 @@ function play(shuffle = false) {
     "nothing": "Ничего не нашлось",
     "nothingText": "Среди любимых нет «{q}». Поищите во всём каталоге",
     "empty": "Здесь появится то, что вам нравится",
-    "emptyText": "Отмечайте треки сердцем — в плеере, в списках или клавишей L"
+    "emptyText": "Отмечайте треки сердцем — в плеере или в списках"
   },
   "en": {
     "title": "Liked songs",
@@ -127,7 +131,7 @@ function play(shuffle = false) {
     "nothing": "Nothing found",
     "nothingText": "No “{q}” among liked songs. Try the whole catalog",
     "empty": "Songs you like will show up here",
-    "emptyText": "Tap the heart — in the player, in lists, or press L"
+    "emptyText": "Tap the heart — in the player or in lists"
   }
 }
 </i18n>

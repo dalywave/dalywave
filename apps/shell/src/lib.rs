@@ -6,18 +6,26 @@
 
 mod audio;
 mod auth;
+// Статус «Слушает DalyWave» в Discord (Rich Presence)
+#[cfg(desktop)]
+mod discord;
 #[cfg(desktop)]
 mod downloader;
 mod error;
 mod haptics;
 #[cfg(target_os = "ios")]
 mod ios;
+// Ссылки dalywave:// для интерфейса, в том числе «Поделиться → DalyWave»
+mod links;
 #[cfg(target_os = "macos")]
 mod macos;
 mod media;
+#[cfg(desktop)]
+mod mini;
 mod offline;
 mod platform;
 mod player;
+mod recognize;
 mod settings;
 #[cfg(windows)]
 mod snap;
@@ -39,6 +47,8 @@ use crate::{
 
 /// Метка главного окна
 pub const MAIN: &str = "main";
+/// Метка окна мини-плеера (mini.rs): события плеера идут и ему
+pub const MINI: &str = "mini";
 
 pub const EVENT_SERVER: &str = "server:changed";
 
@@ -48,7 +58,7 @@ pub fn run() {
     // Первым: второй запуск передаёт ссылку dalywave:// первому и показывает его окно
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-        window::show_main(app);
+        mini::show_app(app);
     }));
     let builder = builder
         .plugin(tauri_plugin_deep_link::init())
@@ -85,6 +95,9 @@ pub fn run() {
     // Загрузчик музыки — sidecar (downloader.rs); права в capabilities не нужны: запускает Rust
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_shell::init());
+    // «Поделиться» кладёт ссылку в буфер обмена (только запись — права в capabilities/main.json)
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_clipboard_manager::init());
     let app = builder
         .setup(|app| {
             let handle = app.handle();
@@ -93,6 +106,9 @@ pub fn run() {
             app.manage(Settings::load(handle));
             app.manage(auth::Auth::new(&app.package_info().version.to_string()));
             app.manage(media::Media::default());
+            links::init(handle);
+            #[cfg(desktop)]
+            discord::init(handle);
             #[cfg(desktop)]
             app.manage(updates::Updates::default());
             // Звук — сразу, в фоновом потоке: к первой команде интерфейса движок готов
@@ -173,6 +189,19 @@ pub fn run() {
             player::player_set_normalize,
             player::player_set_levels,
             player::player_state,
+            player::player_set_eq,
+            player::player_eq,
+            player::player_set_sleep,
+            player::player_sleep,
+            player::player_set_modes,
+            player::player_now,
+            player::player_remote,
+            #[cfg(desktop)]
+            mini::mini_open,
+            #[cfg(desktop)]
+            mini::mini_close,
+            #[cfg(desktop)]
+            mini::mini_toggle,
             offline::offline_status,
             offline::offline_set_settings,
             offline::offline_sync,
@@ -181,15 +210,24 @@ pub fn run() {
             offline::offline_unpin,
             offline::offline_clear,
             offline::offline_downloads,
+            offline::offline_reserve,
             offline::offline_source,
             offline::offline_wave_next,
             offline::offline_wave_react,
             offline::offline_played,
             haptics::haptic,
+            recognize::recognize_listen,
+            recognize::recognize_cancel,
+            recognize::recognize_take_pending,
             audio::audio_outputs,
             audio::audio_set_output,
             audio::audio_show_picker,
             open_external,
+            links::links_take,
+            #[cfg(desktop)]
+            discord::discord_state,
+            #[cfg(desktop)]
+            discord::discord_set_enabled,
             server_url_get,
             server_url_set,
             shell_set_locale,
@@ -212,6 +250,8 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("failed to build DalyWave");
+    // Быстрое действие «Распознать» на значке iPhone: до запуска цикла приложения
+    recognize::install(app.handle());
 
     app.run(|app, event| {
         match event {
@@ -220,7 +260,7 @@ pub fn run() {
             tauri::RunEvent::Reopen {
                 has_visible_windows: false,
                 ..
-            } => window::show_main(app),
+            } => mini::show_app(app),
             // Выход — ⌘Q, «Выйти» в трее, перезапуск после обновления: загрузчик возвращает
             // задание серверу и останавливается, окно тем временем уже не видно
             #[cfg(desktop)]

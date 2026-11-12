@@ -169,7 +169,7 @@ export const useConnectStore = defineStore('connect', () => {
     return JSON.stringify([
       player.current?.uid, player.playing, player.pending?.status, player.context?.id, player.context?.type,
       player.manual.map(e => e.uid), player.upcoming.slice(0, 100).map(e => e.uid), player.history.length,
-      player.volume, player.muted, player.transition, player.waveSessionId, Math.round(player.durationMs), player.peaks.length,
+      player.volume, player.muted, player.transition, player.shuffle, player.repeat, player.waveSessionId, Math.round(player.durationMs), player.peaks.length,
     ])
   })
 
@@ -204,6 +204,8 @@ export const useConnectStore = defineStore('connect', () => {
       case 'setVolume': next = { ...s, volume: cmd.volume }; break
       case 'setMuted': next = { ...s, muted: cmd.muted }; break
       case 'setTransition': next = { ...s, transition: cmd.mode }; break
+      case 'setShuffle': next = { ...s, shuffle: cmd.shuffle }; break
+      case 'setRepeat': next = { ...s, repeat: cmd.mode }; break
     }
     if (next) {
       shown.value = next
@@ -390,6 +392,8 @@ export const useConnectStore = defineStore('connect', () => {
       case 'setTransition':
         player.transition = cmd.mode as TransitionMode
         return
+      case 'setShuffle': return player.setShuffle(cmd.shuffle)
+      case 'setRepeat': return player.setRepeat(cmd.mode)
       case 'dislike': return player.dislike()
       case 'notNow': return player.notNow()
       case 'moreLikeThis': return player.moreLikeThis()

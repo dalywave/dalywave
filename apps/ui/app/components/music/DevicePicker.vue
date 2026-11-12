@@ -21,7 +21,7 @@ function pick(d: PlaybackDevice) {
 </script>
 
 <template>
-  <UiPopover v-model:open="open" :side="side" align="end" :title="t('devices.title')" :hint="t('devices.online', { n: devices.filter(d => d.online).length })" :width="320">
+  <UiPopover v-model:open="open" :side="side" align="end" :title="t('devices.title')" :width="320">
     <template #trigger>
       <UiIconButton icon="ph:devices" :label="t('player.devices')" :size="size" :tooltip="false" :active="devices.some(d => d.current && d.kind !== 'web')" />
     </template>

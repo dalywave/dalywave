@@ -281,6 +281,27 @@ pub async fn release(st: &AppState, user: Uuid, link: &Link) {
     }
 }
 
+/// Тексты текущего и ближайших треков — заранее, в фоне: снимок не ждёт базы ради этого.
+fn prefetch_lyrics(st: &AppState, state: &PlaybackState) {
+    let ids: Vec<Uuid> = state
+        .current
+        .iter()
+        .chain(&state.manual)
+        .chain(&state.upcoming)
+        .map(|q| q.track.id)
+        .take(crate::lyrics::PREFETCH)
+        .collect();
+    if ids.is_empty() {
+        return;
+    }
+    let db = st.db.clone();
+    tokio::spawn(async move {
+        if let Err(e) = crate::lyrics::prefetch(&db, &ids).await {
+            tracing::warn!(error = %e, "lyrics prefetch failed");
+        }
+    });
+}
+
 async fn publish(
     st: &AppState,
     user: Uuid,
@@ -295,6 +316,7 @@ async fn publish(
         ..state
     };
     let json = serde_json::to_value(&state).unwrap_or_default();
+    prefetch_lyrics(st, &state);
     // Снимок принимается от активного устройства; если активного нет — отправитель им становится
     let row = sqlx::query!(
         r#"WITH prev AS (SELECT active_connect_id FROM playback_state WHERE user_id = $1 FOR UPDATE)

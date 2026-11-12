@@ -119,10 +119,6 @@ function startWave() {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px;
-  border-radius: var(--r-5);
-  background: radial-gradient(90% 140% at 0% 0%, color-mix(in oklab, var(--m2) 30%, transparent), transparent 60%), radial-gradient(70% 120% at 100% 100%, color-mix(in oklab, var(--m3) 16%, transparent), transparent 60%), var(--ink-2);
-  box-shadow: inset 0 0 0 1px var(--hair);
 }
 .snd__hero-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .snd__kicker { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-caption); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-2); }
@@ -139,7 +135,7 @@ function startWave() {
   .snd__actions :deep(.btn) { min-height: 40px; }
   .snd { padding: 0 16px; }
   .snd--compact { padding: 0 8px; }
-  .snd__hero { flex-direction: column; align-items: stretch; padding: 20px; }
+  .snd__hero { flex-direction: column; align-items: stretch; gap: 16px; padding-top: 8px; }
   .snd__query { font-size: 24px; }
   .snd__block { margin: 0 -10px; }
   .snd__sub { padding: 0 10px; }
@@ -158,7 +154,7 @@ function startWave() {
     "library": "Из медиатеки",
     "unknown": "Не поняли слова: {words}",
     "down": "Поиск по звучанию недоступен",
-    "downText": "Сервис анализа звука не ответил. Обычный поиск работает",
+    "downText": "Попробуйте чуть позже — обычный поиск работает",
     "none": "Ничего похожего",
     "noneText": "Опишите иначе: настроение, инструменты, темп"
   },
@@ -172,7 +168,7 @@ function startWave() {
     "library": "From your library",
     "unknown": "Didn't understand: {words}",
     "down": "Sound search is unavailable",
-    "downText": "The sound analysis service didn't respond. Regular search works",
+    "downText": "Try again a bit later — regular search works",
     "none": "Nothing similar",
     "noneText": "Try describing the mood, instruments or tempo"
   }

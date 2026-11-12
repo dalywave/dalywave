@@ -15,12 +15,13 @@ use dalywave_transitions::{Analysis, Plan, PlanInput, TempoMap};
 
 use crate::deck::{self, DeckCmd, DeckHandle, PreparedTrack};
 use crate::decode::TrackDecoder;
-use crate::mixer::{MAX_DECKS, Mixer, MixerCmd, MixerEvent, MixerPorts, StartRule};
+use crate::eq::EqTarget;
+use crate::mixer::{MAX_DECKS, Mixer, MixerCmd, MixerEvent, MixerPorts, SleepCmd, StartRule};
 use crate::output::{self, LoadStats, Output, OutputIssue};
 use crate::source::SourceCache;
 use crate::{
-    AudioError, ChangeReason, Command, DjSolo, EngineConfig, Event, OutputConfig, PlaybackState,
-    Snapshot, SourceSpec, TrackSpec, Transition,
+    AudioError, ChangeReason, Command, DjSolo, EngineConfig, EqSettings, Event, OutputConfig,
+    PlaybackState, SleepStatus, SleepTimer, Snapshot, SourceSpec, TrackSpec, Transition,
 };
 
 const POSITION_EVERY: Duration = Duration::from_millis(250);
@@ -39,6 +40,31 @@ const DJ_LEAD_MS: f64 = 12_000.0;
 const DJ_PREP_MS: f64 = 20_000.0;
 /// Анализ не пришёл, а до конца трека меньше этого — переход без него («Умный»).
 const DJ_WAIT_ANALYSIS_MS: u64 = 40_000;
+
+/// Копия трека для повтора одного трека: id элемента очереди + этот разделитель + номер.
+/// Наружу (события, снимок) уходит id без хвоста — для интерфейса это тот же элемент.
+const REPEAT_SEP: char = '\u{1f}';
+
+/// id элемента очереди без хвоста копии повтора.
+fn item_id(id: &str) -> &str {
+    id.split(REPEAT_SEP).next().unwrap_or(id)
+}
+
+fn same_item(a: &str, b: &str) -> bool {
+    item_id(a) == item_id(b)
+}
+
+/// Идущий таймер сна.
+struct SleepRun {
+    timer: SleepTimer,
+    /// «Через N минут»: когда пауза
+    deadline: Option<Instant>,
+    /// «В конце трека»: какой трек доигрываем
+    track_id: Option<String>,
+    track_index: Option<usize>,
+    /// Затухание отдано микшеру
+    fade_sent: bool,
+}
 
 /// Анализ трека: ещё идёт или готов (None — его нет).
 enum AnalysisState {
@@ -192,6 +218,13 @@ struct Controller {
     analysis_tx: Sender<(String, Option<Arc<Analysis>>)>,
     analysis_rx: Receiver<(String, Option<Arc<Analysis>>)>,
     dj_plan: Option<DjPlan>,
+    eq: Option<EqSettings>,
+    sleep: Option<SleepRun>,
+    /// Микшер сообщил: затухание таймера сна дошло до тишины
+    sleep_faded: bool,
+    /// Повтор одного трека: следом за текущим стоит его копия
+    repeat_one: bool,
+    repeat_seq: u64,
 }
 
 pub(crate) fn run(
@@ -305,7 +338,15 @@ impl Controller {
         if cfg.dj_solo != DjSolo::Both {
             let _ = ports.cmd_tx.push(MixerCmd::Solo(cfg.dj_solo));
         }
+        if cfg.eq.is_some() {
+            let _ = ports
+                .cmd_tx
+                .push(MixerCmd::Eq(EqTarget::new(cfg.eq.as_ref(), parts.rate)));
+        }
         Ok(Self {
+            eq: cfg.eq,
+            sleep: None,
+            sleep_faded: false,
             cache: SourceCache::with_resolver(cfg.user_agent.clone(), cfg.resolver.clone()),
             volume: cfg.volume,
             transition: cfg.transition,
@@ -355,10 +396,24 @@ impl Controller {
             analysis_tx,
             analysis_rx,
             dj_plan: None,
+            repeat_one: false,
+            repeat_seq: 0,
         })
     }
 
-    fn emit(&self, e: Event) {
+    fn emit(&self, mut e: Event) {
+        // Копия повтора снаружи — тот же элемент очереди
+        match &mut e {
+            Event::TrackChanged { track, .. } if track.id.contains(REPEAT_SEP) => {
+                track.id = item_id(&track.id).to_string();
+            }
+            Event::Position { id, .. } | Event::Error { id: Some(id), .. }
+                if id.contains(REPEAT_SEP) =>
+            {
+                *id = item_id(id).to_string();
+            }
+            _ => {}
+        }
         let _ = self.ev.send(e);
     }
 
@@ -428,8 +483,10 @@ impl Controller {
             self.analyses.insert(key, AnalysisState::Done(a));
         }
         self.track_segments();
+        self.ensure_repeat();
         self.maybe_plan();
         self.maybe_preload();
+        self.sleep_tick();
         self.emit_position(false);
         self.emit_level();
         let has_next = self.index.and_then(|i| self.next_index(i)).is_some();
@@ -510,7 +567,10 @@ impl Controller {
                 start,
                 start_ms,
                 autoplay,
-            } => self.load(tracks, start, start_ms, autoplay),
+            } => {
+                self.sleep_rearm();
+                self.load(tracks, start, start_ms, autoplay)
+            }
             Command::Append(tracks) => {
                 self.queue.extend(tracks);
                 self.update_expect_chain();
@@ -525,20 +585,24 @@ impl Controller {
                     self.play()
                 }
             }
-            Command::Seek(ms) => self.seek(ms),
+            Command::Seek(ms) => {
+                self.sleep_rearm();
+                self.seek(ms)
+            }
             Command::Next => {
+                self.sleep_rearm();
                 if let Some(i) = self.index
-                    && let Some(j) = self.next_index(i)
+                    && let Some(j) = self.user_next_index(i)
                 {
                     self.go_to(j, ChangeReason::User);
                 }
             }
             Command::Previous => {
+                self.sleep_rearm();
                 if let Some(i) = self.index {
-                    if self.position_ms() > 3000 || i == 0 {
-                        self.seek(0);
-                    } else {
-                        self.go_to(i - 1, ChangeReason::User);
+                    match self.user_previous_index(i) {
+                        Some(j) if self.position_ms() <= 3000 => self.go_to(j, ChangeReason::User),
+                        _ => self.seek(0),
                     }
                 }
             }
@@ -564,6 +628,16 @@ impl Controller {
                 reason,
             } => self.reopen_output(sample_rate, &reason),
             Command::SetOutputDevice(id) => self.set_output_device(id),
+            Command::SetEq(eq) => {
+                self.eq = eq;
+                let t = EqTarget::new(eq.as_ref(), self.device_rate);
+                self.mixer(MixerCmd::Eq(t));
+            }
+            Command::SetSleep(timer) => self.set_sleep(timer),
+            Command::SetRepeatOne(on) => {
+                self.repeat_one = on;
+                self.ensure_repeat();
+            }
             Command::Stop => {
                 self.reset_all();
                 self.want_play = false;
@@ -621,9 +695,20 @@ impl Controller {
             .index()
             .and_then(|j| self.queue.get(j))
             .map(|t| t.id.clone());
-        self.queue.truncate(i + 1);
+        // Копия повтора остаётся следом за текущим: подготовленный повтор не сбрасывается
+        let keep = if self.repeat_one
+            && self
+                .queue
+                .get(i + 1)
+                .is_some_and(|t| same_item(&t.id, &self.queue[i].id))
+        {
+            i + 2
+        } else {
+            i + 1
+        };
+        self.queue.truncate(keep);
         self.queue.extend(tracks);
-        self.failed.retain(|&j| j <= i);
+        self.failed.retain(|&j| j < keep);
         let next = self.next_index(i);
         let next_id = next.map(|j| self.queue[j].id.clone());
         match (prepared, next) {
@@ -769,6 +854,59 @@ impl Controller {
         ((i + 1)..self.queue.len()).find(|j| !self.failed.contains(j))
     }
 
+    /// «Следующий» с пульта: копия повтора пропускается — это тот же трек.
+    fn user_next_index(&self, i: usize) -> Option<usize> {
+        let id = &self.queue.get(i)?.id;
+        ((i + 1)..self.queue.len())
+            .find(|j| !self.failed.contains(j) && !same_item(&self.queue[*j].id, id))
+    }
+
+    /// «Предыдущий» с пульта: сыгранные повторы того же трека пропускаются.
+    fn user_previous_index(&self, i: usize) -> Option<usize> {
+        let id = &self.queue.get(i)?.id;
+        (0..i).rev().find(|&j| !same_item(&self.queue[j].id, id))
+    }
+
+    /// Повтор одного трека: следом за текущим всегда стоит его копия — движок готовит и
+    /// склеивает её как обычный следующий трек (тот же файл, из кэша). Повтор сняли — копия уходит.
+    fn ensure_repeat(&mut self) {
+        let Some(i) = self.index else { return };
+        let Some(cur) = self.queue.get(i) else { return };
+        let next_is_copy = self
+            .queue
+            .get(i + 1)
+            .is_some_and(|t| same_item(&t.id, &cur.id));
+        if self.repeat_one == next_is_copy {
+            return;
+        }
+        if self.repeat_one {
+            let mut copy = cur.clone();
+            self.repeat_seq += 1;
+            copy.id = format!("{}{REPEAT_SEP}{}", item_id(&cur.id), self.repeat_seq);
+            self.queue.insert(i + 1, copy);
+            self.failed = self
+                .failed
+                .iter()
+                .map(|&j| if j > i { j + 1 } else { j })
+                .collect();
+        } else {
+            self.queue.remove(i + 1);
+            self.failed = self
+                .failed
+                .iter()
+                .filter(|&&j| j != i + 1)
+                .map(|&j| if j > i + 1 { j - 1 } else { j })
+                .collect();
+        }
+        // Подготовленный следующий был другим треком — готовим заново
+        if self.next != NextState::None {
+            self.reset_next();
+        } else {
+            self.dj_plan = None;
+            self.update_expect_chain();
+        }
+    }
+
     /// Где в очереди трек `spec`, подготовленный под номером `index`. Очередь могли поменять,
     /// пока он готовился: тогда ищем его дальше текущего, а если его там нет — ставим следом.
     fn adopt(&mut self, index: usize, spec: &TrackSpec) -> usize {
@@ -891,6 +1029,15 @@ impl Controller {
                 self.output_reopens += 1;
                 if matches!(self.transition, Transition::Dj { .. }) {
                     self.mixer(MixerCmd::Dj(true));
+                }
+                // Новый микшер: эквалайзер заново, затухание таймера сна — от новой позиции
+                if self.eq.is_some() {
+                    let t = EqTarget::new(self.eq.as_ref(), self.device_rate);
+                    self.mixer(MixerCmd::Eq(t));
+                }
+                self.sleep_faded = false;
+                if let Some(run) = &mut self.sleep {
+                    run.fade_sent = false;
                 }
                 log::info!(
                     "output reopened ({reason}): {} Hz, {} ch, {}, position {position} ms",
@@ -1571,6 +1718,11 @@ impl Controller {
                         self.set_buffering(false);
                     }
                 }
+                MixerEvent::SleepFaded => {
+                    if self.sleep.is_some() {
+                        self.sleep_faded = true;
+                    }
+                }
             }
         }
     }
@@ -1711,12 +1863,177 @@ impl Controller {
         self.emit(Event::Level(level));
     }
 
+    // ---- таймер сна ----
+
+    fn sleep_fade_ms(&self) -> u64 {
+        u64::from(self.cfg.sleep_fade_ms)
+    }
+
+    fn sleep_status(&self) -> Option<SleepStatus> {
+        let run = self.sleep.as_ref()?;
+        let remaining_ms = match run.timer {
+            SleepTimer::After { .. } => run
+                .deadline
+                .map(|d| d.saturating_duration_since(Instant::now()).as_millis() as u64),
+            SleepTimer::EndOfTrack => self
+                .duration_ms()
+                .map(|d| d.saturating_sub(self.position_ms())),
+        };
+        let fading = run.fade_sent
+            && (run.timer != SleepTimer::EndOfTrack
+                || remaining_ms.is_some_and(|r| r <= self.sleep_fade_ms()));
+        Some(SleepStatus {
+            timer: Some(run.timer),
+            remaining_ms,
+            fading,
+            finished: false,
+        })
+    }
+
+    fn emit_sleep(&self) {
+        let status = self.sleep_status().unwrap_or(SleepStatus {
+            timer: None,
+            remaining_ms: None,
+            fading: false,
+            finished: false,
+        });
+        self.emit(Event::Sleep(status));
+    }
+
+    fn set_sleep(&mut self, timer: Option<SleepTimer>) {
+        // Затухание уже шло — громкость возвращается
+        if self.sleep.as_ref().is_some_and(|r| r.fade_sent) {
+            let ramp = self.declick() * 40;
+            self.mixer(MixerCmd::Sleep(SleepCmd::Cancel { ramp }));
+        }
+        self.sleep_faded = false;
+        self.sleep = timer.map(|timer| SleepRun {
+            timer,
+            deadline: match timer {
+                SleepTimer::After { ms } => Some(Instant::now() + Duration::from_millis(ms)),
+                SleepTimer::EndOfTrack => None,
+            },
+            track_id: self.index.and_then(|i| self.id_at(i)),
+            track_index: self.index,
+            fade_sent: false,
+        });
+        log::info!("sleep timer: {timer:?}");
+        self.emit_sleep();
+        // Короткий таймер — затухание сразу, не дожидаясь следующего тика
+        self.sleep_tick();
+    }
+
+    /// Команда человека (перемотка, другой трек, новая очередь): затухание к концу трека,
+    /// привязанное к кадрам старой деки, больше не к месту — таймер ставится заново.
+    fn sleep_rearm(&mut self) {
+        let Some(run) = &mut self.sleep else { return };
+        if run.timer == SleepTimer::EndOfTrack && run.fade_sent && !self.sleep_faded {
+            run.fade_sent = false;
+            let ramp = self.declick() * 4;
+            self.mixer(MixerCmd::Sleep(SleepCmd::Cancel { ramp }));
+            self.emit_sleep();
+        }
+    }
+
+    fn sleep_tick(&mut self) {
+        if self.sleep.is_none() {
+            return;
+        }
+        if self.sleep_faded {
+            self.sleep_faded = false;
+            self.finish_sleep();
+            return;
+        }
+        let fade = self.sleep_fade_ms();
+        let playing = self.want_play && self.state == PlaybackState::Playing;
+        let index = self.index;
+        let current_id = index.and_then(|i| self.id_at(i));
+        let main = self.main_slot();
+        let duration = self.duration_ms();
+        let position = self.position_ms();
+        let Some(run) = &mut self.sleep else { return };
+        match run.timer {
+            SleepTimer::After { .. } => {
+                let left = run.deadline.map_or(0, |d| {
+                    d.saturating_duration_since(Instant::now()).as_millis() as u64
+                });
+                if !run.fade_sent {
+                    if left <= fade && playing {
+                        run.fade_sent = true;
+                        let len = self.ms_to_frames(left.max(1)).min(u64::from(u32::MAX)) as u32;
+                        self.mixer(MixerCmd::Sleep(SleepCmd::Fade { at: None, len }));
+                        self.emit_sleep();
+                    } else if left == 0 {
+                        // На паузе таймер истёк сам: музыка и так стоит
+                        self.finish_sleep();
+                    }
+                } else if left == 0 && !playing {
+                    // Поставили паузу посреди затухания: оно уже не дойдёт до тишины
+                    self.mixer(MixerCmd::Sleep(SleepCmd::Cancel { ramp: 0 }));
+                    self.finish_sleep();
+                }
+            }
+            SleepTimer::EndOfTrack => {
+                if run.fade_sent {
+                    return;
+                }
+                // Человек сам перешёл к другому треку — таймер про его конец
+                if current_id != run.track_id {
+                    run.track_id = current_id;
+                    run.track_index = index;
+                }
+                let (Some(m), Some(d), true) = (main, duration, playing) else {
+                    return;
+                };
+                // Затухание уходит микшеру сразу, привязанным к кадру деки: оно начнётся точно за
+                // `fade` до конца трека. Перемотка и другой трек ставят его заново (sleep_rearm)
+                let remaining = d.saturating_sub(position);
+                run.fade_sent = true;
+                run.track_index = index;
+                let at = if remaining > fade {
+                    self.main_frame_at(m, d.saturating_sub(fade) as f64)
+                        .map(|frame| (m, frame))
+                } else {
+                    None
+                };
+                let len_ms = if at.is_some() { fade } else { remaining.max(1) };
+                let len = self.ms_to_frames(len_ms).min(u64::from(u32::MAX)) as u32;
+                self.mixer(MixerCmd::Sleep(SleepCmd::Fade { at, len }));
+                self.emit_sleep();
+            }
+        }
+    }
+
+    /// Затухание дошло до тишины (или таймер истёк на паузе): пауза. «В конце трека» — следующий
+    /// трек (если уже начался) встаёт в начало.
+    fn finish_sleep(&mut self) {
+        let Some(run) = self.sleep.take() else { return };
+        log::info!("sleep timer: done");
+        self.pause();
+        if run.timer == SleepTimer::EndOfTrack
+            && run.track_index.is_some()
+            && self.index != run.track_index
+            && self.position_ms() > 0
+        {
+            self.seek(0);
+        }
+        self.emit(Event::Sleep(SleepStatus {
+            timer: None,
+            remaining_ms: None,
+            fading: false,
+            finished: true,
+        }));
+    }
+
     fn update_snapshot(&self) {
         let (avg, max) = self.load.get();
         let snap = Snapshot {
             state: self.state,
             index: self.index,
-            id: self.index.and_then(|i| self.id_at(i)),
+            id: self
+                .index
+                .and_then(|i| self.id_at(i))
+                .map(|id| item_id(&id).to_string()),
             position_ms: self.position_ms(),
             duration_ms: self.duration_ms(),
             volume: self.volume,
@@ -1732,6 +2049,14 @@ impl Controller {
             output_frames: self.ports.shared.clock.load(Ordering::Relaxed),
             output_reopens: self.output_reopens,
             output_device: self.output_device.clone(),
+            eq: self.eq,
+            sleep: self.sleep_status(),
+            repeat_one: self.repeat_one,
+            has_next: self.index.and_then(|i| self.user_next_index(i)).is_some(),
+            has_previous: self
+                .index
+                .and_then(|i| self.user_previous_index(i))
+                .is_some(),
         };
         if let Ok(mut s) = self.snap.lock() {
             *s = snap;

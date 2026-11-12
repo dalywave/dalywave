@@ -10,6 +10,8 @@
 //! На общем выходе — ограничитель пиков. Растяжение по времени — в потоке деки, до кольца.
 //!
 //! Уровень для волны интерфейса меряется здесь же, после паузы и до общей громкости.
+//! Эквалайзер ([`Equalizer`]) — на сумме дек, до ограничителя. Таймер сна — своя огибающая
+//! затухания на сумме: стартует сразу или ровно на кадре деки (конец трека).
 
 use std::f32::consts::FRAC_PI_2;
 use std::sync::Arc;
@@ -20,6 +22,7 @@ use dalywave_transitions::{Curves, Strip};
 
 use crate::DjSolo;
 use crate::deck::{DeckLink, UNKNOWN};
+use crate::eq::{EqTarget, Equalizer};
 use crate::fx::{DeckFx, EchoBus, Limiter};
 use crate::meter::{LevelCell, Meter};
 
@@ -85,6 +88,19 @@ pub(crate) enum MixerCmd {
     Dj(bool),
     /// Проверки: во время перехода слышна одна дека.
     Solo(DjSolo),
+    /// Эквалайзер на общем выходе.
+    Eq(EqTarget),
+    Sleep(SleepCmd),
+}
+
+/// Таймер сна в микшере: затухание и его отмена.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum SleepCmd {
+    /// Затухнуть до тишины за `len` кадров: сразу или когда дека `slot` отыграет `frame` кадров
+    /// (конец трека). Тишина держится, пока контроллер не поставит паузу.
+    Fade { at: Option<(usize, u64)>, len: u32 },
+    /// Таймер сняли: громкость возвращается за `ramp` кадров.
+    Cancel { ramp: u32 },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -108,6 +124,8 @@ pub(crate) enum MixerEvent {
     Resumed {
         slot: usize,
     },
+    /// Таймер сна: затухание дошло до тишины.
+    SleepFaded,
 }
 
 /// Что микшер публикует для контроллера.
@@ -329,6 +347,13 @@ pub(crate) struct Mixer {
     volume: Env,
     declick: u32,
     meter: Meter,
+    eq: Equalizer,
+    /// Огибающая таймера сна поверх всего
+    sleep: Env,
+    /// Затухание ждёт кадра деки: (слот, кадр, длина)
+    sleep_at: Option<(usize, u64, u32)>,
+    /// Затухание идёт или дошло до тишины, а о тишине ещё не сообщили
+    sleep_fading: bool,
 }
 
 pub(crate) struct MixerPorts {
@@ -369,6 +394,10 @@ impl Mixer {
             volume: Env::fixed(volume),
             declick: (sample_rate / 200).max(1),
             meter: Meter::new(sample_rate),
+            eq: Equalizer::new(sample_rate),
+            sleep: Env::fixed(1.0),
+            sleep_at: None,
+            sleep_fading: false,
         };
         (
             mixer,
@@ -407,6 +436,14 @@ impl Mixer {
         self.shared.frames_read[i].store(0, Ordering::Relaxed);
         if self.main == i {
             self.main = NO_SLOT;
+        }
+        // Дека с концом трека ушла раньше (переход «Диджея», сбой): затухаем от этого места
+        if let Some((slot, _, len)) = self.sleep_at
+            && slot == i
+        {
+            self.sleep_at = None;
+            self.sleep.equal_power(false, len);
+            self.sleep_fading = true;
         }
         self.event(MixerEvent::Removed { slot: i });
     }
@@ -474,6 +511,10 @@ impl Mixer {
                 }
                 MixerCmd::Resume { fade } => {
                     self.paused = false;
+                    // После таймера сна — снова полная громкость
+                    if !self.sleep_fading && !self.sleep.active && self.sleep.gain == 0.0 {
+                        self.sleep = Env::fixed(1.0);
+                    }
                     // Старт с тишины (ни одна дека ещё не звучит) — без подъёма: начало трека
                     // должно остаться точным. Подъём нужен только при снятии с паузы посреди трека.
                     if self.slots.iter().any(|s| s.state == SlotState::Playing) {
@@ -505,6 +546,22 @@ impl Mixer {
                 }
                 MixerCmd::Dj(on) => self.dj = on,
                 MixerCmd::Solo(solo) => self.solo = solo,
+                MixerCmd::Eq(t) => self.eq.set(t),
+                MixerCmd::Sleep(SleepCmd::Fade { at, len }) => match at {
+                    Some((slot, frame)) if slot < MAX_DECKS && self.slots[slot].link.is_some() => {
+                        self.sleep_at = Some((slot, frame, len.max(1)));
+                    }
+                    _ => {
+                        self.sleep_at = None;
+                        self.sleep.equal_power(false, len);
+                        self.sleep_fading = true;
+                    }
+                },
+                MixerCmd::Sleep(SleepCmd::Cancel { ramp }) => {
+                    self.sleep_at = None;
+                    self.sleep_fading = false;
+                    self.sleep.linear(1.0, ramp);
+                }
             }
         }
     }
@@ -657,7 +714,40 @@ impl Mixer {
         {
             n = n.min((p.start_frame - read) as usize);
         }
+        if let Some((slot, frame, _)) = self.sleep_at {
+            let read = self.slots[slot].frames_read;
+            if frame > read {
+                n = n.min((frame - read) as usize);
+            }
+        }
         n.max(1)
+    }
+
+    /// Таймер сна: затухание ждало кадра деки — пора?
+    fn check_sleep(&mut self) {
+        if let Some((slot, frame, len)) = self.sleep_at
+            && self.slots[slot].frames_read >= frame
+        {
+            self.sleep_at = None;
+            self.sleep.equal_power(false, len);
+            self.sleep_fading = true;
+        }
+    }
+
+    /// Огибающая таймера сна на кусок выхода; дошла до тишины — сообщить контроллеру.
+    fn apply_sleep(&mut self, out: &mut [f32]) {
+        if !self.sleep.active && self.sleep.gain == 1.0 {
+            return;
+        }
+        for pair in out.as_chunks_mut::<2>().0 {
+            let g = self.sleep.next();
+            pair[0] *= g;
+            pair[1] *= g;
+        }
+        if self.sleep_fading && !self.sleep.active && self.sleep.gain == 0.0 {
+            self.sleep_fading = false;
+            self.event(MixerEvent::SleepFaded);
+        }
     }
 
     fn begin_plan(&mut self) {
@@ -828,6 +918,7 @@ impl Mixer {
             let mut pos = 0;
             while pos < frames {
                 self.check_starts();
+                self.check_sleep();
                 self.automate();
                 let mut n = self.limit(frames - pos);
                 let fx = self.plan.is_some_and(|p| p.started)
@@ -847,6 +938,7 @@ impl Mixer {
                     self.echo
                         .process(&send[..n * 2], &mut out[pos * 2..(pos + n) * 2]);
                 }
+                self.apply_sleep(&mut out[pos * 2..(pos + n) * 2]);
                 if let Some(p) = &mut self.plan
                     && p.started
                 {
@@ -854,12 +946,14 @@ impl Mixer {
                 }
                 pos += n;
             }
+            self.eq.process(out);
             let level = &self.shared.level;
-            let dj = self.dj;
+            // Ограничитель — у «Диджея» и с эквалайзером: подъём полос не уходит в перегрузку
+            let limit = self.dj || self.eq.active();
             for pair in out.as_chunks_mut::<2>().0 {
                 let p = self.pause_env.next();
                 let (mut l, mut r) = (pair[0], pair[1]);
-                if dj {
+                if limit {
                     (l, r) = self.limiter.run(l, r);
                 }
                 let (l, r) = (l * p, r * p);

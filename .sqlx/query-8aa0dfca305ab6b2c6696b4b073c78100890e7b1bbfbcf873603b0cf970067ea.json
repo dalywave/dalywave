@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH mine AS (\n               SELECT artist_id FROM followed_artists WHERE user_id = $1\n               UNION\n               SELECT ta.artist_id FROM liked_tracks l\n               JOIN track_artists ta ON ta.track_id = l.track_id AND ta.role = 'main'\n               WHERE l.user_id = $1 AND l.created_at > taste_reset_at($1)\n               UNION\n               SELECT ta.artist_id FROM play_events p\n               JOIN track_artists ta ON ta.track_id = p.track_id AND ta.role = 'main'\n               WHERE p.user_id = $1 AND p.started_at > now() - interval '90 days'\n                 AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)\n               GROUP BY ta.artist_id HAVING count(*) >= 3\n           )\n           SELECT al.id AS \"id!\" FROM albums al\n           WHERE al.id IN (SELECT r.album_id FROM artist_releases r WHERE r.artist_id IN (SELECT artist_id FROM mine))\n             AND al.release_date >= current_date - 30 AND al.release_date <= current_date\n             AND NOT EXISTS (SELECT 1 FROM blocked_items b\n                             WHERE b.user_id = $1 AND b.kind = 'artist' AND b.ref_id = al.artist_id)\n             -- Треки релиза могли ещё не загрузиться из Deezer: такой релиз показывается\n             AND (NOT EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id) OR EXISTS (\n                 SELECT 1 FROM tracks t\n                 WHERE t.album_id = al.id\n                   AND NOT EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $1 AND b.kind = 'track' AND b.ref_id = t.id)\n                   AND NOT COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f\n                                     WHERE f.user_id = $1 AND f.track_id = t.id AND f.kind IN ('dislike', 'undislike')\n                                     ORDER BY f.at DESC LIMIT 1), false)))\n           ORDER BY al.release_date DESC, al.id DESC\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8aa0dfca305ab6b2c6696b4b073c78100890e7b1bbfbcf873603b0cf970067ea"
+}

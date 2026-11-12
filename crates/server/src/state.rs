@@ -13,9 +13,12 @@ use axum_extra::extract::cookie::Key;
 use sqlx::PgPool;
 
 use crate::{
-    config::Config, deezer::Deezer, ml::Ml, oidc::Oidc, ratelimit::RateLimiter, realtime::Hub,
-    storage::Storage,
+    config::Config, deezer::Deezer, lyrics::lrclib::Lrclib, ml::Ml, oidc::Oidc,
+    ratelimit::RateLimiter, realtime::Hub, storage::Storage,
 };
+
+/// Промежуток между запросами API к LRCLIB: текст нужен сейчас, но очередь просьб не копится.
+const LRCLIB_GAP: Duration = Duration::from_millis(250);
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,6 +37,10 @@ pub struct AppState {
     pub hub: Arc<Hub>,
     /// Сервис анализа звука: векторы описаний словами (поиск по звучанию, волна по описанию)
     pub ml: Arc<Ml>,
+    /// Тексты песен (LRCLIB)
+    pub lrclib: Arc<Lrclib>,
+    /// Страницы и oEmbed чужих сервисов для «Поделиться → DalyWave» (в тестах — заглушка)
+    pub links: Arc<crate::links::Links>,
 }
 
 impl AppState {
@@ -59,7 +66,10 @@ impl AppState {
             .map(|c| Arc::new(Oidc::new(c, http.clone())));
         let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_api)?;
         let ml = Ml::new(&config.ml.url)?;
+        let lrclib = Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?;
         Ok(Self {
+            links: Arc::new(crate::links::Links::new()?),
+            lrclib: Arc::new(lrclib),
             deezer: Arc::new(deezer),
             storage: Arc::new(storage),
             hub: Arc::new(Hub::default()),

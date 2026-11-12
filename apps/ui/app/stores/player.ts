@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import type { ConnectQueueItem, ContextType, EndReason, PlaybackState, RemoteCommand, Track, WaveFeedbackKind, WaveSeed } from '~/api/types'
-import type { EngineTrack, MediaCommand, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveStart, WaveTrack } from '~/bridge/types'
+import type { EngineTrack, MediaCommand, RepeatMode, PlaybackDevice, SourceResult, TrackSource, WaveMood, WaveSettings, WaveStart, WaveTrack } from '~/bridge/types'
 import { getWaveEngine } from '~/lib/wave/engine'
 import { coverColors } from '~/utils/cover-colors'
+import { afterTrack, nextRepeat, previousAction, restoreQueue, roundsNeeded, shuffleQueue, shuffled } from '~/utils/queue-order'
 import { resamplePeaks, syntheticRhythm } from '~/utils/peaks'
-import { WAVE_PRESETS, sameSettings } from '~/utils/wave-options'
+import { sameSettings } from '~/utils/wave-options'
 
 export type TransitionMode = 'gapless' | 'smooth' | 'smart' | 'dj'
 export type QueueSource = 'manual' | 'context' | 'wave'
@@ -14,6 +15,8 @@ export interface QueueEntry {
   track: Track
   source: QueueSource
   reason?: string
+  /** Повтор всей очереди: какой это круг списка (первый — 0) */
+  round?: number
 }
 
 export interface PlayContext {
@@ -85,6 +88,8 @@ export const usePlayerStore = defineStore('player', () => {
   const waveSessionId = ref<string | null>(null)
   const waveLoading = ref(false)
   const wavePrep = ref<WavePrep | null>(null)
+  /** Волна или радио запускается (сервер подбирает и, если надо, докачивает начало): что именно — для подписи */
+  const waveStarting = ref<string | null>(null)
   /** Форма волны текущего трека, 0…1 */
   const peaks = ref<number[]>([])
   const devices = ref<PlaybackDevice[]>([])
@@ -100,7 +105,6 @@ export const usePlayerStore = defineStore('player', () => {
   let prepRun = 0
 
   const waveActive = computed(() => context.value?.type === 'wave')
-  const activePreset = computed(() => WAVE_PRESETS.find(p => sameSettings(p.set, wave.value))?.id ?? null)
   const effectiveMode = computed<TransitionMode>(() => (transition.value === 'dj' && bridge.kind === 'web' ? 'smart' : transition.value))
   const fadeMs = computed(() => FADE_MS[effectiveMode.value])
   const transitionAtMs = computed(() => (effectiveMode.value === 'gapless' ? durationMs.value : Math.max(0, durationMs.value - fadeMs.value - 400)))
@@ -342,6 +346,7 @@ export const usePlayerStore = defineStore('player', () => {
   async function next(reason: EndReason = 'skipped') {
     if (routed({ action: 'next' }, () => next(reason))) return
     if (transitioning) return
+    if (reason === 'completed' && await replayIfRepeating()) return
     finishListen(reason)
     const prev = current.value
     waveOutcome(prev, reason, positionMs.value)
@@ -350,6 +355,7 @@ export const usePlayerStore = defineStore('player', () => {
       await refillWave()
       entry = takeNext()
     }
+    if (!entry && wrapRepeat()) entry = takeNext()
     if (prev) history.value.push(prev)
     if (!entry) {
       pause()
@@ -363,7 +369,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   async function prev() {
     if (routed({ action: 'previous' }, prev)) return
-    if (positionMs.value > 4000 || !history.value.length) {
+    if (previousAction(positionMs.value, history.value.length > 0) === 'restart') {
       seek(0)
       return
     }
@@ -387,18 +393,26 @@ export const usePlayerStore = defineStore('player', () => {
   async function playTracks(tracks: Track[], index: number, ctx: PlayContext, opts: { shuffle?: boolean } = {}) {
     if (!tracks.length) return
     if (routed(remotePlayTracks(tracks, index, ctx, opts))) return
-    let list = tracks.slice()
-    let start = Math.min(Math.max(0, index), list.length - 1)
-    if (opts.shuffle) {
-      list = list.sort(() => Math.random() - 0.5)
-      start = 0
-    }
+    // «Перемешать» включает перемешивание насовсем, как в Spotify: со случайного трека
+    if (opts.shuffle) shuffle.value = true
+    const entries = tracks.map(tr => entryOf(tr, 'context'))
+    const start = opts.shuffle ? Math.floor(Math.random() * entries.length) : Math.min(Math.max(0, index), entries.length - 1)
     finishListen('skipped')
     if (current.value) history.value.push(current.value)
     context.value = ctx
-    upcoming.value = list.slice(start + 1).map(tr => entryOf(tr, 'context'))
+    contextTracks = tracks.slice()
+    round = 0
+    if (shuffle.value) {
+      // Выбранный трек — первым, остальное (и то, что было до него) — вразброс
+      upcoming.value = shuffled(entries.filter((_, i) => i !== start))
+      originalOrder = entries
+    }
+    else {
+      upcoming.value = entries.slice(start + 1)
+      originalOrder = null
+    }
     prefetched = null
-    await startEntry(entryOf(list[start]!, 'context'), { autoplay: true })
+    await startEntry(entries[start]!, { autoplay: true })
   }
 
   // ---------- Подготовка волны ----------
@@ -462,10 +476,11 @@ export const usePlayerStore = defineStore('player', () => {
 
   /** «Отменить» на «Готовим волну…»: что играло — играет дальше */
   function cancelWavePrep() {
-    if (!wavePrep.value && !waveLoading.value) return
+    if (!wavePrep.value && !waveLoading.value && !waveStarting.value) return
     prepRun++
     wavePrep.value = null
     waveLoading.value = false
+    waveStarting.value = null
     breathe(false)
   }
 
@@ -479,6 +494,7 @@ export const usePlayerStore = defineStore('player', () => {
     const run = ++prepRun
     wavePrep.value = null
     waveLoading.value = true
+    waveStarting.value = radio?.title ?? t('wave.title')
     let start: WaveStart | null
     try {
       // Сессия на сервере помнит выданное и реакции; её id — и в событиях прослушивания
@@ -497,6 +513,7 @@ export const usePlayerStore = defineStore('player', () => {
       if (run === prepRun) {
         waveLoading.value = false
         wavePrep.value = null
+        waveStarting.value = null
         breathe(false)
       }
     }
@@ -508,6 +525,7 @@ export const usePlayerStore = defineStore('player', () => {
     finishListen('skipped')
     if (current.value) history.value.push(current.value)
     waveSessionId.value = start.id
+    resetOrder()
     context.value = { type: 'wave', id: start.id, title: radio?.title ?? t('wave.title') }
     upcoming.value = start.queue.slice(1).map(w => entryOf(w.track, 'wave', w.reason))
     prefetched = null
@@ -529,6 +547,20 @@ export const usePlayerStore = defineStore('player', () => {
     manual.value.push(entryOf(track, 'manual'))
     bridge.events.feedback({ kind: 'queue_add', trackId: track.id })
     toast.show({ text: t('player.enqueued', { title: track.title }), icon: 'ph:list-plus' })
+  }
+
+  /** Альбом или плейлист целиком — в конец очереди, одним уведомлением */
+  function enqueueMany(tracks: Track[], title: string) {
+    if (tracks.length <= 1) {
+      if (tracks[0]) enqueue(tracks[0])
+      return
+    }
+    for (const tr of tracks) {
+      if (routed({ action: 'enqueue', track: tr })) continue
+      manual.value.push(entryOf(tr, 'manual'))
+      bridge.events.feedback({ kind: 'queue_add', trackId: tr.id })
+    }
+    toast.show({ text: t('player.enqueued', { title }), icon: 'ph:list-plus' })
   }
 
   function removeTrack(trackId: string, from: QueueSource) {
@@ -586,7 +618,11 @@ export const usePlayerStore = defineStore('player', () => {
 
   /** Приложение: движок сам перешёл к другому элементу очереди — догоняем очередь и историю */
   async function onEngineAdvance(uid: string, reason: 'auto' | 'user') {
-    if (current.value?.uid === uid) return
+    if (current.value?.uid === uid) {
+      // Повтор одного трека: движок сам начал его заново
+      if (reason === 'auto') onReplayed()
+      return
+    }
     const prevEntry = current.value
     let entry: QueueEntry | undefined
     const mi = manual.value.findIndex(e => e.uid === uid)
@@ -781,11 +817,10 @@ export const usePlayerStore = defineStore('player', () => {
     await refillWave()
   }
 
-  async function applyPreset(id: string) {
-    const p = WAVE_PRESETS.find(x => x.id === id)
-    if (!p) return
-    if (waveActive.value) setWave(p.set)
-    else await startWave(p.set)
+  /** Сохранённое сочетание: волна играет — меняются настройки, нет — волна стартует с ними */
+  async function applyPreset(set: WaveSettings) {
+    if (waveActive.value) setWave(set)
+    else await startWave(set)
   }
 
   // ---------- Громкость ----------
@@ -847,6 +882,8 @@ export const usePlayerStore = defineStore('player', () => {
       volume: volume.value,
       muted: muted.value,
       transition: transition.value,
+      shuffle: shuffle.value,
+      repeat: repeat.value,
       waveSessionId: waveActive.value ? waveSessionId.value : null,
       wave: waveActive.value ? { ...wave.value } : null,
       peaks: peaks.value.map(p => Math.round(p * 100) / 100),
@@ -889,6 +926,7 @@ export const usePlayerStore = defineStore('player', () => {
     positionMs.value = atMs
     durationMs.value = s.durationMs || cur?.track.durationMs || 0
     waveSessionId.value = s.waveSessionId ?? null
+    remoteModes.value = { shuffle: !!s.shuffle, repeat: s.repeat ?? 'off' }
     source.value = null
     if (s.peaks?.length) peaks.value = s.peaks
     else if (changed) peaks.value = []
@@ -905,6 +943,7 @@ export const usePlayerStore = defineStore('player', () => {
   /** Это устройство продолжает с того же места с той же очередью (перенос или «Продолжить здесь») */
   async function connectTakeOver(s: PlaybackState | null, atMs: number, autoplay: boolean) {
     mirrored.value = false
+    adoptModes(s)
     const cur = s?.current ? fromItem(s.current) : null
     manual.value = (s?.manual ?? []).map(fromItem)
     upcoming.value = (s?.upcoming ?? []).map(fromItem)
@@ -927,8 +966,209 @@ export const usePlayerStore = defineStore('player', () => {
   /** «Продолжить здесь» не нужно — человек сам включил здесь другое: плеер снова свой */
   function connectLeave() {
     mirrored.value = false
+    remoteModes.value = null
     playing.value = false
     pending.value = null
+  }
+
+  // ---------- Таймер сна (stores/sound.ts) ----------
+  // Приложение: таймер в движке. Сайт: «в конце трека» — трек доигрывает без перехода, следующий
+  // встаёт в начало и ждёт на паузе
+
+  const stopAtTrackEnd = ref(false)
+
+  async function advancePaused() {
+    stopAtTrackEnd.value = false
+    finishListen('completed')
+    const prevEntry = current.value
+    waveOutcome(prevEntry, 'completed', positionMs.value)
+    let entry = takeNext()
+    if (!entry && waveActive.value) {
+      await refillWave()
+      entry = takeNext()
+    }
+    if (prevEntry) history.value.push(prevEntry)
+    if (!entry) {
+      pause()
+      engine.seek(0)
+      positionMs.value = 0
+      return
+    }
+    await startEntry(entry, { autoplay: false })
+    pause()
+  }
+
+  // ---------- Превью («Итоги года»): кусок трека через тот же движок, без истории ----------
+
+  /** Трек, который звучит превью; плеер в это время стоит, прослушивания не пишутся */
+  const previewing = ref<Track | null>(null)
+  let previewSaved: { entry: QueueEntry, positionMs: number } | null = null
+  let previewRun = 0
+
+  /** Кусок готового на сервере трека с `startMs`: текущее прослушивание закрывается, очередь не меняется */
+  async function startPreview(track: Track, startMs = 0): Promise<boolean> {
+    if (mirrored.value) return false
+    const run = ++previewRun
+    if (!previewing.value) {
+      finishListen('stopped')
+      previewSaved = current.value && !pending.value ? { entry: current.value, positionMs: positionMs.value } : null
+      engine.pause()
+      playing.value = false
+      visual()?.setPlaying(false)
+    }
+    previewing.value = track
+    let result: SourceResult
+    try {
+      result = await bridge.media.source(track)
+    }
+    catch {
+      result = { kind: 'unavailable' }
+    }
+    if (run !== previewRun) return false
+    if (result.kind !== 'ready' || !result.source) {
+      engine.pause()
+      return false
+    }
+    const dur = result.source.durationMs ?? track.durationMs
+    engine.load(withGain(result.source), {
+      durationMs: dur,
+      startMs: Math.max(0, Math.min(startMs, dur - 5000)),
+      track: engineTrack({ uid: `preview:${track.id}`, track, source: 'manual' }, result.source),
+    })
+    await engine.play().catch(() => {})
+    return true
+  }
+
+  /** Превью кончилось: плеер возвращается к своему треку на том же месте, на паузе */
+  function stopPreview() {
+    if (!previewing.value) return
+    previewRun++
+    previewing.value = null
+    engine.pause()
+    const saved = previewSaved
+    previewSaved = null
+    if (saved) void startEntry(saved.entry, { startMs: saved.positionMs, autoplay: false })
+    else engine.load(null, { durationMs: 0 })
+  }
+
+  // ---------- Перемешивание и повтор ----------
+  // Свои у каждого устройства. Перемешивается только остаток альбома или плейлиста: добавленное
+  // вручную («Далее») идёт первым и по порядку. Волна бесконечна — там их нет
+
+  const shuffle = useLocalStorage('dw.shuffle', false)
+  const repeat = useLocalStorage<RepeatMode>('dw.repeat', 'off')
+  /** Пульт: режимы активного устройства */
+  const remoteModes = ref<{ shuffle: boolean, repeat: RepeatMode } | null>(null)
+  /** Порядок списка до перемешивания — по нему он вернётся */
+  let originalOrder: QueueEntry[] | null = null
+  /** Весь список (альбом, плейлист) — для повтора всей очереди новыми кругами */
+  let contextTracks: Track[] = []
+  /** Круг повтора текущего трека списка */
+  let round = 0
+  /** Повтор всей: сколько треков держать впереди — движок приложения доиграет их и в фоне */
+  const REPEAT_AHEAD = 10
+
+  /** Режимы есть у альбома и плейлиста, у волны и радио — нет */
+  const modesAvailable = computed(() => !waveActive.value)
+  const shuffleOn = computed(() => (mirrored.value && remoteModes.value ? remoteModes.value.shuffle : shuffle.value))
+  const repeatMode = computed<RepeatMode>(() => (mirrored.value && remoteModes.value ? remoteModes.value.repeat : repeat.value))
+  const effectiveRepeat = computed<RepeatMode>(() => (waveActive.value ? 'off' : repeat.value))
+
+  function resetOrder() {
+    originalOrder = null
+    contextTracks = []
+    round = 0
+  }
+
+  function setShuffle(on: boolean) {
+    if (routed({ action: 'setShuffle', shuffle: on })) return
+    if (shuffle.value === on) return
+    shuffle.value = on
+    if (waveActive.value) return
+    if (on) {
+      const r = shuffleQueue(current.value, upcoming.value)
+      upcoming.value = r.upcoming
+      originalOrder = r.original
+    }
+    else if (originalOrder) {
+      upcoming.value = restoreQueue(current.value, upcoming.value, originalOrder)
+      originalOrder = null
+    }
+    prefetched = null
+    prefetchNext()
+  }
+
+  function setRepeat(mode: RepeatMode) {
+    if (routed({ action: 'setRepeat', mode })) return
+    repeat.value = mode
+    // Повтор всей сняли — новые круги списка уходят, текущий доигрывает
+    if (mode !== 'all') upcoming.value = upcoming.value.filter(e => (e.round ?? 0) <= round)
+    else refillRepeat()
+  }
+
+  const toggleShuffle = () => setShuffle(!shuffleOn.value)
+  const cycleRepeat = () => setRepeat(nextRepeat(repeatMode.value))
+
+  /** Новый круг списка в конец очереди (перемешанный, если перемешивание включено) */
+  function appendRound() {
+    const r = Math.max(round, ...upcoming.value.map(e => e.round ?? 0)) + 1
+    const fresh = contextTracks.map(tr => ({ ...entryOf(tr, 'context'), round: r }))
+    if (shuffle.value) {
+      originalOrder = [...(originalOrder ?? []), ...fresh]
+      upcoming.value.push(...shuffled(fresh))
+    }
+    else upcoming.value.push(...fresh)
+  }
+
+  /** Повтор всей: впереди всегда есть следующий круг — переход на начало списка без паузы */
+  function refillRepeat() {
+    if (effectiveRepeat.value !== 'all' || mirrored.value || !current.value) return
+    const n = roundsNeeded(upcoming.value.length, contextTracks.length, REPEAT_AHEAD)
+    for (let i = 0; i < n; i++) appendRound()
+  }
+
+  /** Очередь кончилась: повтор всей начинает список заново. true — есть что играть */
+  function wrapRepeat(): boolean {
+    if (afterTrack(effectiveRepeat.value, false, contextTracks.length > 0) !== 'wrap') return false
+    appendRound()
+    return upcoming.value.length > 0
+  }
+
+  /** Сайт: трек доиграл, а включён повтор одного — тот же элемент сначала (приложение повторяет само) */
+  async function replayIfRepeating(): Promise<boolean> {
+    const cur = current.value
+    if (!cur || pending.value || afterTrack(effectiveRepeat.value, !!nextEntry.value, false) !== 'replay') return false
+    onReplayed()
+    engine.seek(0)
+    await play()
+    return true
+  }
+
+  /** Трек начался заново: прошлое прослушивание закрыто как дослушанное, новое — с нуля */
+  function onReplayed() {
+    const cur = current.value
+    if (!cur) return
+    finishListen('completed')
+    waveOutcome(cur, 'completed', positionMs.value)
+    positionMs.value = 0
+    beginListen(cur, 0)
+  }
+
+  /** Перенос сюда: режимы — как были на прежнем устройстве */
+  function adoptModes(s: PlaybackState | null) {
+    resetOrder()
+    if (typeof s?.shuffle === 'boolean') shuffle.value = s.shuffle
+    if (s?.repeat) repeat.value = s.repeat
+  }
+
+  if (import.meta.client) {
+    // Круг текущего трека: по нему снимаются лишние круги, когда повтор всей выключают
+    watch(current, (e) => {
+      if (e?.source === 'context') round = e.round ?? 0
+    })
+    watch(() => upcoming.value.length, () => refillRepeat())
+    // Приложение: повтор одного трека ведёт движок, оба режима — в Пункте управления
+    watch([shuffle, effectiveRepeat], ([sh, rep]) => engine.setModes?.(sh, rep), { immediate: true })
   }
 
   // ---------- Система: экран блокировки, медиаклавиши, «Сейчас играет» ----------
@@ -960,6 +1200,8 @@ export const usePlayerStore = defineStore('player', () => {
       case 'stop': return pause()
       case 'seek': return seek(cmd.positionMs)
       case 'seekBy': return seek(positionMs.value + cmd.offsetMs)
+      case 'setShuffle': return setShuffle(cmd.shuffle)
+      case 'setRepeat': return setRepeat(cmd.mode)
     }
   }
 
@@ -973,12 +1215,12 @@ export const usePlayerStore = defineStore('player', () => {
     watch([effectiveMode, normalize, () => Math.round(expressiveness.value * 20) / 20], ([mode, norm, expr]) => engine.configure({ transition: mode === 'gapless' ? 'gapless' : mode === 'dj' ? 'dj' : 'crossfade', fadeMs: FADE_MS[mode], normalize: norm, expressiveness: expr }), { immediate: true })
     watch(() => [...manual.value, ...upcoming.value].map(e => e.uid).join(), () => syncUpcoming())
     engine.on('advance', (uid, reason) => {
-      if (!mirrored.value) void onEngineAdvance(uid, reason)
+      if (!mirrored.value && !previewing.value) void onEngineAdvance(uid, reason)
     })
 
     engine.on('time', (ms) => {
-      // Пульт: позицию ведёт снимок активного устройства
-      if (mirrored.value) return
+      // Пульт: позицию ведёт снимок активного устройства; превью — не трек плеера
+      if (mirrored.value || previewing.value) return
       positionMs.value = ms
       if (listen) {
         const d = ms - listen.lastPos
@@ -987,7 +1229,7 @@ export const usePlayerStore = defineStore('player', () => {
       }
       // Наложение начинается заранее, чтобы следующий трек вошёл до конца текущего.
       // В приложении переход делает движок сам — точно по кадрам
-      if (!native && playing.value && !transitioning && effectiveMode.value !== 'gapless' && durationMs.value > fadeMs.value * 2 && ms >= transitionAtMs.value && nextEntry.value) {
+      if (!native && playing.value && !transitioning && !stopAtTrackEnd.value && effectiveRepeat.value !== 'one' && effectiveMode.value !== 'gapless' && durationMs.value > fadeMs.value * 2 && ms >= transitionAtMs.value && nextEntry.value) {
         transitioning = true
         finishListen('completed')
         const prevEntry = current.value
@@ -1000,10 +1242,10 @@ export const usePlayerStore = defineStore('player', () => {
       }
     })
     engine.on('ended', () => {
-      if (!transitioning && !mirrored.value) void next('completed')
+      if (!transitioning && !mirrored.value && !previewing.value) void (stopAtTrackEnd.value ? advancePaused() : next('completed'))
     })
     engine.on('state', (s) => {
-      if (mirrored.value) return
+      if (mirrored.value || previewing.value) return
       const changed = playing.value !== s.playing
       playing.value = s.playing
       buffering.value = s.buffering
@@ -1011,7 +1253,7 @@ export const usePlayerStore = defineStore('player', () => {
       if (changed) publishNowPlaying()
     })
     engine.on('error', (_e, uid) => {
-      if (mirrored.value || !current.value || (uid && uid !== current.value.uid)) return
+      if (mirrored.value || previewing.value || !current.value || (uid && uid !== current.value.uid)) return
       toast.error(t('player.trackFailed', { title: current.value.track.title }))
     })
 
@@ -1041,10 +1283,13 @@ export const usePlayerStore = defineStore('player', () => {
 
   return {
     current, manual, upcoming, history, context, playing, buffering, positionMs, durationMs, source, pending, volume, muted,
-    transition, expressiveness, normalize, wave, waveSessionId, waveLoading, wavePrep, waveActive, activePreset, effectiveMode, fadeMs,
+    transition, expressiveness, normalize, wave, waveSessionId, waveLoading, wavePrep, waveStarting, waveActive, effectiveMode, fadeMs,
     transitionAtMs, progress, nextEntry, peaks, devices,
-    play, pause, toggle, next, prev, seek, playTracks, startWave, cancelWavePrep, playNext, enqueue, remove, clearManual, moveManual,
+    play, pause, toggle, next, prev, seek, playTracks, startWave, cancelWavePrep, playNext, enqueue, enqueueMany, remove, clearManual, moveManual,
     jumpTo, dislike, notNow, moreLikeThis, toggleLike, setWave, applyPreset, setVolume, toggleMute, loadDevices, selectDevice,
+    previewing, startPreview, stopPreview,
     mirrored, setConnectRoute, connectSnapshot, connectYield, connectMirror, connectTakeOver, connectLeave,
+    stopAtTrackEnd,
+    shuffle, repeat, shuffleOn, repeatMode, effectiveRepeat, modesAvailable, setShuffle, toggleShuffle, setRepeat, cycleRepeat,
   }
 })

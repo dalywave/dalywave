@@ -28,12 +28,12 @@ withDefaults(defineProps<{
   height: 64px;
   margin-bottom: 8px;
   border-radius: 20px;
-  background: radial-gradient(100% 100% at 30% 20%, var(--accent-soft), transparent 70%), var(--fill-1);
+  background: var(--fill-1);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--accent);
   font-size: 28px;
 }
-.empty--error .empty__icon { color: var(--danger); background: radial-gradient(100% 100% at 30% 20%, color-mix(in oklab, var(--danger) 16%, transparent), transparent 70%), var(--fill-1); }
+.empty--error .empty__icon { color: var(--danger); }
 .empty__title { font-size: var(--fs-h4); font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
 .empty__text { margin: 0; max-width: 340px; color: var(--text-2); font-size: var(--fs-small); text-wrap: pretty; }
 .empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }

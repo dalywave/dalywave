@@ -46,8 +46,7 @@ const sub = computed(() => props.playlist.description || props.playlist.title)
   right: 0;
   bottom: 0;
   height: 30%;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--tint) 92%, white), var(--tint));
-  box-shadow: 0 -12px 28px -10px rgba(0, 0, 0, 0.55);
+  background: var(--tint);
   pointer-events: none;
 }
 .mix__label { position: absolute; left: 7%; right: 7%; bottom: 0; display: flex; align-items: center; gap: 8px; height: 30%; color: #0b0b10; pointer-events: none; }

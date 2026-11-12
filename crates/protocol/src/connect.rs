@@ -148,6 +148,16 @@ pub enum PendingStatus {
     WaitingForDownloader,
 }
 
+/// Повтор: выключен, вся очередь по кругу (альбом, плейлист) или один трек.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RepeatMode {
+    #[default]
+    Off,
+    All,
+    One,
+}
+
 fn full_volume() -> f32 {
     1.0
 }
@@ -182,6 +192,11 @@ pub struct PlaybackState {
     pub muted: bool,
     #[serde(default)]
     pub transition: TransitionMode,
+    /// Перемешивание очереди альбома или плейлиста.
+    #[serde(default)]
+    pub shuffle: bool,
+    #[serde(default)]
+    pub repeat: RepeatMode,
     #[serde(default)]
     pub wave_session_id: Option<Uuid>,
     #[serde(default)]
@@ -246,6 +261,18 @@ pub struct RemoteTransition {
     pub mode: TransitionMode,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteShuffle {
+    pub shuffle: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteRepeat {
+    pub mode: RepeatMode,
+}
+
 /// Играть список на устройстве: треки — по id (устройство загрузит их само).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -307,6 +334,10 @@ pub enum RemoteCommand {
     SetMuted(RemoteMuted),
     #[serde(rename = "setTransition")]
     SetTransition(RemoteTransition),
+    #[serde(rename = "setShuffle")]
+    SetShuffle(RemoteShuffle),
+    #[serde(rename = "setRepeat")]
+    SetRepeat(RemoteRepeat),
     /// «Не нравится» текущему треку — и следующий.
     #[serde(rename = "dislike")]
     Dislike,
@@ -452,6 +483,45 @@ mod tests {
             serde_json::json!({ "action": "setVolume", "volume": 0.5 })
         );
         assert!(serde_json::from_str::<RemoteCommand>(r#"{"action":"explode"}"#).is_err());
+    }
+
+    #[test]
+    fn shuffle_and_repeat_commands() {
+        let c: RemoteCommand =
+            serde_json::from_str(r#"{"action":"setShuffle","shuffle":true}"#).unwrap();
+        assert_eq!(
+            c,
+            RemoteCommand::SetShuffle(RemoteShuffle { shuffle: true })
+        );
+        let c: RemoteCommand =
+            serde_json::from_str(r#"{"action":"setRepeat","mode":"one"}"#).unwrap();
+        assert_eq!(
+            c,
+            RemoteCommand::SetRepeat(RemoteRepeat {
+                mode: RepeatMode::One
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(RemoteCommand::SetRepeat(RemoteRepeat {
+                mode: RepeatMode::All
+            }))
+            .unwrap(),
+            serde_json::json!({ "action": "setRepeat", "mode": "all" })
+        );
+        assert!(
+            serde_json::from_str::<RemoteCommand>(r#"{"action":"setRepeat","mode":"twice"}"#)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn old_snapshots_have_no_shuffle_or_repeat() {
+        let s: PlaybackState = serde_json::from_str("{}").unwrap();
+        assert!(!s.shuffle);
+        assert_eq!(s.repeat, RepeatMode::Off);
+        let s: PlaybackState = serde_json::from_str(r#"{"shuffle":true,"repeat":"all"}"#).unwrap();
+        assert!(s.shuffle);
+        assert_eq!(s.repeat, RepeatMode::All);
     }
 
     #[test]

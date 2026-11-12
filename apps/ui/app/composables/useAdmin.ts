@@ -24,7 +24,9 @@ export function useAdminLabels() {
   }
 }
 
-export const JOB_TONE: Record<JobStatus, 'meta' | 'new' | 'success' | 'danger'> = { queued: 'meta', running: 'new', done: 'success', failed: 'danger', cancelled: 'meta' }
+/** Тон точки состояния (AdminStatus) */
+export type StatusTone = 'ok' | 'warn' | 'bad' | 'on' | 'idle'
+export const JOB_TONE: Record<JobStatus, StatusTone> = { queued: 'idle', running: 'on', done: 'ok', failed: 'bad', cancelled: 'idle' }
 export const ACQ_ACTIVE: AcquisitionStatus[] = ['queued', 'matching', 'downloading', 'verifying', 'processing']
 export const AUDIO_COLOR: Record<AudioStatus, string> = {
   ready: 'var(--success)',

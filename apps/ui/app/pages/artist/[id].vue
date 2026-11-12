@@ -6,7 +6,7 @@ import type { MenuEntry } from '~/types/ui'
 const route = useRoute()
 const bridge = useBridge()
 const library = useLibraryStore()
-const toast = useToast()
+const shareMenu = useShare()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
@@ -47,39 +47,37 @@ const moreItems = computed<MenuEntry[]>(() => {
   const a = artist.value
   if (!a) return []
   return [
-    { label: t('shuffle'), icon: 'ph:shuffle', onSelect: () => playArtist(a.id, { shuffle: true }) },
-    { label: t('radio'), icon: 'ph:waveform', onSelect: () => toast.show({ text: t('radioSoon'), icon: 'ph:waveform' }) },
-    { kind: 'separator' },
-    { label: t('block'), icon: 'ph:prohibit', onSelect: () => toast.show({ text: t('blockSoon', { name: a.name }), icon: 'ph:prohibit' }) },
+    ...(data.value?.topTracks.length ? [{ label: t('shuffle'), icon: 'ph:shuffle', onSelect: () => playArtist(a.id, { shuffle: true }) }] : []),
+    shareMenu.entry('artist', a.id, a.name),
   ]
 })
+
 </script>
 
 <template>
   <div class="artist">
-    <MusicPageState v-if="state !== 'ready'" :state="state" round @retry="load" />
+    <template v-if="state !== 'ready'">
+      <MusicPhoneNav />
+      <MusicPageState :state="state" round @retry="load" />
+    </template>
     <template v-else-if="data && artist">
       <MusicPageHeader :kicker="t('title')" :title="artist.name" round>
         <template #art>
-          <MusicCoverArt :image="artist.image" size="large" :alt="artist.name" round ambient eager fallback-icon="ph:user" />
+          <MusicCoverArt :image="artist.image" size="large" :alt="artist.name" round eager fallback-icon="ph:user" />
         </template>
-        <template #meta>
+        <template v-if="artist.fans || releaseCount" #meta>
           <span v-if="artist.fans">{{ formatCount(artist.fans, 'listener', lang) }}</span>
-          <span>{{ formatCount(releaseCount, 'release', lang) }}</span>
-        </template>
-        <template v-if="data.tracksTotal" #status>
-          <span class="ready" :class="{ 'is-full': data.tracksOnServer >= data.tracksTotal }">
-            <Icon :name="data.tracksOnServer >= data.tracksTotal ? 'ph:check-circle-fill' : 'ph:cloud-arrow-down'" />
-            {{ t('onServer', { n: data.tracksOnServer, total: data.tracksTotal }) }}
-          </span>
+          <span v-if="releaseCount">{{ formatCount(releaseCount, 'release', lang) }}</span>
         </template>
         <template #actions>
           <UiButton variant="primary" size="lg" :icon="playing ? 'ph:pause-fill' : 'ph:play-fill'" :loading="loading === `artist:${artist.id}`" :disabled="!data.topTracks.length" @click="playArtist(artist.id)">
             {{ playing ? tg('common.pause') : isContext('artist', artist.id) ? t('resume') : tg('common.play') }}
           </UiButton>
-          <UiButton size="lg" :icon="followed ? 'ph:bell-ringing-fill' : 'ph:bell-simple'" :class="{ 'is-following': followed }" @click="toggleFollow">
+          <UiButton size="lg" :icon="followed ? 'ph:check' : 'ph:plus'" :class="{ 'is-following': followed }" :aria-pressed="followed" @click="toggleFollow">
             {{ followed ? t('following') : t('follow') }}
           </UiButton>
+        </template>
+        <template #tools>
           <!-- Артиста из подписок можно держать на устройстве целиком -->
           <MusicDownloadButton v-if="followed" kind="artist" :ref-id="artist.id" :title="artist.name" />
           <UiMenu :items="moreItems" align="start">
@@ -104,6 +102,8 @@ const moreItems = computed<MenuEntry[]>(() => {
         <MusicArtistCard v-for="a in data.related" :key="a.id" :artist="a" />
       </MusicShelf>
 
+      <UiEmptyState v-if="!data.topTracks.length && !shelves.length" icon="ph:vinyl-record" :title="t('empty')" compact />
+
       <ShellDevMockNote :sections="['catalog']" what="артист" class="artist__note" />
     </template>
   </div>
@@ -111,10 +111,6 @@ const moreItems = computed<MenuEntry[]>(() => {
 
 <style scoped>
 .artist { display: flex; flex-direction: column; gap: 40px; }
-.ready { display: inline; }
-.ready :deep(.iconify) { margin-right: 5px; vertical-align: -2px; }
-.ready :deep(.iconify) { color: var(--text-3); }
-.ready.is-full :deep(.iconify) { color: var(--success); }
 .is-following { box-shadow: inset 0 0 0 1px var(--accent-line); }
 .is-following :deep(.iconify) { color: var(--accent); }
 .artist__top { display: flex; flex-direction: column; gap: 8px; }
@@ -123,7 +119,7 @@ const moreItems = computed<MenuEntry[]>(() => {
 .artist__note { align-self: center; }
 @media (max-width: 699px) {
   .artist { gap: 32px; }
-    .artist__top { padding: 0 8px; }
+  .artist__top { padding: 0 8px; }
   .artist__head { padding: 0 8px; }
 }
 </style>
@@ -134,17 +130,13 @@ const moreItems = computed<MenuEntry[]>(() => {
     "title": "Артист",
     "resume": "Продолжить",
     "shuffle": "Перемешать",
-    "radio": "Волна по артисту",
-    "radioSoon": "Волна по артисту появится вместе с рекомендациями",
-    "block": "Не рекомендовать артиста",
-    "blockSoon": "Скрывать {name} из волны можно будет вместе с рекомендациями",
     "follow": "Подписаться",
     "following": "Вы подписаны",
-    "onServer": "{n} из {total} треков на сервере",
     "popular": "Популярные треки",
     "more": "Показать 10",
     "less": "Свернуть",
     "related": "Похожие артисты",
+    "empty": "Релизов пока нет",
     "kinds": {
       "albumsTitle": "Альбомы",
       "epsTitle": "EP и синглы",
@@ -155,17 +147,13 @@ const moreItems = computed<MenuEntry[]>(() => {
     "title": "Artist",
     "resume": "Resume",
     "shuffle": "Shuffle",
-    "radio": "Artist radio",
-    "radioSoon": "Artist radio arrives with recommendations",
-    "block": "Don't recommend this artist",
-    "blockSoon": "Hiding {name} from the wave arrives with recommendations",
     "follow": "Follow",
     "following": "Following",
-    "onServer": "{n} of {total} tracks on the server",
     "popular": "Popular tracks",
     "more": "Show 10",
     "less": "Show less",
     "related": "Similar artists",
+    "empty": "No releases yet",
     "kinds": {
       "albumsTitle": "Albums",
       "epsTitle": "EPs and singles",

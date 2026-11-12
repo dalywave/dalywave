@@ -4,7 +4,6 @@ import type { PanelTab } from '~/stores/ui'
 // Правая панель большого экрана: очередь, текст, устройства, о треке
 const ui = useUiStore()
 const player = usePlayerStore()
-const toast = useToast()
 const { t } = useI18n()
 
 const tabs = computed(() => [
@@ -17,10 +16,6 @@ const tabs = computed(() => [
 watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
   if (open && tab === 'devices') void player.loadDevices()
 }, { immediate: true })
-
-function saveQueue() {
-  toast.show({ text: t('queue.saveSoon'), icon: 'ph:playlist' })
-}
 </script>
 
 <template>
@@ -32,15 +27,12 @@ function saveQueue() {
       </header>
       <div class="panel__body no-scrollbar">
         <MusicQueuePanel v-if="ui.panelTab === 'queue'" />
-        <UiEmptyState v-else-if="ui.panelTab === 'lyrics'" icon="ph:microphone-stage" :title="t('lyrics.title')" :text="t('lyrics.text')" />
+        <MusicLyricsView v-else-if="ui.panelTab === 'lyrics'" />
         <div v-else-if="ui.panelTab === 'devices'" class="panel__devices">
           <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
         </div>
         <MusicAboutTrack v-else :track="player.current?.track ?? null" />
       </div>
-      <footer v-if="ui.panelTab === 'queue' && player.waveActive" class="panel__foot">
-        <UiButton size="sm" icon="ph:plus" @click="saveQueue">{{ t('queue.saveAsPlaylist') }}</UiButton>
-      </footer>
     </div>
   </aside>
 </template>
@@ -65,7 +57,6 @@ function saveQueue() {
 .panel__tabs :deep(.tabs__item) { height: 50px; }
 .panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 24px; border-top: 1px solid var(--hair); }
 .panel__devices { padding: 12px 0; }
-.panel__foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex: none; padding: 16px 20px; border-top: 1px solid var(--hair); }
 
 /* Планшет: панель ложится поверх содержимого; рядом со сценой плеера — встаёт в ряд */
 @media (max-width: 1099px) {

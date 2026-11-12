@@ -173,8 +173,6 @@ const tiles = computed(() => {
   background: var(--fill-1);
   box-shadow: inset 0 0 0 1px var(--line);
 }
-.is--done { background: radial-gradient(80% 120% at 0% 0%, color-mix(in oklab, var(--success) 10%, transparent), transparent 60%), var(--fill-1); }
-.is--bad { background: radial-gradient(80% 120% at 0% 0%, color-mix(in oklab, var(--danger) 12%, transparent), transparent 60%), var(--fill-1); }
 .is__head { display: flex; align-items: flex-start; gap: 16px; }
 .is__icon {
   display: grid;
@@ -188,7 +186,7 @@ const tiles = computed(() => {
   color: var(--text-1);
   font-size: 22px;
 }
-.is__icon.is-running { background: var(--brand-gradient); color: #fff; box-shadow: 0 10px 28px -14px color-mix(in oklab, var(--brand-2) 80%, transparent); }
+.is__icon.is-running { color: var(--accent); }
 .is--done .is__icon { background: color-mix(in oklab, var(--success) 20%, transparent); color: var(--success); box-shadow: none; }
 .is--bad .is__icon { background: color-mix(in oklab, var(--danger) 18%, transparent); color: var(--danger); box-shadow: none; }
 .is__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-top: 2px; }
@@ -197,7 +195,7 @@ const tiles = computed(() => {
 .is--done .is__detail { color: var(--text-1); }
 
 .is__bar { height: 6px; overflow: hidden; border-radius: 3px; background: var(--fill-2); }
-.is__bar i { display: block; height: 100%; border-radius: inherit; background: var(--brand-gradient-x, var(--brand-gradient)); transition: width var(--dur-3) var(--ease-out); }
+.is__bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--dur-3) var(--ease-out); }
 .is__bar i.is-indeterminate { width: 40% !important; animation: slide 1.4s var(--ease-in-out) infinite; }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 
@@ -210,8 +208,9 @@ const tiles = computed(() => {
 .is__steps li.is-now .is__dot { color: var(--accent); }
 .is__calm { margin: -4px 0 0; font-size: var(--fs-caption); color: var(--text-3); }
 
-.is__tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
-.is__tile { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
+/* Цифры итога — просто цифры в ряд, без плиток внутри карточки */
+.is__tiles { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.is__tile { display: flex; flex-direction: column; gap: 2px; }
 .is__tile b { font-size: var(--fs-h3); font-weight: 700; letter-spacing: -0.02em; }
 .is__tile span { font-size: var(--fs-caption); color: var(--text-3); }
 .is__actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -219,8 +218,7 @@ const tiles = computed(() => {
 @media (max-width: 699px) {
   .is { padding: 20px 16px; border-radius: var(--r-4); }
   .is__icon { width: 44px; height: 44px; border-radius: 14px; font-size: 20px; }
-  .is__tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .is__tile { padding: 10px 12px; }
+  .is__tiles { gap: 12px 24px; }
   .is__tile b { font-size: var(--fs-h4); }
   .is__actions > :first-child { flex: 1 1 100%; }
 }
@@ -252,7 +250,7 @@ const tiles = computed(() => {
       "failed": "Попробуйте ещё раз чуть позже",
       "cancelled": "Найденное до остановки осталось в медиатеке"
     },
-    "calm": "Можно закрыть страницу — перенос продолжится на сервере",
+    "calm": "Можно закрыть страницу — перенос продолжится",
     "calmUpload": "Не закрывайте страницу, пока файл загружается",
     "result": {
       "added": "Добавлено: {what}",
@@ -296,7 +294,7 @@ const tiles = computed(() => {
       "failed": "Try again a bit later",
       "cancelled": "Whatever was found before stopping stays in your library"
     },
-    "calm": "You can close this page — the transfer continues on the server",
+    "calm": "You can close this page — the transfer keeps going",
     "calmUpload": "Keep this page open while the file uploads",
     "result": {
       "added": "Added {what}",

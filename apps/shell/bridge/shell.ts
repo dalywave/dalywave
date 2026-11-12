@@ -119,6 +119,43 @@ export interface PlayerSnapshot {
   deviceRate: number
 }
 
+/** Пресеты эквалайзера; `custom` — «Свой»: полосы `gains` как есть */
+export type PlayerEqPreset = 'off' | 'bass-boost' | 'bass-cut' | 'vocal' | 'acoustic' | 'electronic' | 'loudness' | 'custom'
+
+/** Эквалайзер этого устройства: 10 полос 31 Гц … 16 кГц, усиления ±12 дБ (`gains` — «Свой») */
+export interface PlayerEq {
+  preset: PlayerEqPreset
+  gains: number[]
+}
+
+/** Таймер сна: через `ms` или в конце текущего трека */
+export type PlayerSleepTimer = { mode: 'minutes', ms: number } | { mode: 'track' }
+
+export interface PlayerSleep {
+  /** null — таймера нет */
+  timer: 'minutes' | 'track' | null
+  /** Когда пауза, мс от эпохи Unix (у конца трека — по позиции) */
+  endsAtMs: number | null
+  remainingMs: number | null
+  /** Звук уже затухает */
+  fading: boolean
+  /** Таймер сработал: музыка на паузе */
+  finished: boolean
+}
+
+/** Что играет — для мини-плеера */
+export interface PlayerNow {
+  title: string
+  artist: string
+  album: string | null
+  artworkUrl: string | null
+  durationMs: number | null
+  positionMs: number
+  playing: boolean
+  /** Ключ элемента очереди — для сверки с `player:position` */
+  id: string | null
+}
+
 /** Уровень звука за ~50 мс до общей громкости: RMS, пик, полосы до 150 Гц, 150–2000 Гц, выше 2 кГц */
 export interface PlayerLevel {
   rms: number
@@ -133,6 +170,12 @@ export type MediaCommand =
   | { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'stop', source: MediaSource }
   | { action: 'seek', positionMs: number, source: MediaSource }
   | { action: 'seekBy', offsetMs: number, source: MediaSource }
+  /** Пункт управления, CarPlay, Siri (macOS, iOS): перемешать или сменить повтор */
+  | { action: 'setShuffle', shuffle: boolean, source: MediaSource }
+  | { action: 'setRepeat', mode: PlayerRepeat, source: MediaSource }
+
+/** Повтор: выключен, вся очередь по кругу, один трек */
+export type PlayerRepeat = 'off' | 'all' | 'one'
 
 export type AudioOutputKind = 'builtin' | 'headphones' | 'bluetooth' | 'airplay' | 'usb' | 'hdmi' | 'other'
 
@@ -252,6 +295,16 @@ export interface DownloaderSnapshot {
   retryAtMs: number | null
 }
 
+/** «Распознать» (ShazamKit): совпадение как есть — трек в каталоге находит сервер (`POST /api/recognize/resolve`) */
+export interface RecognizeMatch {
+  title: string
+  artist: string
+  isrc: string | null
+  appleMusicId: string | null
+  shazamId: string | null
+  artworkUrl: string | null
+}
+
 export interface ShellEvents {
   'window:maximized': { maximized: boolean }
   'window:fullscreen': { fullscreen: boolean }
@@ -273,6 +326,10 @@ export interface ShellEvents {
   'player:ended': null
   /** ~20 раз в секунду, пока включено `player.setLevels(true)` */
   'player:level': PlayerLevel
+  /** Таймер сна: поставили, сняли, началось затухание, сработал (`finished`) */
+  'player:sleep': PlayerSleep
+  /** Только окну мини-плеера: другой трек, пауза, конец очереди */
+  'player:now': PlayerNow | null
   /** Список устройств вывода или маршрут звука поменялся (AirPlay, наушники, Bluetooth) */
   'audio:outputs': AudioOutputs
   'server:changed': { serverUrl: string }
@@ -282,10 +339,21 @@ export interface ShellEvents {
   'update:ready': UpdateInfo
   /** Каждая перемена у обновления; ход скачивания — до 4 раз в секунду */
   'update:state': UpdateState
-  /** Ссылки dalywave:// кроме возврата входа — на будущее (треки, альбомы) */
+  /** Ссылки dalywave:// кроме возврата входа: `dalywave://share?url=…` и ссылки на экраны. Ссылку
+   *  забирать через `links.take()` — так она не обработается дважды и не потеряется при запуске */
   'deep-link:open': { url: string }
   /** macOS: загрузчик на этом Mac — при каждой перемене, ход задания — до 4 раз в секунду */
   'downloader:state': DownloaderSnapshot
+  /** Открыть экран «Распознать»: пункт трея macOS, быстрое действие на значке iPhone. Просьбу забрать
+   *  `recognize.takePending()` — и при запуске (приложение открыли этим действием) */
+  'recognize:open': null
+}
+
+/** Статус в Discord: `connected` — Discord запущен и статус до него доходит */
+export interface DiscordState {
+  available: boolean
+  enabled: boolean
+  connected: boolean
 }
 
 export type InvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>
@@ -354,6 +422,27 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       /** События `player:level` — только пока их кто-то рисует */
       setLevels: (enabled: boolean) => call<void>('player_set_levels', { enabled }),
       state: () => call<PlayerSnapshot>('player_state'),
+      /** Эквалайзер этого устройства: запоминается оболочкой и действует сразу; null — выключить */
+      setEq: (eq: PlayerEq | null) => call<void>('player_set_eq', { eq }),
+      /** Сохранённый эквалайзер; null — не настраивали */
+      eq: () => call<PlayerEq | null>('player_eq'),
+      /** Таймер сна; null — снять. Ход — событие `player:sleep` */
+      setSleep: (timer: PlayerSleepTimer | null) => call<void>('player_set_sleep', { timer }),
+      sleep: () => call<PlayerSleep>('player_sleep'),
+      /** Перемешивание и повтор плеера: повтор одного трека ведёт движок (и в фоне), оба режима
+       *  показываются в Пункте управления */
+      setModes: (shuffle: boolean, repeat: PlayerRepeat) => call<void>('player_set_modes', { shuffle, repeat }),
+      /** Мини-плеер: что играет; null — ничего */
+      now: () => call<PlayerNow | null>('player_now'),
+      /** Мини-плеер: кнопки — как пульт (что движок не может сам, уходит главному окну) */
+      remote: (action: 'toggle' | 'play' | 'pause' | 'next' | 'previous') => call<void>('player_remote', { action }),
+    },
+    /** Мини-плеер (macOS, Windows): окно поверх всех; главное окно на это время прячется */
+    mini: {
+      open: () => call<void>('mini_open'),
+      /** Закрыть и вернуть главное окно */
+      close: () => call<void>('mini_close'),
+      toggle: () => call<void>('mini_toggle'),
     },
     /** Куда идёт звук: шторка «Устройства» */
     audio: {
@@ -365,6 +454,26 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
     },
     /** http, https, mailto — в системном браузере */
     openExternal: (url: string) => call<void>('open_external', { url }),
+    /** Ссылки dalywave:// для интерфейса (`dalywave://share?url=…` — «Поделиться → DalyWave»): последняя
+     *  необработанная, и забыть её. Звать при запуске и на каждое `deep-link:open` */
+    links: {
+      take: () => call<string | null>('links_take'),
+    },
+    /** Статус «Слушает DalyWave» в Discord — только macOS и Windows (на iPhone команд нет).
+     *  `available: false` — в сборке нет id приложения Discord, переключатель не показывать */
+    discord: {
+      state: () => call<DiscordState>('discord_state'),
+      setEnabled: (enabled: boolean) => call<DiscordState>('discord_set_enabled', { enabled }),
+    },
+    /** «Распознать» — macOS, iPhone, iPad (ShazamKit); на Windows — `unsupported`. Своя музыка на паузе,
+     *  пока слушаем; не узнали или отменили — продолжается */
+    recognize: {
+      /** До совпадения, не дольше 15 с. Ошибки: `no_match`, `permission`, `no_microphone`, `cancelled`, `shazam` */
+      listen: () => call<RecognizeMatch>('recognize_listen'),
+      cancel: () => call<boolean>('recognize_cancel'),
+      /** Просьба открыть экран, пришедшая до загрузки интерфейса; забирается один раз */
+      takePending: () => call<boolean>('recognize_take_pending'),
+    },
     server: {
       get: () => call<string>('server_url_get'),
       /** null — адрес по умолчанию */
