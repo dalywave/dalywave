@@ -61,7 +61,7 @@ function update(v: unknown) {
 .ssp__label { text-align: center; }
 .ssp__item:hover { color: var(--text-1); }
 .ssp__item:hover .ssp__stage { opacity: 0.8; }
-.ssp__item[data-state='on'] { color: var(--text-1); background: var(--ink-4); box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--line); }
+.ssp__item[data-state='on'] { color: var(--text-1); background: var(--ink-4); box-shadow: 0 2px 8px -2px rgba(var(--shade-rgb), calc(0.6 * var(--shade-k))), inset 0 0 0 1px var(--line); }
 .ssp__item[data-state='on'] .ssp__stage { opacity: 1; }
 
 @media (max-width: 699px) {

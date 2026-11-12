@@ -163,7 +163,7 @@ const phoneMain = ref<HTMLElement | null>(null)
 .app.is-side .app__main--phone { padding-right: calc(var(--side-w) + var(--side-gap) + var(--safe-right)); }
 .app.is-side .page--touch { padding: 20px 28px 0; }
 /* Под строкой состояния содержимое не просвечивает: тихая полоса фона, как у Spotify */
-.app.is-touch::before { content: ''; position: fixed; inset: 0 0 auto; z-index: 25; height: var(--safe-top); background: rgba(8, 9, 12, 0.86); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); pointer-events: none; }
+.app.is-touch::before { content: ''; position: fixed; inset: 0 0 auto; z-index: 25; height: var(--safe-top); background: color-mix(in srgb, var(--ink-1) 86%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); pointer-events: none; }
 
 /* Телефон: документ прокручивается сам */
 @media (max-width: 699px) {

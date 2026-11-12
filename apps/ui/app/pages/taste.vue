@@ -10,7 +10,8 @@ const ui = useUiStore()
 const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
 
-const COLORS = ['#ff4f8b', '#8ed8f5', '#b6abff', '#ffb26b', '#7fdcae', '#ff8fd6']
+// Цвета долей — токены --chart-*: на светлой теме у них свои, плотнее
+const COLORS = [1, 2, 3, 4, 5, 6].map(n => `var(--chart-${n})`)
 
 const { data, state, load } = useLoad<TasteOverview>(() => bridge.taste.overview())
 const blocked = ref<BlockedItem[] | null>(null)

@@ -338,7 +338,7 @@ watch(frame, (el, old) => {
 </template>
 
 <style>
-.uis-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); will-change: opacity; }
+.uis-overlay { position: fixed; inset: 0; background: var(--overlay); will-change: opacity; }
 .uis-overlay.is-anim { transition: opacity 420ms cubic-bezier(0.32, 0.72, 0, 1); }
 .uis {
   position: fixed;
@@ -365,16 +365,16 @@ watch(frame, (el, old) => {
   overflow: hidden;
   padding-bottom: var(--safe-bottom);
   border-radius: 20px 20px 0 0;
-  background: rgba(24, 27, 35, 0.92);
+  background: var(--sheet);
   -webkit-backdrop-filter: blur(40px) saturate(1.6);
   backdrop-filter: blur(40px) saturate(1.6);
-  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 -12px 40px -12px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 0.5px rgba(var(--hi-rgb), 0.08), 0 -12px 40px -12px rgba(var(--shade-rgb), calc(0.6 * var(--shade-k)));
 }
 /* Лист у края при отскоке вверх отрывается от низа экрана — продолжение фона закрывает щель */
-.uis:not(.uis--inset)::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 80px; background: rgb(24, 27, 35); }
+.uis:not(.uis--inset)::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 80px; background: var(--sheet-solid); }
 .uis--inset { left: 8px; right: 8px; bottom: calc(var(--safe-bottom) + 8px); max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 40px); }
-.uis--inset .uis__card { flex: 0 1 auto; padding-bottom: 0; border-radius: 18px; box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 20px 50px -12px rgba(0, 0, 0, 0.8); }
-.uis__grab { width: 36px; height: 5px; margin: 6px auto 0; flex: none; border-radius: 3px; background: rgba(255, 255, 255, 0.24); }
+.uis--inset .uis__card { flex: 0 1 auto; padding-bottom: 0; border-radius: 18px; box-shadow: 0 0 0 0.5px rgba(var(--hi-rgb), 0.08), 0 20px 50px -12px rgba(var(--shade-rgb), calc(0.8 * var(--shade-k))); }
+.uis__grab { width: 36px; height: 5px; margin: 6px auto 0; flex: none; border-radius: 3px; background: rgba(var(--hi-rgb), 0.24); }
 .uis__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 4px 20px 6px; flex: none; }
 .uis__title { margin: 0; font-size: var(--fs-h4); font-weight: 700; letter-spacing: -0.01em; }
 /* Прокрутка — своя у списка, и touch-action у предков на неё не действует: запрещаем здесь же,
@@ -395,10 +395,10 @@ watch(frame, (el, old) => {
   flex: none;
   overflow: hidden;
   border-radius: 18px;
-  background: rgba(30, 33, 42, 0.92);
+  background: var(--sheet-2);
   -webkit-backdrop-filter: blur(40px) saturate(1.6);
   backdrop-filter: blur(40px) saturate(1.6);
-  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 0.5px rgba(var(--hi-rgb), 0.08);
 }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (prefers-reduced-motion: reduce) {

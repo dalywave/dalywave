@@ -74,13 +74,13 @@ const attrs = computed(() => {
 .btn.is-focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .btn--primary { background: var(--text-1); color: var(--on-light); }
-.btn--primary:hover, .btn--primary.is-hover { background: #fff; }
-.btn--primary:active, .btn--primary.is-pressed { background: #dfe3ea; }
+.btn--primary:hover, .btn--primary.is-hover { background: color-mix(in srgb, var(--text-1) 86%, var(--ink-1)); }
+.btn--primary:active, .btn--primary.is-pressed { background: color-mix(in srgb, var(--text-1) 76%, var(--ink-1)); }
 .btn--primary:disabled { background: var(--fill-2); color: var(--text-4); box-shadow: none; }
 
 .btn--secondary { background: var(--fill-2); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--line); }
 .btn--secondary:hover, .btn--secondary.is-hover { background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.btn--secondary:active, .btn--secondary.is-pressed { background: rgba(255, 255, 255, 0.15); }
+.btn--secondary:active, .btn--secondary.is-pressed { background: rgba(var(--hi-rgb), 0.15); }
 .btn--secondary:disabled { background: var(--fill-1); color: var(--text-4); box-shadow: inset 0 0 0 1px var(--hair); }
 
 .btn--ghost { background: transparent; color: var(--text-2); padding: 0 12px; }

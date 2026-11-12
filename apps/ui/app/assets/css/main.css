@@ -92,9 +92,9 @@
   .caps { font-size: var(--fs-micro); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
-  .thin-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.1) transparent; }
+  .thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
   .thin-scrollbar::-webkit-scrollbar { width: 12px; height: 12px; }
-  .thin-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 12px; border: 4px solid transparent; background-clip: content-box; }
+  .thin-scrollbar::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 12px; border: 4px solid transparent; background-clip: content-box; }
   .glass {
     background: var(--glass);
     -webkit-backdrop-filter: blur(30px) saturate(1.4);
@@ -109,6 +109,9 @@
   .no-drag { -webkit-app-region: no-drag; app-region: no-drag; }
 }
 
+/* Тёмный остров в светлой теме (токены — в tokens.css): свой цвет текста по умолчанию */
+.scheme-dark { color: var(--text-1); }
+
 /* Тихое свечение цвета текущей обложки за интерфейсом */
 .ambient {
   position: fixed;
@@ -116,9 +119,22 @@
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(55% 45% at 22% -6%, color-mix(in oklab, var(--amb-1) 30%, transparent), transparent 72%),
-    radial-gradient(45% 40% at 96% 8%, color-mix(in oklab, var(--amb-2) 20%, transparent), transparent 72%),
-    radial-gradient(60% 50% at 55% 112%, color-mix(in oklab, var(--amb-3) 18%, transparent), transparent 72%),
+    radial-gradient(55% 45% at 22% -6%, color-mix(in oklab, var(--amb-1) var(--amb-k1), transparent), transparent 72%),
+    radial-gradient(45% 40% at 96% 8%, color-mix(in oklab, var(--amb-2) var(--amb-k2), transparent), transparent 72%),
+    radial-gradient(60% 50% at 55% 112%, color-mix(in oklab, var(--amb-3) var(--amb-k3), transparent), transparent 72%),
+    var(--ink-1);
+}
+
+/* Светлая: цвет обложки — светлой пастелью того же оттенка, без серой мути от тёмных тонов.
+   Первое объявление — для движков без относительных цветов (Safari до 16.4) */
+:root[data-theme='light'] .ambient {
+  background:
+    radial-gradient(55% 45% at 22% -6%, color-mix(in oklab, var(--amb-1) var(--amb-k1), transparent), transparent 72%),
+    radial-gradient(45% 40% at 96% 8%, color-mix(in oklab, var(--amb-2) var(--amb-k2), transparent), transparent 72%),
+    var(--ink-1);
+  background:
+    radial-gradient(55% 45% at 22% -6%, oklch(from var(--amb-1) 0.9 calc(c * 0.7) h / 0.55), transparent 72%),
+    radial-gradient(45% 40% at 96% 8%, oklch(from var(--amb-2) 0.92 calc(c * 0.6) h / 0.4), transparent 72%),
     var(--ink-1);
 }
 
@@ -136,7 +152,7 @@
 
 /* Windows 11 с Mica: под прозрачными местами — системный фон окна */
 html[data-backdrop='mica'], html[data-backdrop='mica'] body { background: transparent; }
-html[data-backdrop='mica'] .ambient { background-color: transparent; }
+html[data-backdrop='mica'] .ambient, html[data-backdrop='mica'][data-theme='light'] .ambient { background-color: transparent; }
 
 /* Значок «плеер сбоку»: панель справа, как у колонки «Сейчас играет» на планшете */
 .side-icon .ib__icon { transform: scaleX(-1); }

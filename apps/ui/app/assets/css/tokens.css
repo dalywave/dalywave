@@ -1,6 +1,7 @@
 /* Токены дизайна «Полночь».
    Общие (типографика, сетка, скругления, движение) — в :root; цвета — в теме.
-   Светлая тема добавляется блоком :root[data-theme='light'] с теми же именами цветов. */
+   Тема — атрибут data-theme на <html> (dark | light), его ставит скрипт в <head> до первой
+   отрисовки и plugins/theme.client.ts; «как в системе» решается там же по prefers-color-scheme. */
 
 @property --accent { syntax: '<color>'; inherits: true; initial-value: #ff7eb3; }
 @property --amb-1 { syntax: '<color>'; inherits: true; initial-value: #2a2350; }
@@ -69,9 +70,11 @@
   transition: --accent var(--dur-mood) var(--ease-in-out), --amb-1 var(--dur-mood), --amb-2 var(--dur-mood), --amb-3 var(--dur-mood);
 }
 
-/* Тёмная тема — по умолчанию */
+/* Тёмная тема — по умолчанию. .scheme-dark — тёмный остров внутри светлой темы: «сцена» полного
+   плеера остаётся тёмной, как у Apple Music и Spotify (цвет там приходит из обложки и волны) */
 :root,
-:root[data-theme='dark'] {
+:root[data-theme='dark'],
+.scheme-dark {
   color-scheme: dark;
 
   --ink-0: #040507;
@@ -111,37 +114,177 @@
   --mood-happy-1: #5c0f5e; --mood-happy-2: #ff4fa8; --mood-happy-3: #ffe9a8;
   --mood-calm-1: #0a2a52; --mood-calm-2: #1d8cbc; --mood-calm-3: #aef0ff;
   --mood-sad-1: #1c1946; --mood-sad-2: #5b50c4; --mood-sad-3: #d3ccff;
+
+  /* Тихое свечение обложки за интерфейсом: доля каждого из трёх цветов */
+  --amb-k1: 30%;
+  --amb-k2: 20%;
+  --amb-k3: 18%;
+  /* Затемнение под текстом поверх обложек и картинок (кнопки на обложке, подписи) */
+  --veil: rgba(8, 10, 14, 0.55);
+  /* Полосы прокрутки */
+  --scroll-thumb: rgba(255, 255, 255, 0.1);
+
+  /* Полупрозрачные оттенки «от текста» для дорожек, разделителей и нажатий: rgba(var(--fg-rgb), a)
+     (--hi-rgb — от чистого белого). На светлой теме оба — от почти чёрного */
+  --fg-rgb: 232, 236, 244;
+  --hi-rgb: 255, 255, 255;
+  /* Тени: rgba(var(--shade-rgb), calc(a * var(--shade-k))) — на светлой мягче и теплее чёрного */
+  --shade-rgb: 0, 0, 0;
+  --shade-k: 1;
+  /* Затемнение под листами и диалогами */
+  --overlay: rgba(0, 0, 0, 0.5);
+  /* Листы снизу и их отдельная карточка */
+  --sheet: rgba(24, 27, 35, 0.92);
+  --sheet-solid: rgb(24, 27, 35);
+  --sheet-2: rgba(30, 33, 42, 0.92);
+  /* Плавающие карточки (мини-плеер, вкладки на планшете): фон, контур, тень */
+  --float: rgba(24, 27, 35, 0.8);
+  --float-bar: rgba(22, 24, 31, 0.72);
+  --float-ring: rgba(255, 255, 255, 0.07);
+  --float-drop: rgba(0, 0, 0, 0.9);
+  /* Бегунок ползунков и переключателей — всегда светлый, как у системы */
+  --knob: #fff;
+  --knob-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  /* Кнопка-стекло поверх картинки или волны */
+  --glass-btn: rgba(8, 10, 14, 0.45);
+  --glass-btn-hover: rgba(28, 31, 40, 0.6);
+  /* Сцена волны (вход, ожидание) и стеклянная карточка на ней */
+  --stage: #020509;
+  --card-glass: rgba(10, 12, 16, 0.6);
+  /* Большая кнопка волны: светлая жемчужина в темноте, тёмная — на бумаге */
+  --wp-core: radial-gradient(120% 120% at 30% 20%, #fff, #e9edf4 60%, #d5dbe5);
+  /* Свечение выбранного шарика настроения */
+  --orb-glow: 65%;
+  /* Цвета графиков и долей («Мой вкус», админка): на светлой — те же оттенки, но плотнее */
+  /* Боковая колонка (навигация приложения и разделы админки): фон, граница, наведение, выбранный */
+  --side-bg: var(--ink-1);
+  --side-edge: var(--hair);
+  --side-hover: var(--fill-1);
+  --side-active: var(--fill-2);
+  --chart-1: #ff4f8b; --chart-2: #8ed8f5; --chart-3: #b6abff;
+  --chart-4: #ffb26b; --chart-5: #7fdcae; --chart-6: #ff8fd6;
+}
+
+/* Светлая «Полночь»: не перевёрнутая тёмная. Чистые нейтральные поверхности, мягкие тени вместо
+   светящихся контуров, свечение обложек вдвое тише, акцент того же оттенка, но глубже —
+   текст и значки акцентом проходят 4,5:1 на белом и на заливках */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --ink-0: #f2f3f5;
+  --ink-1: #ffffff;
+  --ink-2: #ffffff;
+  --ink-3: #eef0f3;
+  --ink-4: #ffffff;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-strong: rgba(255, 255, 255, 0.88);
+  --glass-bar: rgba(250, 250, 252, 0.84);
+  --hair: rgba(16, 18, 24, 0.07);
+  --line: rgba(16, 18, 24, 0.1);
+  --line-strong: rgba(16, 18, 24, 0.18);
+  --fill-1: rgba(16, 18, 24, 0.04);
+  --fill-2: rgba(16, 18, 24, 0.065);
+  --fill-3: rgba(16, 18, 24, 0.1);
+  --scrim: rgba(16, 18, 24, 0.32);
+
+  /* Вторичный 7:1, третичный 4,8:1 на белом и 4,6:1 на светло-серой заливке */
+  --text-1: #101218;
+  --text-2: rgba(16, 18, 24, 0.7);
+  --text-3: rgba(16, 18, 24, 0.6);
+  --text-4: rgba(16, 18, 24, 0.36);
+  /* Текст на заливке цветом основного текста (кнопка «Слушать», выбранный чип) */
+  --on-light: #ffffff;
+
+  --success: #1d7f52;
+  --warning: #9a5d00;
+  --danger: #cc2f36;
+
+  --shadow-1: 0 10px 28px -16px rgba(16, 18, 24, 0.28);
+  --shadow-cover: 0 18px 40px -20px rgba(16, 18, 24, 0.38), 0 0 0 1px rgba(16, 18, 24, 0.06);
+  --shadow-pop: 0 0 0 1px rgba(16, 18, 24, 0.08), 0 22px 50px -16px rgba(16, 18, 24, 0.24), 0 8px 18px -10px rgba(16, 18, 24, 0.14);
+  --inner-hi: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  --amb-k1: 13%;
+  --amb-k2: 9%;
+  --amb-k3: 0%;
+  --veil: rgba(16, 18, 24, 0.42);
+  --scroll-thumb: rgba(16, 18, 24, 0.16);
+
+  --fg-rgb: 16, 18, 24;
+  --hi-rgb: 16, 18, 24;
+  --shade-rgb: 16, 18, 24;
+  --shade-k: 0.3;
+  --overlay: rgba(16, 18, 24, 0.28);
+  --sheet: rgba(250, 250, 252, 0.94);
+  --sheet-solid: #fafafc;
+  --sheet-2: rgba(255, 255, 255, 0.96);
+  --float: rgba(255, 255, 255, 0.86);
+  --float-bar: rgba(255, 255, 255, 0.8);
+  --float-ring: rgba(16, 18, 24, 0.08);
+  --float-drop: rgba(16, 18, 24, 0.2);
+  --knob-shadow: 0 1px 3px rgba(16, 18, 24, 0.3), 0 0 0 0.5px rgba(16, 18, 24, 0.08);
+  --glass-btn: rgba(255, 255, 255, 0.72);
+  --glass-btn-hover: rgba(255, 255, 255, 0.9);
+  --stage: #fbfafc;
+  --card-glass: rgba(255, 255, 255, 0.72);
+  --wp-core: radial-gradient(120% 120% at 30% 20%, #3a3e4a, #1b1e26 60%, #101218);
+  --orb-glow: 0%;
+  /* Две зоны, как у Apple Music: навигация — светло-серая, содержимое — белое; граница — сам цвет */
+  --side-bg: #f3f3f5;
+  --side-edge: transparent;
+  --side-hover: rgba(16, 18, 24, 0.05);
+  --side-active: rgba(16, 18, 24, 0.08);
+  --chart-1: #e0306f; --chart-2: #1e8fc0; --chart-3: #6f5fe0;
+  --chart-4: #d9740f; --chart-5: #1f9a63; --chart-6: #c93a9a;
 }
 
 /* Акцент — от настроения волны. «Любое настроение» — весь спектр «Сумерек» */
-:root[data-mood='any'] {
+:root[data-mood='any'],
+:root[data-mood='any'] .scheme-dark {
   --accent: #ff7eb3;
   --accent-gradient: var(--brand-gradient-x);
   --m1: var(--brand-1); --m2: var(--brand-2); --m3: var(--brand-3); --m4: var(--brand-4);
 }
-:root[data-mood='energetic'] {
+:root[data-mood='energetic'],
+:root[data-mood='energetic'] .scheme-dark {
   --accent: #ffb26b;
   --accent-gradient: linear-gradient(90deg, #ffb26b, #ffb26b);
   --m1: var(--mood-energetic-1); --m2: var(--mood-energetic-2); --m3: var(--mood-energetic-3); --m4: var(--mood-energetic-2);
 }
-:root[data-mood='happy'] {
+:root[data-mood='happy'],
+:root[data-mood='happy'] .scheme-dark {
   --accent: #ff8fd6;
   --accent-gradient: linear-gradient(90deg, #ff8fd6, #ff8fd6);
   --m1: var(--mood-happy-1); --m2: var(--mood-happy-2); --m3: var(--mood-happy-3); --m4: var(--mood-happy-2);
 }
-:root[data-mood='calm'] {
+:root[data-mood='calm'],
+:root[data-mood='calm'] .scheme-dark {
   --accent: #8ed8f5;
   --accent-gradient: linear-gradient(90deg, #8ed8f5, #8ed8f5);
   --m1: var(--mood-calm-1); --m2: var(--mood-calm-2); --m3: var(--mood-calm-3); --m4: var(--mood-calm-2);
 }
-:root[data-mood='sad'] {
+:root[data-mood='sad'],
+:root[data-mood='sad'] .scheme-dark {
   --accent: #b6abff;
   --accent-gradient: linear-gradient(90deg, #b6abff, #b6abff);
   --m1: var(--mood-sad-1); --m2: var(--mood-sad-2); --m3: var(--mood-sad-3); --m4: var(--mood-sad-2);
 }
 
-:root {
+/* На светлом — тот же оттенок настроения, но глубже: светлые пастели не читаются на белом */
+:root[data-theme='light'][data-mood='any'] { --accent: #d0245e; }
+:root[data-theme='light'][data-mood='energetic'] { --accent: #b54d00; --accent-gradient: linear-gradient(90deg, #b54d00, #b54d00); }
+:root[data-theme='light'][data-mood='happy'] { --accent: #b8237f; --accent-gradient: linear-gradient(90deg, #b8237f, #b8237f); }
+:root[data-theme='light'][data-mood='calm'] { --accent: #0a73a0; --accent-gradient: linear-gradient(90deg, #0a73a0, #0a73a0); }
+:root[data-theme='light'][data-mood='sad'] { --accent: #5b4ccc; --accent-gradient: linear-gradient(90deg, #5b4ccc, #5b4ccc); }
+
+:root,
+.scheme-dark {
   --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
   --accent-line: color-mix(in oklab, var(--accent) 42%, transparent);
   --focus: color-mix(in oklab, var(--accent) 80%, white);
+}
+:root[data-theme='light'] {
+  --accent-soft: color-mix(in oklab, var(--accent) 11%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 36%, transparent);
+  --focus: color-mix(in oklab, var(--accent) 85%, black);
 }

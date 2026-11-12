@@ -13,7 +13,7 @@ const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
 
 const { data, state, load } = useLoad<StorageOverview>(() => bridge.admin.storage())
-const COLORS: Record<string, string> = { audio: 'var(--accent)', covers: '#8ed8f5', photos: '#b6abff' }
+const COLORS: Record<string, string> = { audio: 'var(--accent)', covers: 'var(--chart-2)', photos: 'var(--chart-3)' }
 const kinds = computed<MeterPart[]>(() => (data.value?.kinds ?? []).map(k => ({
   key: k.key,
   label: t(`kind.${k.key}`),

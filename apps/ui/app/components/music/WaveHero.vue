@@ -88,7 +88,19 @@ const moreItems = computed<MenuEntry[]>(() => [
 </template>
 
 <style scoped>
-.hero { position: relative; }
+.hero {
+  position: relative;
+  /* Основа сцены и дымка под текстом: на тёмной — ночь, на светлой — бумага, по которой волна
+     идёт краской (lib/wave: светлые палитры) */
+  --hero-bg: #020509;
+  --hero-edge: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  --hero-dot: rgba(255, 255, 255, 0.18);
+}
+:root[data-theme='light'] .hero {
+  --hero-bg: #fbfafc;
+  --hero-edge: 0 0 0 1px var(--hair), var(--shadow-1);
+  --hero-dot: var(--fill-3);
+}
 .hero__stage {
   position: relative;
   display: grid;
@@ -100,8 +112,8 @@ const moreItems = computed<MenuEntry[]>(() => [
   overflow: hidden;
   isolation: isolate;
   border-radius: var(--r-6);
-  background: #020509;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  background: var(--hero-bg);
+  box-shadow: var(--hero-edge);
 }
 .hero__wave { position: absolute; inset: 0; z-index: -1; }
 .hero__more { position: absolute; top: 20px; right: 20px; z-index: 1; }
@@ -110,7 +122,9 @@ const moreItems = computed<MenuEntry[]>(() => [
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(90deg, rgba(2, 5, 9, 0.55) 0%, rgba(2, 5, 9, 0.12) 38%, transparent 55%), linear-gradient(0deg, rgba(2, 5, 9, 0.5), transparent 32%);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--hero-bg) 55%, transparent) 0%, color-mix(in srgb, var(--hero-bg) 12%, transparent) 38%, transparent 55%),
+    linear-gradient(0deg, color-mix(in srgb, var(--hero-bg) 50%, transparent), transparent 32%);
 }
 .hero__intro { grid-area: intro; display: flex; flex-direction: column; gap: 10px; }
 .hero__eyebrow { font-size: var(--fs-caption); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-2); }
@@ -133,14 +147,14 @@ const moreItems = computed<MenuEntry[]>(() => [
   width: 8px;
   height: 8px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--hero-dot);
   transition: background var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-spring);
 }
 .hero__dot.is-on { background: var(--accent); transform: scale(1.15); }
 .hero__dot.is-next { animation: hero-dot 1.4s var(--ease-in-out) infinite; }
 @keyframes hero-dot {
-  0%, 100% { background: rgba(255, 255, 255, 0.18); transform: scale(1); }
-  50% { background: color-mix(in srgb, var(--accent) 55%, rgba(255, 255, 255, 0.2)); transform: scale(1.2); }
+  0%, 100% { background: var(--hero-dot); transform: scale(1); }
+  50% { background: color-mix(in srgb, var(--accent) 55%, var(--hero-dot)); transform: scale(1.2); }
 }
 @keyframes hero-prep-in {
   from { opacity: 0; transform: translateY(6px); }
@@ -160,7 +174,7 @@ const moreItems = computed<MenuEntry[]>(() => [
 @media (max-width: 699px) {
   .hero { padding: 0 16px; }
   .hero__stage { display: flex; flex-direction: column; justify-content: flex-end; height: min(388px, 50svh); min-height: 300px; padding: 0 20px 20px; border-radius: 28px; }
-  .hero__wave::after { background: linear-gradient(0deg, rgba(2, 5, 9, 0.85) 0%, rgba(2, 5, 9, 0.35) 34%, transparent 55%); }
+  .hero__wave::after { background: linear-gradient(0deg, color-mix(in srgb, var(--hero-bg) 85%, transparent) 0%, color-mix(in srgb, var(--hero-bg) 35%, transparent) 34%, transparent 55%); }
   .hero__play { position: absolute; left: 0; right: 0; top: 30%; justify-content: center; padding: 0; transform: translateY(-50%); }
   .hero__play--prep { flex-direction: column; gap: 14px; top: 34%; }
   .hero__prep { align-items: center; text-align: center; }

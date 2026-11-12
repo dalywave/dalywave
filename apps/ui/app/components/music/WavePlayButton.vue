@@ -83,9 +83,9 @@ onBeforeUnmount(() => off?.())
   width: calc(100% - 10px);
   height: calc(100% - 10px);
   border-radius: 50%;
-  background: radial-gradient(120% 120% at 30% 20%, #fff, #e9edf4 60%, #d5dbe5);
+  background: var(--wp-core);
   color: var(--on-light);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), inset 0 -2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px -10px rgba(var(--shade-rgb), calc(0.8 * var(--shade-k))), inset 0 -2px 6px rgba(0, 0, 0, 0.1);
   scale: calc(1 + var(--beat, 0) * 0.025);
   transition: transform var(--dur-2) var(--ease-out);
 }
@@ -95,6 +95,9 @@ onBeforeUnmount(() => off?.())
 .wp:active .wp__core { transform: scale(0.95); }
 .wp:focus-visible, .wp.is-focus { outline: 2px solid var(--focus); outline-offset: 4px; }
 .wp.is-playing .wp__halo { opacity: 0.75; }
+/* На светлой цветной ореол на бумаге — лишнее свечение: остаётся тонкий ободок */
+:root[data-theme='light'] .wp__halo { opacity: 0.16; }
+:root[data-theme='light'] .wp.is-playing .wp__halo { opacity: 0.3; }
 .wp.is-playing .wp__ring { opacity: 1; }
 .wp.is-idle .wp__ring, .wp.is-idle .wp__halo { animation-duration: 22s; }
 .wp.is-loading .wp__ring { background: conic-gradient(from 0deg, transparent 0 55%, var(--text-1)); animation-duration: 0.9s; opacity: 1; }
@@ -106,8 +109,8 @@ onBeforeUnmount(() => off?.())
 .wp--soft .wp__core {
   width: calc(100% - 8px);
   height: calc(100% - 8px);
-  background: #fff;
-  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  background: var(--text-1);
+  box-shadow: 0 8px 24px -12px rgba(var(--shade-rgb), calc(0.7 * var(--shade-k)));
   scale: calc(1 + var(--beat, 0) * 0.02);
 }
 .wp--soft.is-loading .wp__ring {

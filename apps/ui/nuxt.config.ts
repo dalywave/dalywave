@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite'
+import { THEME_BOOT } from './app/utils/theme'
 
 // Данные дизайн-макетов (обложки, превью) — только для моков в разработке
 const fixtures = decodeURIComponent(new URL('../../design/fixtures', import.meta.url).pathname)
@@ -33,13 +34,14 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      htmlAttrs: { 'lang': 'ru', 'data-theme': 'dark', 'data-mood': 'any' },
+      // data-theme, color-scheme и theme-color ставит скрипт ниже — до первой отрисовки
+      htmlAttrs: { 'lang': 'ru', 'data-mood': 'any' },
       title: 'DalyWave',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-        { name: 'color-scheme', content: 'dark' },
-        { name: 'theme-color', content: '#08090c' },
+        { name: 'color-scheme', content: 'dark light' },
       ],
+      script: [{ innerHTML: THEME_BOOT, tagPosition: 'head' }],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },

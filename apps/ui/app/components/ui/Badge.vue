@@ -39,13 +39,13 @@ withDefaults(defineProps<{
   padding: 0;
   justify-content: center;
   border-radius: 4px;
-  background: rgba(232, 236, 244, 0.5);
+  background: rgba(var(--fg-rgb), 0.5);
   color: var(--on-light);
   font-size: 10px;
   font-weight: 750;
 }
 .badge--new { color: var(--accent); background: var(--accent-soft); }
-.badge--soon { color: var(--text-1); background: rgba(10, 12, 16, 0.6); box-shadow: inset 0 0 0 1px var(--line-strong); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.badge--soon { color: var(--text-1); background: var(--glass-btn); box-shadow: inset 0 0 0 1px var(--line-strong); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .badge--meta { color: var(--text-2); background: var(--fill-2); }
 .badge--danger { color: var(--danger); background: color-mix(in oklab, var(--danger) 14%, transparent); }
 .badge--success { color: var(--success); background: color-mix(in oklab, var(--success) 14%, transparent); }

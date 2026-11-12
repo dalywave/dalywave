@@ -46,7 +46,7 @@ function openDevices() {
 
 <template>
   <Transition name="side" appear>
-    <aside v-if="ui.sidePlayer && track" class="side" :aria-label="t('player.region')">
+    <aside v-if="ui.sidePlayer && track" class="side scheme-dark" :aria-label="t('player.region')">
       <header class="side__head">
         <div class="side__head-start">
           <UiIconButton icon="ph:sidebar-simple" class="side-icon" :label="t('player.unpinSide')" size="lg" tone="solid" :tooltip="false" @click="unpin" />

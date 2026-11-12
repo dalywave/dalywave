@@ -45,7 +45,7 @@ defineEmits<{ click: [e: MouseEvent] }>()
 .pb__icon { font-size: calc(var(--size) * 0.46); }
 .pb__icon--play { transform: translateX(5%); }
 .pb__spin { animation: spin 0.9s linear infinite; }
-.pb:hover, .pb.is-hover { transform: scale(1.05); background: #fff; }
+.pb:hover, .pb.is-hover { transform: scale(1.05); background: color-mix(in srgb, var(--text-1) 86%, var(--ink-1)); }
 .pb:active, .pb.is-pressed { transform: scale(0.95); }
 .pb.is-focus { outline: 2px solid var(--focus); outline-offset: 3px; }
 .pb:disabled { background: var(--fill-3); color: var(--text-4); transform: none; pointer-events: none; }

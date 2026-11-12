@@ -121,7 +121,7 @@ const cookies = computed(() => (health.value?.cookies ?? null) as { present?: bo
 const SERIES = computed<BarSeries[]>(() => [
   { key: 'ok', label: t('days.ok'), color: 'var(--success)' },
   { key: 'disputed', label: t('days.disputed'), color: 'var(--warning)' },
-  { key: 'unavailable', label: t('days.unavailable'), color: 'rgba(232, 236, 244, 0.4)' },
+  { key: 'unavailable', label: t('days.unavailable'), color: 'rgba(var(--fg-rgb), 0.4)' },
   { key: 'failed', label: t('days.failed'), color: 'var(--danger)' },
 ])
 const days = computed<BarDay[]>(() => (data.value?.daily ?? []).map(d => ({ day: d.day, values: { ok: d.ok, disputed: d.disputed, unavailable: d.unavailable, failed: d.failed } })))

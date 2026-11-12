@@ -98,7 +98,7 @@ const accountMenu = computed<MenuEntry[]>(() => [
   transition: background-color var(--dur-3), box-shadow var(--dur-3);
 }
 .top.is-scrolled {
-  background: rgba(8, 9, 12, 0.72);
+  background: color-mix(in srgb, var(--ink-1) 72%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(1.3);
   backdrop-filter: blur(24px) saturate(1.3);
   box-shadow: 0 1px 0 var(--hair);
@@ -125,10 +125,10 @@ const accountMenu = computed<MenuEntry[]>(() => [
   box-shadow: inset 0 0 0 1px var(--line);
   font-size: var(--fs-small);
   font-weight: 700;
-  color: #fff;
+  color: var(--text-1);
   transition: box-shadow var(--dur-2);
 }
-.avatar:hover, .avatar[data-state='open'] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 0 4px var(--fill-2); }
+.avatar:hover, .avatar[data-state='open'] { box-shadow: inset 0 0 0 1px rgba(var(--hi-rgb), 0.3), 0 0 0 4px var(--fill-2); }
 .avatar__img { width: 100%; height: 100%; object-fit: cover; }
 @media (max-width: 1023px) {
   .top { padding: 0 16px 0 20px; }

@@ -7,13 +7,15 @@ interface Host {
   el: HTMLElement
   layout: WaveLayout
   box: HTMLElement | null
+  /** Тёмная волна при любой теме */
+  dark?: boolean
 }
 
 const stack: Host[] = []
 
 function mountTop() {
   const top = stack[stack.length - 1]
-  if (top) getWaveEngine().mount(top.el, { layout: top.layout, box: top.box })
+  if (top) getWaveEngine().mount(top.el, { layout: top.layout, box: top.box, dark: top.dark })
 }
 
 export function pushWaveHost(host: Host) {

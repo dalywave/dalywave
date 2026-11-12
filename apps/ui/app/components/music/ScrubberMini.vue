@@ -67,15 +67,15 @@ const style = computed(() => ({
 
 .sm__layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .sm__layer path { fill: none; stroke: currentColor; stroke-width: var(--stroke); stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.sm__base { color: rgba(232, 236, 244, 0.22); }
+.sm__base { color: rgba(var(--fg-rgb), 0.22); }
 .sm__zone { color: var(--accent); opacity: 0.5; clip-path: inset(0 0 0 calc(var(--x) * 100%)); }
 .sm__played { color: var(--played); clip-path: inset(0 calc((1 - var(--p)) * 100%) 0 0); }
 
-.sm__track { position: absolute; left: 0; right: 0; top: 50%; height: var(--h); border-radius: var(--h); background: rgba(232, 236, 244, 0.16); overflow: hidden; transform: translateY(-50%); }
-.sm__buffer { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--b) * 100%); background: rgba(232, 236, 244, 0.16); }
+.sm__track { position: absolute; left: 0; right: 0; top: 50%; height: var(--h); border-radius: var(--h); background: rgba(var(--fg-rgb), 0.16); overflow: hidden; transform: translateY(-50%); }
+.sm__buffer { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--b) * 100%); background: rgba(var(--fg-rgb), 0.16); }
 .sm__tail { position: absolute; top: 0; bottom: 0; left: calc(var(--x) * 100%); right: 0; background: color-mix(in oklab, var(--accent) 55%, transparent); }
 .sm__fill { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--p) * 100%); border-radius: inherit; background: var(--played); }
-.sm__thumb { position: absolute; top: 50%; left: calc(var(--p) * 100%); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.sm__thumb { position: absolute; top: 50%; left: calc(var(--p) * 100%); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--knob); box-shadow: var(--knob-shadow); }
 
 /* Ромб перехода: у волны — над чертой во всю высоту, у линии — на самой полосе с вырезом вокруг */
 .sm__marker { position: absolute; top: 0; bottom: 0; left: calc(var(--x) * 100%); width: 0; }

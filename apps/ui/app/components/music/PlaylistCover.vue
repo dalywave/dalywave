@@ -62,7 +62,7 @@ const kicker = computed(() => (props.kind === 'mix' ? 'Микс' : props.kind ==
 
 <style scoped>
 .pc { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: var(--r-3); background: var(--ink-3); container-type: inline-size; }
-.pc::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); pointer-events: none; }
+.pc::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(var(--hi-rgb), 0.06); pointer-events: none; }
 .pc__mosaic { display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; }
 .pc__mosaic img, .pc__single { width: 100%; height: 100%; object-fit: cover; }
 .pc__blank { display: grid; place-items: center; width: 100%; height: 100%; background: var(--fill-2); color: var(--text-3); font-size: clamp(14px, 26cqw, 56px); }

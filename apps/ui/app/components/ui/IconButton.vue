@@ -86,12 +86,12 @@ const tip = computed(() => (props.tooltip === false ? undefined : props.tooltip 
 .ib--solid { color: var(--text-1); }
 .ib--glass {
   color: var(--text-1);
-  background: rgba(8, 10, 14, 0.45);
+  background: var(--glass-btn);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   box-shadow: inset 0 0 0 1px var(--line);
 }
-.ib--glass:hover { background: rgba(28, 31, 40, 0.6); }
+.ib--glass:hover { background: var(--glass-btn-hover); }
 /* Планшет под пальцем: значок прежний, а область нажатия — не меньше 44 pt. Залипший после
    нажатия :hover не подсвечивает кнопку */
 @media (pointer: coarse) and (min-width: 700px) {
@@ -99,6 +99,6 @@ const tip = computed(() => (props.tooltip === false ? undefined : props.tooltip 
   .ib:hover:not(:active, .is-hover) { background: transparent; color: var(--text-2); }
   .ib--liked:hover:not(:active), .ib.is-on:hover:not(:active) { color: var(--accent); }
   .ib--solid:hover:not(:active) { color: var(--text-1); }
-  .ib--glass:hover:not(:active) { color: var(--text-1); background: rgba(8, 10, 14, 0.45); }
+  .ib--glass:hover:not(:active) { color: var(--text-1); background: var(--glass-btn); }
 }
 </style>

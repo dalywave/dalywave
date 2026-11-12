@@ -1,7 +1,7 @@
 # Xcode-проект DalyWave для iPhone и iPad. Создан `cargo tauri ios init` и доработан руками:
 #   - своя фаза «Build Rust Code» (scripts/build-ios.sh) — Run в Xcode работает без Tauri CLI;
 #   - фреймворки аудиодвижка и входа — статическая библиотека Rust не передаёт их линковщику;
-#   - фоновый звук, ссылки dalywave://, тёмная тема системных окон, значок с темами;
+#   - фоновый звук, ссылки dalywave://, тема и строка состояния по выбору в интерфейсе, значок с темами;
 #   - Siri: App Intents (Swift в Sources, фразы — ru.lproj) и расширение SiriKit dalywave-siri;
 #   - push (APNs): право aps-environment, делегат уведомлений Sources/…/PushLink.swift.
 # Пересобрать проект: `make ios` (или `xcodegen generate` здесь). `cargo tauri ios init` заново
@@ -74,10 +74,11 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: rest.daly.wave
             CFBundleURLSchemes: [dalywave]
-        # Интерфейс тёмный: системные окна (вход, меню) — тоже, строка состояния — светлая
-        UIUserInterfaceStyle: Dark
+        # Тему (светлая, тёмная, как в системе) задаёт оболочка: overrideUserInterfaceStyle окна
+        # (src/ios.rs), а стиль строки состояния — контроллер окна по этой теме. Плиста только для
+        # заставки: она тёмная (LaunchScreen.storyboard), строка состояния на ней — светлая
         UIStatusBarStyle: UIStatusBarStyleLightContent
-        UIViewControllerBasedStatusBarAppearance: false
+        UIViewControllerBasedStatusBarAppearance: true
         # Разработка: свой сервер на Mac в локальной сети (http)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

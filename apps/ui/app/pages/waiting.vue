@@ -56,10 +56,10 @@ async function logout() {
 </template>
 
 <style scoped>
-.wait { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 32px 16px; overflow: hidden; background: #020509; }
+.wait { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 32px 16px; overflow: hidden; background: var(--stage); }
 .wait__wave { position: absolute; inset: 0; opacity: 0.7; }
-.wait__wave::after { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 55% at 50% 50%, rgba(2, 5, 9, 0.8), rgba(2, 5, 9, 0.4) 70%, rgba(2, 5, 9, 0.6)); }
-.wait__card { position: relative; display: flex; flex-direction: column; align-items: center; width: min(440px, 100%); padding: 40px 32px 28px; border-radius: var(--r-6); background: rgba(10, 12, 16, 0.6); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); text-align: center; }
+.wait__wave::after { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 55% at 50% 50%, color-mix(in srgb, var(--stage) 80%, transparent), color-mix(in srgb, var(--stage) 40%, transparent) 70%, color-mix(in srgb, var(--stage) 60%, transparent)); }
+.wait__card { position: relative; display: flex; flex-direction: column; align-items: center; width: min(440px, 100%); padding: 40px 32px 28px; border-radius: var(--r-6); background: var(--card-glass); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); text-align: center; }
 .wait__icon { width: 64px; height: 64px; opacity: 0.9; filter: grayscale(0.2); }
 .wait__title { margin: 18px 0 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }
 .wait__text { max-width: 340px; margin: 10px 0 22px; color: var(--text-2); text-wrap: pretty; }

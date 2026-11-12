@@ -27,6 +27,16 @@ export const WAVE_MOODS: Record<WaveMood, MoodSpec> = {
 
 const SPECTRUM: [string, string, string, string] = ['#4b21ff', '#b01cf0', '#ff3d7a', '#ff9a3c']
 
+/** Светлая тема: волна — краска на бумаге, а не свет в темноте. Бумага, толща, тело, гребень:
+ * чем плотнее место волны, тем глубже цвет; гребень — самый насыщенный */
+export const WAVE_MOODS_LIGHT: Record<WaveMood, [string, string, string, string]> = {
+  any: ['#fbfafc', '#e6d6f4', '#b01cf0', '#5a14b8'],
+  energetic: ['#fffaf6', '#ffd8b8', '#ff7a2a', '#b83c0a'],
+  happy: ['#fff8fb', '#ffd3ea', '#ff4fa8', '#a8166a'],
+  calm: ['#f6fafd', '#cfe8f5', '#2a9ccc', '#0a5486'],
+  sad: ['#f9f8ff', '#dcd8fb', '#7a6ee0', '#372c94'],
+}
+
 const LAYOUTS: Record<WaveLayout, { tilt: number, offset: number, fadeL: number, fadeR: number, amp: number, freq: number }> = {
   'hero': { tilt: 0.09, offset: -0.06, fadeL: 0.42, fadeR: 0, amp: 1.0, freq: 1.0 },
   'hero-phone': { tilt: -0.42, offset: 0.1, fadeL: 0, fadeR: 0, amp: 1.0, freq: 2.2 },
@@ -79,23 +89,28 @@ function hexToLin(hex: string): Vec3 {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(c => Math.pow(c / 255, 2.2)) as Vec3
 }
 const mixLin = (a: Vec3, b: Vec3, k: number): Vec3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)]
+/** Цвет краски → поглощение: на бумаге с плотностью 1 краска даёт ровно этот цвет */
+const absorb = (c: Vec3): Vec3 => c.map(v => Math.min(4, -Math.log(Math.max(v, 0.018)))) as Vec3
 
 interface Palette {
   c: [Vec3, Vec3, Vec3, Vec3]
   spectrum: number
 }
 
-// Обложка — только оттенок: противоположный цвет в больших долях делает тёплые настроения грязными
-function buildPalette(mood: WaveMood, cover: string[] | null): Palette {
+// Обложка — только оттенок: противоположный цвет в больших долях делает тёплые настроения грязными.
+// На светлой теме c[0] — бумага, c[1..3] — поглощение краски (см. absorb и шейдер)
+function buildPalette(mood: WaveMood, cover: string[] | null, light = false): Palette {
   const spec = WAVE_MOODS[mood]
-  const base = spec.pal.map(hexToLin) as [Vec3, Vec3, Vec3, Vec3]
-  if (!cover?.length || spec.spectrum > 0) return { c: base, spectrum: spec.spectrum }
-  const vivid = hexToLin(cover[0]!)
-  const deep = hexToLin(cover[1] ?? cover[0]!)
-  return {
-    c: [mixLin(base[0], deep, 0.05), mixLin(base[1], deep, 0.12), mixLin(base[2], vivid, 0.08), base[3]],
-    spectrum: spec.spectrum,
+  const base = (light ? WAVE_MOODS_LIGHT[mood] : spec.pal).map(hexToLin) as [Vec3, Vec3, Vec3, Vec3]
+  let c = base
+  if (cover?.length && spec.spectrum === 0) {
+    const vivid = hexToLin(cover[0]!)
+    const deep = hexToLin(cover[1] ?? cover[0]!)
+    c = light
+      ? [base[0], mixLin(base[1], vivid, 0.1), mixLin(base[2], vivid, 0.08), base[3]]
+      : [mixLin(base[0], deep, 0.05), mixLin(base[1], deep, 0.12), mixLin(base[2], vivid, 0.08), base[3]]
   }
+  return { c: light ? [c[0], absorb(c[1]), absorb(c[2]), absorb(c[3])] : c, spectrum: spec.spectrum }
 }
 
 // Огибающая доли: мягкая атака, экспоненциальный спад, сильная доля ярче
@@ -105,7 +120,7 @@ function pulse(beatPos: number): number {
   return Math.min(1, phase / 0.035) * Math.exp(-phase * 5.2) * accent
 }
 
-const UNIFORMS = ['uRes', 'uTime', 'uBeat', 'uEnergy', 'uBands', 'uExpand', 'uFlash', 'uRipple', 'uC0', 'uC1', 'uC2', 'uC3', 'uS0', 'uS1', 'uS2', 'uS3', 'uSpectrum', 'uLayout', 'uFade', 'uFreq', 'uBox', 'uBoxR'] as const
+const UNIFORMS = ['uRes', 'uTime', 'uBeat', 'uEnergy', 'uBands', 'uExpand', 'uFlash', 'uRipple', 'uC0', 'uC1', 'uC2', 'uC3', 'uS0', 'uS1', 'uS2', 'uS3', 'uSpectrum', 'uLayout', 'uFade', 'uFreq', 'uBox', 'uBoxR', 'uLight'] as const
 type UniformName = (typeof UNIFORMS)[number]
 
 export class WaveEngine {
@@ -139,10 +154,15 @@ export class WaveEngine {
   private envFast = 0
   private envSlow = 0
   readonly spectrumLin = SPECTRUM.map(hexToLin) as [Vec3, Vec3, Vec3, Vec3]
+  private spectrumInk = this.spectrumLin.map(absorb) as [Vec3, Vec3, Vec3, Vec3]
+  /** Тема страницы светлая (data-theme на <html>) */
+  private themeLight = false
+  /** Место показа просит тёмную волну при любой теме (полный плеер — «сцена», как у Apple Music) */
+  private forceDark = false
   glError: string | null = null
 
   // Состояние анимации
-  private pal: Palette = buildPalette('any', null)
+  private pal: Palette = buildPalette('any', null, document.documentElement.dataset.theme === 'light')
   private palFrom: Palette | null = null
   private palTo: Palette | null = null
   private palT = 1
@@ -165,6 +185,15 @@ export class WaveEngine {
     this.canvas.setAttribute('aria-hidden', 'true')
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)')
     this.beatOrigin = performance.now()
+    // Тема страницы: следим за атрибутом, его ставит plugins/theme.client.ts
+    const root = document.documentElement
+    this.themeLight = root.dataset.theme === 'light'
+    new MutationObserver(() => {
+      const light = root.dataset.theme === 'light'
+      if (light === this.themeLight) return
+      this.themeLight = light
+      this.setMood(this.state.mood, { instant: true })
+    }).observe(root, { attributes: true, attributeFilter: ['data-theme'] })
     this.initGL()
     this.ro = new ResizeObserver(() => this.resize())
     this.io = new IntersectionObserver((entries) => {
@@ -231,9 +260,12 @@ export class WaveEngine {
   }
 
   /** Перенести холст в контейнер. Контекст WebGL при этом сохраняется */
-  mount(container: HTMLElement, opts: { layout?: WaveLayout, box?: HTMLElement | null } = {}) {
+  mount(container: HTMLElement, opts: { layout?: WaveLayout, box?: HTMLElement | null, dark?: boolean } = {}) {
     this.layout = LAYOUTS[opts.layout ?? 'hero']
     this.boxEl = opts.box ?? null
+    const wasLight = this.light
+    this.forceDark = !!opts.dark
+    if (this.light !== wasLight) this.setMood(this.state.mood, { instant: true })
     if (this.container !== container) {
       if (this.container) {
         this.ro.unobserve(this.container)
@@ -294,6 +326,11 @@ export class WaveEngine {
     const cy = -(r.top + r.height / 2 - c.top - c.height / 2) / c.height
     const radius = parseFloat(getComputedStyle(this.boxEl).borderTopLeftRadius) || 0
     this.box = [cx, cy, r.width / 2 / c.height, r.height / 2 / c.height, radius / c.height]
+  }
+
+  /** Рисовать ли волну краской на светлом */
+  private get light() {
+    return this.themeLight && !this.forceDark
   }
 
   private isStatic() {
@@ -506,7 +543,7 @@ export class WaveEngine {
     gl.uniform3f(u.uC1, c1[0], c1[1], c1[2])
     gl.uniform3f(u.uC2, c2[0], c2[1], c2[2])
     gl.uniform3f(u.uC3, c3[0], c3[1], c3[2])
-    const [s0, s1, s2, s3] = this.spectrumLin
+    const [s0, s1, s2, s3] = this.light ? this.spectrumInk : this.spectrumLin
     gl.uniform3f(u.uS0, s0[0], s0[1], s0[2])
     gl.uniform3f(u.uS1, s1[0], s1[1], s1[2])
     gl.uniform3f(u.uS2, s2[0], s2[1], s2[2])
@@ -515,6 +552,7 @@ export class WaveEngine {
     gl.uniform4f(u.uLayout, L.tilt, L.offset, 0, L.amp)
     gl.uniform2f(u.uFade, L.fadeL, L.fadeR)
     gl.uniform1f(u.uFreq, L.freq)
+    gl.uniform1f(u.uLight, this.light ? 1 : 0)
     if (this.box) {
       gl.uniform4f(u.uBox, this.box[0], this.box[1], this.box[2], this.box[3])
       gl.uniform1f(u.uBoxR, this.box[4])
@@ -530,7 +568,7 @@ export class WaveEngine {
 
   setMood(mood: WaveMood, opts: { instant?: boolean } = {}) {
     this.state.mood = mood
-    const next = buildPalette(mood, this.cover)
+    const next = buildPalette(mood, this.cover, this.light)
     if (opts.instant || this.isStatic()) {
       this.pal = next
       this.palT = 1

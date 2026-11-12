@@ -88,7 +88,19 @@ objc2-authentication-services = { version = "0.3.2", default-features = false, f
 ] }
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFCGTypes"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSURL", "NSError", "NSObject"] }
-objc2-ui-kit = { version = "0.3", default-features = false, features = ["std", "UIDevice", "UIResponder", "UIView", "UIWindow"] }
+# Тема (ios.rs): цвет фона, «как в системе» — динамический UIColor по UITraitCollection
+objc2-ui-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "block2",
+    "objc2-core-foundation",
+    "UIColor",
+    "UIDevice",
+    "UIInterface",
+    "UIResponder",
+    "UITraitCollection",
+    "UIView",
+    "UIWindow",
+] }
 
 # «Распознать» (recognize.rs): ShazamKit слушает микрофон через AVAudioEngine; доступ к
 # микрофону — AVCaptureDevice (одинаково на macOS и iOS)

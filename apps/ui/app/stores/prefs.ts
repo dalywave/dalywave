@@ -3,6 +3,10 @@ import { defineStore } from 'pinia'
 /** Полоса прокрутки: «Волна» — форма волны с пиками, «Линия» — классическая тонкая полоса */
 export type ScrubberStyle = 'wave' | 'line'
 
+/** Тема оформления: тёмная «Полночь», светлая или как в системе */
+export type ThemePref = 'dark' | 'light' | 'system'
+const THEMES: ThemePref[] = ['dark', 'light', 'system']
+
 /**
  * Настройки интерфейса «под себя». Плоский объект с отметкой времени: так же целиком уйдёт
  * на сервер, когда появится синхронизация между устройствами (побеждает более поздняя запись)
@@ -11,14 +15,18 @@ export interface Preferences {
   scrubber: ScrubberStyle
   /** Планшет горизонтально: «Сейчас играет» — колонкой справа от содержимого, как у Spotify на iPad */
   sidePlayer: boolean
+  /** Настройка устройства: у телефона и компьютера тема может быть своя */
+  theme: ThemePref
   updatedAt: string | null
 }
 
 export type PreferencesPatch = Partial<Omit<Preferences, 'updatedAt'>>
 
 const STORAGE_KEY = 'dw.prefs'
-const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, updatedAt: null }
+const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', updatedAt: null }
 
+// По умолчанию — тёмная: «Полночь» задумана тёмной; светлую и «как в системе»
+// выбирают в настройках. Ключ и значения читает и скрипт в <head> (utils/theme.ts) — до отрисовки
 // Из хранилища (а потом и с сервера) берём только понятные значения: старая версия или чужая
 // запись не должны ломать интерфейс
 function sanitize(raw: unknown): Preferences {
@@ -26,6 +34,7 @@ function sanitize(raw: unknown): Preferences {
   return {
     scrubber: r.scrubber === 'line' ? 'line' : DEFAULTS.scrubber,
     sidePlayer: typeof r.sidePlayer === 'boolean' ? r.sidePlayer : DEFAULTS.sidePlayer,
+    theme: THEMES.includes(r.theme as ThemePref) ? r.theme as ThemePref : DEFAULTS.theme,
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : null,
   }
 }
@@ -68,6 +77,11 @@ export const usePrefsStore = defineStore('prefs', () => {
     set: v => update({ sidePlayer: v }),
   })
 
+  const theme = computed<ThemePref>({
+    get: () => prefs.value.theme,
+    set: v => update({ theme: v }),
+  })
+
   // Выбор в другой вкладке подхватывается сразу (key = null — там очистили хранилище)
   if (import.meta.client) {
     window.addEventListener('storage', (e) => {
@@ -75,5 +89,5 @@ export const usePrefsStore = defineStore('prefs', () => {
     })
   }
 
-  return { prefs, scrubber, sidePlayer, update }
+  return { prefs, scrubber, sidePlayer, theme, update }
 })

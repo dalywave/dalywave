@@ -267,15 +267,15 @@ async function createPlaylist() {
   min-height: 0;
   height: 100%;
   padding-top: var(--titlebar-inset, 0px);
-  background: var(--ink-1);
-  border-right: 1px solid var(--hair);
+  background: var(--side-bg);
+  border-right: 1px solid var(--side-edge);
 }
 .side__brand { padding: calc(22px - min(var(--titlebar-inset, 0px), 18px)) 20px 18px; }
 .side__nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
 .nav { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 12px; border-radius: var(--r-3); font-weight: 550; color: var(--text-2); transition: color var(--dur-1), background-color var(--dur-1); }
 .nav__icon { flex: none; font-size: 20px; }
-.nav:hover { color: var(--text-1); background: var(--fill-1); }
-.nav.is-active { color: var(--text-1); background: var(--fill-2); }
+.nav:hover { color: var(--text-1); background: var(--side-hover); }
+.nav.is-active { color: var(--text-1); background: var(--side-active); }
 .nav__kbd { margin-left: auto; opacity: 0; transition: opacity var(--dur-1); }
 .nav:hover .nav__kbd { opacity: 1; }
 .side__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 12px 12px; }
@@ -283,7 +283,7 @@ async function createPlaylist() {
 .sec__head { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 4px 0 12px; }
 .sec__title { font-size: var(--fs-micro); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .item { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 48px; padding: 6px 8px; border-radius: var(--r-3); transition: background-color var(--dur-1); }
-.item:hover, .item.is-active { background: var(--fill-1); }
+.item:hover, .item.is-active { background: var(--side-hover); }
 .item__art { width: 36px; height: 36px; flex: none; border-radius: 8px; overflow: hidden; }
 .item__art--liked { display: grid; place-items: center; background: radial-gradient(110% 110% at 25% 15%, var(--m3), var(--m2) 45%, var(--m1)); color: #fff; font-size: 16px; }
 .item__text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
@@ -317,7 +317,7 @@ async function createPlaylist() {
 .side__foot { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-top: 1px solid var(--hair); }
 .side__foot:empty { display: none; }
 .sync { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: var(--r-3); text-align: left; transition: background-color var(--dur-1); }
-.sync:hover { background: var(--fill-1); }
+.sync:hover { background: var(--side-hover); }
 .sync__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .sync__title { font-size: var(--fs-small); font-weight: 600; white-space: nowrap; }
 .sync__meta { overflow: hidden; font-size: var(--fs-caption); color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }

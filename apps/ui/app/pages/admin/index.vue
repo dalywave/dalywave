@@ -101,7 +101,7 @@ const storageParts = computed<MeterPart[]>(() => {
   if (!s) return []
   return [
     { key: 'audio', label: t('storage.audio'), value: s.audioBytes, display: formatBytes(s.audioBytes, lang.value), color: 'var(--accent)', sub: formatCount(s.audioFiles, 'file', lang.value) },
-    { key: 'images', label: t('storage.images'), value: s.imageBytes, display: formatBytes(s.imageBytes, lang.value), color: '#8ed8f5', sub: formatCount(s.images, 'image', lang.value) },
+    { key: 'images', label: t('storage.images'), value: s.imageBytes, display: formatBytes(s.imageBytes, lang.value), color: 'var(--chart-2)', sub: formatCount(s.images, 'image', lang.value) },
   ]
 })
 const cost = computed(() => formatUsd(r2MonthlyUsd(storageTotal.value), lang.value))

@@ -176,8 +176,8 @@ function onKey(e: KeyboardEvent) {
   height: 12px;
   margin: -6px 0 0 -6px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12), 0 2px 6px rgba(0, 0, 0, 0.6);
+  background: var(--knob);
+  box-shadow: 0 0 0 4px rgba(var(--hi-rgb), 0.12), 0 2px 6px rgba(var(--shade-rgb), calc(0.6 * var(--shade-k)));
   opacity: 0;
   transform: scale(0.6);
   transition: opacity var(--dur-1), transform var(--dur-1) var(--ease-out), box-shadow var(--dur-1);
@@ -206,10 +206,10 @@ function onKey(e: KeyboardEvent) {
 .scrub--wave .scrub__bar:focus-visible { box-shadow: 0 0 0 2px var(--focus); }
 .wf__layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .wf__layer path { fill: none; stroke: currentColor; stroke-width: var(--stroke); stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.wf__base { color: rgba(232, 236, 244, 0.22); }
+.wf__base { color: rgba(var(--fg-rgb), 0.22); }
 .wf__zone { color: var(--accent); opacity: 0.5; clip-path: inset(0 0 0 calc(var(--x) * 100%)); }
 .wf__played { color: var(--text-1); clip-path: inset(0 calc((1 - var(--p)) * 100%) 0 0); }
-.wf__played-zone { color: color-mix(in oklab, var(--accent) 60%, white); clip-path: inset(0 calc((1 - var(--p)) * 100%) 0 calc(var(--x) * 100%)); }
+.wf__played-zone { color: color-mix(in oklab, var(--accent) 60%, var(--text-1)); clip-path: inset(0 calc((1 - var(--p)) * 100%) 0 calc(var(--x) * 100%)); }
 .wf__marker { position: absolute; top: -5px; bottom: -5px; left: calc(var(--x) * 100%); width: 0; pointer-events: none; }
 .wf__marker::before { content: ''; position: absolute; left: -0.75px; top: 5px; bottom: 5px; width: 1.5px; border-radius: 2px; background: var(--accent); }
 .wf__marker::after { content: ''; position: absolute; left: -4px; top: 0; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); transform: rotate(45deg); }
@@ -228,12 +228,12 @@ function onKey(e: KeyboardEvent) {
   top: 50%;
   height: var(--h);
   border-radius: var(--h);
-  background: rgba(232, 236, 244, 0.16);
+  background: rgba(var(--fg-rgb), 0.16);
   overflow: hidden;
   transform: translateY(-50%);
   transition: height var(--dur-1) var(--ease-out);
 }
-.ln__buffer { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--b) * 100%); background: rgba(232, 236, 244, 0.16); }
+.ln__buffer { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--b) * 100%); background: rgba(var(--fg-rgb), 0.16); }
 .ln__zone { position: absolute; top: 0; bottom: 0; left: calc(var(--x) * 100%); right: 0; background: color-mix(in oklab, var(--accent) 55%, transparent); }
 .ln__fill { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--p) * 100%); border-radius: inherit; background: var(--text-1); transition: background-color var(--dur-1); }
 .scrub--line .scrub__bar:hover .ln__fill, .scrub--line .scrub__bar.is-hover .ln__fill, .scrub--line .scrub__bar.is-drag .ln__fill { background: var(--accent); }
@@ -252,9 +252,9 @@ function onKey(e: KeyboardEvent) {
   pointer-events: none;
 }
 .scrub__bar.is-near .ln__marker { transform: rotate(45deg) scale(1.3); }
-.scrub--line .scrub__head { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+.scrub--line .scrub__head { box-shadow: 0 1px 4px rgba(var(--shade-rgb), calc(0.6 * var(--shade-k))); }
 .scrub--line.scrub--lg .scrub__head { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
-.scrub--line .scrub__bar:focus-visible .scrub__head { box-shadow: 0 0 0 3px var(--focus), 0 1px 4px rgba(0, 0, 0, 0.6); }
+.scrub--line .scrub__bar:focus-visible .scrub__head { box-shadow: 0 0 0 3px var(--focus), 0 1px 4px rgba(var(--shade-rgb), calc(0.6 * var(--shade-k))); }
 .scrub--line .scrub__bubble { bottom: calc(50% + 14px); }
 
 /* Пальцем — 44 pt. В панели над полосой кнопки управления: область растёт вниз, не заходя на них */

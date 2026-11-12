@@ -33,7 +33,7 @@ const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.s
   grid-template-columns: repeat(3, 1fr);
   height: calc(var(--tabbar-h) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
-  background: rgba(8, 9, 12, 0.84);
+  background: color-mix(in srgb, var(--ink-1) 84%, transparent);
   -webkit-backdrop-filter: blur(30px) saturate(1.4);
   backdrop-filter: blur(30px) saturate(1.4);
   border-top: 1px solid var(--hair);
@@ -54,10 +54,10 @@ const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.s
   padding: 0 8px;
   border: 0;
   border-radius: 22px;
-  background: rgba(22, 24, 31, 0.72);
+  background: var(--float-bar);
   -webkit-backdrop-filter: blur(30px) saturate(1.6);
   backdrop-filter: blur(30px) saturate(1.6);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 18px 36px -14px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 0 0 1px var(--float-ring), 0 18px 36px -14px var(--float-drop);
 }
 .tabbar--dock .tabbar__item { gap: 3px; padding-top: 0; font-size: 11.5px; }
 .tabbar--dock .tabbar__icon { font-size: 25px; }

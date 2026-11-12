@@ -209,9 +209,9 @@ onBeforeUnmount(() => {
 <template>
   <!-- Большой экран: сцена поверх содержимого -->
   <Transition v-if="variant === 'stage'" name="stage">
-    <section v-if="open && track" ref="beatEl" class="fp" :aria-label="t('player.expand')">
+    <section v-if="open && track" ref="beatEl" class="fp scheme-dark" :aria-label="t('player.expand')">
       <div class="fp__wave">
-        <MusicWaveCanvas layout="stage" :box="art" />
+        <MusicWaveCanvas layout="stage" :box="art" dark />
       </div>
       <UiIconButton class="fp__collapse" icon="ph:caret-down" :label="t('player.collapse')" :kbd="['Esc']" tone="glass" side="right" @click="close" />
       <div class="fp__context"><i class="fp__dot" :class="{ 'fp__dot--any': player.waveActive && player.wave.mood === 'any' }" />{{ contextLabel }}</div>
@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
       <DialogOverlay class="pp-scrim" :style="scrimStyle" />
       <DialogContent
         v-if="track"
-        class="pp"
+        class="pp scheme-dark"
         :class="{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet' }"
         :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
         :aria-describedby="undefined"
@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
           <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
           <div class="pp__ambient" aria-hidden="true" />
-          <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" /></div>
+          <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" dark /></div>
 
           <!-- Планшет -->
           <div v-if="variant === 'tablet'" class="tp">

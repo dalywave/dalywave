@@ -1,6 +1,6 @@
-//! Главное окно: создание, свои кнопки окна для Windows, события для интерфейса,
+//! Главное окно: создание, тема и фон, свои кнопки окна для Windows, события для интерфейса,
 //! закрытие в трей и запрет уходить со своих страниц внутри WebView.
-//! На iPhone и iPad окно одно и во весь экран: из этого модуля там нужно только создание.
+//! На iPhone и iPad окно одно и во весь экран: из этого модуля там нужны только создание и тема.
 
 #[cfg(desktop)]
 use std::sync::Mutex;
@@ -9,16 +9,16 @@ use std::sync::Mutex;
 use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder, Window, WindowEvent};
 #[cfg(desktop)]
-use tauri::{Emitter, Theme};
+use tauri::{Emitter, Theme, window::Color};
 use tauri_plugin_opener::OpenerExt;
 #[cfg(desktop)]
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 use url::Url;
 
-#[cfg(desktop)]
 use crate::error::{ShellError, ShellResult};
 #[cfg(desktop)]
 use crate::platform::Rect;
+use crate::settings::{Settings, ThemeChoice};
 use crate::{MAIN, platform};
 
 /// Что окно помнит между запусками. Видимость не храним: окно, закрытое в трей,
@@ -45,6 +45,12 @@ pub struct WindowFlags {
 
 /// Есть ли под окном системный фон.
 pub struct Backdrop(pub &'static str);
+
+/// Фон под интерфейсом в тёмной теме (`--ink-1`, `#08090c`) и в светлой (`#ffffff`)
+#[cfg(desktop)]
+const DARK_BACKGROUND: Color = Color(8, 9, 12, 255);
+#[cfg(desktop)]
+const LIGHT_BACKGROUND: Color = Color(255, 255, 255, 255);
 
 #[cfg(desktop)]
 #[derive(Clone, Serialize)]
@@ -96,6 +102,8 @@ pub fn create_main(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 
     let backdrop = apply_backdrop(&window, backdrop);
     app.manage(Backdrop(backdrop));
+    // Сохранённая тема — до показа окна: светлая открывается сразу светлой, без тёмной вспышки
+    apply_theme(&window, app.state::<Settings>().theme());
     #[cfg(desktop)]
     {
         app.manage(Mutex::new(WindowFlags {
@@ -141,8 +149,7 @@ fn apply_backdrop(window: &WebviewWindow, expected: &'static str) -> &'static st
             Err(e) => log::warn!("Mica is unavailable: {e}"),
         }
     }
-    // Без Mica окно прозрачно: подложим цвет фона интерфейса, чтобы не просвечивал рабочий стол
-    let _ = window.set_background_color(Some(tauri::window::Color(8, 9, 12, 255)));
+    // Без Mica окно прозрачно: фон цвета темы подложит apply_theme, чтобы не просвечивал рабочий стол
     "none"
 }
 
@@ -156,6 +163,73 @@ pub fn backdrop(window: &WebviewWindow) -> &'static str {
         .try_state::<Backdrop>()
         .map(|b| b.0)
         .unwrap_or("none")
+}
+
+/// Тема окна для Tauri: `None` — как в системе.
+#[cfg(desktop)]
+pub fn window_theme(choice: ThemeChoice) -> Option<Theme> {
+    match choice {
+        ThemeChoice::Dark => Some(Theme::Dark),
+        ThemeChoice::Light => Some(Theme::Light),
+        ThemeChoice::System => None,
+    }
+}
+
+/// Какая тема у окна на самом деле: для «как в системе» — та, что сейчас в системе.
+#[cfg(desktop)]
+pub fn effective_theme(window: &WebviewWindow, choice: ThemeChoice) -> Theme {
+    window_theme(choice).unwrap_or_else(|| window.theme().unwrap_or(Theme::Dark))
+}
+
+#[cfg(desktop)]
+pub fn background_color(theme: Theme) -> Color {
+    match theme {
+        Theme::Light => LIGHT_BACKGROUND,
+        _ => DARK_BACKGROUND,
+    }
+}
+
+/// Тема окна и фон под интерфейсом.
+/// macOS: тема — внешний вид всего приложения (NSAppearance): «светофор», меню и полосы прокрутки
+/// следуют ей сами; фон окна и WebView — цвета темы. Windows: тема — светлая или тёмная рамка и
+/// оттенок Mica; фон — только без Mica (с ней он прозрачный).
+/// iPhone и iPad: см. ios::apply_theme.
+pub fn apply_theme(window: &WebviewWindow, choice: ThemeChoice) {
+    #[cfg(desktop)]
+    {
+        if let Err(e) = window.set_theme(window_theme(choice)) {
+            log::warn!("could not set the theme of {}: {e}", window.label());
+        }
+        paint_background(window, effective_theme(window, choice));
+    }
+    #[cfg(target_os = "ios")]
+    crate::ios::apply_theme(window, choice);
+    #[cfg(target_os = "android")]
+    let _ = (window, choice);
+}
+
+/// Фон окна и WebView: виден, пока страница не нарисовалась, и при изменении размера окна.
+#[cfg(desktop)]
+fn paint_background(window: &WebviewWindow, theme: Theme) {
+    // Под главным окном Mica: фон прозрачный, её оттенок сам следует теме окна
+    if window.label() == MAIN && backdrop(window) == "mica" {
+        return;
+    }
+    if let Err(e) = window.set_background_color(Some(background_color(theme))) {
+        log::warn!("could not paint the background of {}: {e}", window.label());
+    }
+}
+
+/// Система сменила тему: окнам «как в системе» — фон новой темы (рамка и Mica следуют сами).
+#[cfg(desktop)]
+fn follow_system_theme(window: &Window, theme: Theme) {
+    let app = window.app_handle();
+    if app.state::<Settings>().theme() != ThemeChoice::System {
+        return;
+    }
+    if let Some(webview) = app.get_webview_window(window.label()) {
+        paint_background(&webview, theme);
+    }
 }
 
 /// Показать главное окно и вывести вперёд: из трея, по ссылке dalywave://, при втором запуске.
@@ -179,6 +253,10 @@ pub fn on_event(_window: &Window, _event: &WindowEvent) {}
 
 #[cfg(desktop)]
 pub fn on_event(window: &Window, event: &WindowEvent) {
+    if let WindowEvent::ThemeChanged(theme) = event {
+        follow_system_theme(window, *theme);
+        return;
+    }
     // Мини-плеер: ⌘W и Alt+F4 закрывают его и возвращают главное окно
     if window.label() == crate::MINI {
         if let WindowEvent::CloseRequested { api, .. } = event {
@@ -276,22 +354,26 @@ pub fn window_is_maximized(window: Window) -> ShellResult<bool> {
     Ok(window.is_maximized()?)
 }
 
-/// Тема системных частей окна (Mica, «светофор», меню, полосы прокрутки):
-/// `dark`, `light` или `null` — как в системе.
-#[cfg(desktop)]
+/// Тема приложения: `dark`, `light` или `null` — как в системе. Применяется ко всем окнам сразу
+/// (главное и мини-плеер) и запоминается: следующий запуск открывает окна уже в ней.
 #[tauri::command]
-pub fn window_set_theme(window: Window, theme: Option<String>) -> ShellResult<()> {
-    let theme = match theme.as_deref() {
-        None => None,
-        Some("dark") => Some(Theme::Dark),
-        Some("light") => Some(Theme::Light),
+pub fn window_set_theme(app: AppHandle, theme: Option<String>) -> ShellResult<()> {
+    let choice = match theme.as_deref() {
+        None => ThemeChoice::System,
+        Some("dark") => ThemeChoice::Dark,
+        Some("light") => ThemeChoice::Light,
         Some(other) => {
             return Err(ShellError::Invalid(format!(
                 "тема должна быть dark, light или null, а не «{other}»"
             )));
         }
     };
-    Ok(window.set_theme(theme)?)
+    // Сначала в настройки: окно «как в системе» сверяется с ними, когда система сменит тему
+    let saved = app.state::<Settings>().set_theme(choice);
+    for window in app.webview_windows().values() {
+        apply_theme(window, choice);
+    }
+    saved
 }
 
 /// Windows 11: где интерфейс нарисовал кнопку «развернуть» (CSS-пиксели от левого верхнего

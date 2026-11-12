@@ -76,7 +76,7 @@ const mood = computed({
   overflow-x: auto;
   scrollbar-width: none;
   border-radius: var(--r-4);
-  background: rgba(10, 12, 16, 0.55);
+  background: var(--glass-btn);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   box-shadow: inset 0 0 0 1px var(--line), var(--inner-hi);

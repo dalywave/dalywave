@@ -28,6 +28,8 @@ uniform vec2 uFade;
 uniform float uFreq;
 uniform vec4 uBox;
 uniform float uBoxR;
+// 1 — светлая тема: цвета C1..C3 и спектр — поглощение краски, uC0 — бумага
+uniform float uLight;
 
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -100,7 +102,8 @@ void main() {
     vec3 sp = spectrum(kx);
     C1 = mix(C1, sp * 0.32, uSpectrum);
     C2 = mix(C2, sp, uSpectrum);
-    C3 = mix(C3, mix(sp, vec3(1.0, 0.94, 0.97), 0.62), uSpectrum);
+    // Гребень: в темноте — почти белый свет, на бумаге — самая густая краска
+    C3 = mix(C3, uLight > 0.5 ? sp * 1.35 : mix(sp, vec3(1.0, 0.94, 0.97), 0.62), uSpectrum);
   }
 
   float rd = abs(q.x - uRipple.x);
@@ -125,7 +128,9 @@ void main() {
   float ca = caustic(vec2(q.x * 0.42 * uFreq - t * 0.02, fz * 0.32 + 0.13), t * 0.45 + e);
   vec3 faceCol = mix(C1, C2, smoothstep(0.15, 0.9, m) * (1.0 - 0.55 * min(fz, 1.0)));
 
-  vec3 col = uC0;
+  // В темноте свет копится поверх основы; на светлом копится поглощение поверх чистой бумаги
+  vec3 base = uLight > 0.5 ? vec3(0.0) : uC0;
+  vec3 col = base;
   col += faceCol * body * (0.7 + 0.35 * uBeat + 0.15 * uBands.x);
   col += mix(C2, C3, 0.6) * ca * body * smoothstep(0.05, 0.4, fz) * (0.18 + 0.22 * e + 0.15 * uBeat);
 
@@ -163,14 +168,14 @@ void main() {
   float fade = 1.0;
   if (uFade.x > 0.0) fade *= mix(0.4, 1.0, smoothstep(0.0, uFade.x, fx));
   if (uFade.y > 0.0) fade *= mix(0.6, 1.0, smoothstep(1.0, 1.0 - uFade.y, fx));
-  col = uC0 + (col - uC0) * fade;
+  col = base + (col - base) * fade;
 
   col += C3 * uFlash * (0.35 * min(body + core, 1.4) + 0.05 + 0.15 * glow);
 
   vec2 vp = frag / uRes - 0.5;
   col *= 1.0 - 0.6 * dot(vp, vp);
 
-  col = 1.0 - exp(-col * 1.45);
+  col = uLight > 0.5 ? uC0 * exp(-col) : 1.0 - exp(-col * 1.45);
   col = pow(max(col, 0.0), vec3(1.0 / 2.2));
   col += (hash(frag + fract(t * 7.0) * 61.0) - 0.5) / 180.0;
   gl_FragColor = vec4(col, 1.0);

@@ -61,7 +61,7 @@ watch(src, () => (failed.value = false))
   flex: none;
   isolation: isolate;
 }
-.art::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); pointer-events: none; }
+.art::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(var(--hi-rgb), 0.06); pointer-events: none; }
 .art__img, .art__mosaic { position: relative; width: 100%; height: 100%; border-radius: inherit; overflow: hidden; }
 .art__img { object-fit: cover; }
 .art__mosaic { display: grid; grid-template-columns: 1fr 1fr; }
@@ -78,6 +78,8 @@ watch(src, () => (failed.value = false))
   font-size: 28%;
 }
 .art__fallback :deep(*) { font-size: max(16px, 2.2em); }
+/* Светлая: заглушка — ровная серая плашка, как пустая обложка у Apple Music */
+:root[data-theme='light'] .art__fallback { background: linear-gradient(135deg, var(--ink-3), var(--ink-0)); }
 .art__glow {
   position: absolute;
   inset: 8% 6% -6%;

@@ -3,9 +3,11 @@
 //! и подтверждать «Открыть в DalyWave?», а iOS не усыпит приложение, пока человек входит.
 //! Cookie общие с Safari: если в daly.rest уже вошли там, второй раз входить не придётся.
 //!
-//! Здесь же окно выбора AirPlay и Bluetooth (AVRoutePickerView) для шторки «Устройства».
+//! Здесь же окно выбора AirPlay и Bluetooth (AVRoutePickerView) для шторки «Устройства» и тема
+//! приложения: светлая, тёмная или как в системе.
 
 use std::cell::RefCell;
+use std::ptr::NonNull;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
@@ -19,10 +21,11 @@ use objc2_authentication_services::{
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_foundation::{NSError, NSString, NSURL};
-use tauri::{AppHandle, Manager};
+use objc2_ui_kit::{UIColor, UITraitCollection, UIUserInterfaceStyle};
+use tauri::{AppHandle, Manager, WebviewWindow};
 use url::Url;
 
-use crate::{MAIN, auth::Auth};
+use crate::{MAIN, auth::Auth, settings::ThemeChoice};
 
 /// `ASWebAuthenticationSessionErrorCodeCanceledLogin`
 const CANCELED_LOGIN: isize = 1;
@@ -261,5 +264,85 @@ fn route_picker_button(picker: &NSObject) -> Option<Retained<NSObject>> {
             let is_button: Bool = msg_send![&*view, isKindOfClass: button_class];
             is_button.as_bool().then_some(view)
         })
+    }
+}
+
+/// Тема на iPhone и iPad. `overrideUserInterfaceStyle` окна приложения: по нему WKWebView отдаёт
+/// странице `prefers-color-scheme`, системные окна (меню, вход, AirPlay) рисуются в той же теме,
+/// а строка состояния (её стиль решает контроллер, `UIViewControllerBasedStatusBarAppearance`)
+/// берёт светлый или тёмный текст. Фон окна, WebView и его прокрутки — цвета темы: он виден до
+/// первой отрисовки страницы и при оттягивании прокрутки. Можно звать с любого потока.
+pub fn apply_theme(webview: &WebviewWindow, theme: ThemeChoice) {
+    let result = webview.with_webview(move |wv| {
+        let view = wv.inner() as *mut AnyObject;
+        // SAFETY: Tauri отдаёт живой WKWebView и зовёт замыкание на главном потоке
+        if let Some(view) = unsafe { view.as_ref() } {
+            unsafe { paint_theme(view, theme) };
+        }
+    });
+    if let Err(e) = result {
+        log::warn!("could not apply the theme: {e}");
+    }
+}
+
+/// SAFETY: `webview` — WKWebView; только главный поток.
+unsafe fn paint_theme(webview: &AnyObject, theme: ThemeChoice) {
+    let style = match theme {
+        ThemeChoice::Dark => UIUserInterfaceStyle::Dark,
+        ThemeChoice::Light => UIUserInterfaceStyle::Light,
+        ThemeChoice::System => UIUserInterfaceStyle::Unspecified,
+    };
+    let color = theme_color(theme);
+    unsafe {
+        let window: Option<Retained<AnyObject>> = msg_send![webview, window];
+        match window {
+            Some(window) => {
+                let _: () = msg_send![&*window, setOverrideUserInterfaceStyle: style];
+                let _: () = msg_send![&*window, setBackgroundColor: &*color];
+                // Строка состояния со стилем Default берёт текст по теме контроллера —
+                // попросим её перечитать стиль сразу, а не при следующей смене экрана
+                let root: Option<Retained<AnyObject>> = msg_send![&*window, rootViewController];
+                if let Some(root) = root {
+                    let _: () = msg_send![&*root, setNeedsStatusBarAppearanceUpdate];
+                }
+            }
+            None => log::warn!("theme: the web view is not in a window yet"),
+        }
+        // Вид окна Tao, в котором лежит WebView, — тоже: Wry красит его цветом из настроек окна
+        let parent: Option<Retained<AnyObject>> = msg_send![webview, superview];
+        if let Some(parent) = parent {
+            let _: () = msg_send![&*parent, setBackgroundColor: &*color];
+        }
+        let _: () = msg_send![webview, setBackgroundColor: &*color];
+        let scroll: Option<Retained<AnyObject>> = msg_send![webview, scrollView];
+        if let Some(scroll) = scroll {
+            let _: () = msg_send![&*scroll, setBackgroundColor: &*color];
+        }
+    }
+}
+
+/// Фон под интерфейсом: тёмный `#08090c` (`--ink-1`), светлый — белый. «Как в системе» —
+/// динамический цвет: UIKit сам перекрашивает его, когда система меняет тему.
+fn theme_color(theme: ThemeChoice) -> Retained<UIColor> {
+    let dark = UIColor::colorWithRed_green_blue_alpha(8.0 / 255.0, 9.0 / 255.0, 12.0 / 255.0, 1.0);
+    let light = UIColor::whiteColor();
+    match theme {
+        ThemeChoice::Dark => dark,
+        ThemeChoice::Light => light,
+        ThemeChoice::System => {
+            let provider = RcBlock::new(move |traits: NonNull<UITraitCollection>| {
+                // SAFETY: UIKit передаёт живую коллекцию признаков на главном потоке
+                let style = unsafe { traits.as_ref().userInterfaceStyle() };
+                let color = if style == UIUserInterfaceStyle::Dark {
+                    &dark
+                } else {
+                    &light
+                };
+                NonNull::from(&**color)
+            });
+            // SAFETY: блок возвращает цвета, которые держит сам (+0, как положено блоку);
+            // UIKit копирует блок и держит его вместе с цветами
+            unsafe { UIColor::colorWithDynamicProvider(&provider) }
+        }
     }
 }

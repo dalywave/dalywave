@@ -278,7 +278,7 @@ const SKELETON = ['74%', '58%', '82%', '46%', '68%', '77%', '52%', '64%']
   pointer-events: auto;
   transform: translateY(-100%);
 }
-.ly__pill:hover { background: #fff; }
+.ly__pill:hover { background: color-mix(in srgb, var(--text-1) 86%, var(--ink-1)); }
 .ly__pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ly__pill-icon { font-size: 15px; }
 .ly__pill-icon.is-up { transform: rotate(180deg); }

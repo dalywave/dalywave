@@ -52,8 +52,8 @@ function onMenu() {
 .card__link { position: absolute; inset: 0; z-index: 1; border-radius: var(--r-3); }
 .card__art { position: relative; border-radius: var(--r-3); transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-3); }
 .card__art .art { width: 100%; border-radius: var(--r-3); }
-.card:hover .card__art, .card.is-hover .card__art { transform: translateY(-3px); box-shadow: 0 18px 36px -18px rgba(0, 0, 0, 0.9); }
-.card__play { position: absolute; right: 10px; bottom: 10px; z-index: 2; opacity: 0; transform: translateY(6px) scale(0.92); box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.7); transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-out); }
+.card:hover .card__art, .card.is-hover .card__art { transform: translateY(-3px); box-shadow: 0 18px 36px -18px rgba(var(--shade-rgb), calc(0.9 * var(--shade-k))); }
+.card__play { position: absolute; right: 10px; bottom: 10px; z-index: 2; opacity: 0; transform: translateY(6px) scale(0.92); box-shadow: 0 8px 20px -6px rgba(var(--shade-rgb), calc(0.7 * var(--shade-k))); transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-out); }
 .card:hover .card__play, .card.is-hover .card__play, .card:focus-within .card__play { opacity: 1; transform: none; }
 .card__badge { position: absolute; left: 10px; top: 10px; z-index: 2; }
 .card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 2px; }

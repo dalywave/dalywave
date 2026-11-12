@@ -489,7 +489,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
 /* Планшет под пальцем: поле во всю колонку, закреплено под строкой состояния */
 .tsbar { position: sticky; top: var(--safe-top); z-index: 15; display: flex; align-items: center; gap: 8px; margin: 0 -32px; padding: 8px 32px 12px; transition: background-color var(--dur-2), box-shadow var(--dur-2); }
 .tsbar::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--safe-top); background: inherit; }
-.tsbar.is-solid { background: rgba(8, 9, 12, 0.88); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 1px 0 var(--hair); }
+.tsbar.is-solid { background: color-mix(in srgb, var(--ink-1) 88%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 1px 0 var(--hair); }
 .tsbar__field { flex: 1; }
 .tsbar :deep(.sf) { background: var(--fill-2); box-shadow: none; }
 .tsbar :deep(.sf:focus-within) { background: var(--fill-3); box-shadow: none; }
@@ -509,7 +509,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
 
   .sbar { position: sticky; top: var(--safe-top); z-index: 15; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 12px; transition: background-color var(--dur-2), box-shadow var(--dur-2); }
   .sbar::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--safe-top); background: inherit; }
-  .sbar.is-solid { background: rgba(8, 9, 12, 0.88); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 1px 0 var(--hair); }
+  .sbar.is-solid { background: color-mix(in srgb, var(--ink-1) 88%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 1px 0 var(--hair); }
   .sbar__row { display: flex; align-items: center; gap: 12px; }
   .sbar__field { flex: 1; }
   .sbar :deep(.sf) { height: 40px; padding-left: 12px; border-radius: 10px; background: var(--fill-2); box-shadow: none; }

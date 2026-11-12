@@ -530,7 +530,7 @@ async function syncAudio(force = false) {
 </template>
 
 <style scoped>
-.jg { min-height: 100vh; min-height: 100dvh; background: var(--bg, #08090c); color: var(--text-1); }
+.jg { min-height: 100vh; min-height: 100dvh; background: var(--ink-1); color: var(--text-1); }
 .jg__center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; padding: calc(24px + var(--safe-top)) 20px calc(24px + var(--safe-bottom)); text-align: center; }
 .jg__card { gap: 0; max-width: 440px; margin: 0 auto; }
 .jg__spinner { width: 28px; height: 28px; border: 2.5px solid var(--fill-3); border-top-color: var(--text-1); border-radius: 50%; animation: jg-spin 0.8s linear infinite; }

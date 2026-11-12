@@ -88,7 +88,7 @@ function onCancel() {
   <div
     v-if="track"
     class="mini"
-    :class="{ 'mini--inline': inline, 'mini--dock': dock, 'is-lifting': lift }"
+    :class="{ 'mini--inline': inline, 'mini--dock': dock, 'scheme-dark': dock, 'is-lifting': lift }"
     :style="lift ? { transform: `translate3d(0, ${lift}px, 0)` } : undefined"
     @click.capture="open"
     @pointerdown="onDown"
@@ -129,10 +129,10 @@ function onCancel() {
   height: var(--mini-h);
   padding: 0 6px 0 8px;
   border-radius: 16px;
-  background: rgba(24, 27, 35, 0.8);
+  background: var(--float);
   -webkit-backdrop-filter: blur(30px) saturate(1.6);
   backdrop-filter: blur(30px) saturate(1.6);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 16px 32px -12px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 0 0 1px var(--float-ring), 0 16px 32px -12px var(--float-drop);
   overflow: hidden;
   cursor: pointer;
   touch-action: none;

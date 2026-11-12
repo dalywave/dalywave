@@ -46,8 +46,8 @@ const id = useId()
   height: 18px;
   margin-left: 3px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  background: var(--knob);
+  box-shadow: 0 2px 6px rgba(var(--shade-rgb), calc(0.5 * var(--shade-k)));
   transition: transform var(--dur-2) var(--ease-spring);
 }
 .sw__thumb[data-state='checked'] { transform: translateX(16px); }

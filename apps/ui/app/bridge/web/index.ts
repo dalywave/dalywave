@@ -303,6 +303,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       close: opts.window?.close ?? noWindow,
       onState: opts.window?.onState ?? (() => () => {}),
       trackSnap: opts.window?.trackSnap ?? (() => () => {}),
+      setTheme: opts.window?.setTheme ?? (() => {}),
     },
     updates: opts.updates ?? devUpdates() ?? { onAvailable: () => () => {}, state: async () => null, onState: () => () => {}, check: noWindow, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),

@@ -49,15 +49,15 @@ const value = computed({
   user-select: none;
   cursor: pointer;
 }
-.sl__track { position: relative; flex: 1; height: 4px; border-radius: 4px; background: rgba(232, 236, 244, 0.18); overflow: hidden; }
+.sl__track { position: relative; flex: 1; height: 4px; border-radius: 4px; background: rgba(var(--fg-rgb), 0.18); overflow: hidden; }
 .sl__range { position: absolute; height: 100%; border-radius: inherit; background: var(--text-1); transition: background-color var(--dur-1); }
 .sl__thumb {
   display: block;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  background: var(--knob);
+  box-shadow: var(--knob-shadow);
   transform: scale(0);
   transition: transform var(--dur-1) var(--ease-out);
 }

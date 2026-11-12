@@ -77,8 +77,8 @@ const shell = createShell({ invoke, listen })
 
 **iPhone и iPad.** Окна нет: WebView во весь экран, под вырезом и полоской «домой». Отступы —
 `env(safe-area-inset-*)` (в интерфейсе `--safe-top`, `--safe-bottom`; в `<meta name="viewport">`
-нужен `viewport-fit=cover`). Строка состояния светлая, системные окна — в тёмной теме.
-Команды `window_*` и `update_*` там не существуют.
+нужен `viewport-fit=cover`). Строка состояния и системные окна — в теме приложения (см. «Тема»).
+Из команд `window_*` там есть только `window_set_theme`; `update_*` нет.
 
 **macOS (`mac-inset`).** Кнопки 14×14 с шагом 23: x 18–78, по центру строки высотой 48
 (как `.sidebar__chrome` в макете «Полночь»). Левее x = 90 ничего интерактивного не ставить.
@@ -106,16 +106,27 @@ const shell = createShell({ invoke, listen })
 Двойной щелчок по такому месту разворачивает окно (на macOS — как в системе, по отпусканию).
 Своя логика — `shell.window.startDragging()` в `mousedown`.
 
-**Фон.** macOS: фон окна `#08090c` (`--ink-1`), прозрачности и системного размытия нет.
+**Фон.** macOS: фон окна — цвета темы (`#08090c`, `--ink-1`, или `#ffffff`), прозрачности и
+системного размытия нет.
 С материалом `sidebar` боковая панель становится `#1E1F24` — светлее содержимого
 (`#121316`) и с оттенком обоев, а в «Полночи» она темнее (`#0D0E13`); снимок —
 `design/shots/shell/vibrancy-sidebar-test.png`. Windows с
 `backdrop: 'mica'`: у `html` и `body` фон прозрачный, панели — полупрозрачные
 (`--glass`), тогда под ними видна Mica; при `none` — непрозрачный фон, как на сайте.
 
-**Тема.** При выборе темы в настройках вызвать `shell.window.setTheme('dark' | 'light' | null)`
-(`null` — «как в системе»): от неё зависят оттенок Mica, системные меню и полосы прокрутки,
-а внутри WebView — `prefers-color-scheme`.
+**Тема.** Каждое окно (главное и `/mini`) при старте и при смене выбора в настройках вызывает
+`shell.window.setTheme('dark' | 'light' | null)` (`null` — «как в системе»). Оболочка применяет
+тему сразу ко всем окнам и запоминает её (`settings.json`, поле `theme`; записи нет — тёмная):
+следующий запуск открывает окна уже в ней, без вспышки фона другой темы.
+
+| | Что делает тема |
+|---|---|
+| macOS | внешний вид всего приложения (NSAppearance): «светофор», меню, полосы прокрутки, `prefers-color-scheme`; фон окна и WebView — `#08090c` или `#ffffff` |
+| Windows | светлая или тёмная рамка и оттенок Mica; без Mica (`backdrop: 'none'`) — фон окна цвета темы, с Mica фон прозрачный |
+| iPhone, iPad | `overrideUserInterfaceStyle` окна: `prefers-color-scheme`, системные окна (меню, вход, AirPlay) и строка состояния (светлый текст в тёмной теме, тёмный — в светлой); фон под WebView цвета темы |
+
+«Как в системе» следует за системой и после запуска: фон перекрашивается, когда система меняет
+тему. Заставка iPhone и iPad (до загрузки интерфейса) всегда тёмная.
 
 ## Команды
 
@@ -127,7 +138,7 @@ const shell = createShell({ invoke, listen })
 | `window.close()` | `window_close` | — окно в трей, музыка играет |
 | `window.startDragging()` | `window_start_dragging` | — |
 | `window.isMaximized()` | `window_is_maximized` | `boolean` |
-| `window.setTheme(theme)` | `window_set_theme { theme }` | — |
+| `window.setTheme(theme)` | `window_set_theme { theme }` | — `'dark'`, `'light'` или `null` (как в системе); все окна, запоминается. Есть и на iPhone, iPad |
 | `window.setSnapArea(rect)` | `window_set_snap_area { rect }` | — (только Windows; `trackSnapArea` вызывает сам) |
 | `auth.login()` | `auth_login` | `Session` — ждёт возврата из браузера до 10 минут |
 | `auth.cancel()` | `auth_cancel` | `boolean` — был ли незаконченный вход |

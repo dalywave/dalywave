@@ -180,7 +180,7 @@ pub fn run() {
             window::window_start_dragging,
             #[cfg(desktop)]
             window::window_is_maximized,
-            #[cfg(desktop)]
+            // Тема — везде: на iPhone и iPad она задаёт стиль окна и строки состояния
             window::window_set_theme,
             #[cfg(desktop)]
             window::window_set_snap_area,

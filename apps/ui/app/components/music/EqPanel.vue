@@ -101,10 +101,10 @@ function fill(v: number) {
 .eq__band { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
 .eq__slider { position: relative; display: flex; justify-content: center; width: 32px; height: 180px; touch-action: none; user-select: none; cursor: pointer; }
 /* Полоса и черта нуля посередине: подъём — вверх от неё, провал — вниз */
-.eq__track { position: relative; width: 4px; height: 100%; border-radius: 4px; background: rgba(232, 236, 244, 0.14); }
+.eq__track { position: relative; width: 4px; height: 100%; border-radius: 4px; background: rgba(var(--fg-rgb), 0.14); }
 .eq__track::after { content: ''; position: absolute; left: -5px; right: -5px; top: 50%; height: 1px; background: var(--line-strong); }
 .eq__range { position: absolute; left: 0; width: 100%; border-radius: 2px; background: var(--text-1); }
-.eq__thumb { display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); transition: transform var(--dur-1) var(--ease-out); }
+.eq__thumb { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--knob); box-shadow: var(--knob-shadow); transition: transform var(--dur-1) var(--ease-out); }
 .eq__thumb:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
 .eq__slider:hover .eq__range, .eq__slider[data-dragging] .eq__range { background: var(--accent); }
 .eq__slider[data-dragging] .eq__thumb { transform: scale(1.12); }

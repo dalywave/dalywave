@@ -114,7 +114,6 @@ export function createTauriBridge(): Bridge {
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.backdrop = chrome.backdrop
     void loadShell().then((shell) => {
-      if (desktop) void shell.window.setTheme('dark').catch(() => {})
       // Новый адрес сервера — перезагрузка: все запросы и сокет пойдут туда
       void shell.on('server:changed', () => location.reload())
     }).catch(() => {})
@@ -176,6 +175,10 @@ export function createTauriBridge(): Bridge {
         ]
         void loadShell().then(shell => shell.window.isMaximized()).then(maximized => cb({ maximized })).catch(() => {})
         return () => offs.forEach(off => off())
+      },
+      // Тему выбирает интерфейс (plugins/theme.client.ts): окно, «светофор», Mica, строка состояния
+      setTheme(theme) {
+        void loadShell().then(shell => shell.window.setTheme(theme)).catch(() => {})
       },
       trackSnap(button) {
         let stop: (() => void) | null = null

@@ -64,7 +64,7 @@ function onAutoFocus(e: Event) {
 </template>
 
 <style>
-.uim-overlay { position: fixed; inset: 0; z-index: 180; background: rgba(0, 0, 0, 0.55); animation: uim-fade var(--dur-2) var(--ease-out); }
+.uim-overlay { position: fixed; inset: 0; z-index: 180; background: var(--overlay); animation: uim-fade var(--dur-2) var(--ease-out); }
 .uim {
   position: fixed;
   left: 50%;

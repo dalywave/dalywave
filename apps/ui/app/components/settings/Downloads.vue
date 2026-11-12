@@ -153,7 +153,7 @@ onMounted(() => {
 .use__body { display: flex; flex: 1; flex-direction: column; gap: 10px; min-width: 0; padding-bottom: 4px; }
 .use__bar { display: flex; height: 8px; overflow: hidden; border-radius: var(--r-pill); background: var(--fill-3); }
 .use__seg { height: 100%; transition: width var(--dur-3) var(--ease-out); }
-.use__seg + .use__seg { box-shadow: -1px 0 0 var(--ink-1, #08090c); }
+.use__seg + .use__seg { box-shadow: -1px 0 0 var(--ink-1); }
 .use__seg--pinned, .use__dot--pinned { background: var(--accent); }
 .use__seg--reserve, .use__dot--reserve { background: color-mix(in oklab, var(--accent) 45%, var(--ink-3)); }
 .use__seg--cache, .use__dot--cache { background: var(--text-3); }

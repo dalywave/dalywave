@@ -1,6 +1,7 @@
-//! Настройки оболочки: адрес сервера, язык системных меню, загрузчик на Mac (включён ли, на
-//! паузе ли), выбранное устройство вывода звука на компьютере и эквалайзер этого устройства. Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают —
-//! токены живут в связке ключей.
+//! Настройки оболочки: адрес сервера, язык системных меню, тема окна, загрузчик на Mac (включён ли,
+//! на паузе ли), выбранное устройство вывода звука на компьютере и эквалайзер этого устройства.
+//! Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают — токены живут
+//! в связке ключей.
 
 use std::{path::PathBuf, sync::Mutex};
 
@@ -30,11 +31,25 @@ impl Locale {
     }
 }
 
+/// Тема, выбранная в интерфейсе. Оболочка помнит её, чтобы при следующем запуске окно сразу
+/// открылось с фоном этой темы — без вспышки тёмного фона на светлой теме и наоборот.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ThemeChoice {
+    Dark,
+    Light,
+    /// Как в системе
+    System,
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Stored {
     server_url: Option<String>,
     locale: Option<Locale>,
+    /// Тема окна; нет — тёмная, как по умолчанию в интерфейсе
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    theme: Option<ThemeChoice>,
     /// Загрузчик на этом Mac; по умолчанию включён
     #[serde(default, skip_serializing_if = "Option::is_none")]
     downloader_enabled: Option<bool>,
@@ -122,6 +137,20 @@ impl Settings {
     pub fn set_locale(&self, locale: Locale) -> ShellResult<()> {
         let mut stored = self.lock();
         stored.locale = Some(locale);
+        self.save(&stored)
+    }
+
+    pub fn theme(&self) -> ThemeChoice {
+        self.lock().theme.unwrap_or(ThemeChoice::Dark)
+    }
+
+    /// Каждое окно сообщает тему при запуске — файл переписывается, только если она изменилась.
+    pub fn set_theme(&self, theme: ThemeChoice) -> ShellResult<()> {
+        let mut stored = self.lock();
+        if stored.theme == Some(theme) {
+            return Ok(());
+        }
+        stored.theme = Some(theme);
         self.save(&stored)
     }
 

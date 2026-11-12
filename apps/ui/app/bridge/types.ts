@@ -496,6 +496,9 @@ export interface Bridge {
     onState(cb: (state: WindowState) => void): () => void
     /** Windows 11: меню привязки окон над своей кнопкой «развернуть» */
     trackSnap(button: HTMLElement): () => void
+    /** Тема окна и системных частей вокруг страницы («светофор», Mica, строка состояния, фон
+     * под WebView); null — как в системе. На сайте ничего не делает */
+    setTheme(theme: 'dark' | 'light' | null): void
   }
 
   /** Обновления приложения (на сайте и телефонах — ничего: `state()` отдаёт null) */

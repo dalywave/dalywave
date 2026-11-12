@@ -109,7 +109,7 @@ function pick(e: MenuAction) {
 </template>
 
 <style>
-.as__head { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 16px 14px; flex: none; border-bottom: 0.5px solid rgba(255, 255, 255, 0.1); }
+.as__head { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 16px 14px; flex: none; border-bottom: 0.5px solid rgba(var(--hi-rgb), 0.1); }
 .as__cover { flex: none; }
 .as__cover.art { width: 48px; border-radius: 8px; }
 .as__cover.art--round { border-radius: 50%; }
@@ -118,7 +118,7 @@ function pick(e: MenuAction) {
 .as__sub { font-size: 14px; color: var(--text-2); }
 .as__head--back { gap: 8px; padding-top: 6px; padding-bottom: 10px; }
 .as__back { display: inline-flex; align-items: center; gap: 2px; height: 36px; margin-left: -6px; padding: 0 8px 0 0; border: 0; background: none; font-size: 16px; color: var(--accent); flex: none; }
-.as__group + .as__group { border-top: 6px solid rgba(0, 0, 0, 0.22); }
+.as__group + .as__group { border-top: 6px solid rgba(var(--shade-rgb), calc(0.22 * var(--shade-k))); }
 .as__caption { padding: 12px 16px 4px; font-size: 12px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .as__row {
   position: relative;
@@ -135,10 +135,10 @@ function pick(e: MenuAction) {
   color: var(--text-1);
   -webkit-tap-highlight-color: transparent;
 }
-.as__row + .as__row::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 0.5px; background: rgba(255, 255, 255, 0.1); }
+.as__row + .as__row::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 0.5px; background: rgba(var(--hi-rgb), 0.1); }
 /* Волосок начинается там, где текст: без значка — от левого поля */
 .as__row.no-icon::before { left: 16px; }
-.as__row:active { background: rgba(255, 255, 255, 0.08); }
+.as__row:active { background: rgba(var(--hi-rgb), 0.08); }
 .as__row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .as__row:disabled { color: var(--text-4); }
 .as__row.is-danger, .as__row.is-danger .as__icon { color: var(--danger); }
@@ -160,6 +160,6 @@ function pick(e: MenuAction) {
   color: var(--text-1);
   -webkit-tap-highlight-color: transparent;
 }
-.as__cancel:active { background: rgba(255, 255, 255, 0.08); }
+.as__cancel:active { background: rgba(var(--hi-rgb), 0.08); }
 .as__cancel:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 </style>

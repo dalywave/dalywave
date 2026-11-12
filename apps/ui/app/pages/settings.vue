@@ -175,6 +175,16 @@ const language = computed({
     </SettingsGroup>
 
     <SettingsGroup :title="t('appearance')">
+      <!-- Тема — своя для устройства, как и «Плеер сбоку» -->
+      <SettingsRow :title="t('theme')" :stack="ui.isPhone">
+        <UiSegmentedControl
+          v-model="prefs.theme"
+          :options="[{ value: 'dark', label: t('themeDark') }, { value: 'light', label: t('themeLight') }, { value: 'system', label: t('themeSystem') }]"
+          :label="t('theme')"
+          :size="ui.isPhone ? 'sm' : 'md'"
+          :block="ui.isPhone"
+        />
+      </SettingsRow>
       <SettingsRow :title="t('language')">
         <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
       </SettingsRow>
@@ -280,6 +290,10 @@ const language = computed({
     "waveResetBtn": "Сбросить",
     "waveReset": "Настройки волны сброшены",
     "appearance": "Интерфейс",
+    "theme": "Тема",
+    "themeDark": "Тёмная",
+    "themeLight": "Светлая",
+    "themeSystem": "Как в системе",
     "language": "Язык",
     "sidePlayer": "Плеер сбоку",
     "sidePlayerDesc": "Горизонтально «Сейчас играет» — колонкой справа",
@@ -315,6 +329,10 @@ const language = computed({
     "waveResetBtn": "Reset",
     "waveReset": "Wave settings reset",
     "appearance": "Interface",
+    "theme": "Theme",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "themeSystem": "System",
     "language": "Language",
     "sidePlayer": "Side player",
     "sidePlayerDesc": "In landscape, Now Playing stays on the right",

@@ -30,11 +30,11 @@ export const JOB_TONE: Record<JobStatus, StatusTone> = { queued: 'idle', running
 export const ACQ_ACTIVE: AcquisitionStatus[] = ['queued', 'matching', 'downloading', 'verifying', 'processing']
 export const AUDIO_COLOR: Record<AudioStatus, string> = {
   ready: 'var(--success)',
-  queued: '#8ed8f5',
+  queued: 'var(--chart-2)',
   acquiring: 'var(--accent)',
-  none: 'rgba(232, 236, 244, 0.22)',
+  none: 'rgba(var(--fg-rgb), 0.22)',
   disputed: 'var(--warning)',
-  unavailable: 'rgba(232, 236, 244, 0.45)',
+  unavailable: 'rgba(var(--fg-rgb), 0.45)',
   failed: 'var(--danger)',
 }
 

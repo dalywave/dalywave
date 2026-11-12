@@ -349,7 +349,7 @@ onMounted(() => nextTick(grow))
 .ed__row { position: relative; border-radius: var(--r-3); outline: none; transition: transform 180ms var(--ease-out); }
 .ed__row:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
 .ed__row.is-drag { z-index: 5; transition: none; }
-.ed__row.is-drag .ed__slide { background: var(--ink-3); box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--line); }
+.ed__row.is-drag .ed__slide { background: var(--ink-3); box-shadow: 0 12px 32px -10px rgba(var(--shade-rgb), calc(0.8 * var(--shade-k))), 0 0 0 1px var(--line); }
 .ed:not(.is-sorting) .ed__row { transition: none; }
 .ed__slide {
   position: relative;

@@ -124,7 +124,7 @@ const moreItems = computed<MenuEntry[]>(() => {
   border-top: 1px solid var(--hair);
 }
 .bar__track { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.bar__cover { position: relative; width: 56px; height: 56px; flex: none; padding: 0; border: 0; border-radius: 8px; background: none; box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.9); transition: transform var(--dur-2) var(--ease-out); }
+.bar__cover { position: relative; width: 56px; height: 56px; flex: none; padding: 0; border: 0; border-radius: 8px; background: none; box-shadow: 0 6px 18px -8px rgba(var(--shade-rgb), calc(0.9 * var(--shade-k))); transition: transform var(--dur-2) var(--ease-out); }
 .bar__cover :deep(.art) { width: 100%; border-radius: 8px; }
 .bar__cover:hover { transform: scale(1.04); }
 .bar__expand { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 8px; background: rgba(4, 5, 7, 0.5); color: #fff; font-size: 20px; opacity: 0; transition: opacity var(--dur-1); }

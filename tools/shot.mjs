@@ -2,7 +2,7 @@
 //
 //   bun tools/shot.mjs <url> [--routes home,player] [--sizes phone,desktop] [--out dir]
 //                      [--theme dark|light] [--full] [--wait ms] [--dpr n] [--reduced-motion]
-//                      [--eval "js"] [--cookie name=value] [--name base]
+//                      [--eval "js"] [--init "js"] [--cookie name=value] [--name base]
 //
 // В url можно поставить {route}: http://localhost:3400{route} --routes /,/search
 // Без {route} маршрут добавляется как #hash: http://localhost:4400/directions/a/ --routes home,player
@@ -15,6 +15,8 @@ const SIZES = {
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   phoneSmall: { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   tablet: { viewport: { width: 1024, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // Узкое окно компьютера: боковая панель — полоса значков (rail)
+  narrow: { viewport: { width: 900, height: 760 }, deviceScaleFactor: 2 },
   laptop: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 },
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
   wide: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 },
@@ -38,6 +40,8 @@ function parse(argv) {
     else if (a === "--dpr") opts.dpr = Number(next());
     else if (a === "--reduced-motion") opts.reducedMotion = true;
     else if (a === "--eval") opts.eval = next();
+    // Скрипт до кода страницы (например, выбрать тему в localStorage)
+    else if (a === "--init") opts.init = next();
     else if (a === "--cookie") opts.cookies.push(next());
     else if (a === "--name") opts.name = next();
     else if (a.startsWith("--")) throw new Error(`неизвестный флаг ${a}`);
@@ -70,6 +74,7 @@ for (const sizeName of opts.sizes) {
     locale: "ru-RU",
     timezoneId: "Europe/Berlin",
   });
+  if (opts.init) await context.addInitScript(opts.init);
   for (const urlTemplate of opts.urls) {
     for (const cookie of opts.cookies) {
       const [name, ...rest] = cookie.split("=");

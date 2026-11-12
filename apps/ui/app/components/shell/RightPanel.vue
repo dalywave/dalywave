@@ -49,7 +49,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  background: rgba(10, 11, 15, 0.66);
+  background: color-mix(in srgb, var(--ink-1) 66%, transparent);
   -webkit-backdrop-filter: blur(30px) saturate(1.3);
   backdrop-filter: blur(30px) saturate(1.3);
   border-left: 1px solid transparent;
@@ -67,7 +67,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
 /* Планшет: панель ложится поверх содержимого; рядом со сценой плеера — встаёт в ряд */
 @media (max-width: 1099px) {
   .panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 28; box-shadow: none; }
-  .panel.is-open { box-shadow: -24px 0 48px -12px rgba(0, 0, 0, 0.7); }
+  .panel.is-open { box-shadow: -24px 0 48px -12px rgba(var(--shade-rgb), calc(0.7 * var(--shade-k))); }
   .app.is-player .panel { position: relative; box-shadow: none; }
 }
 </style>

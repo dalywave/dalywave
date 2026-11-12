@@ -265,8 +265,8 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
   color: var(--text-1);
   -webkit-tap-highlight-color: transparent;
 }
-.drow + .drow::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 0.5px; background: rgba(255, 255, 255, 0.1); }
-.drow:active { background: rgba(255, 255, 255, 0.06); }
+.drow + .drow::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 0.5px; background: rgba(var(--hi-rgb), 0.1); }
+.drow:active { background: rgba(var(--hi-rgb), 0.06); }
 .drow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .drow__icon { flex: none; width: 24px; font-size: 24px; color: var(--text-2); }
 .drow__icon--accent, .drow.is-current .drow__icon { color: var(--accent); }

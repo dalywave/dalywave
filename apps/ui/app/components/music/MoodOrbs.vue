@@ -62,7 +62,7 @@ function update(v: unknown) {
 .mood:hover .mood__orb, .mood.is-hover .mood__orb { transform: scale(1.12); }
 .mood:active .mood__orb { transform: scale(0.94); }
 .mood[aria-checked='true'] { color: var(--text-1); }
-.mood[aria-checked='true'] .mood__orb { outline-color: var(--text-1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 18px 1px color-mix(in oklab, var(--o2) 65%, transparent); }
+.mood[aria-checked='true'] .mood__orb { outline-color: var(--text-1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 18px 1px color-mix(in oklab, var(--o2) var(--orb-glow, 65%), transparent); }
 .mood:focus-visible { outline: none; }
 .mood:focus-visible .mood__orb { outline-color: var(--focus); }
 .mood__label { font-size: var(--fs-small); font-weight: 550; white-space: nowrap; }

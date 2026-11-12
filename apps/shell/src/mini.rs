@@ -11,7 +11,9 @@ use tauri_plugin_window_state::AppHandleExt;
 use crate::{
     MAIN, MINI,
     error::{ShellError, ShellResult},
-    platform, window,
+    platform,
+    settings::Settings,
+    window,
 };
 
 /// Размер окна, логические пиксели: обложка 72 и две строки, кнопки, полоса прокрутки.
@@ -91,6 +93,12 @@ fn build(app: &AppHandle) -> ShellResult<WebviewWindow> {
     let dev_url = app.config().build.dev_url.clone();
     let opener = app.clone();
     let (x, y) = first_position(main.as_ref());
+    // Тема — как у главного окна, фон — её цвета с первого кадра
+    let choice = app.state::<Settings>().theme();
+    let theme = main
+        .as_ref()
+        .map(|m| window::effective_theme(m, choice))
+        .unwrap_or(tauri::Theme::Dark);
     let builder = WebviewWindowBuilder::new(app, MINI, WebviewUrl::App("mini".into()))
         .title("DalyWave")
         .inner_size(WIDTH, HEIGHT)
@@ -101,7 +109,8 @@ fn build(app: &AppHandle) -> ShellResult<WebviewWindow> {
         .always_on_top(true)
         .visible(false)
         .focused(true)
-        .background_color(tauri::window::Color(8, 9, 12, 255))
+        .theme(window::window_theme(choice))
+        .background_color(window::background_color(theme))
         .initialization_script(&script)
         .on_navigation(move |url| {
             if window::is_app_url(url, dev_url.as_ref()) {

@@ -17,7 +17,7 @@ withDefaults(defineProps<{
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--hi-rgb), 0.05), transparent);
   animation: shimmer 1.6s var(--ease-in-out) infinite;
 }
 .skel--line { height: 10px; border-radius: 5px; }

@@ -81,7 +81,7 @@ function update(v: unknown) {
 .seg--sm .seg__item { height: 26px; padding: 0 10px; font-size: var(--fs-caption); }
 .seg__icon { font-size: 16px; }
 .seg__item:hover { color: var(--text-1); }
-.seg__item[data-state='on'] { color: var(--text-1); background: var(--ink-4); box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--line); }
+.seg__item[data-state='on'] { color: var(--text-1); background: var(--ink-4); box-shadow: 0 2px 8px -2px rgba(var(--shade-rgb), calc(0.6 * var(--shade-k))), inset 0 0 0 1px var(--line); }
 .seg__item[data-disabled] { color: var(--text-4); pointer-events: none; }
 .seg__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 8px var(--dot); }
 </style>

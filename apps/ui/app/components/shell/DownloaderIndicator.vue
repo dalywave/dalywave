@@ -51,7 +51,7 @@ const line = computed(() => {
 <style scoped>
 /* Как строка «Загрузка подписок» рядом */
 .dli { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: var(--r-3); text-align: left; transition: background-color var(--dur-1); }
-.dli:hover { background: var(--fill-1); }
+.dli:hover { background: var(--side-hover); }
 .dli:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .dli__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .dli__title { overflow: hidden; font-size: var(--fs-small); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

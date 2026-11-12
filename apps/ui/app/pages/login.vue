@@ -150,9 +150,9 @@ async function submit() {
 </template>
 
 <style scoped>
-.login { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 32px 16px; overflow: hidden; background: #020509; }
+.login { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 32px 16px; overflow: hidden; background: var(--stage); }
 .login__wave { position: absolute; inset: 0; }
-.login__wave::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 55% at 50% 50%, rgba(2, 5, 9, 0.78), rgba(2, 5, 9, 0.35) 70%, rgba(2, 5, 9, 0.6)); }
+.login__wave::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 55% at 50% 50%, color-mix(in srgb, var(--stage) 78%, transparent), color-mix(in srgb, var(--stage) 35%, transparent) 70%, color-mix(in srgb, var(--stage) 60%, transparent)); }
 .login__card {
   position: relative;
   display: flex;
@@ -161,7 +161,7 @@ async function submit() {
   width: min(420px, 100%);
   padding: 40px 32px 28px;
   border-radius: var(--r-6);
-  background: rgba(10, 12, 16, 0.6);
+  background: var(--card-glass);
   -webkit-backdrop-filter: blur(30px) saturate(1.4);
   backdrop-filter: blur(30px) saturate(1.4);
   box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
