@@ -206,7 +206,8 @@
     "routesHint": "Speakers, headphones, TVs",
     "system": "System default",
     "tab": "Browser tab",
-    "onlineOne": "Online"
+    "onlineOne": "Online",
+    "remote": "Remote"
   },
   "queue": {
     "now": "Now",

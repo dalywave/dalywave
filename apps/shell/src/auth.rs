@@ -660,6 +660,9 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
         },
     );
     log::info!("signed in, device token stored in the keychain");
+    // Часы получают свой ключ сразу, а не при следующем открытии
+    #[cfg(target_os = "ios")]
+    crate::watch::account_changed(true);
     // Загрузчик на компьютере работает, пока вход выполнен
     #[cfg(desktop)]
     crate::downloader::changed(&app);
@@ -723,6 +726,9 @@ pub async fn auth_logout(app: AppHandle) -> ShellResult<()> {
     sessions::remove(&app, &server);
     let _ = app.emit_to(MAIN, EVENT_CHANGED, Changed { session: None });
     log::info!("signed out, device token removed from the keychain");
+    // Сессия часов отозвана сервером вместе с этой; часы узнают сразу
+    #[cfg(target_os = "ios")]
+    crate::watch::account_changed(false);
     #[cfg(desktop)]
     crate::downloader::changed(&app);
     Ok(())

@@ -69,6 +69,8 @@ pub enum Platform {
     Ios,
     Ipados,
     Android,
+    /// Apple Watch: пульт, вход — от сопряжённого iPhone.
+    Watchos,
 }
 
 names!(Platform {
@@ -79,7 +81,15 @@ names!(Platform {
     Ios => "ios",
     Ipados => "ipados",
     Android => "android",
+    Watchos => "watchos",
 });
+
+impl Platform {
+    /// Устройство без своего входа: сессию ему выдаёт уже вошедшее приложение (часы — от iPhone).
+    pub fn is_paired_accessory(self) -> bool {
+        matches!(self, Platform::Watchos)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -197,6 +207,20 @@ pub struct AppToken {
     pub token: String,
     pub device: Device,
     pub user: User,
+}
+
+/// Сессия для сопряжённого устройства (Apple Watch) от уже вошедшего приложения. Это не новый
+/// способ входа: человек уже вошёл через daly.rest на iPhone, часы получают дочернюю сессию.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PairRequest {
+    /// Только `watchos`.
+    pub platform: Platform,
+    /// Имя для списка устройств; по умолчанию «Apple Watch».
+    #[serde(default)]
+    pub device_name: Option<String>,
+    #[serde(default)]
+    pub app_version: Option<String>,
 }
 
 #[cfg(test)]

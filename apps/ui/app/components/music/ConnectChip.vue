@@ -17,6 +17,7 @@ const ICON: Record<ConnectKind, string> = {
   phone: 'ph:device-mobile',
   tablet: 'ph:device-tablet',
   web: 'ph:browser',
+  watch: 'ph:watch',
 }
 
 const show = computed(() => connect.remote || connect.orphaned)

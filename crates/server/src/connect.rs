@@ -46,6 +46,8 @@ pub struct Link {
     pub last_seen: Instant,
     /// Устройство уже объявлено пропавшим.
     pub stale: bool,
+    /// Только пульт (часы): активным не становится, снимков не публикует.
+    pub remote: bool,
 }
 
 impl Default for Link {
@@ -55,6 +57,7 @@ impl Default for Link {
             connection: Uuid::now_v7(),
             last_seen: Instant::now(),
             stale: false,
+            remote: false,
         }
     }
 }
@@ -139,6 +142,29 @@ async fn hello_device(
     if link.device.as_deref().is_some_and(|d| d != hello.device_id) {
         release(st, user, link).await;
     }
+    upsert(st, principal, &hello, link.connection).await?;
+    link.device = Some(hello.device_id);
+    link.stale = false;
+    link.remote = hello.capabilities.remote;
+    announce(&st.db, &st.hub, user).await?;
+    // Новому устройству — кто играет и что: пульт сразу показывает трек и позицию
+    let (active, state) = playback(&st.db, user).await?;
+    Ok(Some(ServerEvent::ConnectActive(ConnectActive {
+        device_id: active,
+        from: None,
+        transfer: false,
+        state: state.map(|s| Box::new(s.advanced(Utc::now()))),
+    })))
+}
+
+/// Строка устройства в списке: представилось соединение `connection` (WebSocket или пульт по HTTP).
+async fn upsert(
+    st: &AppState,
+    principal: &Principal,
+    hello: &ConnectHello,
+    connection: Uuid,
+) -> AppResult<()> {
+    let user = principal.user.id;
     // У приложения имя — из входа: так оно и в админке, и в списке одно
     let app_name = match principal.device_id {
         Some(id) => {
@@ -149,7 +175,7 @@ async fn hello_device(
         None => None,
     };
     let name: String = app_name
-        .unwrap_or(hello.name)
+        .unwrap_or_else(|| hello.name.clone())
         .trim()
         .chars()
         .filter(|c| !c.is_control())
@@ -163,6 +189,7 @@ async fn hello_device(
     let capabilities = serde_json::to_value(hello.capabilities).unwrap_or_default();
     let version = hello
         .app_version
+        .as_ref()
         .map(|v| v.chars().take(40).collect::<String>());
     sqlx::query!(
         "INSERT INTO connect_devices (user_id, id, device_id, name, kind, platform, app_version, capabilities,
@@ -180,7 +207,7 @@ async fn hello_device(
         hello.platform.as_str(),
         version,
         capabilities,
-        link.connection,
+        connection,
     )
     .execute(&st.db)
     .await?;
@@ -192,17 +219,7 @@ async fn hello_device(
     )
     .execute(&st.db)
     .await?;
-    link.device = Some(hello.device_id);
-    link.stale = false;
-    announce(&st.db, &st.hub, user).await?;
-    // Новому устройству — кто играет и что: пульт сразу показывает трек и позицию
-    let (active, state) = playback(&st.db, user).await?;
-    Ok(Some(ServerEvent::ConnectActive(ConnectActive {
-        device_id: active,
-        from: None,
-        transfer: false,
-        state: state.map(|s| Box::new(s.advanced(Utc::now()))),
-    })))
+    Ok(())
 }
 
 async fn heartbeat(st: &AppState, user: Uuid, link: &mut Link) -> AppResult<()> {
@@ -308,7 +325,7 @@ async fn publish(
     link: &Link,
     state: PlaybackState,
 ) -> AppResult<Option<ServerEvent>> {
-    let Some(device) = link.device.clone() else {
+    let Some(device) = link.device.clone().filter(|_| !link.remote) else {
         return Ok(None);
     };
     let state = PlaybackState {
@@ -400,7 +417,7 @@ async fn command(
 }
 
 async fn claim(st: &AppState, user: Uuid, link: &Link) -> AppResult<()> {
-    let Some(device) = link.device.clone() else {
+    let Some(device) = link.device.clone().filter(|_| !link.remote) else {
         return Ok(());
     };
     let prev = set_active(&st.db, user, &device).await?;
@@ -436,7 +453,11 @@ async fn set_active(db: &PgPool, user: Uuid, device: &str) -> AppResult<Option<S
     Ok(row.prev)
 }
 
-async fn transfer(st: &AppState, user: Uuid, t: ConnectTransfer) -> AppResult<Option<ServerEvent>> {
+pub async fn transfer(
+    st: &AppState,
+    user: Uuid,
+    t: ConnectTransfer,
+) -> AppResult<Option<ServerEvent>> {
     let ack = |ok: bool, error: Option<&str>| {
         t.id.clone().map(|id| {
             ServerEvent::ConnectAck(ConnectAck {
@@ -450,6 +471,10 @@ async fn transfer(st: &AppState, user: Uuid, t: ConnectTransfer) -> AppResult<Op
     };
     if !is_online(&st.db, user, &t.to).await? {
         return Ok(ack(false, Some("offline")));
+    }
+    // Звук на часах не играет: перенос туда оставил бы человека в тишине
+    if is_remote(&st.db, user, &t.to).await? {
+        return Ok(ack(false, Some("unsupported")));
     }
     let mut tx = st.db.begin().await?;
     let row = sqlx::query!(
@@ -510,6 +535,18 @@ async fn is_online(db: &PgPool, user: Uuid, device: &str) -> AppResult<bool> {
     .fetch_optional(db)
     .await?;
     Ok(online.unwrap_or(false))
+}
+
+async fn is_remote(db: &PgPool, user: Uuid, device: &str) -> AppResult<bool> {
+    let remote = sqlx::query_scalar!(
+        r#"SELECT coalesce((capabilities->>'remote')::boolean, false) AS "remote!"
+           FROM connect_devices WHERE user_id = $1 AND id = $2"#,
+        user,
+        device,
+    )
+    .fetch_optional(db)
+    .await?;
+    Ok(remote.unwrap_or(false))
 }
 
 fn parse_state(json: serde_json::Value) -> Option<PlaybackState> {
@@ -602,5 +639,131 @@ pub async fn overview(db: &PgPool, user: Uuid) -> AppResult<ConnectOverview> {
         devices: list.devices,
         active_device_id: list.active_device_id,
         state: state.map(|s| s.advanced(Utc::now())),
+    })
+}
+
+// ---------- Пульт по HTTP ----------
+//
+// На часах WebSocket доступен только при своём звуке (watchOS ограничивает «низкоуровневую» сеть),
+// поэтому часы — пульт по HTTP: раз в пару секунд отмечаются и забирают состояние, команды шлют
+// запросом и ждут подтверждения устройства. Для остальных устройств это то же «Где играть».
+
+/// Сколько ждать подтверждения команды от устройства.
+pub const REMOTE_ACK_WAIT: Duration = Duration::from_secs(4);
+
+/// Пульт без WebSocket отметился: устройство в сети ещё [`ONLINE_WINDOW_SECS`] секунд. Соединение —
+/// id сессии: строка остаётся за этим пультом, пока он отмечается. В ответ — список и снимок без
+/// очереди (пульту на запястье она не нужна, а снимок с очередью большой).
+pub async fn remote_presence(
+    st: &AppState,
+    principal: &Principal,
+    hello: ConnectHello,
+) -> AppResult<ConnectOverview> {
+    let user = principal.user.id;
+    if valid_id(&hello.device_id) {
+        let was_online = is_online(&st.db, user, &hello.device_id).await?;
+        upsert(st, principal, &hello, principal.session_id).await?;
+        if !was_online {
+            announce(&st.db, &st.hub, user).await?;
+        }
+    }
+    let mut overview = overview(&st.db, user).await?;
+    if let Some(s) = overview.state.as_mut() {
+        s.manual.clear();
+        s.upcoming.clear();
+        s.history.clear();
+        s.peaks.clear();
+    }
+    Ok(overview)
+}
+
+/// Id устройства «Где играть», которым отмечалась эта сессия (пульт по HTTP).
+async fn remote_id(st: &AppState, principal: &Principal) -> AppResult<String> {
+    let id = sqlx::query_scalar!(
+        "SELECT id FROM connect_devices WHERE user_id = $1 AND connection = $2
+         ORDER BY last_seen_at DESC LIMIT 1",
+        principal.user.id,
+        principal.session_id,
+    )
+    .fetch_optional(&st.db)
+    .await?;
+    Ok(id.unwrap_or_else(|| "remote".into()))
+}
+
+/// Команда с пульта по HTTP: доставить устройству и дождаться его подтверждения.
+pub async fn remote_command(
+    st: &AppState,
+    principal: &Principal,
+    send: ConnectSend,
+) -> AppResult<ConnectAck> {
+    let user = principal.user.id;
+    let from = remote_id(st, principal).await?;
+    let answer = |ok: bool, error: Option<&str>| ConnectAck {
+        id: send.id.clone(),
+        to: None,
+        from: Some(send.to.clone()),
+        ok,
+        error: error.map(str::to_string),
+    };
+    if !is_online(&st.db, user, &send.to).await? {
+        return Ok(answer(false, Some("offline")));
+    }
+    // Подписка — до отправки: быстрое подтверждение не проскочит мимо
+    let mut events = st.hub.subscribe();
+    realtime::deliver(
+        &st.hub,
+        Audience::Device {
+            user,
+            device: send.to.clone(),
+        },
+        ServerEvent::ConnectCommand(ConnectCommand {
+            id: send.id.clone(),
+            from: from.clone(),
+            command: send.command.clone(),
+        }),
+    );
+    let wait = async {
+        loop {
+            match events.recv().await {
+                Ok(env) => {
+                    let mine = matches!(&env.to, Audience::Device { user: u, device } if *u == user && *device == from);
+                    if let (true, ServerEvent::ConnectAck(ack)) = (mine, &env.event)
+                        && ack.id == send.id
+                    {
+                        return Some(ack.clone());
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => return None,
+            }
+        }
+    };
+    Ok(match tokio::time::timeout(REMOTE_ACK_WAIT, wait).await {
+        Ok(Some(ack)) => ConnectAck { to: None, ..ack },
+        _ => answer(false, Some("timeout")),
+    })
+}
+
+/// Перенос с пульта по HTTP. Ответ — как подтверждение по WebSocket.
+pub async fn remote_transfer(
+    st: &AppState,
+    principal: &Principal,
+    t: ConnectTransfer,
+) -> AppResult<ConnectAck> {
+    let id = t.id.clone().unwrap_or_else(|| "transfer".into());
+    let to = t.to.clone();
+    let t = ConnectTransfer {
+        id: Some(id.clone()),
+        ..t
+    };
+    Ok(match transfer(st, principal.user.id, t).await? {
+        Some(ServerEvent::ConnectAck(ack)) => ack,
+        _ => ConnectAck {
+            id,
+            to: None,
+            from: Some(to),
+            ok: true,
+            error: None,
+        },
     })
 }

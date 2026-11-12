@@ -37,6 +37,8 @@ mod snap;
 mod tray;
 #[cfg(desktop)]
 mod updates;
+// Apple Watch (iPhone): ключ для часов через WatchConnectivity — Swift зовёт сюда
+mod watch;
 mod window;
 
 use serde::Serialize;
@@ -261,6 +263,9 @@ pub fn run() {
     recognize::install(app.handle());
     // Siri: SiriKit будит приложение `application:handleIntent:…` — метод нужен до запуска цикла
     siri::install(app.handle());
+    // Apple Watch: часы могут разбудить iPhone в фоне просьбой о ключе — приложение нужно сразу
+    #[cfg(target_os = "ios")]
+    watch::install(app.handle());
 
     app.run(|app, event| {
         match event {

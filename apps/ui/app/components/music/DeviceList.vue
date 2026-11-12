@@ -24,6 +24,7 @@ const ICON: Record<PlaybackDevice['kind'], string> = {
   phone: 'ph:device-mobile',
   tablet: 'ph:device-tablet',
   web: 'ph:browser',
+  watch: 'ph:watch',
 }
 
 // Звук играет не здесь — активное устройство первым, отдельным разделом
@@ -44,7 +45,7 @@ function meta(d: PlaybackDevice) {
   return kindLabel(d)
 }
 
-const kindLabel = (d: PlaybackDevice) => (d.kind === 'web' ? t('devices.tab') : t('devices.onlineOne'))
+const kindLabel = (d: PlaybackDevice) => (d.remote ? t('devices.remote') : d.kind === 'web' ? t('devices.tab') : t('devices.onlineOne'))
 
 const routeHint = computed(() => out.current.value?.name ?? t('devices.routesHint'))
 
@@ -98,7 +99,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 
     <section v-if="others.length" class="dsec">
       <h3 class="dsec__title">{{ t('devices.otherApps') }}</h3>
-      <button v-for="d in others" :key="d.id" type="button" class="drow" :class="{ 'is-offline': !d.online }" @click="emit('select', d)">
+      <button v-for="d in others" :key="d.id" type="button" class="drow" :class="{ 'is-offline': !d.online, 'is-remote': d.remote }" :disabled="d.remote" @click="emit('select', d)">
         <Icon :name="ICON[d.kind]" class="drow__icon" />
         <span class="drow__text">
           <span class="drow__name ellipsis">{{ d.name }}</span>
@@ -162,8 +163,9 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
       type="button"
       role="listitem"
       class="dev"
-      :class="{ 'is-current': isOn(d), 'is-offline': !d.online, 'is-cta': d.current && !isOn(d) }"
+      :class="{ 'is-current': isOn(d), 'is-offline': !d.online, 'is-cta': d.current && !isOn(d), 'is-remote': d.remote }"
       :aria-current="isOn(d) || undefined"
+      :disabled="d.remote && !d.current"
       @click="emit('select', d)"
     >
       <span class="dev__icon"><Icon :name="ICON[d.kind]" /></span>
@@ -233,6 +235,9 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .dev__meta { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--text-3); }
 .dev.is-offline { opacity: 0.5; }
 .dev.is-current.is-offline { opacity: 0.7; }
+/* Часы — пульт: видны в списке, но перенести на них звук нельзя */
+.dev.is-remote { cursor: default; }
+.dev.is-remote:hover { background: transparent; }
 .dev.is-cta .dev__meta { color: var(--accent); }
 .dev__check { font-size: 18px; color: var(--accent); }
 .dev__chev, .drow__chev { flex: none; font-size: 16px; color: var(--text-3); }
@@ -269,6 +274,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .drow__name { font-size: 17px; font-weight: 500; }
 .drow__meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--text-3); }
 .drow.is-offline .drow__name, .drow.is-offline .drow__icon { color: var(--text-3); }
+.drow.is-remote:active { background: transparent; }
 .drow__check { flex: none; font-size: 18px; color: var(--accent); }
 .drow__check--cta { font-size: 24px; }
 .drow.is-cta .drow__meta { color: var(--accent); }

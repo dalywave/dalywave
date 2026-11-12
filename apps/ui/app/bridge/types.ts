@@ -117,7 +117,7 @@ export type SourceResult =
 export interface PlaybackDevice {
   id: string
   name: string
-  kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web'
+  kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web' | 'watch'
   /** Это устройство */
   current: boolean
   online: boolean
@@ -126,6 +126,8 @@ export interface PlaybackDevice {
   active?: boolean
   /** Громкость меняется с пульта */
   volume?: boolean
+  /** Только пульт (часы): звук там не играет, перенести туда нельзя */
+  remote?: boolean
 }
 
 /** Куда идёт звук этого устройства: динамики, наушники, Bluetooth, AirPlay */

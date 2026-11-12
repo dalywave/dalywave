@@ -164,6 +164,7 @@ pub async fn revoke(conn: &mut PgConnection, id: Uuid) -> AppResult<Option<Revok
         )
         .execute(&mut *conn)
         .await?;
+        crate::devices::revoke_paired(conn, device).await?;
     }
     Ok(revoked)
 }

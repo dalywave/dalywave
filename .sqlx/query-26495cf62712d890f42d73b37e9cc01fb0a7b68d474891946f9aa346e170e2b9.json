@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT d.paired_from, s.auth_method FROM devices d JOIN sessions s ON s.device_id = d.id\n         WHERE d.id = $1 AND s.id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "paired_from",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "devices",
+            "name": "paired_from"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "auth_method",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "auth_method"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "26495cf62712d890f42d73b37e9cc01fb0a7b68d474891946f9aa346e170e2b9"
+}
