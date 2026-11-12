@@ -74,7 +74,7 @@ app: sidecar ## приложение macOS с загрузчиком: DalyWave.a
 # Выпуск приложения (apps/shell/README.md, «Выпуск»): версия — одна, в apps/shell/Cargo.toml.
 # release-mac собирает с подписью обновлений, кладёт архив в R2 по ссылке от сервера и регистрирует
 # выпуск. Токен выпусков — DALYWAVE_RELEASE_TOKEN или связка ключей (запись dalywave-release-token)
-bump-version: ## новая версия приложения: make bump-version VERSION=0.2.0
+bump-version: ## новая версия приложения: make bump-version [VERSION=0.2.0], без VERSION — +1 к последней цифре
 	@bash apps/shell/scripts/bump-version.sh "$(VERSION)"
 
 release-mac: ## собрать и выпустить приложение macOS на сервер обновлений: make release-mac [NOTES="…"]
