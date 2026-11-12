@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM friendships WHERE user_id = $1 AND friend_id = $2) AS \"friend!\",\n                  EXISTS (SELECT 1 FROM friend_requests WHERE from_user = $1 AND to_user = $2) AS \"outgoing!\",\n                  EXISTS (SELECT 1 FROM friend_requests\n                          WHERE from_user = $2 AND to_user = $1 AND declined_at IS NULL) AS \"incoming!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "friend!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "outgoing!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "incoming!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "80459673d559b549f3071223d27e55ee3ed74758124f35dfa2409e004d1083a9"
+}

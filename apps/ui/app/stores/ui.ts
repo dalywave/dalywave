@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-export type PanelTab = 'queue' | 'lyrics' | 'devices' | 'about' | 'jam'
+export type PanelTab = 'queue' | 'lyrics' | 'devices' | 'about' | 'jam' | 'friends'
 
 // Состояние оболочки: правая панель, полноэкранный плеер, ширина экрана
 export const useUiStore = defineStore('ui', () => {
@@ -48,6 +48,11 @@ export const useUiStore = defineStore('ui', () => {
 
   function openPanel(tab: PanelTab) {
     if (tab === 'lyrics' && openLyricsInPlayer()) return
+    // Друзья под пальцем — отдельный раздел, а не лист
+    if (tab === 'friends' && isTouchUi.value) {
+      void navigate('/friends')
+      return
+    }
     if (isTouchUi.value) {
       sheetTab.value = tab
       return
@@ -62,6 +67,7 @@ export const useUiStore = defineStore('ui', () => {
       return
     }
     if (tab === 'lyrics' && openLyricsInPlayer()) return
+    if (tab === 'friends' && isTouchUi.value) return openPanel(tab)
     if (isTouchUi.value) {
       sheetTab.value = sheetTab.value === tab ? null : tab
       return

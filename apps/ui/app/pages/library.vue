@@ -368,6 +368,7 @@ async function newFolder() {
 }
 
 const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpperCase())
+const friends = useFriendsStore()
 </script>
 
 <template>
@@ -389,6 +390,11 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
       <!-- Новый плейлист: на телефоне — лист снизу, на компьютере — всплывающая панель у кнопки -->
       <!-- «Недавно прослушанное» -->
       <UiIconButton icon="ph:clock-counter-clockwise" :label="tg('nav.history')" :size="ui.isTouchUi ? 'lg' : 'sm'" :tooltip="ui.isTouchUi ? false : undefined" to="/history" class="lib__hist" />
+      <!-- Друзья: что слушают, запросы; точка — ждут ответа -->
+      <span v-if="ui.isTouchUi" class="lib__friends">
+        <UiIconButton icon="ph:users-three" :label="tg('friends.title')" size="lg" :tooltip="false" to="/friends" />
+        <span v-if="friends.incoming.length" class="lib__dot" aria-hidden="true" />
+      </span>
       <template v-if="ui.isTouchUi">
         <UiIconButton icon="ph:plus" :label="t('newPlaylist')" size="lg" :tooltip="false" class="lib__plus" @click="createOpen = true" />
         <UiSheet v-model:open="createOpen" :title="t('newPlaylist')">
@@ -532,6 +538,8 @@ const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpper
 .lib__avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--hair); font-size: 15px; font-weight: 700; }
 .lib__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .lib__avatar:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.lib__friends { position: relative; display: inline-grid; flex: none; }
+.lib__dot { position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--ink-1); pointer-events: none; }
 
 .newpl { display: flex; flex-direction: column; gap: 8px; padding: 0 6px 6px; }
 .newpl__input { height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-1); font: inherit; }

@@ -56,13 +56,17 @@
       "import": "Music transfer",
       "rewind": "Year in review",
       "review": "Disputed tracks",
-      "sources": "Sources"
+      "sources": "Sources",
+      "friends": "Friends",
+      "shared_playlist": "Shared playlists"
     },
     "kindDesc": {
       "release": "From artists you follow",
       "import": "When a transfer finishes",
       "review": "Waiting for a decision in admin",
-      "sources": "When YouTube stops serving audio"
+      "sources": "When YouTube stops serving audio",
+      "friends": "Friend requests",
+      "shared_playlist": "Invites and new tracks"
     },
     "quiet": "Quiet hours",
     "quietDesc": "Notifications wait until morning",
@@ -267,6 +271,15 @@
     "saveFailed": "Couldn’t save the playlist"
   },
   "pl": {
+    "reorder": "Reorder",
+    "invite": "Invite friends",
+    "people": "People",
+    "leave": "Leave playlist",
+    "leaveTitle": "Leave “{title}”?",
+    "leaveText": "The playlist will disappear from your library. You can come back with a link or an invite.",
+    "left": "You left “{title}”",
+    "shared": "Shared playlist",
+    "addedBy": "Added by {name}",
     "kind": {
       "user": "Playlist",
       "smart": "Smart playlist",
@@ -656,5 +669,28 @@
     "sped_up": "Sped up",
     "soon": "{kind} will start in a moment",
     "unavailable": "{kind} isn’t available right now"
+  },
+  "friends": {
+    "title": "Friends",
+    "activity": "Friends now",
+    "panel": "Friend activity",
+    "all": "All friends",
+    "failed": "Something went wrong — try again",
+    "nowFriends": "You and {name} are friends now",
+    "sent": "Request sent",
+    "removed": "{name} is no longer your friend",
+    "private": "Private session",
+    "privateHint": "Friends can’t see what you play",
+    "privateOn": "Private session is on",
+    "privateOff": "Private session is off",
+    "privateUntil": "until {time}",
+    "private6h": "For 6 hours",
+    "privateUntilOff": "Until I turn it off",
+    "privateStop": "Turn off",
+    "share": "Show friends what I play",
+    "now": "now",
+    "listenTogether": "Listen together",
+    "add": "Add friend",
+    "empty": "No friends yet"
   }
 }

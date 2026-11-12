@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT invite_code FROM social_settings WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "invite_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "social_settings",
+            "name": "invite_code"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "52750c81dd84a6031011a6800ae33b2be6d90579b796bc5bc6880d9d31467d1a"
+}

@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.title, al.id AS \"album_id?\", al.cover_key AS \"cover_key?\", al.cover_source AS \"cover_source?\",\n                  (SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                   WHERE ta.track_id = t.id ORDER BY ta.position LIMIT 1) AS artist\n           FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)\n           JOIN tracks t ON t.id = ids.id\n           LEFT JOIN albums al ON al.id = t.album_id\n           ORDER BY ids.ord LIMIT 20",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "album_id?",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "cover_key?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cover_source?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_source"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "artist",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "ebfed059245ba54b3506451a1155372ef8b1e87793bd2ea662dd78f8ba040b14"
+}

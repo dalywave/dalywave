@@ -16,6 +16,7 @@ mod explicit;
 mod fake_ml;
 mod fetcher;
 mod folders;
+mod friends;
 mod history;
 mod home;
 mod images;

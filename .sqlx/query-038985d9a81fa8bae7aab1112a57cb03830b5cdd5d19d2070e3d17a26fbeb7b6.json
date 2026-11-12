@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_members SET pinned = $3 WHERE playlist_id = $1 AND user_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "038985d9a81fa8bae7aab1112a57cb03830b5cdd5d19d2070e3d17a26fbeb7b6"
+}

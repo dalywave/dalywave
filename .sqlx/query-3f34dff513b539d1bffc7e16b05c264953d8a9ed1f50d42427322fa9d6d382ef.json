@@ -1,0 +1,110 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.title, p.description, p.kind, p.created_at, p.updated_at, p.collaborative,\n                  p.friends_can_see, p.user_id AS owner_id,\n                  p.folder_id AS \"folder_id?\", p.position AS \"position!\", p.pinned AS \"pinned!\", p.rev AS \"rev!\"\n           FROM playlists p\n           WHERE p.user_id = $1 AND p.txid >= $2::text::xid8 AND p.rev > $3\n           UNION ALL\n           SELECT p.id, p.title, p.description, p.kind, p.created_at, p.updated_at, p.collaborative,\n                  p.friends_can_see, p.user_id, NULL, m.position, m.pinned, GREATEST(p.rev, m.rev)\n           FROM playlist_members m JOIN playlists p ON p.id = m.playlist_id\n           WHERE m.user_id = $1 AND p.collaborative AND (p.txid >= $2::text::xid8 OR m.txid >= $2::text::xid8)\n             AND GREATEST(p.rev, m.rev) > $3\n           ORDER BY 13 LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "collaborative",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "friends_can_see",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "owner_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "folder_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "position!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "pinned!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "rev!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3f34dff513b539d1bffc7e16b05c264953d8a9ed1f50d42427322fa9d6d382ef"
+}

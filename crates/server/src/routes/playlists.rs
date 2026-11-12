@@ -18,6 +18,7 @@ use dalywave_protocol::{
         PlaylistPatch, PlaylistSummary, RemovePlaylistItems,
     },
     realtime::{LibraryChange, ServerEvent},
+    social::{PersonRef, PlaylistAccess},
     sync::SyncEntity,
 };
 use sqlx::{PgConnection, PgPool};
@@ -93,41 +94,85 @@ async fn rebalance(conn: &mut PgConnection, playlist_id: Uuid) -> Result<(), sql
     Ok(())
 }
 
-/// Плейлист человека под замком: правки одного плейлиста идут по очереди.
-async fn lock_owned(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> AppResult<()> {
-    sqlx::query_scalar!(
-        "SELECT id FROM playlists WHERE id = $1 AND user_id = $2 FOR UPDATE",
+/// Кем плейлист приходится человеку — под замком: правки одного плейлиста идут по очереди.
+#[derive(Debug, Clone)]
+pub(super) struct Locked {
+    pub kind: String,
+    pub owner: Uuid,
+    pub collaborative: bool,
+    pub member: bool,
+}
+
+impl Locked {
+    pub fn is_owner(&self, user: Uuid) -> bool {
+        self.owner == user
+    }
+}
+
+/// Плейлист, который человек ведёт сам или в котором он участник совместного. Чужой — 404.
+pub(super) async fn lock_any(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    id: Uuid,
+) -> AppResult<Locked> {
+    let row = sqlx::query!(
+        r#"SELECT p.kind, p.user_id, p.collaborative,
+                  EXISTS (SELECT 1 FROM playlist_members m WHERE m.playlist_id = p.id AND m.user_id = $2) AS "member!"
+           FROM playlists p WHERE p.id = $1 FOR UPDATE"#,
         id,
         user_id
     )
     .fetch_optional(&mut *conn)
     .await?
     .ok_or(AppError::NotFound)?;
-    Ok(())
+    let locked = Locked {
+        kind: row.kind,
+        owner: row.user_id,
+        collaborative: row.collaborative,
+        member: row.member && row.collaborative,
+    };
+    if !locked.is_owner(user_id) && !locked.member {
+        return Err(AppError::NotFound);
+    }
+    Ok(locked)
 }
 
-/// Как [`lock_owned`], но только для плейлистов, которые человек ведёт сам: миксы собираются
-/// рекомендациями и при следующей сборке затёрли бы правку — их сначала сохраняют копией.
+pub(super) fn owner_only() -> AppError {
+    AppError::Forbidden("Это может только владелец плейлиста".into())
+}
+
+fn read_only() -> AppError {
+    AppError::Conflict {
+        code: "read_only",
+        message: "Этот плейлист собирается сам — сохраните его как свой, чтобы менять".into(),
+    }
+}
+
+/// Треки плейлиста можно менять: свой плейлист вида `user` или совместный, где человек участник.
+/// Миксы собираются рекомендациями и при следующей сборке затёрли бы правку — их сначала сохраняют копией.
 pub(super) async fn lock_editable(
     conn: &mut PgConnection,
     user_id: Uuid,
     id: Uuid,
-) -> AppResult<()> {
-    let kind = sqlx::query_scalar!(
-        "SELECT kind FROM playlists WHERE id = $1 AND user_id = $2 FOR UPDATE",
-        id,
-        user_id
-    )
-    .fetch_optional(&mut *conn)
-    .await?
-    .ok_or(AppError::NotFound)?;
-    if kind != PlaylistKind::User.as_str() {
-        return Err(AppError::Conflict {
-            code: "read_only",
-            message: "Этот плейлист собирается сам — сохраните его как свой, чтобы менять".into(),
-        });
+) -> AppResult<Locked> {
+    let locked = lock_any(conn, user_id, id).await?;
+    if locked.kind != PlaylistKind::User.as_str() {
+        return Err(read_only());
     }
-    Ok(())
+    Ok(locked)
+}
+
+/// Название, описание, обложка, сет, удаление: только владелец своего плейлиста вида `user`.
+pub(super) async fn lock_own_editable(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    id: Uuid,
+) -> AppResult<Locked> {
+    let locked = lock_editable(conn, user_id, id).await?;
+    if !locked.is_owner(user_id) {
+        return Err(owner_only());
+    }
+    Ok(locked)
 }
 
 pub(super) async fn touch(conn: &mut PgConnection, id: Uuid) -> Result<(), sqlx::Error> {
@@ -146,6 +191,45 @@ pub(super) async fn changed(conn: &mut PgConnection, user_id: Uuid, entities: Ve
     .await;
 }
 
+/// Владелец и участники плейлиста.
+pub(super) async fn participants(
+    conn: &mut PgConnection,
+    id: Uuid,
+) -> Result<Vec<Uuid>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT user_id AS "user_id!" FROM playlists WHERE id = $1
+           UNION SELECT user_id FROM playlist_members WHERE playlist_id = $1"#,
+        id
+    )
+    .fetch_all(conn)
+    .await
+}
+
+/// Плейлист изменился — всем, у кого он в медиатеке: владельцу и участникам.
+pub(super) async fn changed_playlist(conn: &mut PgConnection, id: Uuid, entities: Vec<SyncEntity>) {
+    let users = match participants(&mut *conn, id).await {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::warn!(error = %e, "could not list playlist participants");
+            return;
+        }
+    };
+    for user in users {
+        changed(&mut *conn, user, entities.clone()).await;
+    }
+}
+
+/// Какие плейлисты показывать.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scope {
+    /// Медиатека человека: свои и совместные, где он участник.
+    Library,
+    /// То, что человек может открыть: медиатека и плейлисты друзей, открытые друзьям.
+    Readable,
+    /// Плейлисты друга (владелец), открытые друзьям.
+    Friend(Uuid),
+}
+
 /// Карточки плейлистов человека: закреплённые первыми, затем недавно изменённые.
 pub async fn summaries(
     db: &PgPool,
@@ -153,11 +237,33 @@ pub async fn summaries(
     only: Option<&[Uuid]>,
     pinned_only: bool,
 ) -> Result<Vec<PlaylistSummary>, sqlx::Error> {
+    summaries_in(db, user_id, Scope::Library, only, pinned_only).await
+}
+
+/// Карточки плейлистов глазами `user_id`. У чужого плейлиста место, папка и «закреплён» — из строки
+/// участника; плейлист друга — без них.
+pub async fn summaries_in(
+    db: &PgPool,
+    user_id: Uuid,
+    scope: Scope,
+    only: Option<&[Uuid]>,
+    pinned_only: bool,
+) -> Result<Vec<PlaylistSummary>, sqlx::Error> {
+    let (scope_name, friend) = match scope {
+        Scope::Library => ("library", None),
+        Scope::Readable => ("readable", None),
+        Scope::Friend(f) => ("friend", Some(f)),
+    };
     let rows = sqlx::query!(
-        r#"SELECT p.id, p.title, p.description, p.kind, p.pinned, p.cover_key, p.created_at, p.updated_at,
-                  p.folder_id, p.position, p.rules ->> 'generator' AS generator,
+        r#"SELECT p.id, p.title, p.description, p.kind, p.cover_key, p.created_at, p.updated_at,
+                  p.user_id AS owner_id, p.collaborative, p.friends_can_see,
+                  CASE WHEN p.user_id = $1 THEN p.folder_id END AS folder_id,
+                  CASE WHEN p.user_id = $1 THEN p.position ELSE COALESCE(m.position, p.position) END AS "position!",
+                  CASE WHEN p.user_id = $1 THEN p.pinned ELSE COALESCE(m.pinned, false) END AS "pinned!",
+                  (m.user_id IS NOT NULL AND p.collaborative) AS "member!",
+                  p.rules ->> 'generator' AS generator,
                   (SELECT max(e.started_at) FROM play_events e
-                   WHERE e.user_id = p.user_id AND e.context_type IN ('playlist', 'mix')
+                   WHERE e.user_id = $1 AND e.context_type IN ('playlist', 'mix')
                      AND e.context_id = p.id::text) AS played_at,
                   (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS "tracks_count!",
                   (SELECT COALESCE(sum(t.duration_ms), 0) FROM playlist_items i JOIN tracks t ON t.id = i.track_id
@@ -169,11 +275,23 @@ pub async fn summaries(
                       GROUP BY t.album_id ORDER BY first LIMIT 4) c
                     ORDER BY c.first) AS "cover_albums!"
            FROM playlists p
-           WHERE p.user_id = $1 AND ($2::uuid[] IS NULL OR p.id = ANY($2)) AND (NOT $3 OR p.pinned)
-           ORDER BY p.pinned DESC, p.updated_at DESC, p.id DESC"#,
+           LEFT JOIN playlist_members m ON m.playlist_id = p.id AND m.user_id = $1
+           WHERE ($2::uuid[] IS NULL OR p.id = ANY($2))
+             AND (NOT $3 OR CASE WHEN p.user_id = $1 THEN p.pinned ELSE COALESCE(m.pinned, false) END)
+             AND CASE $4::text
+                 WHEN 'library' THEN p.user_id = $1 OR (m.user_id IS NOT NULL AND p.collaborative)
+                 WHEN 'friend' THEN p.user_id = $5 AND p.kind = 'user' AND p.friends_can_see
+                     AND EXISTS (SELECT 1 FROM friendships f WHERE f.user_id = $1 AND f.friend_id = p.user_id)
+                 ELSE p.user_id = $1 OR (m.user_id IS NOT NULL AND p.collaborative)
+                     OR (p.kind = 'user' AND p.friends_can_see
+                         AND EXISTS (SELECT 1 FROM friendships f WHERE f.user_id = $1 AND f.friend_id = p.user_id))
+                 END
+           ORDER BY p.updated_at DESC, p.id DESC"#,
         user_id,
         only as Option<&[Uuid]>,
         pinned_only,
+        scope_name,
+        friend,
     )
     .fetch_all(db)
     .await?;
@@ -187,37 +305,95 @@ pub async fn summaries(
     .into_iter()
     .map(|r| (r.id, (r.cover_key, r.cover_source)))
     .collect();
+    // Владельцы чужих и участники совместных
+    let shared: Vec<Uuid> = rows
+        .iter()
+        .filter(|r| r.collaborative)
+        .map(|r| r.id)
+        .collect();
+    let mut members: HashMap<Uuid, Vec<PersonRef>> = HashMap::new();
+    if !shared.is_empty() {
+        for r in sqlx::query!(
+            "SELECT m.playlist_id, u.id, u.name, u.avatar_url FROM playlist_members m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.playlist_id = ANY($1) ORDER BY m.joined_at, u.id",
+            &shared
+        )
+        .fetch_all(db)
+        .await?
+        {
+            members.entry(r.playlist_id).or_default().push(PersonRef {
+                id: r.id,
+                name: r.name,
+                avatar_url: r.avatar_url,
+            });
+        }
+    }
+    let owner_ids: Vec<Uuid> = rows
+        .iter()
+        .filter(|r| r.owner_id != user_id)
+        .map(|r| r.owner_id)
+        .collect();
+    let owners = crate::social::people(db, &owner_ids).await?;
+    // Закреплённые первыми (у участника — по его строке), затем недавно изменённые
+    let mut rows = rows;
+    rows.sort_by(|a, b| {
+        b.pinned
+            .cmp(&a.pinned)
+            .then(b.updated_at.cmp(&a.updated_at))
+            .then(b.id.cmp(&a.id))
+    });
     Ok(rows
         .into_iter()
-        .map(|r| PlaylistSummary {
-            covers: r
-                .cover_albums
-                .iter()
-                .filter_map(|id| {
-                    let (key, source) = covers.get(id)?;
-                    image_set(ImageKind::Albums, *id, key.as_deref(), source.as_deref())
-                })
-                .collect(),
-            image: image_set(ImageKind::Playlists, r.id, r.cover_key.as_deref(), None),
-            id: r.id,
-            title: r.title,
-            description: r.description,
-            kind: r.kind.parse().unwrap_or(PlaylistKind::User),
-            pinned: r.pinned,
-            tracks_count: r.tracks_count,
-            duration_ms: r.duration_ms,
-            created_at: r.created_at,
-            updated_at: r.updated_at,
-            folder_id: r.folder_id,
-            position: r.position,
-            played_at: r.played_at,
-            generator: r.generator,
+        .map(|r| {
+            let access = if r.owner_id == user_id {
+                PlaylistAccess::Owner
+            } else if r.member {
+                PlaylistAccess::Member
+            } else {
+                PlaylistAccess::Viewer
+            };
+            PlaylistSummary {
+                covers: r
+                    .cover_albums
+                    .iter()
+                    .filter_map(|id| {
+                        let (key, source) = covers.get(id)?;
+                        image_set(ImageKind::Albums, *id, key.as_deref(), source.as_deref())
+                    })
+                    .collect(),
+                image: image_set(ImageKind::Playlists, r.id, r.cover_key.as_deref(), None),
+                owner: (access != PlaylistAccess::Owner)
+                    .then(|| owners.get(&r.owner_id).cloned())
+                    .flatten(),
+                members: if r.collaborative {
+                    members.remove(&r.id).unwrap_or_default()
+                } else {
+                    Vec::new()
+                },
+                id: r.id,
+                title: r.title,
+                description: r.description,
+                kind: r.kind.parse().unwrap_or(PlaylistKind::User),
+                pinned: r.pinned,
+                tracks_count: r.tracks_count,
+                duration_ms: r.duration_ms,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+                folder_id: r.folder_id,
+                position: r.position,
+                played_at: r.played_at,
+                generator: r.generator,
+                access,
+                collaborative: r.collaborative,
+                friends_can_see: r.friends_can_see,
+            }
         })
         .collect())
 }
 
 async fn summary(db: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<PlaylistSummary> {
-    summaries(db, user_id, Some(&[id]), false)
+    summaries_in(db, user_id, Scope::Readable, Some(&[id]), false)
         .await?
         .into_iter()
         .next()
@@ -226,7 +402,7 @@ async fn summary(db: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<PlaylistSumm
 
 async fn items(db: &PgPool, user_id: Uuid, ids: &[Uuid]) -> AppResult<Vec<PlaylistItem>> {
     let rows = sqlx::query!(
-        "SELECT id, track_id, position, added_at FROM playlist_items WHERE id = ANY($1) ORDER BY position, id",
+        "SELECT id, track_id, position, added_at, added_by FROM playlist_items WHERE id = ANY($1) ORDER BY position, id",
         ids
     )
     .fetch_all(db)
@@ -244,6 +420,7 @@ async fn items(db: &PgPool, user_id: Uuid, ids: &[Uuid]) -> AppResult<Vec<Playli
                 id: r.id,
                 position: r.position,
                 added_at: r.added_at,
+                added_by: r.added_by,
                 track: tracks.get(&r.track_id)?.clone(),
             })
         })
@@ -304,14 +481,16 @@ async fn insert_items(
     playlist_id: Uuid,
     track_ids: &[Uuid],
     positions: &[f64],
+    added_by: Uuid,
 ) -> Result<Vec<Uuid>, sqlx::Error> {
     sqlx::query_scalar!(
-        "INSERT INTO playlist_items (playlist_id, track_id, position)
-         SELECT $1, t, p FROM unnest($2::uuid[], $3::float8[]) AS x(t, p)
+        "INSERT INTO playlist_items (playlist_id, track_id, position, added_by)
+         SELECT $1, t, p, $4 FROM unnest($2::uuid[], $3::float8[]) AS x(t, p)
          RETURNING id",
         playlist_id,
         track_ids,
         positions,
+        added_by,
     )
     .fetch_all(conn)
     .await
@@ -364,7 +543,7 @@ pub async fn create(
     .fetch_one(&mut *tx)
     .await?;
     if let Some(positions) = positions_between(None, None, body.track_ids.len()) {
-        insert_items(&mut tx, id, &body.track_ids, &positions).await?;
+        insert_items(&mut tx, id, &body.track_ids, &positions, user).await?;
     }
     changed(
         &mut tx,
@@ -424,7 +603,7 @@ pub async fn update(
         .map(clean_description)
         .transpose()?;
     let mut tx = st.db.begin().await?;
-    lock_editable(&mut tx, user, id).await?;
+    lock_own_editable(&mut tx, user, id).await?;
     sqlx::query!(
         "UPDATE playlists SET title = COALESCE($2, title), description = COALESCE($3, description),
                 updated_at = now()
@@ -435,7 +614,7 @@ pub async fn update(
     )
     .execute(&mut *tx)
     .await?;
-    changed(&mut tx, user, vec![SyncEntity::Playlists]).await;
+    changed_playlist(&mut tx, id, vec![SyncEntity::Playlists]).await;
     tx.commit().await?;
     Ok(Json(summary(&st.db, user, id).await?))
 }
@@ -447,7 +626,8 @@ pub async fn update(
     security(("session" = []), ("device" = [])),
     params(("id" = Uuid, Path, description = "id плейлиста")),
     responses(
-        (status = 204, description = "Плейлист удалён вместе с позициями"),
+        (status = 204, description = "Плейлист удалён вместе с позициями (и у участников)"),
+        (status = 403, description = "Участник совместного плейлиста — может только выйти", body = ErrorBody),
         (status = 404, description = "Нет такого плейлиста", body = ErrorBody),
     ),
 )]
@@ -458,22 +638,22 @@ pub async fn remove(
 ) -> AppResult<StatusCode> {
     let user = principal.user.id;
     let mut tx = st.db.begin().await?;
-    let deleted = sqlx::query!(
-        "DELETE FROM playlists WHERE id = $1 AND user_id = $2",
-        id,
-        user
-    )
-    .execute(&mut *tx)
-    .await?;
-    if deleted.rows_affected() == 0 {
-        return Err(AppError::NotFound);
+    // Участник совместного плейлиста его не удаляет — он может только выйти
+    if !lock_any(&mut tx, user, id).await?.is_owner(user) {
+        return Err(owner_only());
     }
-    changed(
-        &mut tx,
-        user,
-        vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
-    )
-    .await;
+    let users = participants(&mut tx, id).await?;
+    sqlx::query!("DELETE FROM playlists WHERE id = $1", id)
+        .execute(&mut *tx)
+        .await?;
+    for u in users {
+        changed(
+            &mut tx,
+            u,
+            vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
+        )
+        .await;
+    }
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -503,7 +683,7 @@ pub async fn set_cover(
     // Сначала — есть ли что менять, чтобы не обрабатывать картинку зря
     {
         let mut tx = st.db.begin().await?;
-        lock_editable(&mut tx, user, id).await?;
+        lock_own_editable(&mut tx, user, id).await?;
     }
     if body.is_empty() {
         return Err(bad("файл пустой"));
@@ -525,7 +705,7 @@ pub async fn set_cover(
             .map_err(|e| AppError::Unavailable(format!("хранилище не приняло картинку: {e}")))?;
     }
     let mut tx = st.db.begin().await?;
-    lock_editable(&mut tx, user, id).await?;
+    lock_own_editable(&mut tx, user, id).await?;
     let old = sqlx::query_scalar!(
         "UPDATE playlists p SET cover_key = $2, updated_at = now()
          FROM (SELECT cover_key FROM playlists WHERE id = $1) old
@@ -535,7 +715,7 @@ pub async fn set_cover(
     )
     .fetch_one(&mut *tx)
     .await?;
-    changed(&mut tx, user, vec![SyncEntity::Playlists]).await;
+    changed_playlist(&mut tx, id, vec![SyncEntity::Playlists]).await;
     tx.commit().await?;
     if let Some(old) = old {
         drop_cover(&st, &old).await;
@@ -562,7 +742,7 @@ pub async fn remove_cover(
 ) -> AppResult<Json<PlaylistSummary>> {
     let user = principal.user.id;
     let mut tx = st.db.begin().await?;
-    lock_editable(&mut tx, user, id).await?;
+    lock_own_editable(&mut tx, user, id).await?;
     let old = sqlx::query_scalar!(
         "UPDATE playlists p SET cover_key = NULL, updated_at = now()
          FROM (SELECT cover_key FROM playlists WHERE id = $1) old
@@ -571,7 +751,7 @@ pub async fn remove_cover(
     )
     .fetch_one(&mut *tx)
     .await?;
-    changed(&mut tx, user, vec![SyncEntity::Playlists]).await;
+    changed_playlist(&mut tx, id, vec![SyncEntity::Playlists]).await;
     tx.commit().await?;
     if let Some(old) = old {
         drop_cover(&st, &old).await;
@@ -623,10 +803,11 @@ pub async fn duplicate(
     JsonOrDefault(body): JsonOrDefault<DuplicatePlaylist>,
 ) -> AppResult<(StatusCode, Json<PlaylistSummary>)> {
     let user = principal.user.id;
+    // Копию можно снять со всего, что человек может открыть: свой, совместный, плейлист друга
+    summary(&st.db, user, id).await?;
     let source = sqlx::query!(
-        "SELECT title, description, cover_key FROM playlists WHERE id = $1 AND user_id = $2",
-        id,
-        user
+        "SELECT title, description, cover_key FROM playlists WHERE id = $1",
+        id
     )
     .fetch_optional(&st.db)
     .await?
@@ -653,11 +834,12 @@ pub async fn duplicate(
     .execute(&mut *tx)
     .await?;
     sqlx::query!(
-        "INSERT INTO playlist_items (playlist_id, track_id, position)
-         SELECT $1, track_id, row_number() OVER (ORDER BY position, id) * 1024.0
+        "INSERT INTO playlist_items (playlist_id, track_id, position, added_by)
+         SELECT $1, track_id, row_number() OVER (ORDER BY position, id) * 1024.0, $3
          FROM playlist_items WHERE playlist_id = $2",
         new_id,
         id,
+        user,
     )
     .execute(&mut *tx)
     .await?;
@@ -676,10 +858,21 @@ pub async fn duplicate(
 
 async fn set_pinned(st: &AppState, user: Uuid, id: Uuid, pinned: bool) -> AppResult<StatusCode> {
     let mut tx = st.db.begin().await?;
-    lock_owned(&mut tx, user, id).await?;
-    sqlx::query!("UPDATE playlists SET pinned = $2 WHERE id = $1", id, pinned)
+    // У участника совместного «закреплён» — свой, в его строке участника
+    if lock_any(&mut tx, user, id).await?.is_owner(user) {
+        sqlx::query!("UPDATE playlists SET pinned = $2 WHERE id = $1", id, pinned)
+            .execute(&mut *tx)
+            .await?;
+    } else {
+        sqlx::query!(
+            "UPDATE playlist_members SET pinned = $3 WHERE playlist_id = $1 AND user_id = $2",
+            id,
+            user,
+            pinned
+        )
         .execute(&mut *tx)
         .await?;
+    }
     changed(&mut tx, user, vec![SyncEntity::Playlists]).await;
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
@@ -780,7 +973,7 @@ pub async fn add_items(
         return Err(bad("нет треков для добавления"));
     }
     let mut tx = st.db.begin().await?;
-    lock_editable(&mut tx, user, id).await?;
+    let locked = lock_editable(&mut tx, user, id).await?;
     check_tracks(&mut tx, &body.track_ids).await?;
     let n = body.track_ids.len();
     let find = async |tx: &mut PgConnection| -> AppResult<(Option<f64>, Option<f64>)> {
@@ -812,11 +1005,14 @@ pub async fn add_items(
                 .ok_or_else(|| AppError::Internal(anyhow::anyhow!("no room after rebalance")))?
         }
     };
-    let ids = insert_items(&mut tx, id, &body.track_ids, &positions).await?;
+    let ids = insert_items(&mut tx, id, &body.track_ids, &positions, user).await?;
     touch(&mut tx, id).await?;
-    changed(
+    if locked.collaborative {
+        super::collab::notify_added(&mut tx, id, user, &body.track_ids).await?;
+    }
+    changed_playlist(
         &mut tx,
-        user,
+        id,
         vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
     )
     .await;
@@ -860,9 +1056,9 @@ pub async fn remove_item(
         return Err(AppError::NotFound);
     }
     touch(&mut tx, id).await?;
-    changed(
+    changed_playlist(
         &mut tx,
-        user,
+        id,
         vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
     )
     .await;
@@ -904,9 +1100,9 @@ pub async fn remove_items(
     .execute(&mut *tx)
     .await?;
     touch(&mut tx, id).await?;
-    changed(
+    changed_playlist(
         &mut tx,
-        user,
+        id,
         vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
     )
     .await;
@@ -976,9 +1172,9 @@ pub async fn move_item(
     .execute(&mut *tx)
     .await?;
     touch(&mut tx, id).await?;
-    changed(
+    changed_playlist(
         &mut tx,
-        user,
+        id,
         vec![SyncEntity::Playlists, SyncEntity::PlaylistItems],
     )
     .await;

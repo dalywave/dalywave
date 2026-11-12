@@ -22,15 +22,18 @@ export function usePlaylistActions() {
   const t = useNuxtApp().$i18n.t
   const lang = useLang()
 
-  /** Плейлисты, которые человек ведёт сам: в них можно добавлять */
-  const own = computed(() => (library.playlists ?? []).filter(p => p.kind === 'user' && !pui.hidden.has(p.id)))
+  /** Плейлисты, в которые можно добавлять: свои и совместные, где человек участник */
+  const own = computed(() => (library.playlists ?? []).filter(p => editable(p) && !pui.hidden.has(p.id)))
 
-  const editable = (p: Pick<PlaylistSummary, 'kind'>) => p.kind === 'user'
+  /** Треки можно менять: свой плейлист (не микс) или совместный, где человек участник */
+  const editable = (p: Pick<PlaylistSummary, 'kind'> & { access?: PlaylistSummary['access'] }) => p.kind === 'user' && (p.access ?? 'owner') !== 'viewer'
+  /** Название, обложка, сет, удаление — только владелец */
+  const isOwner = (p: { access?: PlaylistSummary['access'] }) => (p.access ?? 'owner') === 'owner'
 
-  /** Подпись под названием: «Плейлист · 12 треков», пустой — «Пустой плейлист» */
+  /** Подпись под названием: «Плейлист · 12 треков», чужой — «Маша · 12 треков», пустой — «Пустой плейлист» */
   function subOf(p: PlaylistSummary): string {
-    if (!p.tracksCount && editable(p)) return t('pl.empty')
-    const kind = p.kind === 'mix' ? t('pl.kind.mix') : p.kind === 'smart' ? t('pl.kind.smart') : t('pl.kind.user')
+    if (!p.tracksCount && editable(p) && isOwner(p)) return t('pl.empty')
+    const kind = p.owner ? p.owner.name : p.kind === 'mix' ? t('pl.kind.mix') : p.kind === 'smart' ? t('pl.kind.smart') : t('pl.kind.user')
     return `${kind} · ${formatCount(p.tracksCount, 'track', lang.value)}`
   }
 
@@ -132,9 +135,28 @@ export function usePlaylistActions() {
     return ui.navigate(`/playlist/${p.id}?edit=1`)
   }
 
+  /** Выйти из совместного: подтверждение, затем плейлист пропадает из медиатеки */
+  async function leave(p: PlaylistSummary) {
+    const me = useAuthStore().user?.id
+    if (!me) return
+    const ok = await pui.confirm({ title: t('pl.leaveTitle', { title: p.title }), text: t('pl.leaveText'), action: t('pl.leave'), danger: true })
+    if (!ok) return
+    try {
+      await bridge.playlists.removeMember(p.id, me)
+      if (route.path === `/playlist/${p.id}`) await ui.navigate('/library')
+      await refresh()
+      toast.show({ text: t('pl.left', { title: p.title }), icon: 'ph:sign-out' })
+    }
+    catch {
+      toast.error(t('pl.failed'))
+    }
+  }
+
   /** Меню плейлиста — правый щелчок, долгое нажатие или «⋯». `page` — меню в шапке самого плейлиста */
   function menuFor(p: PlaylistSummary, opts: { page?: boolean } = {}): MenuEntry[] {
-    const mine = editable(p)
+    const mine = editable(p) && isOwner(p)
+    const member = p.access === 'member'
+    const viewer = p.access === 'viewer'
     const entries: MenuEntry[] = []
     if (!opts.page) {
       entries.push(
@@ -146,12 +168,16 @@ export function usePlaylistActions() {
       )
     }
     if (mine) entries.push({ label: t('pl.edit'), icon: 'ph:pencil-simple', onSelect: () => void edit(p) })
+    else if (member) entries.push({ label: t('pl.reorder'), icon: 'ph:list-numbers', onSelect: () => void edit(p) })
     else entries.push({ label: t('pl.saveAs'), icon: 'ph:plus-circle', onSelect: () => void duplicate(p) })
-    // Сет из двух треков не собрать; микс собирается в свою копию
-    if (p.tracksCount > 2) entries.push({ label: t('pl.set.title'), icon: 'ph:vinyl-record', onSelect: () => pui.openSet(p) })
-    entries.push({ label: p.pinned ? t('pl.unpin') : t('pl.pin'), icon: p.pinned ? 'ph:push-pin-slash' : 'ph:push-pin', onSelect: () => void library.setPinned(p, !p.pinned) })
-    entries.push(tree.moveMenu(p))
-    if (offline.available && p.tracksCount) {
+    // Совместный: позвать друзей и ссылка (владелец), кто в плейлисте (участник)
+    if (mine) entries.push({ label: p.collaborative ? t('pl.people') : t('pl.invite'), icon: 'ph:user-plus', onSelect: () => pui.openPeople(p) })
+    else if (member) entries.push({ label: t('pl.people'), icon: 'ph:users-three', onSelect: () => pui.openPeople(p) })
+    // Сет из двух треков не собрать; микс собирается в свою копию; совместный собирает только владелец
+    if (p.tracksCount > 2 && !member && !viewer) entries.push({ label: t('pl.set.title'), icon: 'ph:vinyl-record', onSelect: () => pui.openSet(p) })
+    if (!viewer) entries.push({ label: p.pinned ? t('pl.unpin') : t('pl.pin'), icon: p.pinned ? 'ph:push-pin-slash' : 'ph:push-pin', onSelect: () => void library.setPinned(p, !p.pinned) })
+    if (!member && !viewer) entries.push(tree.moveMenu(p))
+    if (offline.available && p.tracksCount && !viewer) {
       entries.push(offline.isPinned('playlist', p.id)
         ? { label: t('offline.remove'), icon: 'ph:x-circle', onSelect: () => void offline.unpin('playlist', p.id, p.title) }
         : { label: t('pl.download'), icon: 'ph:arrow-circle-down', onSelect: () => void offline.pin('playlist', p.id, p.title) })
@@ -161,6 +187,13 @@ export function usePlaylistActions() {
         { label: t('pl.duplicate'), icon: 'ph:copy', onSelect: () => void duplicate(p) },
         { kind: 'separator' },
         { label: t('pl.delete'), icon: 'ph:trash', danger: true, onSelect: () => void remove(p) },
+      )
+    }
+    if (member) {
+      entries.push(
+        { label: t('pl.duplicate'), icon: 'ph:copy', onSelect: () => void duplicate(p) },
+        { kind: 'separator' },
+        { label: t('pl.leave'), icon: 'ph:sign-out', danger: true, onSelect: () => void leave(p) },
       )
     }
     return entries
@@ -197,5 +230,5 @@ export function usePlaylistActions() {
     ]
   }
 
-  return { own, editable, subOf, addTo, createWith, duplicate, remove, enqueue, edit, menuFor, likedMenu, pick: pui.pick }
+  return { own, editable, isOwner, subOf, addTo, createWith, duplicate, remove, leave, enqueue, edit, menuFor, likedMenu, pick: pui.pick }
 }

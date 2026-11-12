@@ -307,6 +307,7 @@ onBeforeUnmount(() => {
           </div>
           <div v-if="entry?.reason" class="fp__reason"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
           <MusicConnectChip class="fp__connect" />
+          <FriendsPrivateChip class="fp__connect" />
           <div class="fp__chips">
             <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
             <UiBadge v-if="bpm" variant="meta">{{ bpm }}</UiBadge>
@@ -418,6 +419,7 @@ onBeforeUnmount(() => {
                 <MusicPlayerControls class="pp__controls tp__controls" :play-size="76" />
 
                 <MusicConnectChip class="pp__connect" />
+                <FriendsPrivateChip class="pp__connect" />
                 <div class="tp__secondary">
                   <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
                   <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
@@ -507,6 +509,7 @@ onBeforeUnmount(() => {
             <MusicPlayerControls class="pp__controls pp__dock" :play-size="80" />
 
             <MusicConnectChip class="pp__connect pp__dock" />
+            <FriendsPrivateChip class="pp__connect pp__dock" />
             <div class="pp__secondary pp__dock">
               <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
               <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />

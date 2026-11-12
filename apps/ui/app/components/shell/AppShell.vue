@@ -22,6 +22,8 @@ onMounted(() => useJamStore().init())
 onMounted(() => void useAccountSettings().load())
 // Уведомления: центр, живые `notification.*`, push этого устройства (без запроса разрешения)
 onMounted(() => useNotificationsStore().init())
+// Друзья: что слушают, запросы и приватная сессия (её видно в плеере и на аватаре)
+onMounted(() => useFriendsStore().init())
 
 // Окно приложения: во весь экран «светофора» нет, без фокуса заголовок приглушён
 const { win, titlebar, titlebarStyle } = useTitlebar()

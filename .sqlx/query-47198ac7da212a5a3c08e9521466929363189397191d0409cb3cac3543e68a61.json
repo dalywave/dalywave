@@ -1,29 +1,28 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT kind FROM playlists WHERE id = $1 AND user_id = $2 FOR UPDATE",
+  "query": "SELECT invite_code FROM playlists WHERE id = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "kind",
+        "name": "invite_code",
         "type_info": "Text",
         "origin": {
           "Table": {
             "table": "playlists",
-            "name": "kind"
+            "name": "invite_code"
           }
         }
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
         "Uuid"
       ]
     },
     "nullable": [
-      false
+      true
     ]
   },
-  "hash": "db7ab5e529e3226e490611b898bc873e940463510a5362a3b10f35af61c3ae49"
+  "hash": "47198ac7da212a5a3c08e9521466929363189397191d0409cb3cac3543e68a61"
 }

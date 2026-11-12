@@ -44,6 +44,17 @@ export const usePlaylistUi = defineStore('playlistUi', () => {
   /** Порядок плейлиста поменялся сборкой или «Отменить» — открытая страница перечитывает его */
   const reordered = ref<{ id: string, at: number } | null>(null)
 
+  /** «Совместный плейлист»: участники, позвать друзей, ссылка — для какого плейлиста открыт лист */
+  const peopleFor = ref<PlaylistSummary | null>(null)
+  const peopleOpen = ref(false)
+  /** Участники или «совместный» поменялись — открытая страница плейлиста перечитывает его */
+  const peopleChanged = ref(0)
+
+  function openPeople(p: PlaylistSummary) {
+    peopleFor.value = p
+    peopleOpen.value = true
+  }
+
   function openSet(p: PlaylistSummary) {
     setFor.value = p
     setOpen.value = true
@@ -94,5 +105,5 @@ export const usePlaylistUi = defineStore('playlistUi', () => {
     if (!open) submitPrompt(null)
   })
 
-  return { pickTracks, pickOpen, confirmReq, confirmOpen, promptReq, promptOpen, hidden, dragTracks, setFor, setOpen, reordered, pick, confirm, answer, prompt, submitPrompt, openSet }
+  return { pickTracks, pickOpen, confirmReq, confirmOpen, promptReq, promptOpen, hidden, dragTracks, setFor, setOpen, reordered, peopleFor, peopleOpen, peopleChanged, pick, confirm, answer, prompt, submitPrompt, openSet, openPeople }
 })

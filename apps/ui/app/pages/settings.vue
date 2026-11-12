@@ -116,6 +116,9 @@ const language = computed({
       </SettingsRow>
     </SettingsGroup>
 
+    <!-- Друзья: что видно друзьям и приватная сессия -->
+    <SettingsFriends />
+
     <SettingsGroup :title="t('playback')">
       <SettingsRow :title="t('normalize')">
         <UiSwitch v-model="player.normalize" :label="t('normalize')" hide-label />

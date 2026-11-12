@@ -117,6 +117,7 @@ function openDevices() {
         <MusicPlayerControls class="side__controls" :play-size="68" />
 
         <MusicConnectChip class="side__connect" />
+        <FriendsPrivateChip class="side__connect" />
         <div class="side__foot">
           <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" tone="solid" :active="connect.remote" :tooltip="false" @click="openDevices" />
           <span class="side__foot-end">

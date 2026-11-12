@@ -57,6 +57,7 @@ pub mod recognize;
 pub mod rewind;
 pub mod settings;
 pub mod share;
+pub mod social;
 pub mod stream;
 pub mod sync;
 pub mod system;

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM playlists WHERE id = $1 AND user_id = $2",
+  "query": "DELETE FROM friend_requests WHERE from_user = $1 AND to_user = $2",
   "describe": {
     "columns": [],
     "parameters": {
@@ -11,5 +11,5 @@
     },
     "nullable": []
   },
-  "hash": "e1bb2cf8e3afbf702f2121dc191bb698fffcd7622598934acaa37e60716e6f94"
+  "hash": "1c0270a75b04078469a125995648cf11f57bb7613788bc4a9eaa6a76dafab0ef"
 }

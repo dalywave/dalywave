@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT i.id, i.playlist_id, i.track_id, i.position, i.added_at, i.rev\n             FROM playlist_items i JOIN playlists p ON p.id = i.playlist_id\n             WHERE p.user_id = $1 AND i.txid >= $2::text::xid8 AND i.rev > $3 ORDER BY i.rev LIMIT $4",
+  "query": "SELECT i.id, i.playlist_id, i.track_id, i.position, i.added_at, i.added_by, i.rev\n             FROM playlist_items i JOIN playlists p ON p.id = i.playlist_id\n             WHERE (p.user_id = $1\n                    OR (p.collaborative\n                        AND EXISTS (SELECT 1 FROM playlist_members m WHERE m.playlist_id = p.id AND m.user_id = $1)))\n               AND i.txid >= $2::text::xid8 AND i.rev > $3 ORDER BY i.rev LIMIT $4",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,17 @@
       },
       {
         "ordinal": 5,
+        "name": "added_by",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlist_items",
+            "name": "added_by"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
         "name": "rev",
         "type_info": "Int8",
         "origin": {
@@ -84,8 +95,9 @@
       false,
       false,
       false,
+      true,
       false
     ]
   },
-  "hash": "9335305712c8d4498156e191d47afe102e741535b3d00901e36a4e87be3e0581"
+  "hash": "fd3855e9bfa4fac9960bd3cc80623dba93148a8e80c680e97f1ce6d5416f0f4f"
 }

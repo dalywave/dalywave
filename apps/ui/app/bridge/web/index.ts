@@ -466,6 +466,33 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       pin: (id, pinned) => (pinned
         ? done(api.PUT('/api/playlists/{id}/pin', { params: { path: { id } } }))
         : done(api.DELETE('/api/playlists/{id}/pin', { params: { path: { id } } }))),
+      setCollaborative: (id, on) => (on
+        ? unwrap(api.PUT('/api/playlists/{id}/collaborative', { params: { path: { id } } }))
+        : unwrap(api.DELETE('/api/playlists/{id}/collaborative', { params: { path: { id } } }))),
+      setVisibility: (id, friendsCanSee) => unwrap(api.PUT('/api/playlists/{id}/visibility', { params: { path: { id } }, body: { friendsCanSee } })),
+      invite: (id, reset) => (reset
+        ? unwrap(api.POST('/api/playlists/{id}/invite', { params: { path: { id } } }))
+        : unwrap(api.GET('/api/playlists/{id}/invite', { params: { path: { id } } }))),
+      addMembers: (id, userIds) => unwrap(api.POST('/api/playlists/{id}/members', { params: { path: { id } }, body: { userIds } })),
+      removeMember: (id, userId) => done(api.DELETE('/api/playlists/{id}/members/{userId}', { params: { path: { id, userId } } })),
+      joinPreview: code => unwrap(api.GET('/api/playlists/join/{code}', { params: { path: { code } } })),
+      join: code => unwrap(api.POST('/api/playlists/join/{code}', { params: { path: { code } } })),
+    },
+
+    friends: {
+      list: () => unwrap(api.GET('/api/friends')),
+      people: q => unwrap(api.GET('/api/friends/people', { params: { query: { q: q || undefined } } })),
+      request: userId => unwrap(api.POST('/api/friends/requests', { body: { userId } })),
+      cancel: userId => done(api.DELETE('/api/friends/requests/{userId}', { params: { path: { userId } } })),
+      accept: userId => unwrap(api.POST('/api/friends/requests/{userId}/accept', { params: { path: { userId } } })),
+      decline: userId => done(api.POST('/api/friends/requests/{userId}/decline', { params: { path: { userId } } })),
+      remove: userId => done(api.DELETE('/api/friends/{userId}', { params: { path: { userId } } })),
+      profile: userId => unwrap(api.GET('/api/friends/{userId}', { params: { path: { userId } } })),
+      invite: reset => (reset ? unwrap(api.POST('/api/friends/invite')) : unwrap(api.GET('/api/friends/invite'))),
+      invitePreview: code => unwrap(api.GET('/api/friends/invite/{code}', { params: { path: { code } } })),
+      useInvite: code => unwrap(api.POST('/api/friends/invite/{code}', { params: { path: { code } } })),
+      privacy: () => unwrap(api.GET('/api/friends/privacy')),
+      updatePrivacy: patch => unwrap(api.PATCH('/api/friends/privacy', { body: patch })),
     },
 
     wave: {

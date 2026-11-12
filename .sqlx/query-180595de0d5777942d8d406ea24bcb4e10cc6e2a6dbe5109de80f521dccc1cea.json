@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ta.artist_id, count(*) AS \"n!\"\n           FROM play_events e\n           JOIN track_artists ta ON ta.track_id = e.track_id AND ta.role = 'main'\n           WHERE e.user_id = $1 AND e.started_at > now() - make_interval(days => $2)\n             AND e.played_ms >= $3 AND NOT played_privately(e.user_id, e.started_at)\n           GROUP BY ta.artist_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_artists",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "180595de0d5777942d8d406ea24bcb4e10cc6e2a6dbe5109de80f521dccc1cea"
+}

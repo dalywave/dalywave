@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM play_events e\n           WHERE e.user_id = $1 AND e.started_at > now() - make_interval(days => $2)\n             AND e.played_ms >= $3 AND NOT played_privately(e.user_id, e.started_at)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e9d6557525df1d1f1a8c51f36543fa01687f00afa5080e57de41affb73db85c5"
+}
