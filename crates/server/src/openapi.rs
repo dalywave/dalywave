@@ -7,10 +7,10 @@ use utoipa::{
 };
 
 use crate::routes::{
-    acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, events, fetcher, home,
-    images, imports, jam, library, lyrics, notifications, offline, playlist_folders, playlist_set,
-    playlists, queue, reco, recognize, rewind, settings, share, sources, stream, sync, system,
-    taste, updates, wave, wave_presets, ws,
+    acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, describe, events,
+    fetcher, home, images, imports, jam, library, lyrics, notifications, offline, playlist_folders,
+    playlist_set, playlists, queue, reco, recognize, rewind, settings, share, sources, stream,
+    sync, system, taste, updates, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -77,6 +77,12 @@ use crate::routes::{
         wave::session,
         wave::next,
         wave::feedback,
+        describe::describe_preview,
+        describe::describe_more,
+        describe::save_described,
+        describe::described,
+        describe::update_described,
+        describe::extend_described,
         wave_presets::list,
         wave_presets::create,
         wave_presets::update,

@@ -303,7 +303,10 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       </template>
     </div>
 
-    <SearchSoundResults v-else-if="type === 'sound'" :text="q" />
+    <div v-else-if="type === 'sound'" class="results">
+      <SearchDescribeRow v-if="words >= 2" :text="q" />
+      <SearchSoundResults :text="q" />
+    </div>
 
     <div v-else-if="state === 'loading' && !results" class="search__skel" aria-busy="true">
       <template v-if="ui.isPhone">
@@ -326,6 +329,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
     </UiEmptyState>
 
     <div v-else-if="empty && scope === 'catalog' && words >= 2" class="results">
+      <SearchDescribeRow :text="q" />
       <SearchLyricsResults v-if="lyricLike" :text="q" />
       <SearchSoundResults :text="q" />
     </div>
@@ -379,6 +383,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
         </div>
 
         <SearchLyricsResults v-if="lyricLike && scope === 'catalog'" :text="q" />
+        <SearchDescribeRow v-if="descriptive" :text="q" />
         <SearchSoundResults v-if="descriptive" :text="q" compact :all-link="soundLink" />
 
         <MusicShelf v-if="results.artists.length" :title="t('artists')" :cols="6" phone-width="104px" :to="results.artists.length > 6 ? filterLink('artists') : undefined">

@@ -5,6 +5,7 @@ pub mod analysis;
 pub mod auth;
 pub mod catalog;
 pub mod connect;
+pub mod describe;
 pub mod events;
 pub mod fetcher;
 pub mod home;
@@ -105,6 +106,7 @@ pub fn router(state: AppState) -> Router {
         .merge(analysis::routes())
         .merge(wave::routes())
         .merge(wave_presets::routes())
+        .merge(describe::routes())
         .merge(connect::routes())
         .merge(offline::routes())
         .merge(jam::host_routes())

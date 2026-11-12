@@ -11,6 +11,7 @@ mod catalog;
 mod common;
 mod connect;
 mod deezer;
+mod describe;
 mod events;
 mod explicit;
 mod fake_ml;

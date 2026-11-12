@@ -20,6 +20,7 @@ import type {
   Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
+  DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -585,6 +586,20 @@ export interface Bridge {
     undoLess(damperId: string): Promise<void>
     /** Сбросить вкус: грани и миксы собираются заново по новым прослушиваниям */
     reset(): Promise<void>
+  }
+
+  /** «Плейлист по описанию»: словами — предпросмотр, «ещё в том же духе», сохранение обычным плейлистом */
+  describe: {
+    /** Собрать по описанию; `exclude` — треки прошлой сборки («Пересобрать») */
+    preview(text: string, exclude?: string[]): Promise<DescribePreview>
+    /** Ещё треки в том же духе: без показанных, начало — к последнему */
+    more(brief: DescribeBrief, exclude: string[], afterTrackId: string | null, count?: number): Promise<WaveItems>
+    save(body: SaveDescribed): Promise<PlaylistSummary>
+    /** Понятое у сохранённого плейлиста; собран не по описанию — `null` */
+    get(playlistId: string): Promise<DescribedPlaylist | null>
+    setWeekly(playlistId: string, weekly: boolean): Promise<DescribedPlaylist>
+    /** «Ещё в том же духе» в конец сохранённого; id добавленных треков */
+    extend(playlistId: string, count?: number): Promise<string[]>
   }
 
   /** «Итоги года»: годы с прослушиваниями, итоги года («по сей день» — у текущего), плейлист лучших треков */

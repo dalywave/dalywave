@@ -365,6 +365,23 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       reset: () => done(api.POST('/api/taste/reset', { body: { confirm: true } })),
     },
 
+    describe: {
+      preview: (text, exclude = []) => unwrap(api.POST('/api/describe', { body: { text, exclude: exclude.slice(0, 500) } })),
+      more: (brief, exclude, afterTrackId, count = 10) => unwrap(api.POST('/api/describe/more', { body: { brief, exclude: exclude.slice(0, 500), afterTrackId, count } })),
+      save: body => unwrap(api.POST('/api/describe/save', { body })),
+      get: async (id) => {
+        try {
+          return await unwrap(api.GET('/api/playlists/{id}/describe', { params: { path: { id } } }))
+        }
+        catch (e) {
+          if ((e as { status?: number }).status === 404) return null
+          throw e
+        }
+      },
+      setWeekly: (id, weekly) => unwrap(api.PATCH('/api/playlists/{id}/describe', { params: { path: { id } }, body: { weekly } })),
+      extend: async (id, count = 10) => (await unwrap(api.POST('/api/playlists/{id}/describe/more', { params: { path: { id } }, body: { count } }))).trackIds,
+    },
+
     rewind: {
       years: () => unwrap(api.GET('/api/rewind')),
       get: year => unwrap(api.GET('/api/rewind/{year}', { params: { path: { year } } })),

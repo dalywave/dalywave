@@ -655,6 +655,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/describe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["describe_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/describe/more": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["describe_more"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/describe/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["save_described"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/devices": {
         parameters: {
             query?: never;
@@ -1706,6 +1754,38 @@ export interface paths {
         put: operations["set_cover"];
         post?: never;
         delete: operations["remove_cover"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/describe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["described"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_described"];
+        trace?: never;
+    };
+    "/api/playlists/{id}/describe/more": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["extend_described"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2971,6 +3051,18 @@ export interface components {
         BlockedList: {
             items: components["schemas"]["BlockedItem"][];
         };
+        /** @description Артист-ориентир («как Скриптонит») или исключение («без Моргенштерна»). */
+        BriefArtist: {
+            /**
+             * Format: uuid
+             * @description Найденный артист каталога; `None` — не нашли.
+             */
+            id: string | null;
+            /** @description Имя артиста в каталоге (или как написано, если не нашли). */
+            name: string;
+            /** @description Как написал человек: «Скриптонита». */
+            said: string;
+        };
         /** @description Чем кончилась попытка скачать кандидата. */
         CandidateAttempt: {
             downloaded: boolean;
@@ -3208,6 +3300,150 @@ export interface components {
             newTracks: number;
             /** Format: int64 */
             plays: number;
+        };
+        /**
+         * @description Что понято из описания: по этому собирается плейлист. Отдаётся в предпросмотре и приходит обратно
+         *     в «Ещё в том же духе» и при сохранении — повторно запрос не разбирается.
+         */
+        DescribeBrief: {
+            /** @default any */
+            activity: components["schemas"]["WaveActivity"];
+            /**
+             * @description Жанры, которых не надо («без попсы»).
+             * @default []
+             */
+            avoidGenres: string[];
+            /** @default mix */
+            character: components["schemas"]["WaveCharacter"];
+            /**
+             * Format: int32
+             * @description Число треков («20 треков»).
+             * @default null
+             */
+            count: number | null;
+            /**
+             * @description В описании есть конкретика — жанр, ориентир или своё слово о звуке: подбор держится описания,
+             *     а вкус только подмешивается. Без неё («40 минут для зала») — подбор из своего вкуса под настройки.
+             * @default false
+             */
+            focused: boolean;
+            /**
+             * @description Жанры: `phonk`, `indie`, `rap` …
+             * @default []
+             */
+            genres: string[];
+            /** @default any */
+            language: components["schemas"]["WaveLanguage"];
+            /**
+             * @description Ориентиры: «как Скриптонит».
+             * @default []
+             */
+            like: components["schemas"]["BriefArtist"][];
+            /**
+             * Format: int32
+             * @description Длительность, минут («40 минут», «на час»).
+             * @default null
+             */
+            minutes: number | null;
+            /** @default any */
+            mood: components["schemas"]["WaveMood"];
+            /**
+             * @description «Без мата».
+             * @default false
+             */
+            noExplicit: boolean;
+            /**
+             * @description «Без медляков».
+             * @default false
+             */
+            noSlow: boolean;
+            /**
+             * @description Обстановка словами для названия: «для зала», «под дождь».
+             * @default null
+             */
+            scene: string | null;
+            /**
+             * @description Текст для поиска по звучанию (CLAP): то, что описывает звук.
+             * @default null
+             */
+            sound: string | null;
+            /**
+             * @description Описание как есть.
+             * @default
+             */
+            text: string;
+            /**
+             * @description Исключённые артисты: «без Моргенштерна».
+             * @default []
+             */
+            without: components["schemas"]["BriefArtist"][];
+        };
+        /** @description «Ещё в том же духе» для предпросмотра: следующие треки после `afterTrackId` без уже показанных. */
+        DescribeMore: {
+            /**
+             * Format: uuid
+             * @description Последний трек списка — к нему подстраивается начало новых.
+             */
+            afterTrackId?: string | null;
+            brief: components["schemas"]["DescribeBrief"];
+            /**
+             * Format: int32
+             * @description 1–30, по умолчанию 10.
+             */
+            count?: number | null;
+            /** @description Уже показанные треки. */
+            exclude?: string[];
+        };
+        /** @description Предпросмотр: название, описание и треки по порядку (плавно, как сет). */
+        DescribePreview: {
+            brief: components["schemas"]["DescribeBrief"];
+            /** @description «Без медляков · только русское»; пустая строка — описывать нечего. */
+            description: string;
+            /**
+             * Format: int64
+             * @description Длительность всех треков.
+             */
+            durationMs: number;
+            items: components["schemas"]["WaveItem"][];
+            /** @description «Фонк для зала · 40 мин». */
+            title: string;
+        };
+        /**
+         * @description Собрать плейлист по описанию. `exclude` — треки прошлой сборки («Пересобрать»): их сервер
+         *     постарается не повторять.
+         */
+        DescribeRequest: {
+            exclude?: string[];
+            /** @description 2–300 символов. */
+            text: string;
+        };
+        /** @description Добавленное «Ещё в том же духе»: id треков по порядку. */
+        DescribedAdded: {
+            trackIds: string[];
+        };
+        /** @description «Ещё в том же духе» для сохранённого плейлиста: сколько добавить в конец. */
+        DescribedMore: {
+            /**
+             * Format: int32
+             * @description 1–30, по умолчанию 10.
+             */
+            count?: number | null;
+        };
+        /** @description Настройки сохранённого плейлиста по описанию. */
+        DescribedPatch: {
+            weekly: boolean;
+        };
+        /** @description Плейлист, собранный по описанию. */
+        DescribedPlaylist: {
+            brief: components["schemas"]["DescribeBrief"];
+            /** Format: uuid */
+            playlistId: string;
+            /**
+             * Format: date-time
+             * @description Когда неделя обновила его в последний раз.
+             */
+            refreshedAt: string | null;
+            weekly: boolean;
         };
         /** @description Устройство с приложением: у каждого свой токен. */
         Device: {
@@ -5622,6 +5858,15 @@ export interface components {
          * @enum {string}
          */
         Role: "admin" | "listener";
+        /** @description Сохранить предпросмотр обычным плейлистом. */
+        SaveDescribed: {
+            brief: components["schemas"]["DescribeBrief"];
+            description?: string | null;
+            title: string;
+            trackIds: string[];
+            /** @description Раз в неделю менять прослушанное на новое в том же духе. */
+            weekly?: boolean;
+        };
         /** @description `POST /api/rewind/{year}/more`: сохранить показанное плейлистом. */
         SaveRewindMore: {
             /** @description Треки по порядку, до 100. */
@@ -8480,6 +8725,123 @@ export interface operations {
             };
             /** @description Deezer не ответил */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    describe_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Предпросмотр: что понято, название, описание и треки в плавном порядке. Первые треки, которых нет на сервере, уже качаются. Сервис анализа не ответил — подбор без поиска по звучанию (по жанрам, ориентирам и вкусу) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescribePreview"];
+                };
+            };
+            /** @description Пустое или длиннее 300 символов описание */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком часто: не больше 30 сборок за 10 минут */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    describe_more: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescribeMore"];
+            };
+        };
+        responses: {
+            /** @description Ещё треки в том же духе: без показанных, начало подстроено к `afterTrackId` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveItems"];
+                };
+            };
+            /** @description count вне 1–30 или понятое не разобрать */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком часто */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    save_described: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDescribed"];
+            };
+        };
+        responses: {
+            /** @description Обычный плейлист человека; помнит понятое — для «Ещё в том же духе» и обновления раз в неделю. Чего нет на сервере, ставится на скачивание */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Пустое название, нет известных треков, понятое не разобрать */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11394,6 +11756,128 @@ export interface operations {
             };
             /** @description Плейлист собирается сам (микс) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    described: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Плейлист собран по описанию: понятое и обновление раз в неделю */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescribedPlaylist"];
+                };
+            };
+            /** @description Нет такого плейлиста или он собран не по описанию (`not_described`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_described: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescribedPatch"];
+            };
+        };
+        responses: {
+            /** @description Обновление раз в неделю включено или выключено */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescribedPlaylist"];
+                };
+            };
+            /** @description Нет такого плейлиста или он собран не по описанию */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    extend_described: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescribedMore"];
+            };
+        };
+        responses: {
+            /** @description В конец плейлиста добавлены треки в том же духе (без тех, что уже есть) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescribedAdded"];
+                };
+            };
+            /** @description count вне 1–30 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста или он собран не по описанию */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком часто */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

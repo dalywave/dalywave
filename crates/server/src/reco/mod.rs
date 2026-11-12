@@ -5,6 +5,7 @@
 //! в `recommendation_impressions` — на них будет учиться и проверяться маленькая нейросеть вкуса.
 
 pub mod analysis;
+pub mod describe;
 pub mod device_set;
 pub mod model;
 pub mod prep;
@@ -588,6 +589,17 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     )
     .await?
     .created;
+    // Плейлисты по описанию с обновлением раз в неделю: срок каждого проверяет сама задача
+    jobs::enqueue(
+        &mut conn,
+        NewJob::new(
+            dalywave_protocol::jobs::kind::DESCRIBE_REFRESH,
+            lanes::MAINTENANCE,
+            serde_json::json!({}),
+        )
+        .dedupe("describe_refresh"),
+    )
+    .await?;
     drop(conn);
     let analysis = analysis::schedule_backfill(db, 500).await?;
     let taste = taste::schedule(db, &settings).await?;

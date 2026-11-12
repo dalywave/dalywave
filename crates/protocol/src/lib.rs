@@ -40,6 +40,7 @@ pub mod analysis;
 pub mod auth;
 pub mod catalog;
 pub mod connect;
+pub mod describe;
 pub mod error;
 pub mod events;
 pub mod fetcher;
