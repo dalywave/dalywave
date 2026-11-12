@@ -69,7 +69,7 @@ pub fn output_devices() -> Result<Vec<OutputDevice>, AudioError> {
         };
         let id = id.to_string();
         let is_default = default.as_deref() == Some(id.as_str());
-        if !is_default && !selectable(&id) {
+        if !is_default && (!selectable(&id) || looks_like_microphone(desc.name())) {
             continue;
         }
         let kind = platform_kind(&id).unwrap_or_else(|| kind_from_cpal(&desc));
@@ -81,6 +81,13 @@ pub fn output_devices() -> Result<Vec<OutputDevice>, AudioError> {
         });
     }
     Ok(out)
+}
+
+/// Виртуальные «микрофоны» программ трансляции (Steam Streaming Microphone, Virtual Desktop Mic)
+/// система считает выходами — в них пишет сама программа, слушать там нечего.
+fn looks_like_microphone(name: &str) -> bool {
+    let name = name.to_lowercase();
+    name.contains("microphone") || name.split_whitespace().any(|w| w == "mic")
 }
 
 fn kind_from_cpal(desc: &cpal::DeviceDescription) -> OutputKind {
@@ -333,6 +340,30 @@ mod macos {
             }
             // SAFETY: указатель из Box::into_raw, слушатели сняты — CoreAudio его больше не тронет
             drop(unsafe { Box::from_raw(self.callback) });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::looks_like_microphone;
+
+    #[test]
+    fn streaming_microphones_are_not_outputs() {
+        for name in [
+            "Steam Streaming Microphone",
+            "Virtual Desktop Mic",
+            "NDI Mic Input",
+        ] {
+            assert!(looks_like_microphone(name), "{name}");
+        }
+        for name in [
+            "MacBook Pro Speakers",
+            "Steam Streaming Speakers",
+            "Mickey's HomePod",
+            "Динамики",
+        ] {
+            assert!(!looks_like_microphone(name), "{name}");
         }
     }
 }

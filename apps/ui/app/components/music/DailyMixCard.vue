@@ -10,7 +10,7 @@ const props = defineProps<{
 }>()
 
 const TINTS = ['#ff4f8b', '#8ed8f5', '#b6abff', '#ffb26b', '#7fdcae', '#ff8fd6']
-const { t } = useI18n()
+const { tg: t } = useGlobalT()
 const { t: tl } = useI18n({ useScope: 'local' })
 const { playPlaylist, isPlayingContext, loading } = usePlayActions()
 const tint = computed(() => TINTS[(props.index - 1) % TINTS.length]!)

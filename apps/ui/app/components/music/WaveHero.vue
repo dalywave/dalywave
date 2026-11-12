@@ -9,7 +9,7 @@ withDefaults(defineProps<{ greeting?: string }>(), {})
 const player = usePlayerStore()
 const ui = useUiStore()
 const lang = useLang()
-const { t } = useI18n()
+const { tg: t } = useGlobalT()
 const { t: tl } = useI18n({ useScope: 'local' })
 
 const settings = computed({

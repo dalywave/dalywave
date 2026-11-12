@@ -99,6 +99,9 @@ ios-build: ## iPhone: собрать release для устройства (под
 	set -o pipefail; xcodebuild -project $(IOS_PROJECT) -scheme dalywave-shell_iOS -configuration release \
 	  -destination generic/platform=iOS -allowProvisioningUpdates build | tail -n 5
 
+testflight: ## iPhone: собрать для App Store и загрузить в TestFlight (ключ API — scripts/testflight.sh)
+	@bash apps/shell/scripts/testflight.sh
+
 ios-sim: ## симулятор: собрать, поставить и запустить с тестовым звуком на громкости 0
 	@bash apps/shell/scripts/xcodegen.sh
 	set -o pipefail; xcodebuild -project $(IOS_PROJECT) -scheme dalywave-shell_iOS -configuration release \
@@ -148,4 +151,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release-mac ios ios-build ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release-mac ios ios-build testflight ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt

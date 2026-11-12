@@ -18,6 +18,9 @@ const SIZES = {
   laptop: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 },
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
   wide: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 },
+  // Размеры скриншотов App Store: iPhone 6,9″ — 1320×2868, iPad 13″ — 2064×2752
+  iphone69: { viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
+  ipad13: { viewport: { width: 1032, height: 1376 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 };
 
 function parse(argv) {

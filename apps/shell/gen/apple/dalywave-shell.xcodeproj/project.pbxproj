@@ -372,14 +372,14 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_0F24C16F-DEBD-465C-BD2E-6A227C82EFA9" /* arm64 */ = {
+		"TEMP_53FE007E-2B55-4AA3-B7D5-B7ADB6855E38" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = arm64;
 			sourceTree = "<group>";
 		};
-		"TEMP_93A8C92E-2866-4AAB-AECD-9353E7426005" /* x86_64 */ = {
+		"TEMP_96E80462-13B1-4AB1-8879-01BB07991BE6" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
