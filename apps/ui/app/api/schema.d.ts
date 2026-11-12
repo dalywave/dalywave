@@ -2319,6 +2319,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tracks/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["track_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tracks/{id}/versions/choice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["choose"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/{id}/wrong-recording": {
         parameters: {
             query?: never;
@@ -2343,6 +2375,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/versions/choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["choices"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6579,6 +6627,21 @@ export interface components {
             /** @enum {string} */
             status: "waiting_for_downloader";
         });
+        /** @description Одна версия песни: по одной на вид. */
+        TrackVersion: {
+            kind: components["schemas"]["VersionKind"];
+            track: components["schemas"]["Track"];
+        };
+        /** @description Версии песни трека. В `items` — и сам трек; версий нет — в `items` только он. */
+        TrackVersions: {
+            /** @description По порядку: оригинал, slowed, super slowed, sped up. */
+            items: components["schemas"]["TrackVersion"][];
+            /** @description Вид этого трека. */
+            kind: components["schemas"]["VersionKind"];
+            preferred: components["schemas"]["VersionKind"] | null;
+            /** Format: uuid */
+            trackId: string;
+        };
         /**
          * @description Режим переходов между треками.
          * @enum {string}
@@ -6659,6 +6722,25 @@ export interface components {
             qualityDownload?: components["schemas"]["DownloadQuality"] | null;
             qualityWifi?: components["schemas"]["WifiQuality"] | null;
         };
+        /** @description Исполнитель, у которого человек выбрал не оригинал. */
+        VersionChoice: {
+            /** Format: uuid */
+            artistId: string;
+            kind: components["schemas"]["VersionKind"];
+        };
+        /** @description Выбор версии: в следующий раз у этого исполнителя играет та же. */
+        VersionChoiceBody: {
+            kind: components["schemas"]["VersionKind"];
+        };
+        VersionChoices: {
+            items: components["schemas"]["VersionChoice"][];
+        };
+        /**
+         * @description Вид версии по названию релиза: «(Slowed + Reverb)» — slowed, «(Ultra Slowed)» — super slowed,
+         *     «(Nightcore)» — sped up. Ремиксы, 8D и концертные записи версиями не считаются.
+         * @enum {string}
+         */
+        VersionKind: "original" | "slowed" | "super_slowed" | "sped_up";
         /**
          * @description Занятие: задаёт границы энергии и темпа и ход сессии («Засыпаю» снижает энергию, «Просыпаюсь» — поднимает).
          * @enum {string}
@@ -12995,6 +13077,72 @@ export interface operations {
             };
         };
     };
+    track_versions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Версии той же песни: оригинал, slowed, super slowed, sped up; раз в две недели ищутся у Deezer заново */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackVersions"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    choose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека: выбор запоминается для его основного исполнителя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionChoiceBody"];
+            };
+        };
+        responses: {
+            /** @description Запомнено; `original` — выбор забыт */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     report_wrong_recording: {
         parameters: {
             query?: never;
@@ -13088,6 +13236,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    choices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Исполнители, у которых слушатель выбрал не оригинал */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionChoices"];
                 };
             };
         };

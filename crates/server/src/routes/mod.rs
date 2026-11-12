@@ -30,6 +30,7 @@ pub mod sync;
 pub mod system;
 pub mod taste;
 pub mod updates;
+pub mod versions;
 pub mod wave;
 pub mod wave_presets;
 pub mod ws;
@@ -108,6 +109,7 @@ pub fn router(state: AppState) -> Router {
         .merge(connect::routes())
         .merge(offline::routes())
         .merge(jam::host_routes())
+        .merge(versions::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())

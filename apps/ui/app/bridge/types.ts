@@ -12,7 +12,7 @@ import type {
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
-  LyricsSearchResults, TrackLyrics,
+  LyricsSearchResults, TrackLyrics, TrackVersions, VersionChoice, VersionKind,
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
@@ -565,6 +565,12 @@ export interface Bridge {
     lyrics(trackId: string): Promise<TrackLyrics>
     /** Песни, в тексте которых есть строчка (среди уже взятых текстов) */
     searchLyrics(q: string, limit?: number): Promise<LyricsSearchResults>
+    /** Версии той же песни, выпущенные исполнителем: оригинал, slowed, super slowed, sped up */
+    versions(trackId: string): Promise<TrackVersions>
+    /** Запомнить выбранную версию для основного исполнителя трека; `original` — забыть */
+    chooseVersion(trackId: string, kind: VersionKind): Promise<void>
+    /** Исполнители, у которых выбрана не оригинальная версия */
+    versionChoices(): Promise<VersionChoice[]>
     /** Похожие по звучанию на трек (не больше двух у артиста) — «Подходит к плейлисту» */
     similar(trackId: string, limit?: number): Promise<WaveItems>
     /** «Умное перемешивание»: похожее на весь список (не из него и не из `exclude`) — подпись «Подобрано» */

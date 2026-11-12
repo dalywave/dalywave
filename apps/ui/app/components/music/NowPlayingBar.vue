@@ -51,7 +51,11 @@ const moreItems = computed<MenuEntry[]>(() => {
         <span v-if="track" class="bar__expand" aria-hidden="true"><Icon :name="ui.playerOpen ? 'ph:caret-down' : 'ph:caret-up'" /></span>
       </button>
       <div v-if="track" class="bar__meta">
-        <NuxtLink :to="track.album ? `/album/${track.album.id}` : undefined" class="bar__title ellipsis">{{ track.title }}</NuxtLink>
+        <div class="bar__titlerow">
+          <NuxtLink :to="track.album ? `/album/${track.album.id}` : undefined" class="bar__title ellipsis">{{ track.title }}</NuxtLink>
+          <!-- Версия песни (оригинал, slowed, sped up) — маленькой подписью с меню, только если есть другие -->
+          <MusicVersionSwitch />
+        </div>
         <div class="bar__artist ellipsis">
           <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`">{{ a.name }}</NuxtLink></template>
         </div>
@@ -143,6 +147,8 @@ const moreItems = computed<MenuEntry[]>(() => {
 .bar__meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .bar__react { display: flex; align-items: center; flex: none; margin-left: -6px; }
 .bar__title { font-weight: 600; }
+.bar__titlerow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar__titlerow .bar__title { min-width: 0; }
 a.bar__title:hover, .bar__artist a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
 .bar__artist { font-size: var(--fs-small); color: var(--text-2); }
 .bar__reason { display: flex; align-items: center; gap: 4px; font-size: var(--fs-caption); color: var(--text-3); }

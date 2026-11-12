@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_versions (track_id, version_id, kind)\n             SELECT $1, v, k FROM unnest($2::uuid[], $3::text[]) AS x(v, k)\n             ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2908fee726eb11496bb14846d72a527b7d24a961e591205ed3d2cb56a3b4fea6"
+}

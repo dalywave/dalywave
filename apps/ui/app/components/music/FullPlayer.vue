@@ -17,6 +17,9 @@ const library = useLibraryStore()
 const ui = useUiStore()
 const { menuFor } = useTrackActions()
 const { t } = useI18n()
+// Версии песни (оригинал, slowed, sped up): хранилище живёт, пока жив плеер, — оно же заранее
+// ставит в очередь выбранную у исполнителя версию
+useVersionsStore()
 
 const entry = computed(() => player.current)
 const track = computed(() => entry.value?.track ?? null)
@@ -295,8 +298,12 @@ onBeforeUnmount(() => {
         </div>
         <div class="fp__info">
           <h2 class="fp__title" :title="track.title">{{ track.title }}</h2>
-          <div class="fp__artist">
-            <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`" @click="close">{{ a.name }}</NuxtLink></template>
+          <!-- Версия песни (оригинал, slowed, sped up) — подписью у исполнителя, а не отдельным рядом -->
+          <div class="fp__byline">
+            <div class="fp__artist">
+              <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`" @click="close">{{ a.name }}</NuxtLink></template>
+            </div>
+            <MusicVersionSwitch size="md" />
           </div>
           <div v-if="entry?.reason" class="fp__reason"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
           <MusicConnectChip class="fp__connect" />
@@ -380,8 +387,11 @@ onBeforeUnmount(() => {
                   <div class="pp__titlerow">
                     <div class="pp__titles">
                       <div class="pp__title tp__title ellipsis">{{ track.title }}</div>
-                      <div class="pp__artist ellipsis">
-                        <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`" @click="close">{{ a.name }}</NuxtLink></template>
+                      <div class="pp__byline">
+                        <div class="pp__artist ellipsis">
+                          <template v-for="(a, i) in track.artists" :key="a.id"><span v-if="i">, </span><NuxtLink :to="`/artist/${a.id}`" @click="close">{{ a.name }}</NuxtLink></template>
+                        </div>
+                        <MusicVersionSwitch size="md" />
                       </div>
                     </div>
                     <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
@@ -458,7 +468,10 @@ onBeforeUnmount(() => {
               <div class="pp__titlerow">
                 <div class="pp__titles">
                   <div class="pp__title ellipsis">{{ track.title }}</div>
-                  <div class="pp__artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</div>
+                  <div class="pp__byline">
+                    <div class="pp__artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</div>
+                    <MusicVersionSwitch size="md" />
+                  </div>
                 </div>
                 <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
                 <!-- Сердце у названия, как в Spotify; в волне рядом — «не нравится». В ряду кнопок — перемешивание и повтор -->
@@ -594,6 +607,7 @@ onBeforeUnmount(() => {
 .fp__reason { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: var(--fs-small); color: var(--accent); }
 .fp__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
 .fp__connect { margin-top: 10px; max-width: 100%; }
+.fp__byline { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 100%; min-width: 0; }
 .fp__reactions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .stage-enter-active, .stage-leave-active { transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
 .stage-enter-from, .stage-leave-to { opacity: 0; transform: translateY(24px); }
@@ -663,6 +677,9 @@ onBeforeUnmount(() => {
 .pp__title { font-size: 24px; font-weight: 750; letter-spacing: -0.025em; line-height: 1.2; }
 .pp__artist { font-size: 17px; color: var(--text-2); }
 .pp__reason { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: var(--fs-small); color: var(--accent); }
+/* Исполнитель и подпись версии в одну строку: имя сжимается, подпись — нет */
+.pp__byline { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pp__byline .pp__artist { min-width: 0; }
 .pp__scrub { margin-top: clamp(14px, 2.4vh, 20px); flex: none; }
 .pp__controls { margin-top: clamp(8px, 2.1vh, 18px); padding: 0 4px; flex: none; }
 .pp__like { display: inline-flex; flex: none; margin: -7px -8px 0 -4px; }

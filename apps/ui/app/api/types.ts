@@ -38,6 +38,12 @@ export type TrackLyrics = Schemas['TrackLyrics']
 export type LyricsHit = Schemas['LyricsHit']
 export type LyricsSearchResults = Schemas['LyricsSearchResults']
 
+// Версии песни: оригинал, slowed, super slowed, sped up
+export type VersionKind = Schemas['VersionKind']
+export type TrackVersion = Schemas['TrackVersion']
+export type TrackVersions = Schemas['TrackVersions']
+export type VersionChoice = Schemas['VersionChoice']
+
 // Главная
 export type ShelfKind = Schemas['ShelfKind']
 export type ShelfItem = Schemas['ShelfItem']

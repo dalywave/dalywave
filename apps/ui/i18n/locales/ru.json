@@ -647,5 +647,14 @@
   "settingsSync": {
     "failed": "Не получилось сохранить настройку — попробуйте ещё раз",
     "hidden": "Скрыто фильтром"
+  },
+  "versions": {
+    "label": "Версия",
+    "original": "Оригинал",
+    "slowed": "Slowed",
+    "super_slowed": "Super slowed",
+    "sped_up": "Sped up",
+    "soon": "{kind} включится через пару секунд",
+    "unavailable": "{kind} сейчас недоступна"
   }
 }

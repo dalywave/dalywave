@@ -647,5 +647,14 @@
   "settingsSync": {
     "failed": "Couldn't save the setting — try again",
     "hidden": "Hidden by the filter"
+  },
+  "versions": {
+    "label": "Version",
+    "original": "Original",
+    "slowed": "Slowed",
+    "super_slowed": "Super slowed",
+    "sped_up": "Sped up",
+    "soon": "{kind} will start in a moment",
+    "unavailable": "{kind} isn’t available right now"
   }
 }

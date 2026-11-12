@@ -10,7 +10,7 @@ use crate::routes::{
     acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, events, fetcher, home,
     images, imports, jam, library, lyrics, notifications, offline, playlist_folders, playlist_set,
     playlists, queue, reco, recognize, rewind, settings, share, sources, stream, sync, system,
-    taste, updates, wave, wave_presets, ws,
+    taste, updates, versions, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -199,6 +199,9 @@ use crate::routes::{
         jam::stream,
         jam::leave,
         jam::guest_ws,
+        versions::track_versions,
+        versions::choose,
+        versions::choices,
     ),
     components(schemas(
         dalywave_protocol::imports::ImportJobPayload,

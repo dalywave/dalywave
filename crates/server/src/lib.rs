@@ -39,6 +39,7 @@ pub mod spa;
 pub mod state;
 pub mod storage;
 pub mod users;
+pub mod versions;
 
 pub use config::Config;
 pub use state::AppState;

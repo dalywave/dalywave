@@ -45,6 +45,7 @@ mod system;
 mod taste;
 mod taste_model;
 mod updates;
+mod versions;
 mod watch;
 mod wave_prep;
 mod wave_presets;
