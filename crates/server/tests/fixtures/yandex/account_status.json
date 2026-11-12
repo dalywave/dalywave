@@ -1,0 +1,8 @@
+{
+  "invocationInfo": {"req-id": "1794492923696651-4", "hostname": "music-api"},
+  "result": {
+    "account": {"now": "2026-11-12T12:00:00+00:00", "uid": 42, "login": "daly", "region": 0, "serviceAvailable": true},
+    "permissions": {"until": "2026-12-12T00:00:00+00:00", "values": ["landing-play"]},
+    "plus": {"hasPlus": true}
+  }
+}

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ApiError } from '~/api/types'
 import type { ImportItem, ImportKind, ImportSummary } from '~/api/types'
 
-// Перенос музыки: архив данных Spotify, список треков или свои файлы. Один спокойный путь:
-// выбрать способ → отдать файл или текст → видеть ход → итог одной фразой и «не нашлось» с поиском.
-// Сопоставление идёт на сервере в фоне, страницу можно закрыть; прошлые переносы — внизу
-type Mode = 'spotify' | 'list' | 'files'
+// Перенос музыки: архив данных Spotify, «Яндекс Музыка», YouTube Music, список треков или свои файлы.
+// Один спокойный путь: выбрать способ → отдать файл, ссылку или текст → видеть ход → итог одной фразой
+// и «не нашлось» с поиском. Сопоставление идёт на сервере в фоне, страницу можно закрыть; прошлые
+// переносы — внизу. Логотипов чужих сервисов нет: значок из набора и название словом
+type Mode = 'spotify' | 'yandex' | 'youtube' | 'list' | 'files'
 
 const bridge = useBridge()
 const toast = useToast()
@@ -17,15 +19,47 @@ const { y: scrollY } = useWindowScroll()
 
 const MODES: { value: Mode, icon: string }[] = [
   { value: 'spotify', icon: 'ph:spotify-logo' },
+  { value: 'yandex', icon: 'ph:music-notes' },
+  { value: 'youtube', icon: 'ph:play-circle' },
   { value: 'list', icon: 'ph:list-bullets' },
   { value: 'files', icon: 'ph:waveform' },
 ]
 const initial = route.query.mode
-const mode = ref<Mode>(initial === 'list' || initial === 'files' ? initial : 'spotify')
+const mode = ref<Mode>(MODES.find(m => m.value === initial)?.value ?? 'spotify')
 watch(mode, m => void navigateTo({ query: { ...route.query, mode: m } }, { replace: true }))
 
+// На телефоне ряд способов листается вбок: выбранный всегда целиком на виду
+const modesEl = ref<HTMLElement | null>(null)
+function revealMode(smooth: boolean) {
+  const row = modesEl.value
+  const on = row?.querySelector<HTMLElement>('.is-on')
+  if (!row || !on || row.scrollWidth <= row.clientWidth) return
+  const pad = 16
+  // Ряд позиционирован: offsetLeft кнопки — от его левого края
+  const left = on.offsetLeft
+  const target = left < row.scrollLeft + pad
+    ? left - pad
+    : left + on.offsetWidth > row.scrollLeft + row.clientWidth - pad
+      ? left + on.offsetWidth - row.clientWidth + pad
+      : row.scrollLeft
+  row.scrollTo({ left: target, behavior: smooth ? 'smooth' : 'auto' })
+}
+watch(mode, () => nextTick(() => revealMode(true)))
+
 function modeOf(kind: ImportKind): Mode {
-  return kind === 'spotify_archive' ? 'spotify' : kind === 'files' ? 'files' : 'list'
+  switch (kind) {
+    case 'spotify_archive': return 'spotify'
+    case 'yandex': return 'yandex'
+    case 'youtube_playlist':
+    case 'youtube_takeout': return 'youtube'
+    case 'files': return 'files'
+    default: return 'list'
+  }
+}
+
+/** Код ошибки сервера — для понятной подсказки на месте, а не всплывашки */
+function errorCode(e: unknown): string {
+  return e instanceof ApiError ? e.code : ''
 }
 
 // ---------- Текущий перенос ----------
@@ -126,6 +160,110 @@ async function startSpotify(list: File[]) {
   abort = new AbortController()
   try {
     current.value = await bridge.imports.spotify(file, (s) => { uploadShare.value = s }, abort.signal)
+    uploadShare.value = null
+    void loadHistory()
+  }
+  catch (e) {
+    if ((e as Error).name !== 'AbortError') toast.error((e as Error).message || t('uploadFailed'))
+    reset()
+  }
+}
+
+// ---------- «Яндекс Музыка» ----------
+
+// Вход «Яндекс Музыки», как у известных клиентов: после входа Яндекс возвращает на свою страницу
+// с ключом в адресе. Человек копирует адрес целиком — сервер достанет ключ сам и нигде его не сохранит
+const YANDEX_LOGIN = 'https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d'
+const ymUrl = ref('')
+const ymKey = ref('')
+const ymLogin = ref(false)
+const ymBusy = ref(false)
+const ymError = ref('')
+const ymReady = computed(() => !!ymUrl.value.trim() || (ymLogin.value && !!ymKey.value.trim()))
+
+async function startYandex() {
+  if (!ymReady.value || ymBusy.value) return
+  ymError.value = ''
+  ymBusy.value = true
+  try {
+    const s = await bridge.imports.yandex({
+      url: ymUrl.value.trim() || null,
+      token: ymLogin.value ? ymKey.value.trim() || null : null,
+    })
+    reset()
+    current.value = s
+    active.value = true
+    ymUrl.value = ''
+    ymKey.value = ''
+    ymLogin.value = false
+    void loadHistory()
+  }
+  catch (e) {
+    const code = errorCode(e)
+    if (code === 'yandex_login_required') {
+      ymLogin.value = true
+      ymError.value = t('yandex.needLogin')
+    }
+    else if (code === 'yandex_token' || code === 'yandex_token_rejected') ymError.value = t('yandex.badKey')
+    else if (code === 'yandex_link') ymError.value = t('yandex.badLink')
+    else if (code === 'yandex_not_found') ymError.value = t('yandex.notFound')
+    else if (code === 'yandex_region') ymError.value = t('yandex.region')
+    else toast.error((e as Error).message || t('uploadFailed'))
+  }
+  finally {
+    ymBusy.value = false
+  }
+}
+watch([ymUrl, ymKey], () => { ymError.value = '' })
+
+// ---------- YouTube Music ----------
+
+const ytUrl = ref('')
+const ytBusy = ref(false)
+const ytError = ref('')
+
+async function startYoutube() {
+  if (!ytUrl.value.trim() || ytBusy.value) return
+  ytError.value = ''
+  ytBusy.value = true
+  try {
+    const s = await bridge.imports.youtube(ytUrl.value.trim())
+    reset()
+    current.value = s
+    active.value = true
+    ytUrl.value = ''
+    void loadHistory()
+  }
+  catch (e) {
+    const code = errorCode(e)
+    if (code === 'youtube_link') ytError.value = t('youtube.badLink')
+    else if (code === 'youtube_not_found') ytError.value = t('youtube.notFound')
+    else toast.error((e as Error).message || t('uploadFailed'))
+  }
+  finally {
+    ytBusy.value = false
+  }
+}
+watch(ytUrl, () => { ytError.value = '' })
+
+async function startTakeout(list: File[]) {
+  const file = list[0]
+  if (!file) return
+  if (!/\.zip$/i.test(file.name)) {
+    toast.error(t('youtube.wrongFile'))
+    return
+  }
+  if (file.size > 500 * 1024 * 1024) {
+    toast.error(t('youtube.tooBig'))
+    return
+  }
+  reset()
+  active.value = true
+  fileName.value = file.name
+  uploadShare.value = 0
+  abort = new AbortController()
+  try {
+    current.value = await bridge.imports.takeout(file, (s) => { uploadShare.value = s }, abort.signal)
     uploadShare.value = null
     void loadHistory()
   }
@@ -317,6 +455,7 @@ async function loadHistory() {
   }
 }
 onMounted(async () => {
+  revealMode(false)
   await loadHistory()
   const q = route.query.id
   const found = typeof q === 'string' ? history.value.find(h => h.id === q) : history.value.find(h => h.status === 'running')
@@ -324,7 +463,16 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => abort?.abort())
 
-const KIND_ICON: Record<ImportKind, string> = { spotify_archive: 'ph:spotify-logo', text: 'ph:list-bullets', csv: 'ph:table', m3u: 'ph:playlist', files: 'ph:waveform' }
+const KIND_ICON: Record<ImportKind, string> = {
+  spotify_archive: 'ph:spotify-logo',
+  yandex: 'ph:music-notes',
+  youtube_playlist: 'ph:play-circle',
+  youtube_takeout: 'ph:file-zip',
+  text: 'ph:list-bullets',
+  csv: 'ph:table',
+  m3u: 'ph:playlist',
+  files: 'ph:waveform',
+}
 function historySub(s: ImportSummary): string {
   const when = formatRelative(s.createdAt, lang.value)
   if (s.status === 'running') return `${when} · ${t('history.running')}`
@@ -337,7 +485,7 @@ const actionLink = computed(() => {
   const s = current.value
   if (!s || s.status !== 'done') return null
   if (s.playlistId) return { to: `/playlist/${s.playlistId}`, label: t('openPlaylist') }
-  if (s.kind === 'spotify_archive' || s.stats.likes) return { to: '/library', label: t('openLibrary') }
+  if (s.kind === 'spotify_archive' || s.kind === 'yandex' || s.kind === 'youtube_takeout' || s.stats.likes) return { to: '/library', label: t('openLibrary') }
   return null
 })
 const showHistory = computed(() => history.value.filter(h => h.id !== current.value?.id))
@@ -350,7 +498,7 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 
     <template v-if="!active">
       <!-- Откуда переносить: один ряд, как сегменты, но с зоной касания 44 -->
-      <div class="imp__modes" role="radiogroup" :aria-label="t('how')">
+      <div ref="modesEl" class="imp__modes" role="radiogroup" :aria-label="t('how')">
         <button
           v-for="m in MODES"
           :key="m.value"
@@ -376,6 +524,78 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
           @files="startSpotify"
         />
         <p class="imp__note">{{ t('spotify.where') }}</p>
+      </section>
+
+      <section v-else-if="mode === 'yandex'" class="imp__panel">
+        <form class="imp__link" @submit.prevent="startYandex">
+          <input
+            v-model="ymUrl"
+            class="imp__input"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            :placeholder="t('yandex.placeholder')"
+            :aria-label="t('yandex.label')"
+          >
+          <UiButton v-if="!ymLogin" type="submit" variant="primary" :loading="ymBusy" :disabled="!ymReady" :block="ui.isPhone" class="imp__link-go">{{ t('go') }}</UiButton>
+        </form>
+        <p v-if="ymError && !ymLogin" class="imp__error" role="alert">{{ ymError }}</p>
+
+        <!-- Вход нужен, если Яндекс не отдаёт плейлист без него, и для всего аккаунта сразу -->
+        <button v-if="!ymLogin" type="button" class="imp__more" @click="ymLogin = true">
+          <Icon name="ph:user-circle" aria-hidden="true" />{{ t('yandex.all') }}
+        </button>
+        <div v-else class="imp__login">
+          <p v-if="ymError" class="imp__error imp__error--top" role="alert">{{ ymError }}</p>
+          <ol class="imp__steps">
+            <li>
+              <span>{{ t('yandex.step1') }}</span>
+              <UiButton size="sm" icon-right="ph:arrow-up-right" :href="YANDEX_LOGIN" target="_blank" rel="noopener noreferrer">{{ t('yandex.open') }}</UiButton>
+            </li>
+            <li><span>{{ t('yandex.step2') }}</span></li>
+          </ol>
+          <input
+            v-model="ymKey"
+            class="imp__input"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            :placeholder="t('yandex.keyPlaceholder')"
+            :aria-label="t('yandex.keyLabel')"
+            @keydown.enter.prevent="startYandex"
+          >
+          <p class="imp__note">{{ t('yandex.keyNote') }}</p>
+          <!-- С входом кнопка — после всех шагов, по порядку чтения -->
+          <UiButton variant="primary" size="lg" :loading="ymBusy" :disabled="!ymReady" :block="ui.isPhone" class="imp__go" @click="startYandex">{{ t('go') }}</UiButton>
+        </div>
+      </section>
+
+      <section v-else-if="mode === 'youtube'" class="imp__panel">
+        <form class="imp__link" @submit.prevent="startYoutube">
+          <input
+            v-model="ytUrl"
+            class="imp__input"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            :placeholder="t('youtube.placeholder')"
+            :aria-label="t('youtube.label')"
+          >
+          <UiButton type="submit" variant="primary" :loading="ytBusy" :disabled="!ytUrl.trim()" :block="ui.isPhone" class="imp__link-go">{{ t('go') }}</UiButton>
+        </form>
+        <p v-if="ytError" class="imp__error" role="alert">{{ ytError }}</p>
+        <div class="imp__or" role="separator"><span>{{ t('or') }}</span></div>
+        <ImportDropZone
+          :title="ui.isPhone ? t('youtube.dropPhone') : t('youtube.drop')"
+          :hint="t('youtube.dropHint')"
+          :button="t('youtube.pick')"
+          icon="ph:file-zip"
+          accept=".zip,application/zip"
+          @files="startTakeout"
+        />
+        <p class="imp__note">{{ t('youtube.where') }}</p>
       </section>
 
       <section v-else-if="mode === 'list'" class="imp__panel">
@@ -500,14 +720,15 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 .imp { display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 760px; margin: 0 auto; padding: 16px 0 48px; }
 .imp__title { margin: 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
 
-/* Три способа — сегменты в одной подложке */
-.imp__modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: min(520px, 100%); padding: 4px; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
+/* Способы — сегменты в одной подложке; на телефоне — ряд, который листается вбок */
+.imp__modes { position: relative; display: flex; gap: 4px; width: fit-content; max-width: 100%; padding: 4px; border-radius: var(--r-pill); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--hair); }
 .imp__mode {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-width: 0;
+  white-space: nowrap;
   height: 40px;
   padding: 0 12px;
   border: 0;
@@ -570,6 +791,44 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 .imp__input:focus-visible { outline: none; background: var(--fill-2); box-shadow: inset 0 0 0 1.5px var(--focus); }
 .imp__go { align-self: flex-start; }
 
+/* Ссылка: поле и кнопка в строку */
+.imp__link { display: flex; gap: 8px; }
+.imp__link .imp__input { flex: 1 1 auto; min-width: 0; height: 44px; }
+.imp__link-go { flex: none; height: 44px; }
+.imp__error { margin: -4px 0 0; padding-left: 16px; font-size: var(--fs-small); color: var(--warning); text-wrap: pretty; }
+.imp__error--top { margin: 0; padding-left: 0; }
+.imp__more {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  margin-left: -6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-1), color var(--dur-1);
+}
+.imp__more:hover { background: var(--fill-1); color: var(--text-1); }
+.imp__more:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.imp__more :deep(svg) { font-size: 18px; }
+/* Вход в Яндекс: два шага и поле — без отдельной карточки, под волоском */
+.imp__login { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; box-shadow: inset 0 1px 0 var(--hair); }
+.imp__login .imp__input { flex: none; height: 44px; }
+.imp__steps { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.imp__steps li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 32px; font-size: var(--fs-body); color: var(--text-2); counter-increment: step; }
+.imp__steps li::before { content: counter(step); display: grid; flex: none; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--fill-2); color: var(--text-2); font-size: var(--fs-caption); font-weight: 650; }
+.imp__steps li > span { flex: 1 1 0; min-width: 160px; text-wrap: pretty; }
+/* «или» между ссылкой и архивом */
+.imp__or { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; font-size: var(--fs-small); color: var(--text-3); }
+.imp__or::before, .imp__or::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
+
 /* Файлы: строка на файл */
 .imp__files { display: flex; flex-direction: column; }
 .imp__frow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 0; }
@@ -618,8 +877,15 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
 @media (max-width: 699px) {
   .imp { gap: 20px; padding: 0 16px 32px; }
   .imp > .pn { margin-right: -16px; margin-bottom: -20px; margin-left: -16px; }
-  .imp__mode { height: 44px; padding: 0 8px; }
+  /* Пять способов в ширину телефона не помещаются: ряд листается вбок, подписи целиком */
+  .imp__modes { width: auto; max-width: none; margin: 0 -16px; padding: 0 16px; overflow-x: auto; gap: 8px; border-radius: 0; background: none; box-shadow: none; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .imp__modes::-webkit-scrollbar { display: none; }
+  .imp__mode { height: 44px; padding: 0 18px; box-shadow: inset 0 0 0 1px var(--line); }
+  .imp__mode.is-on { box-shadow: none; }
   .imp__mode-icon { display: none; }
+  .imp__link { flex-direction: column; }
+  .imp__link .imp__input { flex: none; }
+  .imp__more { height: 44px; }
   .imp__title { font-size: 28px; }
   .imp__text { min-height: 180px; padding: 14px 16px; }
   .imp__target { flex-direction: column; align-items: stretch; }
@@ -635,7 +901,38 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
   "ru": {
     "title": "Перенести музыку",
     "how": "Откуда переносить",
-    "mode": { "spotify": "Spotify", "list": "Список", "files": "Файлы" },
+    "mode": { "spotify": "Spotify", "yandex": "Яндекс Музыка", "youtube": "YouTube Music", "list": "Список", "files": "Файлы" },
+    "go": "Перенести",
+    "or": "или",
+    "yandex": {
+      "label": "Ссылка на плейлист «Яндекс Музыки»",
+      "placeholder": "Ссылка на плейлист",
+      "all": "Перенести всё: лайки и плейлисты",
+      "step1": "Войдите в Яндекс",
+      "open": "Открыть",
+      "step2": "Скопируйте адрес страницы, куда вас вернёт Яндекс, и вставьте сюда",
+      "keyLabel": "Адрес после входа",
+      "keyPlaceholder": "Адрес после входа",
+      "keyNote": "Без ссылки перенесутся «Мне нравится» и все ваши плейлисты. Вход нужен один раз — мы его не сохраняем.",
+      "needLogin": "Яндекс отдаёт музыку только после входа — это два шага ниже",
+      "badKey": "Вход не подошёл — войдите ещё раз и скопируйте адрес целиком",
+      "badLink": "Это не ссылка на плейлист «Яндекс Музыки»",
+      "notFound": "Плейлист не открылся — он скрыт или удалён",
+      "region": "Яндекс сейчас не отдаёт музыку — попробуйте позже"
+    },
+    "youtube": {
+      "label": "Ссылка на плейлист YouTube Music",
+      "placeholder": "Ссылка на плейлист",
+      "badLink": "Нужна ссылка на плейлист — в ней есть «list=»",
+      "notFound": "Плейлист не открылся — он закрыт или удалён",
+      "drop": "Перетащите сюда архив Google Takeout",
+      "dropPhone": "Архив Google Takeout",
+      "dropHint": "Лайки, библиотека и все плейлисты",
+      "pick": "Выбрать архив",
+      "where": "Архив — на takeout.google.com: оставьте только «YouTube и YouTube Music», а в его данных — плейлисты и музыкальную библиотеку. Приходит на почту.",
+      "wrongFile": "Нужен ZIP-архив из Google Takeout",
+      "tooBig": "Архив больше 500 МБ — оставьте в Takeout только плейлисты и музыкальную библиотеку"
+    },
     "spotify": {
       "drop": "Перетащите сюда my_spotify_data.zip",
       "dropPhone": "Архив my_spotify_data.zip",
@@ -702,7 +999,38 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
   "en": {
     "title": "Bring your music",
     "how": "Where from",
-    "mode": { "spotify": "Spotify", "list": "List", "files": "Files" },
+    "mode": { "spotify": "Spotify", "yandex": "Yandex Music", "youtube": "YouTube Music", "list": "List", "files": "Files" },
+    "go": "Bring over",
+    "or": "or",
+    "yandex": {
+      "label": "Yandex Music playlist link",
+      "placeholder": "Playlist link",
+      "all": "Bring everything: likes and playlists",
+      "step1": "Sign in to Yandex",
+      "open": "Open",
+      "step2": "Copy the address of the page Yandex returns you to and paste it here",
+      "keyLabel": "Address after sign-in",
+      "keyPlaceholder": "Address after sign-in",
+      "keyNote": "Without a link, your Liked tracks and all your playlists come over. Sign-in is used once — we don't keep it.",
+      "needLogin": "Yandex only shares music after you sign in — two steps below",
+      "badKey": "Sign-in didn't work — sign in again and copy the whole address",
+      "badLink": "That's not a Yandex Music playlist link",
+      "notFound": "The playlist didn't open — it's hidden or deleted",
+      "region": "Yandex isn't sharing music right now — try later"
+    },
+    "youtube": {
+      "label": "YouTube Music playlist link",
+      "placeholder": "Playlist link",
+      "badLink": "Use a playlist link — it has “list=” in it",
+      "notFound": "The playlist didn't open — it's private or deleted",
+      "drop": "Drop your Google Takeout archive here",
+      "dropPhone": "Google Takeout archive",
+      "dropHint": "Likes, library and all playlists",
+      "pick": "Choose archive",
+      "where": "Get it at takeout.google.com: keep only “YouTube and YouTube Music”, and in its data — playlists and music library. It arrives by email.",
+      "wrongFile": "Use the ZIP archive from Google Takeout",
+      "tooBig": "The archive is over 500 MB — keep only playlists and the music library in Takeout"
+    },
     "spotify": {
       "drop": "Drop my_spotify_data.zip here",
       "dropPhone": "my_spotify_data.zip archive",

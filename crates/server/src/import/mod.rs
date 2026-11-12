@@ -1,7 +1,9 @@
-//! Импорт музыки: архив данных Spotify, списки и свои аудиофайлы.
+//! Импорт музыки: архив данных Spotify, «Яндекс Музыка» и YouTube Music ([`yandex`], [`youtube`]),
+//! списки и свои аудиофайлы.
 //!
 //! Путь импорта: API разбирает загруженное (архив — потоком во временный файл, с пределами против
-//! архивов-бомб) и пишет позиции в `import_items`, историю — в `import_plays`; задача `import_match`
+//! архивов-бомб) или забирает плейлист по ссылке и пишет позиции в `import_items`, историю — в
+//! `import_plays`; задача `import_match`
 //! (полоса «Импорт») сопоставляет позиции с каталогом — кеш `import_matches`, свой каталог, поиск Deezer
 //! в пределах общего лимита запросов; `import_apply` раскладывает найденное в медиатеку: лайки,
 //! плейлисты (те же названия и порядок), альбомы, подписки (политика по умолчанию), прослушивания
@@ -10,11 +12,14 @@
 //! Свои файлы обрабатывает `import_file` ([`files`]).
 
 pub mod audio;
+pub mod collection;
 pub mod files;
 pub mod jobs;
 pub mod lists;
 pub mod matching;
 pub mod spotify;
+pub mod yandex;
+pub mod youtube;
 
 use std::collections::HashMap;
 
@@ -285,6 +290,60 @@ pub async fn store_archive(
             name: p.name.clone(),
             description: p.description.clone(),
             items: p.tracks.iter().map(|i| track_ids[*i]).collect(),
+            playlist_id: None,
+        })
+        .collect();
+    let total = items.len() as i32;
+    sqlx::query!(
+        "UPDATE imports SET total = $2, playlists = $3, updated_at = now() WHERE id = $1",
+        import_id,
+        total,
+        serde_json::to_value(&playlists).unwrap_or_else(|_| json!([])),
+    )
+    .execute(&mut *conn)
+    .await?;
+    Ok(total)
+}
+
+/// Медиатека другого сервиса: лайки — в «Мне нравится», плейлисты — с теми же названиями и порядком.
+/// Возвращает число позиций.
+pub async fn store_collection(
+    conn: &mut PgConnection,
+    import_id: Uuid,
+    c: &collection::Collection,
+) -> Result<i32, sqlx::Error> {
+    let mut in_playlist = vec![false; c.tracks.len()];
+    for p in &c.playlists {
+        for i in &p.tracks {
+            in_playlist[*i] = true;
+        }
+    }
+    let items: Vec<NewItem> = c
+        .tracks
+        .iter()
+        .enumerate()
+        .map(|(n, t)| NewItem {
+            id: Uuid::now_v7(),
+            kind: Some(ImportItemKind::Track),
+            position: n as i32,
+            priority: if t.liked { 1000 } else { 0 } + if in_playlist[n] { 500 } else { 0 },
+            artist: t.artist.clone(),
+            title: t.title.clone(),
+            album: t.album.clone(),
+            duration_ms: t.duration_ms,
+            source_ref: t.source_ref.clone(),
+            liked: t.liked,
+            ..NewItem::default()
+        })
+        .collect();
+    insert_items(conn, import_id, &items).await?;
+    let playlists: Vec<SourcePlaylist> = c
+        .playlists
+        .iter()
+        .map(|p| SourcePlaylist {
+            name: p.name.clone(),
+            description: p.description.clone(),
+            items: p.tracks.iter().map(|i| items[*i].id).collect(),
             playlist_id: None,
         })
         .collect();
@@ -661,12 +720,14 @@ pub async fn apply(
                 id
             }
             _ => {
-                // Тот же плейлист из прошлого импорта (архив загрузили ещё раз) — дополняется, а не дублируется
+                // Тот же плейлист из прошлого переноса (архив загрузили или ссылку вставили ещё раз) —
+                // дополняется, а не дублируется
                 let earlier = sqlx::query_scalar!(
                     r#"SELECT pl.id FROM imports i
                        CROSS JOIN LATERAL jsonb_array_elements(i.playlists) AS e
                        JOIN playlists pl ON pl.id = (e ->> 'playlistId')::uuid AND pl.user_id = i.user_id
-                       WHERE $3 = 'spotify_archive' AND i.user_id = $1 AND i.id <> $2 AND i.kind = $3 AND e ->> 'name' = $4
+                       WHERE $3 IN ('spotify_archive', 'yandex', 'youtube_playlist', 'youtube_takeout')
+                         AND i.user_id = $1 AND i.id <> $2 AND i.kind = $3 AND e ->> 'name' = $4
                        ORDER BY i.created_at DESC
                        LIMIT 1"#,
                     user,
@@ -939,9 +1000,12 @@ pub fn cache_key(
     title: &str,
     source_ref: Option<&str>,
 ) -> String {
-    if let Some(r) =
-        source_ref.filter(|r| r.starts_with("spotify:") && !r.starts_with("spotify:local:"))
-    {
+    // Устойчивые id источника: трек Spotify, трек «Яндекс Музыки», видео YouTube
+    if let Some(r) = source_ref.filter(|r| {
+        (r.starts_with("spotify:") && !r.starts_with("spotify:local:"))
+            || r.starts_with("ym:")
+            || r.starts_with("yt:")
+    }) {
         return r.to_string();
     }
     let n = matching::normalize;
@@ -995,6 +1059,9 @@ pub fn kind_title(kind: ImportKind) -> &'static str {
         ImportKind::Csv => "Таблица CSV",
         ImportKind::M3u => "Плейлист M3U",
         ImportKind::Files => "Свои файлы",
+        ImportKind::Yandex => "Яндекс Музыка",
+        ImportKind::YoutubePlaylist => "Плейлист YouTube Music",
+        ImportKind::YoutubeTakeout => "Архив YouTube Music",
     }
 }
 
@@ -1025,6 +1092,14 @@ mod tests {
         assert_eq!(
             cache_key(ImportItemKind::Artist, "5OPKA", "", None),
             "n:artist:5opka"
+        );
+        assert_eq!(
+            cache_key(ImportItemKind::Track, "", "", Some("yt:dQw4w9WgXcQ")),
+            "yt:dQw4w9WgXcQ"
+        );
+        assert_eq!(
+            cache_key(ImportItemKind::Track, "A", "B", Some("ym:123")),
+            "ym:123"
         );
     }
 }

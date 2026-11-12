@@ -1,0 +1,13 @@
+{
+  "invocationInfo": {"req-id": "1794492923696651-2", "hostname": "music-api"},
+  "result": [
+    {"id": "102", "title": "Devil", "durationMs": 162000, "available": true, "type": "music",
+     "artists": [{"id": 13828465, "name": "Lowborn"}], "albums": [{"id": 1002, "title": "Devil"}]},
+    {"id": "103", "title": "Doctor Doctor", "durationMs": 165000, "available": true, "type": "music",
+     "artists": [{"id": 13828465, "name": "Lowborn"}], "albums": [{"id": 1003, "title": "Doctor Doctor"}]},
+    {"id": "105", "title": "Совсем неизвестная песня", "durationMs": 200000, "available": true, "type": "music",
+     "artists": [{"id": 1, "name": "Nobody At All"}], "albums": [{"id": 1005, "title": "Void"}]},
+    {"id": "106", "title": "Crazy", "version": "Live", "durationMs": 196000, "available": true, "type": "music",
+     "artists": [{"id": 13828465, "name": "Lowborn"}], "albums": [{"id": 1006, "title": "Crazy"}]}
+  ]
+}

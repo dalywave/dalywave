@@ -7,7 +7,7 @@ use axum::{
 };
 use dalywave_server::{
     AppState, Config,
-    config::{DeezerConfig, FetcherConfig, LrclibConfig, MlConfig},
+    config::{DeezerConfig, FetcherConfig, LrclibConfig, MlConfig, YandexMusicConfig},
     deezer::Deezer,
     jobs::{
         handlers,
@@ -51,6 +51,10 @@ pub fn config() -> Config {
         },
         // Тексты — тоже без сети: тесты текстов ставят свою заглушку LRCLIB
         lrclib: LrclibConfig {
+            url: "http://127.0.0.1:9".into(),
+        },
+        // «Яндекс Музыка» — тоже без сети: тесты переноса ставят свою заглушку
+        yandex_music: YandexMusicConfig {
             url: "http://127.0.0.1:9".into(),
         },
         release_token: None,

@@ -1,0 +1,11 @@
+{
+  "songs": [
+    {"videoId": "Hurt0000001", "found": true, "title": "Hurt", "artists": ["Lowborn"],
+     "durationMs": 158000, "videoType": "MUSIC_VIDEO_TYPE_ATV"},
+    {"videoId": "Crazy000001", "found": true, "title": "Lowborn - Crazy", "artists": ["Some Uploader"],
+     "durationMs": 196000, "videoType": "MUSIC_VIDEO_TYPE_UGC"},
+    {"videoId": "jNQXAC9IVRw", "found": true, "title": "Me at the zoo", "artists": ["jawed"],
+     "durationMs": 19000, "videoType": null},
+    {"videoId": "Gone0000001", "found": false, "title": "", "artists": [], "durationMs": null, "videoType": null}
+  ]
+}

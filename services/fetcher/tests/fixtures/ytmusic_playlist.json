@@ -1,0 +1,71 @@
+{
+ "id": "PLntVvZRJe0d-6aEQPLPW4C3VjzjP2XbG8",
+ "privacy": "PUBLIC",
+ "title": "Russian rap",
+ "description": null,
+ "author": {
+  "name": "Vasilis Kazakos",
+  "id": "UCl969u0AqhM0HKkE-zFI3wQ"
+ },
+ "year": "2026",
+ "duration": "3 hours, 41 minutes",
+ "trackCount": 72,
+ "tracks": [
+  {
+   "videoId": "QoKpz_95OIM",
+   "title": "4K - По Кайфу ★✯★",
+   "artists": [
+    {
+     "name": "Mama I'm A Criminal",
+     "id": "UCHl0OvS2BxzVbIBiegeATyg"
+    }
+   ],
+   "album": null,
+   "likeStatus": "INDIFFERENT",
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/QoKpz_95OIM/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nghsXnzRaxElTT07Me0RWCZ-FvIQ",
+     "width": 400,
+     "height": 225
+    }
+   ],
+   "isAvailable": true,
+   "isExplicit": false,
+   "videoType": "MUSIC_VIDEO_TYPE_UGC",
+   "views": null,
+   "communityVoteStatus": null,
+   "duration": "3:09",
+   "duration_seconds": 189
+  },
+  {
+   "videoId": "Z0s1RTZUAqQ",
+   "title": "Ноггано, AK 47 - Russian Paradise",
+   "artists": [
+    {
+     "name": "Ani gagiladze",
+     "id": "UCpEeViN88sJWdBJyVT2sf0g"
+    }
+   ],
+   "album": null,
+   "likeStatus": "INDIFFERENT",
+   "inLibrary": false,
+   "pinnedToListenAgain": false,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/Z0s1RTZUAqQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kYisVPh789XmuN1LzmbTULwuTo0g",
+     "width": 400,
+     "height": 225
+    }
+   ],
+   "isAvailable": true,
+   "isExplicit": false,
+   "videoType": "MUSIC_VIDEO_TYPE_UGC",
+   "views": null,
+   "communityVoteStatus": null,
+   "duration": "5:20",
+   "duration_seconds": 320
+  }
+ ]
+}

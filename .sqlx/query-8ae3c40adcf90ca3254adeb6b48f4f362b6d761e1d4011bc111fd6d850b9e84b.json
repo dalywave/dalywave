@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET status = 'skipped', resolved_by = 'source', title = $2, updated_at = now()\n                     WHERE id = $1 AND status = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8ae3c40adcf90ca3254adeb6b48f4f362b6d761e1d4011bc111fd6d850b9e84b"
+}

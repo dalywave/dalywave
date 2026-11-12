@@ -19,6 +19,7 @@ mod folders;
 mod history;
 mod home;
 mod images;
+mod import_sources;
 mod imports;
 mod jam;
 mod jobs;

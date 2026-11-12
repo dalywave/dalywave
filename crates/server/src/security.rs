@@ -81,6 +81,7 @@ fn raw_upload(path: &str) -> bool {
         return false;
     };
     rest == "spotify"
+        || rest == "youtube/takeout"
         || rest
             .strip_suffix("/files")
             .is_some_and(|id| !id.contains('/'))
@@ -181,6 +182,7 @@ mod tests {
             fetcher: Default::default(),
             ml: Default::default(),
             lrclib: Default::default(),
+            yandex_music: Default::default(),
             release_token: None,
         }
     }
@@ -210,6 +212,8 @@ mod tests {
     fn raw_uploads() {
         let c = config();
         assert!(raw_upload("/imports/spotify"));
+        assert!(raw_upload("/api/imports/youtube/takeout"));
+        assert!(!raw_upload("/api/imports/youtube"));
         assert!(raw_upload("/api/imports/0193/files"));
         assert!(!raw_upload("/imports/list"));
         assert!(raw_upload("/api/playlists/0193/cover"));

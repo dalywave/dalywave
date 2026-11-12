@@ -1,0 +1,14 @@
+{
+  "invocationInfo": {"req-id": "1794492923696651-3", "hostname": "music-api"},
+  "result": {
+    "library": {
+      "uid": 42,
+      "revision": 77,
+      "playlistUuid": "lk.0b7a8f3e-0000-4000-8000-000000000042",
+      "tracks": [
+        {"id": "102", "albumId": "1002", "timestamp": "2024-05-01T10:00:00+00:00"},
+        {"id": "105", "albumId": "1005", "timestamp": "2024-04-01T10:00:00+00:00"}
+      ]
+    }
+  }
+}

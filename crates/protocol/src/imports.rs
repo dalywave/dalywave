@@ -1,5 +1,7 @@
 //! Импорт музыки: архив данных Spotify (лайки, плейлисты, альбомы, подписки, история прослушиваний),
-//! списки («Артист — Трек», CSV, M3U) и свои аудиофайлы. Позиции сопоставляются с каталогом Deezer
+//! «Яндекс Музыка» (плейлист по ссылке или лайки и плейлисты аккаунта), YouTube Music (плейлист по
+//! ссылке или архив Google Takeout), списки («Артист — Трек», CSV, M3U) и свои аудиофайлы.
+//! Позиции сопоставляются с каталогом Deezer
 //! в фоне; несопоставленные человек проверяет сам.
 
 use chrono::{DateTime, Utc};
@@ -23,6 +25,12 @@ pub enum ImportKind {
     Files,
     /// Архив данных Spotify (`my_spotify_data.zip`).
     SpotifyArchive,
+    /// «Яндекс Музыка»: плейлист по ссылке или «Мне нравится» и плейлисты аккаунта.
+    Yandex,
+    /// Плейлист YouTube или YouTube Music по ссылке.
+    YoutubePlaylist,
+    /// Архив Google Takeout «YouTube и YouTube Music»: библиотека, понравившееся, плейлисты.
+    YoutubeTakeout,
 }
 
 names!(ImportKind {
@@ -31,6 +39,9 @@ names!(ImportKind {
     M3u => "m3u",
     Files => "files",
     SpotifyArchive => "spotify_archive",
+    Yandex => "yandex",
+    YoutubePlaylist => "youtube_playlist",
+    YoutubeTakeout => "youtube_takeout",
 });
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -291,6 +302,37 @@ pub struct ListImportRequest {
     /// Название нового плейлиста; по умолчанию — имя файла или «Импорт от …».
     #[serde(default)]
     pub playlist_title: Option<String>,
+}
+
+/// Перенос из «Яндекс Музыки». Ссылка — на плейлист (`music.yandex.ru/users/<логин>/playlists/<номер>`,
+/// `music.yandex.ru/playlists/<id>`) или на «Мне нравится» открытого профиля (`…/users/<логин>/tracks`).
+/// Ключ входа (OAuth-токен «Яндекс Музыки») нужен, если Яндекс не отдаёт данные без входа; с ним и без
+/// ссылки переносятся «Мне нравится» и все плейлисты аккаунта. Ключ используется только в этом
+/// запросе: не сохраняется и не пишется в журналы.
+#[derive(Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct YandexImportRequest {
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub token: Option<String>,
+}
+
+/// Ключ входа не попадает в журналы даже через `{:?}`.
+impl std::fmt::Debug for YandexImportRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("YandexImportRequest")
+            .field("url", &self.url)
+            .field("token", &self.token.as_ref().map(|_| "…"))
+            .finish()
+    }
+}
+
+/// Плейлист YouTube или YouTube Music по ссылке (`…?list=PL…`).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct YoutubeImportRequest {
+    pub url: String,
 }
 
 /// Новый импорт файлов: дальше файлы грузятся по одному, затем `finish`.

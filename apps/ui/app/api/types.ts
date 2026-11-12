@@ -134,6 +134,7 @@ export type ImportCandidate = Schemas['ImportCandidate']
 export type ImportFileInfo = Schemas['ImportFileInfo']
 export type ListFormat = Schemas['ListFormat']
 export type ListImportRequest = Schemas['ListImportRequest']
+export type YandexImportRequest = Schemas['YandexImportRequest']
 
 // События прослушивания
 export type EndReason = Schemas['EndReason']

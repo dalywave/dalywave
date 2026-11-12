@@ -11,7 +11,7 @@ import type {
   PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
-  ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest,
+  ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
   LyricsSearchResults, TrackLyrics,
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
@@ -632,6 +632,13 @@ export interface Bridge {
     spotify(file: File, onProgress?: (share: number) => void, signal?: AbortSignal): Promise<ImportSummary>
     /** Список «Артист — Трек», CSV или M3U — в новый плейлист или в «Мне нравится» */
     fromList(body: ListImportRequest): Promise<ImportSummary>
+    /** «Яндекс Музыка»: плейлист по ссылке; с ключом входа без ссылки — лайки и плейлисты аккаунта.
+     *  Ключ сервер использует один раз и не хранит */
+    yandex(body: YandexImportRequest): Promise<ImportSummary>
+    /** Плейлист YouTube / YouTube Music по ссылке */
+    youtube(url: string): Promise<ImportSummary>
+    /** Архив Google Takeout «YouTube и YouTube Music» */
+    takeout(file: File, onProgress?: (share: number) => void, signal?: AbortSignal): Promise<ImportSummary>
     /** Новый импорт файлов: дальше `file` по одному, затем `finish` */
     startFiles(title?: string): Promise<ImportSummary>
     file(id: string, file: File, onProgress?: (share: number) => void, signal?: AbortSignal): Promise<ImportItem>

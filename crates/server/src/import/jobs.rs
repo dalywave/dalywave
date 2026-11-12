@@ -11,6 +11,7 @@ use uuid::Uuid;
 use super::{
     cache_key,
     matching::{self, ACCEPT, Cand, Wanted, normalize},
+    youtube,
 };
 use crate::{
     catalog,
@@ -95,6 +96,22 @@ pub async fn run_match(ctx: Arc<Context>, job: JobRow) -> JobResult {
         if batch.is_empty() {
             break;
         }
+        // Видео из Takeout известны только по id: сначала имена, потом поиск
+        let unnamed: Vec<(Uuid, String)> = batch
+            .iter()
+            .filter(|i| i.title.trim().is_empty())
+            .filter_map(|i| {
+                let video = i.source_ref.as_deref()?.strip_prefix("yt:")?;
+                Some((i.id, video.to_string()))
+            })
+            .collect();
+        if !unnamed.is_empty() {
+            name_videos(&ctx, &unnamed).await?;
+            if !running(&ctx.db, p.import_id).await? {
+                return Ok(json!({ "stopped": true }).into());
+            }
+            continue;
+        }
         for item in &batch {
             let out = match_item(&ctx.db, &ctx.deezer, item, &mut waiting).await?;
             if out.matched() {
@@ -134,6 +151,49 @@ pub async fn run_apply(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let stats = super::apply(&ctx.db, &ctx.deezer, p.import_id, None).await?;
     super::finish(&ctx.db, p.import_id).await?;
     Ok(serde_json::to_value(stats)?.into())
+}
+
+/// Имена видео по id у YouTube Music (через fetcher). Удалённое, скрытое и не музыка (влоги из
+/// «Понравившихся») пропускается: искать такое в каталоге бессмысленно.
+async fn name_videos(ctx: &Context, items: &[(Uuid, String)]) -> Result<(), JobError> {
+    let ids: Vec<String> = items.iter().map(|(_, v)| v.clone()).collect();
+    let songs = youtube::fetch_songs(&ctx.http, &ctx.config.fetcher.url, &ids)
+        .await
+        .map_err(JobError::retry)?;
+    let by_id: HashMap<&str, &youtube::YtSong> =
+        songs.iter().map(|s| (s.video_id.as_str(), s)).collect();
+    for (item, video) in items {
+        let song = by_id.get(video.as_str()).filter(|s| {
+            s.found && !s.title.trim().is_empty() && youtube::is_music(s.video_type.as_deref())
+        });
+        match song {
+            Some(s) => {
+                let (artist, title) = youtube::song(&s.title, &s.artists, s.video_type.as_deref());
+                sqlx::query!(
+                    "UPDATE import_items SET artist = $2, title = $3, duration_ms = COALESCE(duration_ms, $4),
+                            updated_at = now()
+                     WHERE id = $1",
+                    item,
+                    artist.chars().take(500).collect::<String>(),
+                    title.chars().take(500).collect::<String>(),
+                    s.duration_ms,
+                )
+                .execute(&ctx.db)
+                .await?;
+            }
+            None => {
+                sqlx::query!(
+                    "UPDATE import_items SET status = 'skipped', resolved_by = 'source', title = $2, updated_at = now()
+                     WHERE id = $1 AND status = 'pending'",
+                    item,
+                    format!("youtu.be/{video}"),
+                )
+                .execute(&ctx.db)
+                .await?;
+            }
+        }
+    }
+    Ok(())
 }
 
 async fn running(db: &PgPool, import_id: Uuid) -> Result<bool, sqlx::Error> {

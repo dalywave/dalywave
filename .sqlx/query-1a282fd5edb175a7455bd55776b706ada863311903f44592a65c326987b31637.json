@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE import_items SET artist = $2, title = $3, duration_ms = COALESCE(duration_ms, $4),\n                            updated_at = now()\n                     WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1a282fd5edb175a7455bd55776b706ada863311903f44592a65c326987b31637"
+}
