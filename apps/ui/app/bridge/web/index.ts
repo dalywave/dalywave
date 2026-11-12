@@ -442,6 +442,9 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       moveFolder: (id, body) => unwrap(api.POST('/api/playlist-folders/{id}/move', { params: { path: { id } }, body })),
       removeItem: (id, itemId) => done(api.DELETE('/api/playlists/{id}/items/{itemId}', { params: { path: { id, itemId } } })),
       moveItem: (id, itemId, afterItemId) => done(api.POST('/api/playlists/{id}/items/{itemId}/move', { params: { path: { id, itemId } }, body: { afterItemId } })),
+      setPreview: (id, opts) => unwrap(api.POST('/api/playlists/{id}/set/preview', { params: { path: { id } }, body: opts })),
+      applySet: (id, opts) => unwrap(api.POST('/api/playlists/{id}/set', { params: { path: { id } }, body: opts })),
+      setOrder: (id, itemIds) => done(api.PUT('/api/playlists/{id}/order', { params: { path: { id } }, body: { itemIds } })),
       pin: (id, pinned) => (pinned
         ? done(api.PUT('/api/playlists/{id}/pin', { params: { path: { id } } }))
         : done(api.DELETE('/api/playlists/{id}/pin', { params: { path: { id } } }))),

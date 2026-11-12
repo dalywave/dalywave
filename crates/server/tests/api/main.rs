@@ -28,6 +28,7 @@ mod lyrics;
 mod mock;
 mod offline;
 mod password;
+mod playlist_set;
 mod playlists;
 mod quality;
 mod realtime;

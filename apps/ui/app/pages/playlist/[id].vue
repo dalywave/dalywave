@@ -57,6 +57,12 @@ async function refresh() {
 
 const addOpen = ref(false)
 
+// «Собрать как сет» поменял порядок этого плейлиста (или его вернули «Отменить») — перечитать
+const pui = usePlaylistUi()
+watch(() => pui.reordered, (r) => {
+  if (r?.id === id.value) void refresh()
+})
+
 const moreItems = computed<MenuEntry[]>(() => {
   if (!pl.value) return []
   return [
@@ -150,6 +156,7 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
           <UiIconButton v-if="mine && !ui.isPhone" icon="ph:plus" :label="t('addTracks')" size="lg" @click="addOpen = true" />
           <UiIconButton v-if="mine && !ui.isPhone" icon="ph:pencil-simple" :label="tg('pl.edit')" size="lg" @click="startEdit" />
           <UiIconButton v-if="!mine && !ui.isPhone" icon="ph:plus-circle" :label="tg('pl.saveAs')" size="lg" @click="pla.duplicate(pl)" />
+          <UiIconButton v-if="!ui.isPhone && pl.tracksCount > 2" icon="ph:vinyl-record" :label="tg('pl.set.title')" size="lg" @click="pui.openSet(pl)" />
           <MusicDownloadButton v-if="tracks.length" kind="playlist" :ref-id="pl.id" :title="pl.title" />
           <UiMenu :items="moreItems" align="start">
             <UiIconButton icon="ph:dots-three" :label="tg('common.more')" size="lg" :tooltip="false" />

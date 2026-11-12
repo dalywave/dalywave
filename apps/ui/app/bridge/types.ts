@@ -16,7 +16,7 @@ import type {
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
-  MovePlaylist, MovePlaylistFolder, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
+  MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
   Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
@@ -659,6 +659,12 @@ export interface Bridge {
     /** Несколько позиций разом (выбранные в списке) */
     removeItems(id: string, itemIds: string[]): Promise<void>
     moveItem(id: string, itemId: string, afterItemId: string | null): Promise<void>
+    /** «Собрать как сет»: новый порядок, плейлист не меняется (у микса — тоже) */
+    setPreview(id: string, opts: SetOptions): Promise<SetPreview>
+    /** Применить сет одной операцией; в ответе — прежний порядок для «Отменить» */
+    applySet(id: string, opts: SetOptions): Promise<SetApplied>
+    /** Порядок целиком: названные позиции — так, остальные — за ними */
+    setOrder(id: string, itemIds: string[]): Promise<void>
     pin(id: string, pinned: boolean): Promise<void>
     /** Своя обложка: картинка обрезается по центру до квадрата */
     setCover(id: string, file: Blob): Promise<PlaylistSummary>

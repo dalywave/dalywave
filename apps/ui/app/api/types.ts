@@ -106,6 +106,13 @@ export type NewPlaylistFolder = Schemas['NewPlaylistFolder']
 export type PlaylistFolderPatch = Schemas['PlaylistFolderPatch']
 export type MovePlaylist = Schemas['MovePlaylist']
 export type MovePlaylistFolder = Schemas['MovePlaylistFolder']
+// «Собрать как сет»
+export type SetCurve = Schemas['SetCurve']
+export type SetFit = Schemas['SetFit']
+export type SetOptions = Schemas['SetOptions']
+export type SetEntry = Schemas['SetEntry']
+export type SetPreview = Schemas['SetPreview']
+export type SetApplied = Schemas['SetApplied']
 
 // Настройки слушателя (общие для устройств): фильтр нецензурного, качество, порядок плейлистов
 export type UserSettings = Schemas['UserSettings']

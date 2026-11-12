@@ -331,6 +331,113 @@ pub struct MovedPlaylistItem {
     pub rebalanced: bool,
 }
 
+/// Порядок плейлиста целиком: названные позиции — в этом порядке, остальные (добавленные тем
+/// временем) — за ними в прежнем порядке. Так «Отменить» возвращает порядок до сборки сета.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlaylistOrder {
+    pub item_ids: Vec<Uuid>,
+}
+
+/// «Собрать как сет»: как идёт энергия.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SetCurve {
+    /// Нарастание: от спокойного к пику в конце.
+    #[default]
+    Rise,
+    /// Волна: подъём, пик около двух третей, спад.
+    Wave,
+    /// Ровно: как можно меньше скачков.
+    Flat,
+}
+
+names!(SetCurve { Rise => "rise", Wave => "wave", Flat => "flat" });
+
+/// Настройки сборки сета.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SetOptions {
+    #[serde(default)]
+    pub curve: SetCurve,
+    /// Позиция, с которой начать сет; без неё первый выбирается сам.
+    #[serde(default)]
+    pub first_item_id: Option<Uuid>,
+    /// Не ставить подряд треки одного исполнителя.
+    #[serde(default = "yes")]
+    pub spread_artists: bool,
+}
+
+fn yes() -> bool {
+    true
+}
+
+impl Default for SetOptions {
+    fn default() -> Self {
+        Self {
+            curve: SetCurve::Rise,
+            first_item_id: None,
+            spread_artists: true,
+        }
+    }
+}
+
+/// Как трек переходит из предыдущего — мягкая подсказка в списке.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SetFit {
+    /// Темп близко, тональности совместимы: «в тон».
+    InKey,
+    /// Темп близко, тональности не спорят: «плавно».
+    Smooth,
+    /// Энергия заметно выше.
+    Lift,
+    /// Энергия заметно ниже.
+    Calm,
+    /// Смена темпа или тональности.
+    Switch,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetEntry {
+    pub item_id: Uuid,
+    pub track_id: Uuid,
+    /// Энергия трека 0…1 — для линии энергии сета.
+    pub energy: Option<f32>,
+    /// Переход из предыдущего; у первого и у треков без анализа — нет.
+    pub fit: Option<SetFit>,
+    /// Поставлен по анализу; `false` — анализа нет, трек в конце в прежнем порядке.
+    pub placed: bool,
+}
+
+/// Порядок сета: новый порядок позиций и что изменится.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetPreview {
+    pub curve: SetCurve,
+    /// Все позиции плейлиста в новом порядке.
+    pub entries: Vec<SetEntry>,
+    /// Треков без анализа (они в конце).
+    pub unplaced: i64,
+    /// Переходов, которые сводятся плавно: сейчас и в новом порядке.
+    pub smooth_before: i64,
+    pub smooth_after: i64,
+    /// Новый порядок отличается от нынешнего.
+    pub changed: bool,
+    /// Плейлист собирается сам (микс): применить можно к своей копии.
+    pub read_only: bool,
+}
+
+/// Сет применён: новый порядок и прежний — для «Отменить».
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetApplied {
+    pub set: SetPreview,
+    /// Порядок позиций до сборки: вернуть — `PUT /api/playlists/{id}/order`.
+    pub previous_item_ids: Vec<Uuid>,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryCounts {

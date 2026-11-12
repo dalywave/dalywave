@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_items i SET position = (x.rn * 1024)::float8\n         FROM unnest($2::uuid[]) WITH ORDINALITY AS x(id, rn)\n         WHERE i.id = x.id AND i.playlist_id = $1 AND i.position <> (x.rn * 1024)::float8",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ea0211d3015c4fb06089a60281687ef0a136424f6a03a1d8e4e3ee1175f7f9ce"
+}

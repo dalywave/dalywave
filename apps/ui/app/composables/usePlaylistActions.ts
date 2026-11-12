@@ -147,6 +147,8 @@ export function usePlaylistActions() {
     }
     if (mine) entries.push({ label: t('pl.edit'), icon: 'ph:pencil-simple', onSelect: () => void edit(p) })
     else entries.push({ label: t('pl.saveAs'), icon: 'ph:plus-circle', onSelect: () => void duplicate(p) })
+    // Сет из двух треков не собрать; микс собирается в свою копию
+    if (p.tracksCount > 2) entries.push({ label: t('pl.set.title'), icon: 'ph:vinyl-record', onSelect: () => pui.openSet(p) })
     entries.push({ label: p.pinned ? t('pl.unpin') : t('pl.pin'), icon: p.pinned ? 'ph:push-pin-slash' : 'ph:push-pin', onSelect: () => void library.setPinned(p, !p.pinned) })
     entries.push(tree.moveMenu(p))
     if (offline.available && p.tracksCount) {

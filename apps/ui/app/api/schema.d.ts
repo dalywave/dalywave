@@ -735,6 +735,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/devices/remote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remote_presence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/remote/command": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remote_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/remote/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remote_transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -1679,6 +1727,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/playlists/{id}/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["set_order"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/playlists/{id}/pin": {
         parameters: {
             query?: never;
@@ -1690,6 +1754,38 @@ export interface paths {
         put: operations["pin"];
         post?: never;
         delete: operations["unpin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/set/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["preview_post_playlists_id_set_preview"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4474,6 +4570,13 @@ export interface components {
             folders?: components["schemas"]["PlaylistFolder"][];
             items: components["schemas"]["PlaylistSummary"][];
         };
+        /**
+         * @description Порядок плейлиста целиком: названные позиции — в этом порядке, остальные (добавленные тем
+         *     временем) — за ними в прежнем порядке. Так «Отменить» возвращает порядок до сборки сета.
+         */
+        PlaylistOrder: {
+            itemIds: string[];
+        };
         PlaylistPatch: {
             description?: string | null;
             title?: string | null;
@@ -5415,6 +5518,69 @@ export interface components {
         SessionList: {
             items: components["schemas"]["SessionInfo"][];
             nextCursor: string | null;
+        };
+        /** @description Сет применён: новый порядок и прежний — для «Отменить». */
+        SetApplied: {
+            /** @description Порядок позиций до сборки: вернуть — `PUT /api/playlists/{id}/order`. */
+            previousItemIds: string[];
+            set: components["schemas"]["SetPreview"];
+        };
+        /**
+         * @description «Собрать как сет»: как идёт энергия.
+         * @enum {string}
+         */
+        SetCurve: "rise" | "wave" | "flat";
+        SetEntry: {
+            /**
+             * Format: float
+             * @description Энергия трека 0…1 — для линии энергии сета.
+             */
+            energy?: number | null;
+            fit?: components["schemas"]["SetFit"] | null;
+            /** Format: uuid */
+            itemId: string;
+            /** @description Поставлен по анализу; `false` — анализа нет, трек в конце в прежнем порядке. */
+            placed: boolean;
+            /** Format: uuid */
+            trackId: string;
+        };
+        /**
+         * @description Как трек переходит из предыдущего — мягкая подсказка в списке.
+         * @enum {string}
+         */
+        SetFit: "in_key" | "smooth" | "lift" | "calm" | "switch";
+        /** @description Настройки сборки сета. */
+        SetOptions: {
+            curve?: components["schemas"]["SetCurve"];
+            /**
+             * Format: uuid
+             * @description Позиция, с которой начать сет; без неё первый выбирается сам.
+             */
+            firstItemId?: string | null;
+            /** @description Не ставить подряд треки одного исполнителя. */
+            spreadArtists?: boolean;
+        };
+        /** @description Порядок сета: новый порядок позиций и что изменится. */
+        SetPreview: {
+            /** @description Новый порядок отличается от нынешнего. */
+            changed: boolean;
+            curve: components["schemas"]["SetCurve"];
+            /** @description Все позиции плейлиста в новом порядке. */
+            entries: components["schemas"]["SetEntry"][];
+            /** @description Плейлист собирается сам (микс): применить можно к своей копии. */
+            readOnly: boolean;
+            /** Format: int64 */
+            smoothAfter: number;
+            /**
+             * Format: int64
+             * @description Переходов, которые сводятся плавно: сейчас и в новом порядке.
+             */
+            smoothBefore: number;
+            /**
+             * Format: int64
+             * @description Треков без анализа (они в конце).
+             */
+            unplaced: number;
         };
         /** @description Карточка для ссылки: то же видят превью в мессенджерах и статус в Discord. */
         ShareCard: {
@@ -8259,6 +8425,105 @@ export interface operations {
             };
         };
     };
+    remote_presence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectHello"];
+            };
+        };
+        responses: {
+            /** @description Пульт отметился (в сети ещё 15 с). Устройства и снимок активного — без очереди, истории и формы волны */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectOverview"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remote_command: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectSend"];
+            };
+        };
+        responses: {
+            /** @description Подтверждение устройства: `ok`, или `error` — `offline` (не в сети), `timeout` (не ответило за 4 с), `failed`, `unsupported` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectAck"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remote_transfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectTransfer"];
+            };
+        };
+        responses: {
+            /** @description Перенос: `ok`, или `error` — `offline`, `unsupported` (на часы звук не переносится) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectAck"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     ingest: {
         parameters: {
             query?: never;
@@ -10911,6 +11176,49 @@ export interface operations {
             };
         };
     };
+    set_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaylistOrder"];
+            };
+        };
+        responses: {
+            /** @description Порядок задан: названные позиции — так, остальные — за ними в прежнем порядке; чужие id пропущены */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Плейлист собирается сам (микс) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     pin: {
         parameters: {
             query?: never;
@@ -10962,6 +11270,123 @@ export interface operations {
             };
             /** @description Нет такого плейлиста */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetOptions"];
+            };
+        };
+        responses: {
+            /** @description Сет применён; прежний порядок — для «Отменить» */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetApplied"];
+                };
+            };
+            /** @description Нет позиции `firstItemId` */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Плейлист собирается сам (микс): сначала сохранить копию */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком длинный плейлист (`too_long`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    preview_post_playlists_id_set_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста или микса */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetOptions"];
+            };
+        };
+        responses: {
+            /** @description Порядок сета; плейлист не меняется */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetPreview"];
+                };
+            };
+            /** @description Нет позиции `firstItemId` */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком длинный плейлист (`too_long`) */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

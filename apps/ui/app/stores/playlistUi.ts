@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Track } from '~/api/types'
+import type { PlaylistSummary, Track } from '~/api/types'
 
 export interface ConfirmRequest {
   title: string
@@ -37,6 +37,17 @@ export const usePlaylistUi = defineStore('playlistUi', () => {
 
   /** Треки, которые сейчас тянут на плейлист в боковой панели */
   const dragTracks = ref<Track[] | null>(null)
+
+  /** «Собрать как сет»: для какого плейлиста открыт лист */
+  const setFor = ref<PlaylistSummary | null>(null)
+  const setOpen = ref(false)
+  /** Порядок плейлиста поменялся сборкой или «Отменить» — открытая страница перечитывает его */
+  const reordered = ref<{ id: string, at: number } | null>(null)
+
+  function openSet(p: PlaylistSummary) {
+    setFor.value = p
+    setOpen.value = true
+  }
 
   function pick(tracks: Track[]) {
     if (!tracks.length) return
@@ -83,5 +94,5 @@ export const usePlaylistUi = defineStore('playlistUi', () => {
     if (!open) submitPrompt(null)
   })
 
-  return { pickTracks, pickOpen, confirmReq, confirmOpen, promptReq, promptOpen, hidden, dragTracks, pick, confirm, answer, prompt, submitPrompt }
+  return { pickTracks, pickOpen, confirmReq, confirmOpen, promptReq, promptOpen, hidden, dragTracks, setFor, setOpen, reordered, pick, confirm, answer, prompt, submitPrompt, openSet }
 })

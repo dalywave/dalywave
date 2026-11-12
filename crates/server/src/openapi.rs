@@ -8,9 +8,9 @@ use utoipa::{
 
 use crate::routes::{
     acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, events, fetcher, home,
-    images, imports, jam, library, lyrics, offline, playlist_folders, playlists, queue, reco,
-    recognize, rewind, settings, share, sources, stream, sync, system, taste, updates, wave,
-    wave_presets, ws,
+    images, imports, jam, library, lyrics, offline, playlist_folders, playlist_set, playlists,
+    queue, reco, recognize, rewind, settings, share, sources, stream, sync, system, taste, updates,
+    wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -123,6 +123,9 @@ use crate::routes::{
         playlists::set_cover,
         playlists::remove_cover,
         playlists::duplicate,
+        playlist_set::preview,
+        playlist_set::apply,
+        playlist_set::set_order,
         playlist_folders::create,
         playlist_folders::update,
         playlist_folders::remove,

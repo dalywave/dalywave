@@ -281,7 +281,41 @@
     "drag": "Drag: {title}",
     "remove": "Remove",
     "removeTrack": "Remove “{title}”",
-    "editEmpty": "No tracks yet"
+    "editEmpty": "No tracks yet",
+    "set": {
+      "title": "Arrange as a set",
+      "curve": "Energy flow",
+      "rise": "Build-up",
+      "riseDesc": "From calm to the brightest",
+      "wave": "Wave",
+      "waveDesc": "Rise, a peak near the end, a gentle fade",
+      "flat": "Steady",
+      "flatDesc": "No sudden jumps",
+      "start": "Start with",
+      "auto": "Automatically",
+      "first": "First track",
+      "back": "Back",
+      "search": "Find a track",
+      "energy": "Energy across the set",
+      "smooth": "Smooth transitions: {after} of {total}, now {before}",
+      "same": "Already arranged this way",
+      "unplaced": "{n} at the end: not much known about them yet",
+      "apply": "Apply",
+      "applyCopy": "Arrange a copy",
+      "copyTitle": "{title} — set",
+      "applied": "Arranged as a set",
+      "appliedDj": "Arranged as a set, DJ transitions on",
+      "dj": "DJ transitions",
+      "djDesc": "Mix tracks like in a set",
+      "tooLong": "This playlist is too big for a set",
+      "fit": {
+        "in_key": "in key",
+        "smooth": "smooth",
+        "lift": "lift",
+        "calm": "calmer",
+        "switch": "shift"
+      }
+    }
   },
   "track": {
     "wrongRecording": "Wrong recording",

@@ -15,6 +15,7 @@ pub mod library;
 pub mod lyrics;
 pub mod offline;
 pub mod playlist_folders;
+pub mod playlist_set;
 pub mod playlists;
 pub mod queue;
 pub mod reco;
@@ -88,6 +89,7 @@ pub fn router(state: AppState) -> Router {
     let library = library::routes()
         .merge(playlists::routes())
         .merge(playlist_folders::routes())
+        .merge(playlist_set::routes())
         .merge(home::routes())
         .merge(taste::routes())
         .merge(rewind::routes())

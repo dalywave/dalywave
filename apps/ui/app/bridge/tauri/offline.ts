@@ -186,6 +186,8 @@ export function withOffline(bridge: Bridge, offline: OfflineBridge): Bridge {
       removeCover: synced(pl.removeCover),
       duplicate: synced(pl.duplicate),
       moveItem: synced(pl.moveItem),
+      applySet: synced(pl.applySet),
+      setOrder: synced(pl.setOrder),
       pin: synced(pl.pin),
       move: synced(pl.move),
       createFolder: synced(pl.createFolder),

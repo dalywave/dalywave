@@ -108,7 +108,11 @@ async fn lock_owned(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> AppResu
 
 /// Как [`lock_owned`], но только для плейлистов, которые человек ведёт сам: миксы собираются
 /// рекомендациями и при следующей сборке затёрли бы правку — их сначала сохраняют копией.
-async fn lock_editable(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> AppResult<()> {
+pub(super) async fn lock_editable(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    id: Uuid,
+) -> AppResult<()> {
     let kind = sqlx::query_scalar!(
         "SELECT kind FROM playlists WHERE id = $1 AND user_id = $2 FOR UPDATE",
         id,
@@ -126,14 +130,14 @@ async fn lock_editable(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> AppR
     Ok(())
 }
 
-async fn touch(conn: &mut PgConnection, id: Uuid) -> Result<(), sqlx::Error> {
+pub(super) async fn touch(conn: &mut PgConnection, id: Uuid) -> Result<(), sqlx::Error> {
     sqlx::query!("UPDATE playlists SET updated_at = now() WHERE id = $1", id)
         .execute(conn)
         .await?;
     Ok(())
 }
 
-async fn changed(conn: &mut PgConnection, user_id: Uuid, entities: Vec<SyncEntity>) {
+pub(super) async fn changed(conn: &mut PgConnection, user_id: Uuid, entities: Vec<SyncEntity>) {
     realtime::publish(
         conn,
         Audience::User(user_id),
