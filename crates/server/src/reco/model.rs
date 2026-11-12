@@ -91,8 +91,13 @@ pub const FEATURE_DIM: usize = SOUND_DIM + SEMANTIC_DIM + SCALARS.len();
 pub const MIN_ROWS: usize = 300;
 /// Сколько строк, самое меньшее, уходит на проверку.
 pub const MIN_HOLDOUT: usize = 60;
-/// Самые поздние 20 % строк — отложенная проверка.
+/// Самые поздние 20 % строк — отложенная проверка (запасной размер, когда истории по времени мало).
 const HOLDOUT_SHARE: f64 = 0.2;
+/// Отложенная проверка — последние недели истории: в неё попадает и импорт за эти недели, а не только
+/// горстка свежих прослушиваний в DalyWave, на которых правила и сеть ведут себя иначе.
+const HOLDOUT_WEEKS: i64 = 4;
+/// Больше этой доли на проверку не уходит: иначе учить не на чем.
+const MAX_HOLDOUT_SHARE: f64 = 0.4;
 /// Последние прослушивания за год, не больше стольких.
 const MAX_ROWS: i64 = 30_000;
 /// Чтобы включиться, сеть должна обогнать правила по средней AUC хотя бы на столько (и не уступить в logloss).
@@ -407,6 +412,20 @@ pub fn f16_bits(x: f32) -> u16 {
     sign | r as u16
 }
 
+/// С какой строки начинается проверка: строки идут по времени, на проверку — последние
+/// [`HOLDOUT_WEEKS`] недель истории, но не меньше [`MIN_HOLDOUT`] строк и не больше [`MAX_HOLDOUT_SHARE`].
+pub fn holdout_start(times: &[DateTime<Utc>]) -> usize {
+    let rows = times.len();
+    let Some(last) = times.last() else {
+        return 0;
+    };
+    let cut = *last - Duration::weeks(HOLDOUT_WEEKS);
+    let by_time = rows - times.partition_point(|t| *t < cut);
+    let floor = MIN_HOLDOUT.min(rows);
+    let ceil = ((rows as f64 * MAX_HOLDOUT_SHARE).round() as usize).max(floor);
+    rows - by_time.clamp(floor, ceil)
+}
+
 /// Сколько строк уходит на проверку.
 pub fn holdout_size(rows: usize) -> usize {
     ((rows as f64 * HOLDOUT_SHARE).round() as usize)
@@ -551,6 +570,8 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
     }
 
     let mut data = Dataset::default();
+    // Время каждой строки — для отложенной проверки по неделям, а не по числу строк
+    let mut row_at: Vec<DateTime<Utc>> = Vec::new();
     let mut vector_of: HashMap<Uuid, i32> = HashMap::new();
     for e in &events {
         let h = history.entry(e.user_id).or_default();
@@ -635,6 +656,7 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
             data.labels.extend_from_slice(&y);
             data.baseline.push(rules_prior(&feat, &fam, e.started_at));
             data.rows += 1;
+            row_at.push(e.started_at);
         }
         // История — после строки: признаки видят только прошлое
         let complete = labels.is_some_and(|y| y[1] > 0.5);
@@ -652,7 +674,7 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
         h.last_at = Some(e.started_at);
         h.last_session = e.listening_session;
     }
-    data.holdout_from = data.rows - holdout_size(data.rows);
+    data.holdout_from = holdout_start(&row_at);
     Ok(data)
 }
 
@@ -1349,6 +1371,18 @@ mod tests {
         let none = judge(&json!({ "auc": null, "baselineAuc": null }));
         assert!(!none.beats);
         assert_eq!(holdout_size(300), 60);
+        let day = |d: i64| DateTime::<Utc>::from_timestamp(0, 0).unwrap() + Duration::days(d);
+        // Год истории по строке в день: на проверку — последние четыре недели
+        let year: Vec<_> = (0..365).map(day).collect();
+        assert_eq!(365 - holdout_start(&year), 60.max(29));
+        // Вся история за неделю: последние недели — это всё, но больше 40 % на проверку не уходит
+        let week: Vec<_> = (0..300).map(|i| day(i / 50)).collect();
+        assert_eq!(300 - holdout_start(&week), 120);
+        // Плотный хвост свежих строк: всё из последних четырёх недель
+        let mut tail: Vec<_> = (0..300).map(day).collect();
+        tail.extend((0..80).map(|_| day(300)));
+        assert_eq!(380 - holdout_start(&tail), 80 + 28);
+        assert_eq!(holdout_start(&[]), 0);
         assert_eq!(holdout_size(1000), 200);
     }
 }
