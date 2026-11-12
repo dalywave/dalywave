@@ -59,7 +59,7 @@ impl Stub {
     fn answer(&self, auc: f64, base_auc: f64, loss: f64, base_loss: f64) {
         let head = |p: i64| json!({ "positives": p, "auc": auc, "logloss": loss, "baselineAuc": base_auc, "baselineLogloss": base_loss });
         *self.metrics.lock().unwrap() = json!({
-            "train": 320, "holdout": 80,
+            "train": 240, "holdout": 160,
             "heads": { "skip": head(40), "complete": head(40), "like": { "positives": 0, "auc": null,
                        "logloss": 0.01, "baselineAuc": null, "baselineLogloss": 0.02 } },
             "auc": auc, "logloss": loss, "baselineAuc": base_auc, "baselineLogloss": base_loss,
@@ -204,10 +204,11 @@ async fn network_switches_on_only_when_it_beats_rules(db: PgPool) {
         .unwrap();
     let (stub, base) = Stub::start().await;
 
-    // Набор: строки по времени, метки, последние 20 % — проверка
+    // Набор: строки по времени, метки; проверка — последние четыре недели, а вся история здесь за сутки:
+    // на проверку уходит потолок, 40 %
     let data = model::dataset(&app.state.db).await.unwrap();
     assert_eq!(data.rows, 400);
-    assert_eq!(data.holdout_from, 320);
+    assert_eq!(data.holdout_from, 240);
     assert_eq!(data.vector_rows, 40, "вектор трека — один раз");
     assert_eq!(data.scalars.len(), 400 * model::SCALARS.len());
     let label = |i: usize| &data.labels[i * 3..i * 3 + 3];
@@ -240,7 +241,7 @@ async fn network_switches_on_only_when_it_beats_rules(db: PgPool) {
         assert_eq!(calls.len(), 1);
         let body = &calls[0];
         assert_eq!(body["rows"], 400);
-        assert_eq!(body["holdoutFrom"], 320);
+        assert_eq!(body["holdoutFrom"], 240);
         assert_eq!(body["scalarDim"], model::SCALARS.len());
         assert_eq!(body["soundDim"], 1280);
         assert_eq!(body["featureNames"][0], "bpm");
