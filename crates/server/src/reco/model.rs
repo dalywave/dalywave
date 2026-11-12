@@ -1374,7 +1374,8 @@ mod tests {
         let day = |d: i64| DateTime::<Utc>::from_timestamp(0, 0).unwrap() + Duration::days(d);
         // Год истории по строке в день: на проверку — последние четыре недели
         let year: Vec<_> = (0..365).map(day).collect();
-        assert_eq!(365 - holdout_start(&year), 60.max(29));
+        // Последние четыре недели — 29 строк, меньше нижней границы: на проверку уходит 60
+        assert_eq!(365 - holdout_start(&year), 60);
         // Вся история за неделю: последние недели — это всё, но больше 40 % на проверку не уходит
         let week: Vec<_> = (0..300).map(|i| day(i / 50)).collect();
         assert_eq!(300 - holdout_start(&week), 120);
