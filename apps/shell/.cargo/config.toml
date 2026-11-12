@@ -1,0 +1,6 @@
+# MSVC по умолчанию сообщает __cplusplus = 199711, и заголовок ssstretch (растяжение темпа «Диджея»)
+# подкладывает свою копию std::make_unique — вызов становится неоднозначным. С /Zc:__cplusplus
+# компилятор сообщает настоящую версию C++, и копия не нужна. На других системах не влияет.
+[env]
+CXXFLAGS_x86_64_pc_windows_msvc = "/Zc:__cplusplus"
+CXXFLAGS_aarch64_pc_windows_msvc = "/Zc:__cplusplus"
