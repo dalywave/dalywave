@@ -96,6 +96,7 @@ export const useConnectStore = defineStore('connect', () => {
       lastSeenAt: d.lastSeenAt,
       active: d.id === activeId.value,
       volume: d.capabilities.volume,
+      remote: !!d.capabilities.remote,
     }))
     // Связи с сервером ещё нет — само устройство в списке всё равно есть
     if (!own) rows.unshift({ id: deviceId.value, name: deviceName(), kind: kindOf(bridge.platform, app), current: true, online: true, lastSeenAt: null, active: isActive.value })
@@ -322,6 +323,8 @@ export const useConnectStore = defineStore('connect', () => {
       return
     }
     if (d.id === activeId.value && d.online) return
+    // Часы — пульт: звук там не играет
+    if (d.remote) return
     if (!d.online) {
       toast.show({ text: t('connect.offline', { name: d.name }), icon: 'ph:wifi-slash' })
       return

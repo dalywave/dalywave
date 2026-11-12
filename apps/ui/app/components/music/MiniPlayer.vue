@@ -20,6 +20,7 @@ const ICON: Record<ConnectKind, string> = {
   phone: 'ph:device-mobile',
   tablet: 'ph:device-tablet',
   web: 'ph:browser',
+  watch: 'ph:watch',
 }
 
 function open(e: MouseEvent) {

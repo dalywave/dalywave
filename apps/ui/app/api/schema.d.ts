@@ -495,6 +495,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/app/pair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["app_pair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/app/start": {
         parameters: {
             query?: never;
@@ -2901,6 +2917,8 @@ export interface components {
         ConnectCapabilities: {
             /** @description Режим переходов «Диджей» (движок приложения). */
             dj?: boolean;
+            /** @description Только пульт: звук здесь не играет (часы), перенести сюда воспроизведение нельзя. */
+            remote?: boolean;
             /** @description Громкость меняется из приложения (у Safari на iPhone — только кнопками телефона). */
             volume?: boolean;
         };
@@ -2950,7 +2968,7 @@ export interface components {
          * @description Вид устройства — для значка в списке.
          * @enum {string}
          */
-        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet";
+        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch";
         /** @description `GET /api/devices`: устройства и последнее состояние. */
         ConnectOverview: {
             activeDeviceId: string | null;
@@ -4307,6 +4325,17 @@ export interface components {
             /** @description Подпись кнопки входа, например `daly.rest`. */
             title: string;
         };
+        /**
+         * @description Сессия для сопряжённого устройства (Apple Watch) от уже вошедшего приложения. Это не новый
+         *     способ входа: человек уже вошёл через daly.rest на iPhone, часы получают дочернюю сессию.
+         */
+        PairRequest: {
+            appVersion?: string | null;
+            /** @description Имя для списка устройств; по умолчанию «Apple Watch». */
+            deviceName?: string | null;
+            /** @description Только `watchos`. */
+            platform: components["schemas"]["Platform"];
+        };
         PasswordLogin: {
             password: string;
         };
@@ -4321,7 +4350,7 @@ export interface components {
             id?: string | null;
         };
         /** @enum {string} */
-        Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android";
+        Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android" | "watchos";
         /** @description Что играет: альбом, плейлист, волна… */
         PlayContext: {
             id?: string | null;
@@ -7650,6 +7679,66 @@ export interface operations {
             };
             /** @description Нет такого артиста */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    app_pair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PairRequest"];
+            };
+        };
+        responses: {
+            /** @description Сессия часов: отдельное устройство в «Доступе», отзывается вместе с iPhone. Токен показывается один раз */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppToken"];
+                };
+            };
+            /** @description Платформа — не сопряжённое устройство */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Просит не приложение (сайт) или само сопряжённое устройство */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 10 запросов в минуту с одного адреса */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

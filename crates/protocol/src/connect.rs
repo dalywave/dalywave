@@ -30,6 +30,8 @@ pub enum ConnectKind {
     Desktop,
     Phone,
     Tablet,
+    /// Часы: пульт на запястье.
+    Watch,
 }
 
 names!(ConnectKind {
@@ -38,6 +40,7 @@ names!(ConnectKind {
     Desktop => "desktop",
     Phone => "phone",
     Tablet => "tablet",
+    Watch => "watch",
 });
 
 /// Что устройство умеет — пульт прячет то, чего нет.
@@ -50,6 +53,9 @@ pub struct ConnectCapabilities {
     /// Режим переходов «Диджей» (движок приложения).
     #[serde(default)]
     pub dj: bool,
+    /// Только пульт: звук здесь не играет (часы), перенести сюда воспроизведение нельзя.
+    #[serde(default)]
+    pub remote: bool,
 }
 
 /// Первое сообщение устройства после `hello` сервера: кто оно. Повторяется после каждого переподключения.

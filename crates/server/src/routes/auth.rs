@@ -4,6 +4,7 @@
 //! Приложение: `/api/auth/app/start` → тот же круг через daly.rest → одноразовый код на redirect_uri
 //! приложения → `POST /api/auth/app/token` → токен устройства `dwd_…`. Код от daly.rest меняется
 //! на токены только здесь, на сервере: секрет клиента есть только у него.
+//! Часы: своего входа нет — вошедший iPhone просит `POST /api/auth/app/pair` и передаёт им токен.
 
 use std::{net::IpAddr, time::Duration};
 
@@ -20,7 +21,7 @@ use dalywave_protocol::{
     ErrorBody,
     auth::{
         AppStartQuery, AppToken, AppTokenRequest, AuthProviders, AuthVia, Me, OidcProvider,
-        OidcStartQuery, PasswordLogin, Platform,
+        OidcStartQuery, PairRequest, PasswordLogin, Platform, SessionKind,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -56,6 +57,7 @@ pub fn routes() -> Router<AppState> {
         .route("/me", get(me))
         .route("/app/start", get(app_start))
         .route("/app/token", post(app_token))
+        .route("/app/pair", post(app_pair))
 }
 
 /// Незаконченный вход. Лежит в зашифрованной cookie `dw_oidc`: state, nonce и PKCE verifier
@@ -809,6 +811,117 @@ pub async fn app_token(
         token,
         device: device.view(),
         user: user.public(),
+    }))
+}
+
+// ---------- сопряжённые устройства ----------
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/app/pair",
+    tag = "auth",
+    security(("device" = [])),
+    request_body = PairRequest,
+    responses(
+        (status = 200, description = "Сессия часов: отдельное устройство в «Доступе», отзывается вместе \
+                                      с iPhone. Токен показывается один раз", body = AppToken),
+        (status = 400, description = "Платформа — не сопряжённое устройство", body = ErrorBody),
+        (status = 401, description = "Нет сессии", body = ErrorBody),
+        (status = 403, description = "Просит не приложение (сайт) или само сопряжённое устройство", body = ErrorBody),
+        (status = 429, description = "Больше 10 запросов в минуту с одного адреса", body = ErrorBody),
+    ),
+)]
+pub async fn app_pair(
+    State(st): State<AppState>,
+    ClientIp(ip): ClientIp,
+    headers: HeaderMap,
+    principal: Principal,
+    Json(body): Json<PairRequest>,
+) -> AppResult<Json<AppToken>> {
+    if !st
+        .limiter
+        .check("app-pair", ip, 10, Duration::from_secs(60))
+    {
+        return Err(AppError::TooManyRequests);
+    }
+    // Выдаёт только приложение со своим входом: не сайт (cookie можно подставить чужой странице)
+    // и не сами часы — иначе сопряжённые устройства плодили бы друг друга
+    let parent = match (principal.kind, principal.device_id) {
+        (SessionKind::Device, Some(id)) => id,
+        _ => return Err(AppError::Forbidden("сессию часам выдаёт приложение".into())),
+    };
+    if !body.platform.is_paired_accessory() {
+        return Err(bad("platform: сессию можно выдать только часам (watchos)"));
+    }
+    let mut tx = st.db.begin().await?;
+    let parent_row = sqlx::query!(
+        "SELECT d.paired_from, s.auth_method FROM devices d JOIN sessions s ON s.device_id = d.id
+         WHERE d.id = $1 AND s.id = $2",
+        parent,
+        principal.session_id,
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(AppError::Unauthorized)?;
+    if parent_row.paired_from.is_some() {
+        return Err(AppError::Forbidden(
+            "сопряжённое устройство не выдаёт сессий".into(),
+        ));
+    }
+    let method = match parent_row.auth_method.as_str() {
+        "password" => Method::Password,
+        _ => Method::Oidc,
+    };
+    let name = body
+        .device_name
+        .as_deref()
+        .map(|n| n.trim().chars().take(64).collect::<String>())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| devices::default_name(body.platform).to_string());
+    let app_version: Option<String> = body
+        .app_version
+        .as_deref()
+        .map(|v| v.trim().chars().take(32).collect())
+        .filter(|v: &String| !v.is_empty());
+    let user = principal.user.id;
+    let device = devices::create_paired(
+        &mut tx,
+        user,
+        parent,
+        &name,
+        body.platform.as_str(),
+        app_version.as_deref(),
+    )
+    .await?;
+    let new = NewSession {
+        user_id: user,
+        device_id: Some(device.id),
+        method,
+        user_agent: user_agent(&headers),
+        ip,
+    };
+    let (session_id, token) = session::create(&mut tx, new).await?;
+    let payload = json!({
+        "via": "paired",
+        "sessionId": session_id,
+        "deviceId": device.id,
+        "pairedFrom": parent,
+        "platform": body.platform,
+        "ip": ip.to_string(),
+    });
+    audit::record(
+        &mut *tx,
+        Some(user),
+        audit::SIGN_IN,
+        Some(user.to_string()),
+        payload,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(Json(AppToken {
+        token,
+        device: device.view(),
+        user: principal.user,
     }))
 }
 

@@ -205,6 +205,58 @@ developer.apple.com → Account → **Certificates, Identifiers & Profiles** →
 - Проверка без голоса: `make ios-test` — тест `SiriShortcutsTests` открывает «Команды», раздел DalyWave
   и выполняет «Пауза» (снимки — `design/shots/siri`; нужен `make test-audio-server`).
 
+## Apple Watch
+
+Приложение часов (`gen/apple/WatchApp`, SwiftUI, watchOS 11+, Bundle ID `rest.daly.wave.watchkitapp`)
+ставится вместе с iPhone-приложением: iOS сама предложит его на часах (или «Watch» → DalyWave →
+«Установить»). Это пульт «Где играть»: «Сейчас играет» (⏮ ⏯ ⏭, «Нравится», громкость колёсиком
+Digital Crown, выбор устройства), «Моя волна» (одно нажатие, настроения, сохранённые сочетания),
+медиатека («Любимые треки», плейлисты, недавнее). Звук играет на iPhone, компьютере или в браузере.
+Осложнения и Smart Stack (`gen/apple/WatchWidgets`, `rest.daly.wave.watchkitapp.widgets`): кнопка
+«Моя волна» и мини «Сейчас играет».
+
+**Вход.** Своего входа у часов нет. Часы просят ключ у iPhone (WatchConnectivity,
+`Sources/dalywave-shell/WatchLink.swift`), iPhone просит у сервера дочернюю сессию
+`POST /api/auth/app/pair` (`src/watch.rs`, токен iPhone не покидает Rust) и передаёт её часам; часы
+хранят её в своей связке ключей. В разделе «Доступ» это отдельная строка «Apple Watch»: её можно
+отозвать, а выход или отзыв iPhone отзывает и часы. Повторная выдача заменяет прежние часы этого
+iPhone. Ключ отозван — часы сами просят новый, когда iPhone рядом.
+
+**Связь.** watchOS даёт WebSocket только приложениям со своим звуком, поэтому на часах — пульт по
+HTTP: раз в 2 с `POST /api/devices/remote` (отметиться и забрать состояние без очереди), команды —
+`POST /api/devices/remote/command` с подтверждением устройства в ответе, перенос —
+`/api/devices/remote/transfer`. На симуляторе WebSocket работает, и часы ходят по нему
+(`DALYWAVE_WATCH_TRANSPORT=http` — проверить путь настоящих часов).
+
+### Что включить в Apple Developer (один раз)
+
+Часы и осложнения делят снимок «Сейчас играет» через App Group `group.rest.daly.wave` (ту же, что у
+виджетов iPhone). Ключ App Store Connect API группы не создаёт (у API нет такой операции), поэтому один
+раз — в портале или Xcode с вошедшим аккаунтом:
+
+1. developer.apple.com → **Certificates, Identifiers & Profiles** → **Identifiers** → «+» →
+   **App Groups** → Description «DalyWave», Identifier `group.rest.daly.wave` → Register (если её ещё
+   нет).
+2. Там же «+» → **App IDs** → App → Bundle ID Explicit `rest.daly.wave.watchkitapp` (Description
+   «DalyWave Watch») → Capabilities: **App Groups** → Register. Затем откройте его → App Groups →
+   **Edit** → отметить `group.rest.daly.wave` → Save.
+3. То же для `rest.daly.wave.watchkitapp.widgets` («DalyWave Watch Widgets»).
+4. `make testflight` (или архив в Xcode): автоподпись с ключом API сама выпустит профили.
+
+Проще всего: Xcode → Settings → Accounts (Apple ID команды Y5KR5JPCRG) → открыть проект, цель
+`dalywave-watch` → Signing & Capabilities: Xcode сам зарегистрирует App ID и группу; то же для
+`dalywave-watch-widgets`.
+
+### Симулятор
+
+Пара часов и iPhone: `xcrun simctl pair <часы> <iPhone>`, обе загрузить, поставить приложение iPhone
+(`DALYWAVE_DEV_TOKEN`, `DALYWAVE_SERVER_URL`) и приложение часов из
+`Products/debug-watchsimulator/DalyWaveWatch.app`. Без iPhone: часы берут ключ из
+`DALYWAVE_DEV_TOKEN` / `DALYWAVE_DEV_SERVER` (только симулятор). Проверки без касаний (только
+симулятор): `DALYWAVE_WATCH_PAGE` (0 — «Сейчас играет», 1 — «Моя волна», 2 — медиатека),
+`DALYWAVE_WATCH_SHEET=devices`, `DALYWAVE_WATCH_ACTIONS=toggle,next,like,calm,liked`. Переменные
+передаются как `SIMCTL_CHILD_…` при `xcrun simctl launch`.
+
 ## Журнал
 
 Xcode → Window → Devices and Simulators → iPhone → Installed Apps → DalyWave → «…» → Download
