@@ -82,9 +82,9 @@
       ]
     },
     "nullable": [
-      false,
-      null,
       true,
+      null,
+      false,
       true,
       true,
       true,

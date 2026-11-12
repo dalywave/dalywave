@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id, r.audio_status AS \"audio_status?\" FROM tracks t\n           LEFT JOIN recordings r ON r.id = t.recording_id WHERE t.id = ANY($1)",
+  "query": "SELECT t.id AS \"id!\", r.audio_status AS \"audio_status?\" FROM tracks t\n           LEFT JOIN recordings r ON r.id = t.recording_id WHERE t.id = ANY($1)",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
+        "name": "id!",
         "type_info": "Uuid",
         "origin": {
           "Table": {
@@ -32,9 +32,9 @@
       ]
     },
     "nullable": [
-      false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "1d8eb8e200d53d35a25727f14a53de5bd364da1a950875abebe1bef8f919999a"
+  "hash": "f85cabb52f02483a75850b964e0b3c380aba4a798432e46bd7dfab688b872bec"
 }
