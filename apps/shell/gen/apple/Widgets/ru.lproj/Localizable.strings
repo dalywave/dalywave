@@ -1,0 +1,23 @@
+/* Виджеты DalyWave (WidgetKit): названия и описания в галерее виджетов, подписи */
+
+"Now Playing" = "Сейчас играет";
+"What's playing, with pause and next." = "Что играет — с паузой и следующим треком.";
+"My Wave" = "Моя волна";
+"My Wave and your saved mixes in one tap." = "Волна и ваши сочетания — одним касанием.";
+"Recent" = "Недавнее";
+"Albums and playlists you've been listening to." = "Альбомы и плейлисты, которые вы слушали.";
+
+/* Сочетания волны, пока своих нет — как на главной */
+"Work" = "Работа";
+"Road" = "Дорога";
+"Night" = "Ночь";
+
+/* Кнопки (App Intents) */
+"Play or Pause" = "Играть или пауза";
+"Next Track" = "Следующий трек";
+"Play My Wave" = "Включить «Мою волну»";
+"Playing" = "Играет";
+"Mood" = "Настроение";
+"Activity" = "Занятие";
+"Character" = "Характер";
+"Language" = "Язык";

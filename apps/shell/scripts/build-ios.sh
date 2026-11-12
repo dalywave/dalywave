@@ -69,5 +69,6 @@ cargo build --lib --target "$TARGET" $PROFILE_FLAG --features tauri/custom-proto
 
 OUT="${SRCROOT:-$SHELL_DIR/gen/apple}/Externals/$ARCH/${CONFIGURATION:-debug}"
 mkdir -p "$OUT"
-cp "$SHELL_DIR/target/$TARGET/$PROFILE_DIR/libdalywave_shell_lib.a" "$OUT/libapp.a"
+# CARGO_TARGET_DIR — своя папка сборки (параллельные проверки, второй worktree)
+cp "${CARGO_TARGET_DIR:-$SHELL_DIR/target}/$TARGET/$PROFILE_DIR/libdalywave_shell_lib.a" "$OUT/libapp.a"
 echo "Rust: $TARGET ($PROFILE_DIR) -> $OUT/libapp.a"

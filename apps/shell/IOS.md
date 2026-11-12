@@ -73,6 +73,53 @@ DalyWave?» → «Открыть».
 Xcode подписывает его той же командой сам. Проверка на симуляторе — `ShareExtensionTests` в
 `make ios-test`, снимки — `design/shots/share`.
 
+## Виджеты
+
+Домашний экран → долгое нажатие → «Изменить» → «Добавить виджет» → DalyWave:
+
+| Виджет | Размеры | Что внутри |
+|---|---|---|
+| Сейчас играет | маленький, средний, строка экрана блокировки | обложка, название, исполнитель, ⏯ ⏭; фон — цвет обложки |
+| Моя волна | маленький, средний, круглый значок экрана блокировки | запуск волны; в среднем — три сохранённых сочетания (пока своих нет — «Работа», «Дорога», «Ночь») |
+| Недавнее | средний, большой | полка «Продолжить» главной: альбомы, плейлисты, артисты; нажатие открывает экран |
+
+Маленькие виджеты работают и в StandBy. Тёмная и светлая тема — по системе; тонированные и
+прозрачные значки iOS 18+ — обложка обесцвечивается и подкрашивается. Кнопки (iOS 17+) — App Intents
+(`gen/apple/WidgetsShared/WidgetIntents.swift`): система выполняет их в процессе приложения и
+запускает его в фоне, если оно закрыто; дальше — тот же путь, что у Siri (`src/siri.rs`). На iOS 15–16
+кнопки — ссылки `dalywave://remote/toggle`, `dalywave://remote/next`, `dalywave://wave?…`
+(открывают приложение).
+
+Данные: расширение `dalywave-widgets` (`gen/apple/Widgets`, Bundle ID `rest.daly.wave.widgets`) в сеть
+не ходит — читает снимок из App Group **`group.rest.daly.wave`**. Пишет его приложение
+(`Sources/dalywave-shell/DalyWaveWidgets.swift`, данные даёт `src/widgets.rs`): что играет — при смене
+трека и паузе; недавнее и сочетания — с сервера при запуске, после входа и при уходе в фон (не чаще
+раза в 5 минут). После выхода виджеты показывают кнопку волны.
+
+### Что включить в Apple Developer (один раз)
+
+Автоподпись с ключом API регистрирует профили, но **группу App Group по ключу API Xcode создать не
+может** («Authentication failed … bearer token» на шаге App Groups) — её создают руками:
+
+1. developer.apple.com → Certificates, Identifiers & Profiles → **Identifiers** → «+» → **App Groups** →
+   Description «DalyWave», Identifier `group.rest.daly.wave` → Continue → Register.
+2. Identifiers → «+» → **App IDs** → App → Description «DalyWave Widgets», Bundle ID Explicit
+   `rest.daly.wave.widgets` → в Capabilities галочка **App Groups** → Continue → Register.
+3. Identifiers → **rest.daly.wave** → галочка **App Groups** → Edit (Configure) → отметить
+   `group.rest.daly.wave` → Continue → **Save** → Confirm. То же для `rest.daly.wave.widgets`.
+4. `make testflight` — профили с группой автоподпись выпустит сама.
+
+Проверки без телефона:
+
+```sh
+xcodebuild test -project gen/apple/dalywave-shell.xcodeproj -scheme dalywave-widgets \
+  -destination 'platform=iOS Simulator,name=iPhone 16 (iOS 27)'   # PNG каждого виджета → design/shots/widgets
+```
+
+Обложки для снимков — `WIDGET_ART=<папка>` (через `TEST_RUNNER_WIDGET_ART`), иначе цветные квадраты.
+`WidgetsHomeScreenTests` (`make ios-test`, нужен `make test-audio-server`) добавляет виджеты на
+домашний экран симулятора и нажимает ⏯ — снимки в `design/shots/widgets/sim`.
+
 ## «Распознать» (Shazam)
 
 Один раз, до первой проверки, — в Apple Developer (developer.apple.com → Account → **Certificates,
@@ -138,7 +185,8 @@ developer.apple.com → Account → **Certificates, Identifiers & Profiles** →
 2. **rest.daly.wave.siri** — если его нет: «+» → App IDs → App → Description «DalyWave Siri», Bundle
    ID Explicit `rest.daly.wave.siri` → Continue → Register (служб не нужно). Xcode с вошедшим
    аккаунтом создаёт его сам.
-3. **App Groups не нужны**: расширение не ходит в сеть и не читает токен.
+3. **App Groups для Siri не нужны**: расширение не ходит в сеть и не читает токен (группа
+   `group.rest.daly.wave` нужна виджетам — см. «Виджеты»).
 4. Xcode → Settings → Accounts: аккаунт Apple ID команды Y5KR5JPCRG должен быть добавлен (без него
    `make ios-build` пишет «No Accounts» и «profile doesn't include the Siri capability»), затем
    **Download Manual Profiles** и ⌘R / `make ios-build`. Автоподпись сама выпустит профили с Siri для

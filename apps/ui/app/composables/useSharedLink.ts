@@ -29,6 +29,20 @@ export function ownRoute(url: URL): string | null {
   return kind && id && KINDS.includes(kind as ShareKind) && UUID.test(id) ? `/${kind}/${id}` : null
 }
 
+/** Ссылка на экран приложения: `dalywave://album/{id}` (виджет «Недавнее» на iPhone) → `/album/{id}` */
+export function appRoute(text: string): string | null {
+  const raw = text.trim()
+  if (!raw.startsWith('dalywave://')) return null
+  try {
+    const url = new URL(raw)
+    const [id] = url.pathname.split('/').filter(Boolean)
+    return id && KINDS.includes(url.host as ShareKind) && UUID.test(id) ? `/${url.host}/${id}` : null
+  }
+  catch {
+    return null
+  }
+}
+
 /** Первая ссылка в тексте, которую умеем открыть; dalywave://share?url=… разворачивается */
 export function findLink(text: string): URL | null {
   const raw = text.trim()
@@ -70,6 +84,12 @@ export function useSharedLink() {
 
   /** Открыть ссылку из текста. false — ссылки в тексте нет (вставка идёт как обычно) */
   function open(text: string): boolean {
+    const screen = appRoute(text)
+    if (screen) {
+      state.value = null
+      void ui.navigate(screen)
+      return true
+    }
     const url = findLink(text)
     if (!url) return false
     const route = ownRoute(url)

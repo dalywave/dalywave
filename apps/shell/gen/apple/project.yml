@@ -33,6 +33,8 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+      # Виджеты: общий снимок и кнопки (App Intents) — тот же код, что в расширении dalywave-widgets
+      - path: WidgetsShared
       - path: Assets.xcassets
       # Тот же документ Icon Composer, что у macOS (apps/shell/icons)
       - path: ../../icons/DalyWave.icon
@@ -99,6 +101,8 @@ targets:
       properties:
         # SiriKit (INPlayMediaIntent от HomePod): служба Siri у App ID rest.daly.wave (IOS.md)
         com.apple.developer.siri: true
+        # Виджеты: снимок «что играет», недавнее и сочетания волны — в общем контейнере
+        com.apple.security.application-groups: [group.rest.daly.wave]
     settings:
       base:
         ENABLE_BITCODE: false
@@ -116,6 +120,8 @@ targets:
       - target: dalywave-share
       # Siri: запросы музыки SiriKit (HomePod) — расширение в PlugIns
       - target: dalywave-siri
+      # Виджеты WidgetKit — расширение в PlugIns
+      - target: dalywave-widgets
       - framework: libapp.a
         embed: false
       - sdk: CoreGraphics.framework
@@ -216,6 +222,62 @@ targets:
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
         APPLICATION_EXTENSION_API_ONLY: YES
+  # Виджеты (WidgetKit): «Сейчас играет», «Моя волна», «Недавнее», значки экрана блокировки и StandBy.
+  # Данные — снимок приложения в App Group group.rest.daly.wave (src/widgets.rs → Swift), в сеть не
+  # ходят; кнопки (iOS 17+) — App Intents, их выполняет приложение (Widgets/, WidgetsShared/)
+  dalywave-widgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: WidgetsShared
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: DalyWave
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widgets/dalywave-widgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.rest.daly.wave]
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_NAME: DalyWaveWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.widgets
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: 0.1.2
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        ARCHS: [arm64]
+        APPLICATION_EXTENSION_API_ONLY: YES
+  # Снимки виджетов в PNG (ImageRenderer): каждый размер, тёмная и светлая тема, тонированные значки.
+  # `xcodebuild test -scheme dalywave-widgets` → design/shots/widgets
+  dalywave-widgets_Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WidgetTests
+      - path: Widgets
+        excludes: [DalyWaveWidgets.swift, Info.plist, "*.entitlements"]
+      - path: WidgetsShared
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.widgets.tests
+        # ImageRenderer — iOS 16+, значки экрана блокировки без проверок версии
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        ARCHS: [arm64]
   # Проверки на симуляторе: окно входа и снимки экрана (make ios-test)
   dalywave-shell_UITests:
     type: bundle.ui-testing
@@ -255,3 +317,13 @@ schemes:
       config: debug
     archive:
       config: release
+  # Виджеты отдельно: снимки в PNG (тест без приложения) и запуск виджета из Xcode
+  dalywave-widgets:
+    build:
+      targets:
+        dalywave-widgets: all
+        dalywave-widgets_Tests: [test]
+    test:
+      config: debug
+      targets:
+        - dalywave-widgets_Tests

@@ -1,8 +1,9 @@
-import type { WaveActivity, WaveMood, WaveSettings } from '~/bridge/types'
+import type { WaveActivity, WaveCharacter, WaveLanguage, WaveMood, WaveSettings } from '~/bridge/types'
 
-/** Команда Siri и «Команд» от оболочки (apps/shell/src/siri.rs, событие `siri:command`) */
+/** Команда Siri, «Команд» и виджетов от оболочки (apps/shell/src/siri.rs, событие `siri:command`);
+ *  характер и язык приходят с сохранённым сочетанием из виджета «Моя волна» */
 type SiriCommand =
-  | { action: 'wave', mood?: WaveMood, activity?: WaveActivity }
+  | { action: 'wave', mood?: WaveMood, activity?: WaveActivity, character?: WaveCharacter, language?: WaveLanguage }
   | { action: 'play', kind: 'album' | 'artist' | 'playlist' | 'track' | 'liked', id: string, title?: string, shuffle?: boolean }
   | { action: 'liked', trackId: string }
 
@@ -24,6 +25,8 @@ export default defineNuxtPlugin(() => {
         const settings: Partial<WaveSettings> = {}
         if (cmd.mood) settings.mood = cmd.mood
         if (cmd.activity) settings.activity = cmd.activity
+        if (cmd.character) settings.character = cmd.character
+        if (cmd.language) settings.language = cmd.language
         return player.startWave(settings)
       }
       case 'play': {

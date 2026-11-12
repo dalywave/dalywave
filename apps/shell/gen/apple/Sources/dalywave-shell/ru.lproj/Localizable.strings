@@ -49,3 +49,9 @@
 "Next" = "Дальше";
 "Previous" = "Назад";
 "Like" = "Нравится";
+
+/* Кнопки виджетов (WidgetsShared/WidgetIntents.swift) */
+"Play or Pause" = "Играть или пауза";
+"Playing" = "Играет";
+"Character" = "Характер";
+"Language" = "Язык";

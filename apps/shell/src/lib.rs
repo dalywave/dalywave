@@ -37,6 +37,8 @@ mod snap;
 mod tray;
 #[cfg(desktop)]
 mod updates;
+// Виджеты iPhone и iPad (WidgetKit): снимок «что играет», недавнее и сочетания волны для Swift
+mod widgets;
 mod window;
 
 use serde::Serialize;
@@ -110,6 +112,7 @@ pub fn run() {
             app.manage(Settings::load(handle));
             app.manage(auth::Auth::new(&app.package_info().version.to_string()));
             app.manage(media::Media::default());
+            widgets::init(handle);
             links::init(handle);
             #[cfg(desktop)]
             discord::init(handle);

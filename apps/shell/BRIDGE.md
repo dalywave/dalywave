@@ -566,13 +566,22 @@ iPhone и iPad, iOS 17+: фразы и действия «Команд» (App In
 
 ```ts
 type SiriCommand =
-  | { action: 'wave', mood?: WaveMood, activity?: WaveActivity }
+  | { action: 'wave', mood?: WaveMood, activity?: WaveActivity, character?: WaveCharacter, language?: WaveLanguage }
   | { action: 'play', kind: 'album' | 'artist' | 'playlist' | 'track' | 'liked', id: string, title?: string, shuffle?: boolean }
   | { action: 'liked', trackId: string }
 ```
 
 Подключено плагином `apps/ui/app/plugins/siri.client.ts`; устройство — `apps/shell/src/siri.rs`,
 Swift — `gen/apple/Sources/dalywave-shell/DalyWaveIntents.swift` и `gen/apple/SiriExtension`.
+
+## Виджеты iPhone
+
+Виджеты WidgetKit (`apps/shell/src/widgets.rs`, Swift — `gen/apple/Widgets`, IOS.md «Виджеты»)
+интерфейсу почти ничего не стоят: что играет, оболочка берёт у движка, недавнее и сочетания волны —
+с сервера сама. Кнопки виджетов приходят тем же путём, что Siri: пауза и «дальше» — движок,
+«Моя волна» и её сочетание — `siri:command` с `wave` (характер и язык — только у сочетаний). Нажатие
+на альбом, плейлист или артиста в «Недавнем» — ссылка `dalywave://album/{id}` (`playlist`, `artist`):
+`deep-link:open` → `links.take()` → экран (`useSharedLink`, `appRoute`).
 
 ## Окно и приложение
 

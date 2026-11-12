@@ -195,6 +195,10 @@ pub fn handle_urls(app: &AppHandle, urls: Vec<Url>) {
         }
         if url.host_str() == Some("auth") && matches!(url.path(), "" | "/") {
             app.state::<Auth>().deliver(&url);
+        } else if crate::widgets::open_link(app, &url) {
+            // Кнопки виджетов на iOS 15–16: волна и пульт — без интерфейса
+            log::info!("widget link {url}");
+            window::show_main(app);
         } else {
             log::info!("deep link {url}");
             crate::links::remember(app, url.as_str());
@@ -660,6 +664,7 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
         },
     );
     log::info!("signed in, device token stored in the keychain");
+    crate::widgets::signed_in(&app);
     // Загрузчик на компьютере работает, пока вход выполнен
     #[cfg(desktop)]
     crate::downloader::changed(&app);
@@ -723,6 +728,7 @@ pub async fn auth_logout(app: AppHandle) -> ShellResult<()> {
     sessions::remove(&app, &server);
     let _ = app.emit_to(MAIN, EVENT_CHANGED, Changed { session: None });
     log::info!("signed out, device token removed from the keychain");
+    crate::widgets::signed_out(&app);
     #[cfg(desktop)]
     crate::downloader::changed(&app);
     Ok(())

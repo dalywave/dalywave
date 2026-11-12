@@ -60,12 +60,17 @@ pub enum MediaKind {
     rename_all_fields = "camelCase"
 )]
 pub enum SiriCommand {
-    /// Моя волна; настроение и занятие — как в настройках волны интерфейса
+    /// Моя волна; настроение, занятие, характер и язык — как в настройках волны интерфейса
+    /// (характер и язык — у сохранённых сочетаний из виджета, widgets.rs)
     Wave {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         mood: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         activity: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        character: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        language: Option<String>,
     },
     /// Включить найденное (id на сервере)
     Play {
@@ -233,15 +238,15 @@ pub fn siri_take(app: AppHandle) -> Vec<SiriCommand> {
 
 // ---- сервер ----
 
-/// Запросы к серверу от имени устройства (токен из связки ключей).
-struct Api {
+/// Запросы к серверу от имени устройства (токен из связки ключей). Им же пользуются виджеты.
+pub(crate) struct Api {
     http: reqwest::Client,
     server: String,
     token: Option<String>,
 }
 
 impl Api {
-    fn new(app: &AppHandle) -> ShellResult<Api> {
+    pub(crate) fn new(app: &AppHandle) -> ShellResult<Api> {
         if crate::offline::offline_now(app) {
             return Err(ShellError::Network("нет сети".into()));
         }
@@ -286,7 +291,7 @@ impl Api {
             .map_err(|e| ShellError::Network(e.to_string()))
     }
 
-    async fn get(&self, path: &str) -> ShellResult<Value> {
+    pub(crate) async fn get(&self, path: &str) -> ShellResult<Value> {
         self.send(self.http.get(format!("{}{path}", self.server)))
             .await
     }
@@ -301,11 +306,21 @@ impl Api {
             .await
     }
 
-    fn absolute(&self, url: &str) -> String {
+    pub(crate) fn absolute(&self, url: &str) -> String {
         if url.starts_with('/') {
             format!("{}{url}", self.server)
         } else {
             url.to_string()
+        }
+    }
+
+    /// Без сети и токена — для проверок разбора ответов сервера.
+    #[cfg(test)]
+    pub(crate) fn for_tests(server: &str) -> Api {
+        Api {
+            http: reqwest::Client::new(),
+            server: server.to_string(),
+            token: None,
         }
     }
 }
@@ -361,7 +376,7 @@ pub struct Found {
     score: u8,
 }
 
-fn str_of<'a>(v: &'a Value, key: &str) -> &'a str {
+pub(crate) fn str_of<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or_default()
 }
 
@@ -539,13 +554,22 @@ fn track_spec(api: &Api, track: &Value, n: usize) -> Option<TrackSpec> {
 async fn native(app: &AppHandle, cmd: &SiriCommand) -> ShellResult<()> {
     let api = Api::new(app)?;
     let (mut tracks, shuffle): (Vec<Value>, bool) = match cmd {
-        SiriCommand::Wave { mood, activity } => {
+        SiriCommand::Wave {
+            mood,
+            activity,
+            character,
+            language,
+        } => {
             let mut settings = serde_json::Map::new();
-            if let Some(m) = mood {
-                settings.insert("mood".into(), json!(m));
-            }
-            if let Some(a) = activity {
-                settings.insert("activity".into(), json!(a));
+            for (key, value) in [
+                ("mood", mood),
+                ("activity", activity),
+                ("character", character),
+                ("language", language),
+            ] {
+                if let Some(v) = value {
+                    settings.insert(key.into(), json!(v));
+                }
             }
             let start = api
                 .post("/api/wave/sessions", json!({ "settings": settings }))
@@ -877,7 +901,9 @@ mod tests {
             wave,
             SiriCommand::Wave {
                 mood: Some("calm".into()),
-                activity: None
+                activity: None,
+                character: None,
+                language: None,
             }
         );
         let play: SiriCommand = serde_json::from_str(
@@ -907,10 +933,12 @@ mod tests {
         assert_eq!(
             serde_json::to_value(SiriCommand::Wave {
                 mood: None,
-                activity: Some("road".into())
+                activity: Some("road".into()),
+                character: None,
+                language: Some("none".into()),
             })
             .unwrap(),
-            json!({ "action": "wave", "activity": "road" })
+            json!({ "action": "wave", "activity": "road", "language": "none" })
         );
         for a in ["pause", "resume", "next", "previous", "like"] {
             let c: SiriCommand = serde_json::from_value(json!({ "action": a })).unwrap();
