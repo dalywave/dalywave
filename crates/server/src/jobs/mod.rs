@@ -39,6 +39,8 @@ pub mod lanes {
     pub const MAINTENANCE: &str = "maintenance";
     /// Тексты песен заранее, для ближайших треков очереди.
     pub const LYRICS: &str = "lyrics";
+    /// Рассылка уведомлений: окно приложения и push.
+    pub const NOTIFY: &str = "notify";
 
     /// Полосы скачивания аудио в порядке важности: загрузчик берёт задачи именно так.
     pub const ACQUIRE: [&str; 5] = [NOW, WAVE, LIBRARY, DISCOGRAPHY, DISCOVERY];
@@ -126,6 +128,8 @@ pub struct NewJob {
     pub priority: i16,
     pub max_attempts: i16,
     pub dedupe_key: Option<String>,
+    /// Не раньше чем через столько (собрать события в одно уведомление, дождаться утра).
+    pub delay: Option<Duration>,
 }
 
 impl NewJob {
@@ -137,7 +141,14 @@ impl NewJob {
             priority: 0,
             max_attempts: 3,
             dedupe_key: None,
+            delay: None,
         }
+    }
+
+    /// Взять задачу не раньше чем через `delay`.
+    pub fn delay(mut self, delay: Duration) -> Self {
+        self.delay = (!delay.is_zero()).then_some(delay);
+        self
     }
 
     /// Пока задача с этим ключом в очереди или в работе, вторая такая не ставится.
@@ -179,8 +190,8 @@ pub async fn enqueue(conn: &mut PgConnection, job: NewJob) -> Result<Enqueued, s
     // Задача-двойник может закончиться между вставкой и поиском: тогда пробуем вставить ещё раз
     for _ in 0..3 {
         let inserted = sqlx::query_scalar!(
-            "INSERT INTO jobs (kind, lane, priority, payload, max_attempts, dedupe_key)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            "INSERT INTO jobs (kind, lane, priority, payload, max_attempts, dedupe_key, run_after)
+             VALUES ($1, $2, $3, $4, $5, $6, now() + make_interval(secs => COALESCE($7::float8, 0)))
              ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL AND status IN ('queued', 'running') DO NOTHING
              RETURNING id",
             job.kind,
@@ -189,6 +200,7 @@ pub async fn enqueue(conn: &mut PgConnection, job: NewJob) -> Result<Enqueued, s
             job.payload,
             job.max_attempts,
             job.dedupe_key,
+            job.delay.map(|d| d.as_secs_f64()),
         )
         .fetch_optional(&mut *conn)
         .await?;

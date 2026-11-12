@@ -8,9 +8,9 @@ use utoipa::{
 
 use crate::routes::{
     acquisitions, admin, admin_catalog, analysis, auth, catalog, connect, events, fetcher, home,
-    images, imports, jam, library, lyrics, offline, playlist_folders, playlist_set, playlists,
-    queue, reco, recognize, rewind, settings, share, sources, stream, sync, system, taste, updates,
-    wave, wave_presets, ws,
+    images, imports, jam, library, lyrics, notifications, offline, playlist_folders, playlist_set,
+    playlists, queue, reco, recognize, rewind, settings, share, sources, stream, sync, system,
+    taste, updates, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -133,6 +133,14 @@ use crate::routes::{
         playlist_folders::move_playlist,
         settings::get_settings,
         settings::update,
+        notifications::list,
+        notifications::read,
+        notifications::get_settings,
+        notifications::update_settings,
+        notifications::push_info,
+        notifications::subscribe,
+        notifications::unsubscribe,
+        notifications::test,
         home::home,
         taste::overview,
         taste::less,
@@ -222,6 +230,7 @@ use crate::routes::{
         (name = "library", description = "Медиатека, плейлисты, главная и синхронизация приложений"),
         (name = "recognize", description = "«Распознать»: песня из ShazamKit — трек каталога и история распознанного"),
         (name = "events", description = "События прослушивания и история"),
+        (name = "notifications", description = "Уведомления: центр уведомлений, настройки, подписки устройств на push"),
         (name = "playback", description = "Воспроизведение: ссылка на аудио трека и состояние его скачивания"),
         (name = "offline", description = "Умный офлайн: закреплённое на устройстве, набор волны, файлы для загрузки"),
         (name = "wave", description = "«Моя волна» и радио: сессии, выдача с причинами, реакции"),

@@ -18,6 +18,7 @@ path = "src/bin/worker.rs"
 dalywave-protocol.workspace = true
 dalywave-transitions.workspace = true
 
+aes-gcm.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
@@ -28,6 +29,7 @@ dotenvy.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 hex.workspace = true
+hkdf.workspace = true
 image.workspace = true
 ipnet.workspace = true
 object_store.workspace = true

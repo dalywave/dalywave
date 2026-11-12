@@ -479,8 +479,6 @@ WebSocket `/api/ws`, что и живые события, сообщениями
 | `offline_wave_react` | `session, trackId, kind, positionMs` | — реакция в волне без сети |
 | `offline_played` | `play: { trackId, playedMs, durationMs, endReason, wave }` | — в историю устройства |
 | `haptic` | `kind` | — тактильный отклик (ниже) |
-| `notify_schedule` | `id`, `title`, `body`, `atMs?` | `bool` — локальное уведомление iPhone/iPad (`atMs` в прошлом или `null` — сразу; тот же `id` заменяет прежнее); разрешение система спрашивает при первом вызове; `false` — запрещено или не iOS |
-| `notify_cancel` | `id` | — снять ещё не показанное уведомление |
 
 ```ts
 interface OfflineStatus {
@@ -516,6 +514,22 @@ interface TrackDownload { trackId: string, state: 'queued' | 'downloading' | 're
 **Проверка без входа** — `DALYWAVE_OFFLINE_SMOKE=<тестовый сервер>`: своя база, файлы тестового сервера
 качаются тем же путём (iPhone — фоновой сессией), затем «Без сети», волна из скачанного и воспроизведение
 из файлов. В журнал — `offline smoke: …`.
+
+## Уведомления
+
+Уведомления шлёт сервер (`/api/notifications*`): в центр уведомлений и по WebSocket
+(`notification.new`) — всем, push — iPhone и iPad через APNs. Команды — `src/push.rs` и `src/notify.rs`.
+
+| Команда | Аргументы | Результат |
+|---|---|---|
+| `push_state` | — | `{ supported: boolean, permission: 'default' \| 'granted' \| 'denied' }` — iPhone/iPad: разрешение системы (`default` — ещё не спрашивали); компьютеры — `supported: false` |
+| `push_register` | `prompt: boolean` | `{ token: string, environment: 'sandbox' \| 'production' } \| null` — токен APNs (hex) для `POST /api/notifications/push`. `prompt: false` — окна разрешения не будет (пока не спрашивали — `null`); `true` — система спросит один раз. Запрещено, не iOS, нет ответа 10 с — `null`. Звать при каждом запуске после входа: токен может смениться |
+| `push_set_badge` | `count: number` | — число непрочитанных на значке (iPhone/iPad) |
+| `notify_show` | `id`, `title`, `body`, `link: string \| null` | `bool` — системное уведомление на компьютере, пока приложение открыто (звать, когда окно не в фокусе). Щелчок показывает окно и открывает `link` (`dalywave://…`; на Windows — только окно). macOS спросит разрешение при первом; iPhone/iPad и запуск без бандла — `false` |
+
+Нажатие на push (iPhone/iPad) и на уведомление macOS приходит как ссылка `dalywave://…` — через
+`links_take` / `deep-link:open`, как ссылки из «Поделиться» и виджетов: `dalywave://album/{id}`,
+`dalywave://import`, `dalywave://rewind?year=2026`, `dalywave://notifications`, `dalywave://admin/disputed`.
 
 ## Распознать
 

@@ -74,6 +74,7 @@ const accountMenu = computed<MenuEntry[]>(() => [
     <UiSearchField ref="search" v-model="q" class="top__search" shortcut links :placeholder="t('search.placeholder')" @update:model-value="onInput" @submit="onSubmit" />
     <RecognizeButton size="sm" class="top__mic" />
     <div class="top__spacer" />
+    <NotifyBell />
     <UiMenu :items="accountMenu" align="end">
       <button type="button" class="avatar" :aria-label="t('nav.profile')">
         <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="" class="avatar__img">

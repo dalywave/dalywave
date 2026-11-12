@@ -1519,6 +1519,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_get_notifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["push_info"];
+        put?: never;
+        post: operations["subscribe"];
+        delete: operations["unsubscribe"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_settings_patch_notifications_settings"];
+        trace?: never;
+    };
+    "/api/notifications/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/openapi.json": {
         parameters: {
             query?: never;
@@ -2022,7 +2102,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_settings"];
+        get: operations["get_settings_get_settings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2727,6 +2807,11 @@ export interface components {
             /** Format: uuid */
             trackId: string;
         };
+        /**
+         * @description Среда APNs: отладочные сборки получают токены песочницы, TestFlight и App Store — боевые.
+         * @enum {string}
+         */
+        ApnsEnvironment: "sandbox" | "production";
         AppRelease: {
             arch: string;
             notes?: string | null;
@@ -4417,6 +4502,94 @@ export interface components {
         NewWaveSession: {
             settings?: components["schemas"]["WaveSettings"];
         };
+        Notification: {
+            body: string;
+            /**
+             * Format: int32
+             * @description Сколько событий собрано в уведомлении.
+             */
+            count: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            /** @description Картинка: адрес `/api/images/…`. */
+            image: string | null;
+            /** @description События по отдельности (пусто, если событие одно и всё сказано в заголовке). */
+            items: components["schemas"]["NotificationItem"][];
+            kind: components["schemas"]["NotificationKind"];
+            /**
+             * @description Куда ведёт нажатие: путь сайта (`/album/{id}`, `/import`, `/rewind?year=2026`). Приложения
+             *     открывают его как `dalywave://album/{id}`.
+             */
+            link: string | null;
+            /** Format: date-time */
+            readAt: string | null;
+            title: string;
+        };
+        /** @description Одно событие внутри уведомления: у «3 новых релиза» — три альбома. */
+        NotificationItem: {
+            /** @description Обложка: адрес `/api/images/…`. */
+            image: string | null;
+            /** @description Путь сайта, например `/album/{id}`. */
+            link: string | null;
+            subtitle?: string;
+            title: string;
+        };
+        /**
+         * @description Вид уведомления.
+         * @enum {string}
+         */
+        NotificationKind: "release" | "import" | "rewind" | "review" | "sources" | "test";
+        /** @description Вид уведомлений включён или нет. */
+        NotificationKindSetting: {
+            enabled: boolean;
+            kind: components["schemas"]["NotificationKind"];
+        };
+        /** @description Страница центра уведомлений: новые первыми. */
+        NotificationPage: {
+            items: components["schemas"]["Notification"][];
+            /** @description Курсор следующей страницы (`?before=`); `null` — дальше ничего. */
+            next: string | null;
+            /**
+             * Format: int64
+             * @description Непрочитанных всего.
+             */
+            unread: number;
+        };
+        /** @description Отметить прочитанными: перечисленные или (пустой список) все. */
+        NotificationReadRequest: {
+            ids?: string[];
+        };
+        NotificationSettings: {
+            /** @description Виды, доступные этому человеку (админские — только администраторам). */
+            kinds: components["schemas"]["NotificationKindSetting"][];
+            quiet: components["schemas"]["QuietHours"];
+            /**
+             * Format: int32
+             * @description Часовой пояс для тихих часов: минуты к UTC (Москва — 180).
+             */
+            utcOffsetMin: number;
+        };
+        /** @description Изменить часть настроек. */
+        NotificationSettingsPatch: {
+            /** @description Только перечисленные виды; остальные как были. */
+            kinds?: components["schemas"]["NotificationKindSetting"][] | null;
+            quiet?: components["schemas"]["QuietHours"] | null;
+            /** Format: int32 */
+            utcOffsetMin?: number | null;
+        };
+        /** @description Событие WebSocket `notification.read` и ответ на отметку прочтения. */
+        NotificationsRead: {
+            all: boolean;
+            /** @description Прочитанные; пусто вместе с `all` — все. */
+            ids: string[];
+            /**
+             * Format: int64
+             * @description Непрочитанных осталось.
+             */
+            unread: number;
+        };
         OidcProvider: {
             /** @description Подпись кнопки входа, например `daly.rest`. */
             title: string;
@@ -4625,6 +4798,68 @@ export interface components {
         Pong: {
             id: string | null;
         };
+        /**
+         * @description Канал доставки push.
+         * @enum {string}
+         */
+        PushChannel: "apns" | "webpush" | "fcm";
+        /** @description Устройство, подписанное на push. */
+        PushDevice: {
+            channel: components["schemas"]["PushChannel"];
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Подписка этой сессии (этого браузера или приложения). */
+            current: boolean;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            lastSentAt: string | null;
+            name: string;
+        };
+        /** @description Какие каналы push есть на сервере и какие устройства человека подписаны. */
+        PushInfo: {
+            /** @description APNs настроен: приложению на iPhone и iPad есть смысл просить разрешение. */
+            apns: boolean;
+            devices: components["schemas"]["PushDevice"][];
+            fcm: boolean;
+            /** @description Открытый ключ VAPID (base64url) для `pushManager.subscribe`; `null` — Web Push на сервере выключен. */
+            webPushKey: string | null;
+        };
+        PushRegistered: {
+            /** Format: uuid */
+            id: string;
+        };
+        /**
+         * @description Подписать это устройство на push. Повтор с тем же токеном обновляет подписку (токен APNs стоит
+         *     присылать при каждом запуске приложения).
+         */
+        PushRegistration: {
+            channel: components["schemas"]["PushChannel"];
+            environment?: components["schemas"]["ApnsEnvironment"] | null;
+            /** @description Как назвать устройство в списке («iPhone», «Chrome»). По умолчанию — по сессии. */
+            name?: string | null;
+            subscription?: components["schemas"]["WebPushSubscription"] | null;
+            /** @description APNs и FCM: токен устройства (у APNs — hex). */
+            token?: string | null;
+            /**
+             * Format: int32
+             * @description Часовой пояс устройства (минуты к UTC) — для тихих часов.
+             */
+            utcOffsetMin?: number | null;
+        };
+        /** @description Ответ на пробное уведомление. */
+        PushTest: {
+            /**
+             * Format: int64
+             * @description На сколько устройств ушёл push.
+             */
+            devices: number;
+        };
+        /** @description Отписать устройство: токен APNs/FCM или адрес подписки браузера. */
+        PushUnregister: {
+            endpoint?: string | null;
+            token?: string | null;
+        };
         /** @description Элемент очереди: `uid` — id элемента у активного устройства (команды ссылаются на него). */
         QueueItem: {
             /** @description «Почему этот трек» у волны. */
@@ -4638,6 +4873,23 @@ export interface components {
          * @enum {string}
          */
         QueueSource: "manual" | "context" | "wave";
+        /**
+         * @description Тихие часы: в это время push не приходят — они ждут утра (центр уведомлений и окно приложения
+         *     получают их сразу). Время — минуты от полуночи по часовому поясу человека; `from > to` — через полночь.
+         */
+        QuietHours: {
+            enabled: boolean;
+            /**
+             * Format: int32
+             * @description 0…1439, например 1380 — 23:00.
+             */
+            from: number;
+            /**
+             * Format: int32
+             * @description 0…1439, например 480 — 08:00.
+             */
+            to: number;
+        };
         /** @description Подпись под названием трека: вид для иконки и готовый текст по-русски. */
         Reason: {
             kind: components["schemas"]["ReasonKind"];
@@ -5455,6 +5707,12 @@ export interface components {
         }) | (components["schemas"]["JamReaction"] & {
             /** @enum {string} */
             type: "jam.reaction";
+        }) | (components["schemas"]["Notification"] & {
+            /** @enum {string} */
+            type: "notification.new";
+        }) | (components["schemas"]["NotificationsRead"] & {
+            /** @enum {string} */
+            type: "notification.read";
         });
         /** @description Серверный fetcher — второй исполнитель (`DALYWAVE_FETCHER_MODE` с `server`). */
         ServerFetcher: {
@@ -6575,6 +6833,17 @@ export interface components {
              * @description Темп бега, шагов в минуту (140–200), для «Тренируюсь»: темп треков подстраивается под него.
              */
             tempo?: number | null;
+        };
+        WebPushKeys: {
+            /** @description Секрет аутентификации, base64url. */
+            auth: string;
+            /** @description Открытый ключ браузера P-256, base64url. */
+            p256dh: string;
+        };
+        /** @description Подписка браузера — `PushSubscription.toJSON()`. */
+        WebPushSubscription: {
+            endpoint: string;
+            keys: components["schemas"]["WebPushKeys"];
         };
         /**
          * @description Качество по Wi-Fi: «Высокое» — lossless, если он есть у записи, иначе лучший файл; «Обычное» — Opus
@@ -10479,6 +10748,221 @@ export interface operations {
             };
         };
     };
+    list_get_notifications: {
+        parameters: {
+            query?: {
+                /** @description `next` из предыдущей страницы. */
+                before?: string;
+                /** @description Сколько вернуть: 1–100, по умолчанию 30. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Уведомления, новые первыми, и сколько непрочитанных */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            /** @description Неверный курсор или limit */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    push_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Каналы push на сервере и подписанные устройства человека */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushInfo"];
+                };
+            };
+        };
+    };
+    subscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushRegistration"];
+            };
+        };
+        responses: {
+            /** @description Устройство подписано (повтор с тем же токеном обновляет подписку) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushRegistered"];
+                };
+            };
+            /** @description Нет токена или подписки браузера, канал на сервере выключен */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushUnregister"];
+            };
+        };
+        responses: {
+            /** @description Устройство больше не получает push (если подписки не было — тоже) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нужен token или endpoint */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationReadRequest"];
+            };
+        };
+        responses: {
+            /** @description Отмечено; другие устройства получат `notification.read` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsRead"];
+                };
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Какие уведомления присылать и тихие часы */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettings"];
+                };
+            };
+        };
+    };
+    update_settings_patch_notifications_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Настройки после правки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettings"];
+                };
+            };
+            /** @description Неверное время тихих часов или часовой пояс */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Пробное уведомление: в центре уведомлений и push на подписанные устройства (и в тихие часы) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushTest"];
+                };
+            };
+        };
+    };
     openapi: {
         parameters: {
             query?: never;
@@ -11994,7 +12478,7 @@ export interface operations {
             };
         };
     };
-    get_settings: {
+    get_settings_get_settings: {
         parameters: {
             query?: never;
             header?: never;

@@ -2,7 +2,7 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, LocalNotify, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, SystemNotify, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
@@ -63,8 +63,10 @@ export interface WebBridgeOptions extends HttpOptions {
   offline?: OfflineBridge | null
   /** Тактильный отклик (приложение на iPhone) */
   haptic?: (kind: HapticKind) => void
-  /** Локальные уведомления (приложение на iPhone и iPad) */
-  notify?: LocalNotify | null
+  /** Push приложения (iPhone и iPad) */
+  appPush?: AppPush | null
+  /** Системные уведомления приложения для компьютера */
+  systemNotify?: SystemNotify | null
 }
 
 /** Только разработка: загрузчик изображает мок — `?downloader=idle|working|paused|offline|…` */
@@ -308,7 +310,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
     offline: opts.offline !== undefined ? opts.offline : devOffline(),
     haptic: opts.haptic ?? (() => {}),
-    notify: opts.notify ?? null,
+    appPush: opts.appPush ?? null,
+    systemNotify: opts.systemNotify ?? null,
 
     auth: {
       providers: () => unwrap(api.GET('/api/auth/providers')),
@@ -414,6 +417,17 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       startFiles: title => unwrap(api.POST('/api/imports/files', { body: { title } })),
       file: (id, file, onProgress, signal) => upload<ImportItem>('PUT', `/api/imports/${encodeURIComponent(id)}/files${query({ name: file.name })}`, file, file.type || 'application/octet-stream', onProgress, signal),
       finish: id => unwrap(api.POST('/api/imports/{id}/finish', { params: { path: { id } } })),
+    },
+
+    notifications: {
+      list: (before, limit = 30) => unwrap(api.GET('/api/notifications', { params: { query: { before: before ?? undefined, limit } } })),
+      read: ids => unwrap(api.POST('/api/notifications/read', { body: { ids } })),
+      settings: () => unwrap(api.GET('/api/notifications/settings')),
+      updateSettings: patch => unwrap(api.PATCH('/api/notifications/settings', { body: patch })),
+      push: () => unwrap(api.GET('/api/notifications/push')),
+      subscribe: reg => unwrap(api.POST('/api/notifications/push', { body: reg })),
+      unsubscribe: body => done(api.DELETE('/api/notifications/push', { body })),
+      test: () => unwrap(api.POST('/api/notifications/test')),
     },
 
     settings: {

@@ -47,6 +47,11 @@ async fn main() -> anyhow::Result<()> {
         if config.fetcher.server { "the server fetcher and home downloaders" } else { "home downloaders" }
     );
     let ctx = Context::new(db, Arc::new(config), Arc::new(deezer), Arc::new(storage))?;
+    tracing::info!(
+        apns = ctx.push.apns.is_some(),
+        web_push = ctx.push.webpush.is_some(),
+        "push channels"
+    );
     let worker = Worker::new(Arc::new(ctx), registry, Settings::default());
     worker.run(boot::shutdown_signal()).await
 }

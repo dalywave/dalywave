@@ -406,8 +406,8 @@ async fn admin_manages_jobs_and_lanes(db: PgPool) {
     let lanes = res.body["items"].as_array().unwrap();
     assert_eq!(
         lanes.len(),
-        12,
-        "девять полос очереди, «Импорт», «Тексты» и «Сжатие для сотовой»"
+        13,
+        "девять полос очереди, «Импорт», «Тексты», «Сжатие для сотовой» и «Уведомления»"
     );
     assert_eq!(lanes[0]["lane"], "now");
     assert_eq!(lanes[0]["title"], "Сейчас");
@@ -460,7 +460,7 @@ async fn admin_manages_jobs_and_lanes(db: PgPool) {
     let res = app.get("/api/admin/overview", &admin).await;
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
     assert_eq!(res.body["recordingsByStatus"].as_array().unwrap().len(), 7);
-    assert_eq!(res.body["lanes"].as_array().unwrap().len(), 12);
+    assert_eq!(res.body["lanes"].as_array().unwrap().len(), 13);
     assert!(res.body["last24h"]["jobsFailed"].as_i64().unwrap() >= 1);
     assert_eq!(res.body["storage"]["audioBytes"], 0);
 }

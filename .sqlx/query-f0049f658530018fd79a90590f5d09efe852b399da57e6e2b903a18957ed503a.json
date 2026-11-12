@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.channel AS \"channel!\", p.token AS \"token!\", p.p256dh, p.auth, p.environment\n         FROM push_subscriptions p LEFT JOIN sessions s ON s.id = p.session_id\n         WHERE p.id = $1 AND p.disabled_at IS NULL\n           AND (p.session_id IS NULL OR (s.revoked_at IS NULL AND s.expires_at > now()))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "channel"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "token!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "token"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "p256dh",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "p256dh"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "auth",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "auth"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "environment",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "environment"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "f0049f658530018fd79a90590f5d09efe852b399da57e6e2b903a18957ed503a"
+}

@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO push_subscriptions (user_id, session_id, channel, token, p256dh, auth, environment, name)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n         ON CONFLICT (channel, token) DO UPDATE SET\n             user_id = excluded.user_id, session_id = excluded.session_id, p256dh = excluded.p256dh,\n             auth = excluded.auth, environment = excluded.environment, name = excluded.name,\n             disabled_at = NULL, disabled_reason = NULL, updated_at = now()\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2c3b828a9b7f6993f7e181003ce16d26ecbf0018d6cf255e67af373dff08c147"
+}

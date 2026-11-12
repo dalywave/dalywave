@@ -1,0 +1,102 @@
+/* Б · «Карточка» — по мотивам Spotify */
+.b { --cur: #fff; --sung: rgba(255, 255, 255, 0.72); --up: rgba(0, 0, 0, 0.72); --pt: #fff; position: absolute; inset: 0; color: var(--pt); }
+[data-theme="light"] .b { --cur: #0b0c10; --sung: rgba(11, 12, 16, 0.62); --up: rgba(255, 255, 255, 0.86); --pt: #0b0c10; }
+.b .track { background: color-mix(in oklab, var(--pt) 22%, transparent); }
+.b .track i { background: var(--pt); }
+.b .ib--play { background: var(--pt); color: var(--bp); }
+.b .pill { background: var(--cur); color: var(--bc); }
+
+/* ---------- Строки ---------- */
+.b-line {
+  padding: 7px 0; font-size: var(--b-fs); font-weight: 800; line-height: 1.22; letter-spacing: -0.02em; text-wrap: pretty;
+  color: var(--up); cursor: pointer; transition: color 300ms ease;
+}
+.b-line.is-past { color: var(--sung); }
+.b-line.is-active { color: var(--cur); }
+/* Текущая строка заливается слева направо */
+.b-line.is-active .w {
+  color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(90deg, var(--cur) calc(var(--p, 0) * 104% - 4%), var(--up) calc(var(--p, 0) * 104%));
+}
+.b-backing { color: inherit; opacity: 0.75; }
+.b-line.is-active .b-backing { color: var(--up); opacity: 1; }
+.b-line:focus-visible { outline: 2px solid var(--cur); outline-offset: 4px; border-radius: 6px; }
+/* Проигрыш — нота наполняется снизу */
+.b-note { display: inline-block; font-size: 1.3em; line-height: 1; font-weight: 600; }
+.b-brk.is-active .b-note {
+  color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(0deg, var(--cur) calc(var(--bp, 0) * 100%), var(--up) calc(var(--bp, 0) * 100%));
+  animation: b-bob 1.6s ease-in-out infinite alternate;
+}
+@keyframes b-bob { to { transform: translateY(-3px) rotate(-6deg); } }
+.b-end { height: 30px; pointer-events: none; }
+.b-stanza { margin: 0 0 26px; font-size: var(--b-plain); font-weight: 750; line-height: 1.32; letter-spacing: -0.015em; color: var(--cur); }
+
+/* Выбор строк */
+.is-selecting .b-line, .is-selecting .b-line.is-past, .is-selecting .b-line.is-active { color: var(--up); }
+.is-selecting .b-line .w { background-image: none !important; color: inherit !important; }
+.is-selecting .b-brk { opacity: 0.4; pointer-events: none; }
+.b-line.is-sel, .is-selecting .b-line.is-sel { color: var(--cur); }
+.b-selbar { position: absolute; z-index: 6; display: flex; gap: 10px; transition: opacity var(--dur-3), transform var(--dur-3) var(--ease-out); }
+.b-selbar.is-hidden { opacity: 0; transform: translateY(16px); pointer-events: none; }
+.b-selbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; padding: 0 22px; border: 0; border-radius: var(--r-pill); background: color-mix(in oklab, var(--up) 70%, transparent); color: var(--cur); font-size: 15px; font-weight: 700; cursor: pointer; }
+.b-selbtn--main { flex: 1; background: var(--cur); color: var(--bc); }
+.b-selbtn:disabled { opacity: 0.45; }
+
+/* ---------- Телефон ---------- */
+.b--phone { --b-fs: 26px; --b-plain: 22px; }
+.b-player { position: absolute; inset: 0; overflow-y: auto; padding: 54px 24px 0; background: var(--bp); scrollbar-width: none; }
+.b-head { display: flex; align-items: center; height: 52px; margin: 0 -8px; }
+.b-head__ctx { flex: 1; text-align: center; line-height: 1.25; }
+.b-head__ctx small { display: block; font-size: 11px; font-weight: 600; letter-spacing: var(--tr-caps); text-transform: uppercase; opacity: 0.7; }
+.b-head__ctx b { font-size: 13px; font-weight: 700; }
+.b-cover { display: block; width: 100%; aspect-ratio: 1; margin-top: 14px; border-radius: 8px; object-fit: cover; box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.7); }
+.b-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 26px; }
+.b-meta b { display: block; font-size: 22px; font-weight: 750; letter-spacing: -0.015em; }
+.b-meta small { font-size: 16px; opacity: 0.7; }
+.b-prog { margin-top: 18px; }
+.b-times { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.b-transport { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.b-transport .ib { font-size: 24px; }
+.b-transport .ib--lg { font-size: 34px; }
+.b-transport .ib--play { width: 66px; height: 66px; font-size: 28px; }
+.b-row { display: flex; align-items: center; margin: 6px -6px 0; opacity: 0.85; }
+.b-row span { flex: 1; }
+.b-card { position: relative; height: 340px; margin-top: 16px; padding: 16px 18px 0; border-radius: 16px; background: var(--bc); overflow: hidden; cursor: pointer; }
+.b-card__head { display: flex; align-items: center; height: 32px; }
+.b-card__head b { font-size: 16px; font-weight: 750; }
+.b-card__head span:first-of-type { flex: 1; }
+.b-card__btn { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: color-mix(in oklab, var(--up) 55%, transparent); color: var(--cur); font-size: 16px; }
+.b-card__body { position: relative; height: 280px; margin-top: 8px; overflow: hidden; pointer-events: none; }
+.b-card__list { --b-fs: 21px; --b-plain: 19px; transition: transform 600ms var(--ease-out); }
+.b-card__list.is-instant { transition: none; }
+.b-gap { height: 48px; }
+
+.b-full { position: absolute; inset: 0; z-index: 10; background: var(--bc); visibility: hidden; clip-path: inset(100% 0 0 0); transition: clip-path 560ms var(--ease-out), visibility 0s 560ms; }
+.b.is-open .b-full { visibility: visible; transition: clip-path 560ms var(--ease-out); }
+.b-full > * { opacity: 0; transition: opacity 300ms ease; }
+.b.is-open .b-full > * { opacity: 1; transition: opacity 400ms ease 120ms; }
+.b.is-open .b-full > .pill.is-hidden, .b.is-open .b-full > .b-selbar.is-hidden { opacity: 0; }
+.b-fhead { position: absolute; z-index: 3; inset: 50px 16px auto; display: flex; align-items: center; height: 56px; }
+.b-fhead__t { flex: 1; min-width: 0; text-align: center; line-height: 1.25; }
+.b-fhead__t b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 15px; font-weight: 700; }
+.b-fhead__t small { font-size: 13px; opacity: 0.72; }
+.b--phone .b-scroll { position: absolute; inset: 112px 0 116px; overflow-y: auto; padding: 8px 24px 60%; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 90%, transparent); mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 90%, transparent); }
+.b-ffoot { position: absolute; left: 24px; right: 24px; bottom: 30px; display: flex; align-items: center; gap: 18px; }
+.b-ffoot .b-prog { flex: 1; margin: 18px 0 0; }
+.b-ffoot .ib--play { width: 56px; height: 56px; font-size: 24px; background: var(--cur); color: var(--bc); }
+.b--phone .pill { bottom: 132px; }
+.b--phone .b-selbar { left: 24px; right: 24px; bottom: 34px; }
+.b.is-selecting .b-ffoot { opacity: 0; pointer-events: none; }
+
+/* ---------- Компьютер ---------- */
+.b--desk { --b-fs: 36px; --b-plain: 26px; position: absolute; inset: 0; padding: 8px 8px 8px 0; }
+.b-panel { position: relative; height: 100%; border-radius: 12px; background: var(--bc); overflow: hidden; }
+.b--desk .b-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 72px 80px 55%; scrollbar-width: thin; }
+.b--desk .b-list { max-width: 880px; }
+.b--desk .b-line { padding: 9px 0; }
+@media (hover: hover) { .b--desk .b-line:not(.is-active):hover { color: color-mix(in oklab, var(--cur) 85%, transparent); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; } }
+.b--desk .pill { bottom: 32px; }
+.b--desk .b-selbar { left: 50%; bottom: 28px; width: 420px; margin-left: -210px; }
+.b--desk .b-stanza { max-width: 760px; }

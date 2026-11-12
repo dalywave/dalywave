@@ -23,6 +23,7 @@ pub mod jobs;
 pub mod links;
 pub mod lyrics;
 pub mod ml;
+pub mod notify;
 pub mod oidc;
 pub mod openapi;
 pub mod ratelimit;

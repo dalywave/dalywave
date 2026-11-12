@@ -18,6 +18,8 @@ import type {
   ResolvedLink,
   MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
   Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
+  NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
+  PushTest, PushUnregister,
 } from '~/api/types'
 import type { DownloaderSnapshot } from './tauri/shell'
 
@@ -523,8 +525,11 @@ export interface Bridge {
   /** Тактильный отклик (iPhone); на остальных — ничего */
   haptic(kind: HapticKind): void
 
-  /** Локальные уведомления (iPhone, iPad); на остальных — null */
-  readonly notify: LocalNotify | null
+  /** Push приложения на iPhone и iPad (APNs); на сайте и компьютерах — null (сайт — Web Push сам) */
+  readonly appPush: AppPush | null
+
+  /** Системное уведомление, пока приложение открыто (macOS, Windows); на остальных — null */
+  readonly systemNotify: SystemNotify | null
 
   auth: {
     providers(): Promise<AuthProviders>
@@ -682,6 +687,22 @@ export interface Bridge {
     moveFolder(id: string, body: MovePlaylistFolder): Promise<PlaylistList>
   }
 
+  /** Уведомления: центр, настройки по видам и тихие часы, подписки устройств на push */
+  notifications: {
+    /** Новые первыми; `before` — курсор следующей страницы */
+    list(before?: string | null, limit?: number): Promise<NotificationPage>
+    /** Отметить прочитанными; пустой список — все */
+    read(ids: string[]): Promise<NotificationsRead>
+    settings(): Promise<NotificationSettings>
+    updateSettings(patch: NotificationSettingsPatch): Promise<NotificationSettings>
+    /** Какие каналы push есть на сервере и какие устройства подписаны */
+    push(): Promise<PushInfo>
+    subscribe(reg: PushRegistration): Promise<PushRegistered>
+    unsubscribe(body: PushUnregister): Promise<void>
+    /** Пробное уведомление на все подписанные устройства */
+    test(): Promise<PushTest>
+  }
+
   /** Настройки слушателя — общие для всех его устройств */
   settings: {
     get(): Promise<UserSettings>
@@ -797,9 +818,20 @@ export interface Bridge {
 
 export type { DeviceInfo, Track }
 
-/** Локальное уведомление приложения: разрешение система спрашивает при первом */
-export interface LocalNotify {
-  /** Поставить (тот же id заменяет прежнее); `atMs` в прошлом или null — сразу. false — запрещено */
-  schedule(n: { id: string, title: string, body: string, atMs?: number | null }): Promise<boolean>
-  cancel(id: string): Promise<void>
+/** Разрешение на уведомления в системе */
+export type PushPermission = 'default' | 'granted' | 'denied'
+
+/** Push приложения на iPhone и iPad (apps/shell, APNs). Разрешение спрашивается только по `register(true)` */
+export interface AppPush {
+  state(): Promise<{ supported: boolean, permission: PushPermission }>
+  /** Токен устройства для сервера; `prompt` — спросить разрешение, если система ещё не спрашивала.
+   *  null — запрещено, не вышло или не дождались */
+  register(prompt: boolean): Promise<{ token: string, environment: 'sandbox' | 'production' } | null>
+  /** Число на значке приложения */
+  setBadge(count: number): void
+}
+
+/** Системное уведомление приложения для компьютера, пока оно открыто; щелчок открывает `link` */
+export interface SystemNotify {
+  show(n: { id: string, title: string, body: string, link: string | null }): Promise<boolean>
 }

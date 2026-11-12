@@ -76,7 +76,6 @@ async function load() {
     // Посмотрел — карточка «Твои итоги готовы» на главной больше не зовёт
     if (!preview.value && years.open && y === years.current && !years.seen) {
       void bridge.rewind.seen(y).catch(() => {})
-      void bridge.notify?.cancel(`rewind-${y}`)
     }
   }
   catch (e) {

@@ -28,6 +28,48 @@
     "syncDone": "Follows loaded",
     "syncTitle": "Downloading follows"
   },
+  "notify": {
+    "title": "Notifications",
+    "unread": "{n} unread",
+    "empty": "All quiet",
+    "emptyText": "New releases from your artists and other news will show up here",
+    "readAll": "Mark all as read",
+    "open": "Open",
+    "showAll": "Show {n}",
+    "collapse": "Show less",
+    "askTitle": "Turn on notifications?",
+    "askText": "New releases and your year in review — right on this device",
+    "askOn": "Turn on",
+    "askLater": "Not now",
+    "readFailed": "Couldn't mark as read",
+    "enableFailed": "Couldn't turn on notifications",
+    "disableFailed": "Couldn't turn off notifications",
+    "testSent": "Test notification sent",
+    "testCenter": "Test notification is in your notifications",
+    "testFailed": "Couldn't send a test notification",
+    "device": "On this device",
+    "deniedApp": "Notifications are off in iPhone Settings: Settings → DalyWave → Notifications",
+    "deniedWeb": "Notifications are blocked for this site — allow them in your browser settings",
+    "kinds": "What to send",
+    "kind": {
+      "release": "New releases",
+      "import": "Music transfer",
+      "rewind": "Year in review",
+      "review": "Disputed tracks",
+      "sources": "Sources"
+    },
+    "kindDesc": {
+      "release": "From artists you follow",
+      "import": "When a transfer finishes",
+      "review": "Waiting for a decision in admin",
+      "sources": "When YouTube stops serving audio"
+    },
+    "quiet": "Quiet hours",
+    "quietDesc": "Notifications wait until morning",
+    "from": "From",
+    "to": "to",
+    "test": "Send a test"
+  },
   "common": {
     "play": "Play",
     "pause": "Pause",

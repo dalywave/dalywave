@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM push_subscriptions p LEFT JOIN sessions s ON s.id = p.session_id\n           WHERE p.user_id = $1 AND p.disabled_at IS NULL AND p.channel = ANY($2)\n             AND (p.session_id IS NULL OR (s.revoked_at IS NULL AND s.expires_at > now()))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "dc3676fe1aecb552d39e50955b6925a328df478709a3729e5c38ad25fd4f74bc"
+}

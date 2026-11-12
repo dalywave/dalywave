@@ -36,7 +36,6 @@ onMounted(async () => {
     // Администратор получает ответ и при закрытых итогах — но карточку видят только при открытых
     if (!y.open) return
     years.value = y
-    if (props.launch) remind(y)
     r.value = data
   }
   catch (e) {
@@ -45,29 +44,7 @@ onMounted(async () => {
   }
 })
 
-/**
- * Приложение на iPhone: итоги открылись, а слушатель их ещё не видел — одно спокойное уведомление
- * вечером того же дня (разрешение система спросит тут же, один раз). Посмотрел — уведомление снимается
- */
-function remind(y: RewindYears) {
-  const notify = bridge.notify
-  if (!notify) return
-  const id = `rewind-${y.current}`
-  if (y.seen) return void notify.cancel(id)
-  const key = `dw.rewind.reminder.${y.current}`
-  try {
-    if (localStorage.getItem(key)) return
-    localStorage.setItem(key, '1')
-  }
-  catch {
-    return
-  }
-  // В 19:00, а если до него меньше двух часов — завтра в 19:00
-  const at = new Date()
-  at.setHours(19, 0, 0, 0)
-  if (at.getTime() - Date.now() < 2 * 3600_000) at.setDate(at.getDate() + 1)
-  void notify.schedule({ id, title: t('notifyTitle', { year: y.current }), body: t('notifyBody'), atMs: at.getTime() })
-}
+// Уведомление «Итоги готовы» присылает сервер (центр уведомлений и push), здесь — только карточки
 
 const palette = computed(() => r.value?.topAlbums.flatMap(a => a.album.palette ?? []) ?? null)
 const colors = computed(() => slideColors(palette.value))
@@ -285,9 +262,7 @@ const yearHalves = computed(() => [String(r.value?.year ?? '').slice(0, 2), Stri
     "ready": "Твои итоги {year} готовы",
     "watch": "Смотреть",
     "empty": "Пока тихо — итоги соберутся из прослушиваний",
-    "past": "Прошлые годы",
-    "notifyTitle": "Итоги {year} готовы",
-    "notifyBody": "Минуты, артист и трек года — всё в одной истории"
+    "past": "Прошлые годы"
   },
   "en": {
     "kicker": "Year in review",
@@ -296,9 +271,7 @@ const yearHalves = computed(() => [String(r.value?.year ?? '').slice(0, 2), Stri
     "ready": "Your {year} is ready",
     "watch": "Watch",
     "empty": "Quiet so far — your review builds as you listen",
-    "past": "Past years",
-    "notifyTitle": "Your {year} is ready",
-    "notifyBody": "Minutes, artist and track of the year — all in one story"
+    "past": "Past years"
   }
 }
 </i18n>

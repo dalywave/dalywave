@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE push_subscriptions SET disabled_at = now(), disabled_reason = 'replaced', updated_at = now()\n         WHERE session_id = $1 AND channel = $2 AND id <> $3 AND disabled_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d11d8c569de812d74f0242f81dc3828e173359fa7a802d3c7f85c5b6bd92d2f0"
+}

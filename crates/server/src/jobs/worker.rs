@@ -50,6 +50,8 @@ pub struct Context {
     pub fetcher: reqwest::Client,
     /// Сервис анализа звука: анализы этого процесса идут по одному
     pub ml: Arc<Ml>,
+    /// Каналы push (APNs, Web Push): каналы без настроек выключены
+    pub push: Arc<crate::notify::push::Push>,
     /// Тексты песен: запросы процесса не чаще раза в секунду
     pub lrclib: Arc<Lrclib>,
     /// Виды задач на паузе после сбоя исполнителя (YouTube заподозрил бота, сервис анализа лежит)
@@ -86,7 +88,9 @@ impl Context {
             .timeout(Duration::from_secs(15 * 60))
             .build()?;
         let lrclib = Arc::new(Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?);
+        let push = Arc::new(crate::notify::push::Push::from_config(&config.push)?);
         Ok(Self {
+            push,
             db,
             config,
             deezer,
@@ -591,6 +595,14 @@ impl Worker {
                         Ok(t) if t == crate::renditions::Trimmed::default() => {}
                         Ok(t) => tracing::info!(stale = t.stale, evicted = t.evicted, deleted = t.deleted, "renditions trimmed"),
                         Err(e) => tracing::warn!(error = %e, "could not trim renditions"),
+                    }
+                    match crate::notify::events::rewind_ready(&self.ctx.db, chrono::Utc::now()).await {
+                        Ok(0) => {}
+                        Ok(n) => tracing::info!(users = n, "year in review notifications"),
+                        Err(e) => tracing::warn!(error = %e, "could not notify about year in review"),
+                    }
+                    if let Err(e) = crate::notify::cleanup(&self.ctx.db).await {
+                        tracing::warn!(error = %e, "notification cleanup failed");
                     }
                     match jobs::cleanup(&self.ctx.db).await {
                         Ok(0) => {}

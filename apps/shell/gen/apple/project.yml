@@ -2,7 +2,8 @@
 #   - своя фаза «Build Rust Code» (scripts/build-ios.sh) — Run в Xcode работает без Tauri CLI;
 #   - фреймворки аудиодвижка и входа — статическая библиотека Rust не передаёт их линковщику;
 #   - фоновый звук, ссылки dalywave://, тёмная тема системных окон, значок с темами;
-#   - Siri: App Intents (Swift в Sources, фразы — ru.lproj) и расширение SiriKit dalywave-siri.
+#   - Siri: App Intents (Swift в Sources, фразы — ru.lproj) и расширение SiriKit dalywave-siri;
+#   - push (APNs): право aps-environment, делегат уведомлений Sources/…/PushLink.swift.
 # Пересобрать проект: `make ios` (или `xcodegen generate` здесь). `cargo tauri ios init` заново
 # не запускать: он перезапишет файл и вернёт штатную фазу, которой нужен запущенный CLI.
 name: dalywave-shell
@@ -103,6 +104,10 @@ targets:
         com.apple.developer.siri: true
         # Виджеты: снимок «что играет», недавнее и сочетания волны — в общем контейнере
         com.apple.security.application-groups: [group.rest.daly.wave]
+        # Push (APNs): возможность Push Notifications у App ID rest.daly.wave (IOS.md). В проекте —
+        # development; при экспорте для App Store/TestFlight Xcode берёт значение из профиля
+        # дистрибуции — production
+        aps-environment: development
     settings:
       base:
         ENABLE_BITCODE: false
@@ -149,6 +154,8 @@ targets:
       - sdk: CoreMedia.framework
       # Siri: INPlayMediaIntent в приложении (src/siri.rs), INPreferences, INMediaUserContext
       - sdk: Intents.framework
+      # Push: разрешение, токен APNs, нажатие на уведомление (src/push.rs, PushLink.swift)
+      - sdk: UserNotifications.framework
     preBuildScripts:
       # Своя фаза вместо `cargo tauri ios xcode-script`: работает из Xcode без запущенного CLI
       - script: |

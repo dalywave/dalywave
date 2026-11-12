@@ -49,6 +49,7 @@ pub mod jam;
 pub mod jobs;
 pub mod library;
 pub mod lyrics;
+pub mod notifications;
 pub mod offline;
 pub mod realtime;
 pub mod reco;

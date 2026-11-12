@@ -1,0 +1,338 @@
+{
+ "note": "Тексты из нашего API /api/tracks/{id}/lyrics (источник LRCLIB), снято 2026-11-12. Только построчная синхронизация.",
+ "tracks": [
+  {
+   "slug": "ptichki",
+   "id": "01a1cb08-b88a-775f-9299-028da54d0a98",
+   "title": "Да что романтичного в птичках?",
+   "artists": [
+    "Pyrokinesis"
+   ],
+   "album": "Питер, чай, не Франция",
+   "durationMs": 130000,
+   "cover": "cover-ptichki.jpg",
+   "lyrics": {
+    "kind": "synced",
+    "lines": [
+     {
+      "tMs": 15420,
+      "text": "С неба падают на землю птицы"
+     },
+     {
+      "tMs": 18790,
+      "text": "Мне понадобится потрудиться"
+     },
+     {
+      "tMs": 22220,
+      "text": "Чтобы суть поймать, как Марко Поло"
+     },
+     {
+      "tMs": 24270,
+      "text": "Ах, вы птица еще та"
+     },
+     {
+      "tMs": 25790,
+      "text": "Но жаль, что я не орнитолог"
+     },
+     {
+      "tMs": 28300,
+      "text": "Но гнётся ваша ветка, тучи пузырятся"
+     },
+     {
+      "tMs": 31100,
+      "text": "Дождь слюны течет по перьям, а те пенятся в ответ"
+     },
+     {
+      "tMs": 34590,
+      "text": "Но только вместо пенья птиц вы слышите хи-хи"
+     },
+     {
+      "tMs": 37950,
+      "text": "Хоть убей - не понимаю как вы пишете стихи"
+     },
+     {
+      "tMs": 41960,
+      "text": "В небе как синичка, отлично (тоже мне)"
+     },
+     {
+      "tMs": 45350,
+      "text": "Да что романтичного в птичках?"
+     },
+     {
+      "tMs": 47950,
+      "text": "Можете мне не объяснять"
+     },
+     {
+      "tMs": 50120,
+      "text": "И ваша мне была скучна ласточка"
+     },
+     {
+      "tMs": 52950,
+      "text": "Мне как ни крути - вас не понять"
+     },
+     {
+      "tMs": 55040,
+      "text": "И вы"
+     },
+     {
+      "tMs": 55720,
+      "text": "В небе как синичка, отлично (тоже мне)"
+     },
+     {
+      "tMs": 59070,
+      "text": "Да что романтичного в птичках?"
+     },
+     {
+      "tMs": 61670,
+      "text": "Можете мне не объяснять"
+     },
+     {
+      "tMs": 63880,
+      "text": "И ваша мне была скучна ласточка"
+     },
+     {
+      "tMs": 66640,
+      "text": "Мне как ни крути вас не понять"
+     },
+     {
+      "tMs": 68800,
+      "text": "И вы в небе как синичка"
+     },
+     {
+      "tMs": 72470,
+      "text": "Я очень рад, но на любого журавля"
+     },
+     {
+      "tMs": 74800,
+      "text": "Найдется мальчуган с рогаткой"
+     },
+     {
+      "tMs": 76670,
+      "text": "Так что лучше птичку все таки в руках"
+     },
+     {
+      "tMs": 79040,
+      "text": "И вам бы тоже, мисс, не стоило витать бы в облаках"
+     },
+     {
+      "tMs": 82440,
+      "text": "(ах-ах-ха-ха-ха)"
+     },
+     {
+      "tMs": 84200,
+      "text": "А мне бы перед тем, хотелось знать"
+     },
+     {
+      "tMs": 86880,
+      "text": "Кто вам наврал о том, что небо не предел?"
+     },
+     {
+      "tMs": 89350,
+      "text": "(допустим может быть и так)"
+     },
+     {
+      "tMs": 91120,
+      "text": "Но там вы рухните балластом"
+     },
+     {
+      "tMs": 92920,
+      "text": "Ах, ну кто же вам сказал, мадам"
+     },
+     {
+      "tMs": 94800,
+      "text": "Что небо безопасно? (и вы)"
+     },
+     {
+      "tMs": 96800,
+      "text": "В небе как синичка, отлично (тоже мне)"
+     },
+     {
+      "tMs": 100200,
+      "text": "Да что романтичного в птичках?"
+     },
+     {
+      "tMs": 102800,
+      "text": "Можете мне не объяснять"
+     },
+     {
+      "tMs": 105040,
+      "text": "И ваша мне была скучна ласточка"
+     },
+     {
+      "tMs": 107830,
+      "text": "Мне как ни крути - вас не понять"
+     },
+     {
+      "tMs": 109870,
+      "text": "И вы"
+     },
+     {
+      "tMs": 110600,
+      "text": "В небе как синичка, отлично (тоже мне)"
+     },
+     {
+      "tMs": 113830,
+      "text": "Да что романтичного в птичках?"
+     },
+     {
+      "tMs": 116520,
+      "text": "Можете мне не объяснять"
+     },
+     {
+      "tMs": 118720,
+      "text": "И ваша мне была скучна ласточка"
+     },
+     {
+      "tMs": 121550,
+      "text": "Мне как ни крути вас не понять"
+     },
+     {
+      "tMs": 123550,
+      "text": "И вы в небе как синичка"
+     }
+    ],
+    "plain": null,
+    "source": "lrclib"
+   }
+  },
+  {
+   "slug": "hochesh",
+   "id": "01a1cb11-a3be-7bf8-b701-d502c21ab0ba",
+   "title": "ХОЧЕШЬ?",
+   "artists": [
+    "Земфира"
+   ],
+   "album": "ПРОСТИ МЕНЯ МОЯ ЛЮБОВЬ",
+   "durationMs": 198000,
+   "cover": "cover-hochesh.jpg",
+   "lyrics": {
+    "kind": "synced",
+    "lines": [
+     {
+      "tMs": 930,
+      "text": "Пожалуйста, не умиpай"
+     },
+     {
+      "tMs": 3760,
+      "text": "Или мне придётся тоже"
+     },
+     {
+      "tMs": 7620,
+      "text": "Ты, конечно, сразу в рай"
+     },
+     {
+      "tMs": 10650,
+      "text": "А я не думаю, что тоже"
+     },
+     {
+      "tMs": 14350,
+      "text": "Хочешь сладких апельсинов?"
+     },
+     {
+      "tMs": 18080,
+      "text": "Хочешь вслух рассказов длинных?"
+     },
+     {
+      "tMs": 21770,
+      "text": "Хочешь, я взорву все звёзды"
+     },
+     {
+      "tMs": 25460,
+      "text": "Что мешают спать?"
+     },
+     {
+      "tMs": 28810,
+      "text": ""
+     },
+     {
+      "tMs": 43970,
+      "text": "Пожалуйста, только живи"
+     },
+     {
+      "tMs": 46460,
+      "text": "Ты же видишь: я живу тобою"
+     },
+     {
+      "tMs": 51020,
+      "text": "Моей огромной любви"
+     },
+     {
+      "tMs": 53810,
+      "text": "Хватит нам двоим с головою"
+     },
+     {
+      "tMs": 57550,
+      "text": "Хочешь в море с парусами?"
+     },
+     {
+      "tMs": 61240,
+      "text": "Хочешь музык новых самых?"
+     },
+     {
+      "tMs": 64780,
+      "text": "Хочешь, я убью соседей"
+     },
+     {
+      "tMs": 68550,
+      "text": "Что мешают спать?"
+     },
+     {
+      "tMs": 72220,
+      "text": ""
+     },
+     {
+      "tMs": 114390,
+      "text": "Хочешь солнце вместо лампы?"
+     },
+     {
+      "tMs": 118520,
+      "text": "Хочешь за окошком Альпы?"
+     },
+     {
+      "tMs": 122180,
+      "text": "Хочешь, я отдам все пeсни?"
+     },
+     {
+      "tMs": 125730,
+      "text": "Про тебя отдам все пeсни"
+     },
+     {
+      "tMs": 129380,
+      "text": "Хочешь солнце вместо лампы?"
+     },
+     {
+      "tMs": 132950,
+      "text": "Хочешь за окошком Альпы?"
+     },
+     {
+      "tMs": 136430,
+      "text": "Хочешь, я отдам все пeсни?"
+     },
+     {
+      "tMs": 140070,
+      "text": "Про тебя отдам все пeсни я"
+     }
+    ],
+    "plain": null,
+    "source": "lrclib"
+   }
+  },
+  {
+   "slug": "onmyway",
+   "id": "01a1c8d3-692b-7389-a274-c15634cf69f8",
+   "title": "On My Way",
+   "artists": [
+    "Lowborn"
+   ],
+   "album": "On My Way",
+   "durationMs": 195000,
+   "cover": "cover-onmyway.jpg",
+   "lyrics": {
+    "kind": "plain",
+    "lines": [],
+    "plain": "Oh I've got a sad soul\nIt's gonna hurt more when I take your throne\nOh this world is so cold\nIn a glass house but you're throwing stones\nDid your mama not warn ya\nYou're gonna grow older\nOh I've broken these bones\nSelling these lines but I've never been sold\n\nI'm on my way\nNo this ain't a game\nI'll never let you escape\nI'm on my way\nI'm on my way\nOh ain't a shame\nNow I'm just taking your place\nI'm on my way\n\nTake this kingdom you own\nI'm gonna set fire to the love you hold\nAll you touch isn't gold\nIt's gonna burn quick leaving you exposed\nDid ya daddy not warn ya\nLook over your shoulder\nOh I'm taking control\nIt's gonna be fun just to watch you fold\n\nI'm on my way\nNo this ain't a game\nI'll never let you escape\nI'm on my way\nI'm on my way\nOh ain't a shame\nNow I'm just taking your place\nI'm on my way\n\nThis is the end\nI'm coming for you and all of your friends\nI'm gonna end it before it begins\nPay for your sins again and again\nThis is the end\nI'm coming for you and all of your friends\nI'm gonna end it before it begins\nPay for your sins again and again\nAgain and again\n\nI'm on my way\nNo this ain't a game\nI'll never let you escape\nI'm on my way\nI'm on my way\nOh ain't a shame\nNow I'm just taking your place\nI'm on my way",
+    "source": "lrclib"
+   }
+  }
+ ]
+}
