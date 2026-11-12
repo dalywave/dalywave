@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Текст песни — три направления</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap">
+  <link rel="icon" type="image/svg+xml" href="../brand/icon-rounded.svg">
+  <style>
+    :root { color-scheme: dark; --bg: #0c0c0f; --panel: #141418; --line: #24242b; --text: #f2f2f5; --muted: #9a9aa6; --accent: #ff7eb3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 Onest, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 40px 32px 96px; }
+    h1 { margin: 0 0 8px; font-size: 30px; font-weight: 750; letter-spacing: -0.02em; }
+    h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+    h3 { margin: 0 0 6px; font-size: 15px; font-weight: 650; }
+    p { margin: 0; }
+    .intro { max-width: 860px; color: var(--muted); }
+    section { margin-top: 56px; }
+    .now { display: grid; grid-template-columns: 220px 1fr 1fr; gap: 20px; margin-top: 18px; align-items: start; }
+    .now img { display: block; width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+    .now figure { margin: 0; }
+    .now figcaption { margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .now.light { grid-template-columns: repeat(3, 1fr); }
+    .now.light img { max-width: 300px; }
+    .now.light figcaption { max-width: 360px; color: #cfd0d8; }
+    .now.light b { color: var(--text); }
+    ul.weak { margin: 18px 0 0; padding: 0 0 0 18px; max-width: 980px; color: #d6d7de; }
+    ul.weak li { margin: 6px 0; }
+    ul.weak b { color: var(--text); }
+    .grid { display: grid; grid-template-columns: repeat(3, 390px); justify-content: space-between; gap: 32px; margin-top: 22px; }
+    .dir p { margin: 6px 0 14px; min-height: 118px; color: var(--muted); font-size: 14px; }
+    .phone { width: 390px; height: 844px; border-radius: 44px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+    .phone iframe { display: block; width: 390px; height: 844px; border: 0; }
+    .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .links a, .tabs button { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); font: 500 13px/1 Onest, sans-serif; text-decoration: none; cursor: pointer; }
+    .links a:hover, .tabs button:hover { color: var(--text); border-color: #3a3a44; }
+    .links a.main { color: #0c0c0f; background: var(--text); border-color: var(--text); }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 16px; }
+    .tabs button[aria-pressed="true"] { color: #0c0c0f; background: var(--text); border-color: var(--text); }
+    .desk { position: relative; width: 100%; aspect-ratio: 1440 / 900; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+    .desk iframe { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; border: 0; transform-origin: 0 0; }
+    .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 18px; }
+    .cols > div { padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .cols ul { margin: 6px 0 0; padding-left: 18px; color: #cfd0d8; font-size: 14px; }
+    .cols li { margin: 4px 0; }
+    .honest { margin-top: 16px; max-width: 980px; color: #cfd0d8; }
+    .honest b { color: var(--text); }
+    .keys { margin-top: 10px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 1300px) { .grid { grid-template-columns: repeat(auto-fill, 390px); justify-content: center; } .now, .cols { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Текст песни — три направления</h1>
+    <p class="intro">Тексты настоящие, из нашего API: «Да что романтичного в птичках?» (Pyrokinesis — 15 секунд вступления, подпевки в скобках, яркая обложка), «ХОЧЕШЬ?» (Земфира — два проигрыша по 15 и 42 секунды, серая обложка) и «On My Way» (Lowborn — текст без времени). Воспроизведение имитируется без звука, строки идут по настоящим таймкодам. В каждом прототипе сверху — телефон или компьютер, тёмная или светлая тема, трек и быстрые переходы: «Строка», «Проигрыш», «Начало».</p>
+
+    <section>
+      <h2>Как сейчас</h2>
+      <div class="now">
+        <figure><img src="../shots/lyrics/now/now-sheet-phone.png" alt="Текст на телефоне сейчас"><figcaption>Телефон: лист «Текст» поверх плеера</figcaption></figure>
+        <figure><img src="../shots/lyrics/now/now-panel-desktop.png" alt="Текст на компьютере сейчас"><figcaption>Компьютер: вкладка в правой панели</figcaption></figure>
+        <figure><img src="../shots/lyrics/now/now-ipad-ipad13l.png" alt="Текст на iPad сейчас"><figcaption>iPad: текст в плеере и лист поверх него</figcaption></figure>
+      </div>
+      <ul class="weak">
+        <li><b>Текст выглядит как служебная вкладка, а не как сцена.</b> На телефоне это серый лист с заголовком «Текст» поверх плеера, на компьютере — колонка 380 px между «Очередью» и «Устройствами». Главная часть экрана в это время занята чем-то другим.</li>
+        <li><b>Текущую строку трудно отличить от остальных.</b> Размер почти тот же, яркость отличается немного, спетые строки и будущие выглядят одинаково. Нет ощущения, что строка поётся сейчас.</li>
+        <li><b>Проигрыш почти не виден.</b> На 42 секунды без слов приходятся три мелкие точки цвета текста. Не видно ни сколько осталось, ни какая строка будет дальше.</li>
+        <li><b>Не используется обложка.</b> Фон — нейтральная поверхность листа, хотя цвет обложки здесь как раз уместен.</li>
+        <li><b>Мелкие проблемы:</b> на iPad лист с текстом открывается поверх плеера, где текст уже показан; после последней строки (у «ХОЧЕШЬ?» это ещё минута) текст просто стоит; на узкой панели строки ломаются некрасиво («Хочешь солнце / вместо лампы?»); подпевки в скобках идут в одну строку с основным текстом; нельзя поделиться строкой.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Три направления на телефоне</h2>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section>
+      <h2>На компьютере</h2>
+      <div class="tabs" id="tabs"></div>
+      <div class="desk" id="desk"><iframe title="Текст на компьютере" src="a.html?device=desktop&amp;bare=1"></iframe></div>
+    </section>
+
+    <section>
+      <h2>Светлая тема</h2>
+      <div class="now light">
+        <figure><img src="../shots/lyrics/a-light-phone.png" alt="А в светлой теме"><figcaption><b>А.</b> Фон — те же тона обложки, но пастельные (смешаны с белым); текст чернильный, приглушённые строки — чернила 30 %. Размытие и «загорание» слов те же. Обложки с тёмной палитрой дают тёплую бумагу, а не грязь: яркость фона фиксирована.</figcaption></figure>
+        <figure><img src="../shots/lyrics/b-light-phone.png" alt="Б в светлой теме"><figcaption><b>Б.</b> Цвет обложки остаётся, но светлый. Схема зеркальная: спетое и текущее — чернилами, будущее — белым. Заливка идёт из белого в чернила. Плеер под карточкой — почти белый оттенок того же тона.</figcaption></figure>
+        <figure><img src="../shots/lyrics/c-light-phone.png" alt="В в светлой теме"><figcaption><b>В.</b> Бумага вместо ночи: белый фон, тексты по токенам светлой темы. Волна берёт более тёмный оттенок цвета обложки, чтобы читалась на белом. Лучше всех переносит светлую тему, потому что почти ничего не меняется.</figcaption></figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Что есть во всех трёх</h2>
+      <div class="cols">
+        <div><h3>Управление</h3><ul><li>Нажатие на строку — перемотка к её началу</li><li>Прокрутили сами — лента стоит, появляется «К текущей строке» (стрелка смотрит туда, где строка); через 6 с лента сама возвращается</li><li>Долгое нажатие (на компьютере — правый щелчок) — поделиться строкой</li></ul></div>
+        <div><h3>Проигрыши</h3><ul><li>Пустая строка LRCLIB или пауза длиннее 5 с после конца строки — это проигрыш, и он виден</li><li>Вступление до первой строки — тоже проигрыш</li><li>После последней строки текст «отпускает»: ничего не подсвечено</li></ul></div>
+        <div><h3>Простой текст</h3><ul><li>Без подсветки и без слежения, обычная прокрутка</li><li>Строфы с воздухом между ними, крупный ровный шрифт</li><li>В В: повторы припева свёрнуты</li></ul></div>
+      </div>
+      <p class="honest"><b>Что тут честно, а что оценка.</b> У нас есть только время <i>начала</i> каждой строки (LRCLIB). Честно: какая строка сейчас, перемотка, время до следующей строки, длина проигрыша. Оценка: где кончается строка перед долгой паузой (считаем по слогам: ≈240 мс на слог) и время каждого слова. В А слова «загораются» по слогам, в Б строка заливается по буквам. На медленных и растянутых строках оценка заметно ошибается: заливка обгоняет голос или отстаёт. В В используются только честные данные: волна под строкой идёт за время до следующей строки и не притворяется, что знает слова. Настоящую пословную подсветку можно получить, только если появится источник с пословным временем (формат Enhanced LRC / TTML).</p>
+    </section>
+  </div>
+  <script>
+    const DIRS = [
+      { id: "a", name: "А · «Сцена»", text: "Как в Apple Music. Фон — живой градиент из цветов обложки. Крупные жирные строки: текущая белая, слова загораются по ходу пения (по оценке), остальные строки приглушены и чуть размыты. Лента едет пружиной, и строки догоняют её лесенкой. Проигрыш — три точки, которые дышат и наполняются. Открывается кнопкой «Текст» внизу плеера: обложка уезжает в шапку, текст занимает экран, управление само прячется." },
+      { id: "b", name: "Б · «Карточка»", text: "Как в Spotify. Плоский цвет обложки. Спетые строки белые, будущие тёмные, текущая заливается белым слева направо. Проигрыш — нота, которая наполняется снизу. На телефоне под плеером карточка «Текст» с живыми строками: нажатие раскрывает её на весь экран, стрелка вниз сворачивает обратно. Чтобы поделиться, можно выбрать до пяти строк." },
+      { id: "c", name: "В · «Полночь»", text: "Своё направление. Чёрный экран, цвет есть только у волны. Текст по центру: текущая строка крупная, остальные мельче. Под строкой волна DalyWave прорисовывается ровно за время строки, без угадывания слов. В проигрыше волна живая и сходит на нет, следующая строка уже видна. Справа шкала «ритм песни», по ней можно перематывать. Под обложкой видна текущая строка, нажатие разворачивает текст." },
+    ];
+    const grid = document.getElementById("grid");
+    for (const d of DIRS) {
+      grid.insertAdjacentHTML("beforeend", `
+        <div class="dir">
+          <h2>${d.name}</h2>
+          <p>${d.text}</p>
+          <div class="phone"><iframe title="${d.name}" src="${d.id}.html?device=phone&bare=1" id="f-${d.id}"></iframe></div>
+          <div class="links">
+            <a class="main" href="${d.id}.html?device=phone" target="_blank">Открыть с настройками</a>
+            <a href="#" data-v="${d.id}" data-q="open=0">Плеер</a>
+            <a href="#" data-v="${d.id}" data-q="track=hochesh&t=71500">Проигрыш</a>
+            <a href="#" data-v="${d.id}" data-q="track=onmyway">Без времени</a>
+            <a href="#" data-v="${d.id}" data-q="theme=light">Светлая</a>
+          </div>
+        </div>`);
+    }
+    grid.addEventListener("click", (e) => {
+      const a = e.target.closest("a[data-v]");
+      if (!a) return;
+      e.preventDefault();
+      document.getElementById(`f-${a.dataset.v}`).src = `${a.dataset.v}.html?device=phone&bare=1&${a.dataset.q}`;
+    });
+    const tabs = document.getElementById("tabs");
+    const desk = document.getElementById("desk");
+    const frame = desk.querySelector("iframe");
+    const DESK = [...DIRS.map((d, i) => [d.name, `${d.id}.html?device=desktop&bare=1`, i === 0]),
+      ["Б · светлая", "b.html?device=desktop&bare=1&theme=light"], ["В · проигрыш", "c.html?device=desktop&bare=1&track=hochesh&t=71500"], ["В · без времени", "c.html?device=desktop&bare=1&track=onmyway"]];
+    tabs.innerHTML = DESK.map(([n, u, on]) => `<button type="button" data-u="${u}" aria-pressed="${!!on}">${n}</button>`).join("");
+    tabs.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      for (const x of tabs.children) x.setAttribute("aria-pressed", String(x === b));
+      frame.src = b.dataset.u;
+    });
+    const fit = () => (frame.style.transform = `scale(${desk.clientWidth / 1440})`);
+    addEventListener("resize", fit);
+    fit();
+  </script>
+</body>
+</html>

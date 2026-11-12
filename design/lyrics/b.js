@@ -40,7 +40,7 @@
     };
     const listHtml = synced ? items.map(lineHtml).join("") : model.stanzas.map((st) => `<p class="b-stanza">${st.map(esc).join("<br>")}</p>`).join("");
     const cardHtml = synced ? items.map(lineHtml).join("") : model.stanzas.slice(0, 2).map((st) => `<p class="b-stanza">${st.map(esc).join("<br>")}</p>`).join("");
-    const selbar = `<div class="b-selbar is-hidden"><button class="b-selbtn" type="button" data-sel="cancel">Отмена</button><button class="b-selbtn b-selbtn--main" type="button" data-sel="share">${icon("share-fat", true)}Поделиться</button></div>`;
+    const selbarHtml = `<div class="b-selbar is-hidden"><button class="b-selbtn" type="button" data-sel="cancel">Отмена</button><button class="b-selbtn b-selbtn--main" type="button" data-sel="share">${icon("share-fat", true)}Поделиться</button></div>`;
 
     if (phone) {
       stage.innerHTML = `<div class="b b--phone">
@@ -63,7 +63,7 @@
           <div class="b-scroll" tabindex="0"><div class="b-list">${listHtml}</div></div>
           <button class="pill is-hidden" type="button">${icon("arrow-down")}Вернуться к текущей</button>
           <footer class="b-ffoot"><div class="b-prog"><div class="track" data-act="seekbar"><i data-bind="fill"></i></div><div class="b-times"><span data-bind="pos"></span><span data-bind="left"></span></div></div><button class="ib ib--play" type="button" data-act="play"></button></footer>
-          ${selbar}
+          ${selbarHtml}
         </div>
         ${homeInd()}
       </div>`;
@@ -72,7 +72,7 @@
           <div class="b-panel">
             <div class="b-scroll" tabindex="0"><div class="b-list">${listHtml}</div></div>
             <button class="pill is-hidden" type="button">${icon("arrow-down")}Вернуться к текущей</button>
-            ${selbar}
+            ${selbarHtml}
           </div>
         </div>`);
     }

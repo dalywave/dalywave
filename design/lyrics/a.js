@@ -72,8 +72,8 @@
           ${transport}
           <div class="a-vol">${icon("speaker-none", true)}<div class="track"><i style="width:62%"></i></div>${icon("speaker-high", true)}</div>
         </div>
-        <section class="a-lyr" aria-label="Текст песни"><div class="a-list">${linesHtml}</div>
-          <button class="pill is-hidden" type="button">${icon("arrow-down")}К текущей строке</button></section>
+        <section class="a-lyr" aria-label="Текст песни"><div class="a-list">${linesHtml}</div></section>
+        <button class="pill is-hidden" type="button">${icon("arrow-down")}К текущей строке</button>
       </div>`;
     }
 

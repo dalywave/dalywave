@@ -1,0 +1,131 @@
+/* В · «Полночь» — своё: волна и ритм */
+.c { position: absolute; inset: 0; background: var(--ink-1); color: var(--text-1); }
+.c .track { height: 4px; background: var(--fill-3); }
+.c .track i { background: var(--text-1); }
+
+/* ---------- Строки ---------- */
+.c-line {
+  position: relative; padding: 4px 0; text-align: center;
+  font-size: var(--c-fs); font-weight: 750; line-height: 1.16; letter-spacing: -0.022em; text-wrap: balance;
+  color: var(--text-3); cursor: pointer; transform: scale(0.76); transform-origin: 50% 50%;
+  transition: transform 560ms var(--ease-out), color 420ms ease;
+}
+.c-line.is-past { color: var(--text-4); }
+.c-line.is-next { color: var(--text-2); transform: scale(0.84); }
+.c-line.is-active { color: var(--text-1); transform: none; }
+.c.is-manual .c-line { color: var(--text-2); }
+.c.is-manual .c-line.is-active { color: var(--text-1); }
+.c-line:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: 10px; }
+.c-txt { position: relative; display: inline-block; max-width: 100%; padding-bottom: 6px; }
+.c-backing { display: block; margin-top: 2px; font-size: 0.56em; font-weight: 650; letter-spacing: -0.01em; color: var(--text-3); }
+.c-line.is-back { font-size: calc(var(--c-fs) * 0.72); font-weight: 650; }
+/* Волна под текущей строкой: прорисовывается за время строки */
+.c-wave { position: absolute; left: 0; bottom: -8px; overflow: visible; }
+.c-wave path { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.c-wave__track { stroke: var(--line); }
+.c-wave__fill { stroke: var(--acc); stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+/* Проигрыш: волна живёт и сходит на нет к центру */
+.c-brk { padding: 16px 0; transform: none; }
+.c-bw { display: inline-block; overflow: visible; }
+.c-bw path { fill: none; stroke: var(--text-4); stroke-width: 2.4; stroke-linecap: round; transition: stroke 300ms; }
+.c-brk:not(.is-active) .c-bw { opacity: 0.5; transform: scaleX(0.4); }
+.c-brk.is-active .c-bw path { stroke: var(--acc); }
+.c-end { height: 30px; pointer-events: none; }
+.c-share { position: absolute; right: 0; top: 50%; display: grid; place-items: center; width: 40px; height: 40px; margin-top: -20px; padding: 0; border: 0; border-radius: 50%; background: var(--fill-2); color: var(--text-2); font-size: 18px; opacity: 0; cursor: pointer; transition: opacity var(--dur-2); }
+@media (hover: hover) { .c-line:hover .c-share { opacity: 1; } .c-line:not(.is-active):hover { color: var(--text-2); } }
+
+/* «Ритм песни»: строки на оси времени */
+.c-rhythm { position: absolute; z-index: 2; cursor: pointer; touch-action: none; }
+.c-rhythm::before { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 1px; background: var(--hair); }
+.c-rhythm i { position: absolute; right: 0; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--text-4); transition: background 300ms, height 300ms; }
+.c-rhythm i.is-past { background: var(--text-3); }
+.c-rhythm i.is-on { height: 3px; background: var(--acc); }
+.c-head { position: absolute; right: -3px; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--acc); }
+.c-window { position: absolute; left: -6px; right: -5px; border: 1px solid var(--line-strong); border-radius: 5px; opacity: 0; transition: opacity 300ms, top 200ms, height 200ms; pointer-events: none; }
+.c-rhythm:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; border-radius: 4px; }
+
+/* Простой текст: как стихи */
+.c-stanza { margin: 0 0 28px; text-align: center; font-size: var(--c-plain); font-weight: 600; line-height: 1.46; letter-spacing: -0.01em; color: var(--text-1); text-wrap: balance; }
+.c-label { display: block; margin-bottom: 8px; color: var(--acc); font-size: 11px; font-weight: 700; letter-spacing: var(--tr-caps); text-align: center; text-transform: uppercase; }
+.c-repeat { margin: -6px 0 22px; }
+.c-repeat summary { display: flex; justify-content: center; align-items: center; gap: 6px; height: 44px; color: var(--text-3); cursor: pointer; list-style: none; }
+.c-repeat summary::-webkit-details-marker { display: none; }
+.c-repeat summary .c-label { margin: 0; color: var(--text-3); }
+.c-repeat summary .ph { font-size: 14px; transition: transform var(--dur-3); }
+.c-repeat[open] summary .ph { transform: rotate(180deg); }
+.c-repeat .c-stanza { color: var(--text-2); }
+
+.c-scroll { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 84%, transparent); mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 84%, transparent); }
+.c-list { margin: 0 auto; padding: 240px 0 520px; }
+.c--desk .c-list { padding: 340px 0 600px; }
+.c.is-plain .c-list { padding: 40px 0 80px; }
+.c--desk.is-plain .c-list { padding-top: 104px; }
+
+/* ---------- Телефон ---------- */
+.c--phone { --c-fs: 27px; --c-plain: 19px; }
+.c-top { position: absolute; inset: 50px 12px auto; display: flex; align-items: center; height: 52px; transition: opacity 300ms; }
+.c-top__ctx { flex: 1; text-align: center; line-height: 1.25; }
+.c-top__ctx small { display: block; color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: var(--tr-caps); text-transform: uppercase; }
+.c-top__ctx b { font-size: 13px; font-weight: 650; }
+.c-cover { position: absolute; z-index: 3; left: 24px; top: 112px; width: 342px; height: 342px; border-radius: 10px; object-fit: cover; box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8); transition: all 600ms var(--ease-out); }
+.c-meta { position: absolute; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: opacity 360ms var(--ease-out), transform 500ms var(--ease-out); }
+.c-meta > div { min-width: 0; }
+.c-meta b, .c-meta small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.c-meta small { color: var(--text-2); }
+.c-meta--big { left: 24px; right: 14px; top: 474px; }
+.c-meta--big b { font-size: 22px; font-weight: 750; letter-spacing: -0.015em; }
+.c-meta--big small { font-size: 16px; }
+.c-meta--small { left: 76px; right: 10px; top: 60px; height: 44px; opacity: 0; transform: translateY(6px); pointer-events: none; }
+.c-meta--small b { font-size: 16px; font-weight: 650; }
+.c-meta--small small { font-size: 13.5px; }
+.c-strip { position: absolute; left: 24px; right: 24px; top: 536px; height: 62px; display: block; padding: 0 30px 0 0; border: 0; border-top: 1px solid var(--hair); background: none; color: var(--text-1); text-align: left; cursor: pointer; transition: opacity 300ms; }
+.c-strip__t { display: block; padding-top: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+.c-strip__t.is-in { animation: c-in 450ms var(--ease-out); }
+.c-strip.is-break .c-strip__t { color: var(--text-3); }
+.c-strip__w { position: static; display: block; margin-top: 4px; }
+.c-strip__go { position: absolute; right: 0; top: 14px; color: var(--text-3); font-size: 18px; }
+.c.is-plain .c-strip__t { color: var(--text-2); font-weight: 600; }
+@keyframes c-in { from { opacity: 0; transform: translateY(6px); } }
+.c-ctl { position: absolute; left: 24px; right: 24px; transition: opacity 360ms var(--ease-out), transform 500ms var(--ease-out); }
+.c-ctl--big { bottom: 30px; }
+.c-times { display: flex; justify-content: space-between; margin-top: 8px; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.c-transport { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.c-transport .ib--lg { font-size: 32px; }
+.c-transport .ib { color: var(--text-1); }
+.c-transport .ib--play { width: 66px; height: 66px; font-size: 28px; color: var(--ink-1); }
+.c-row { display: flex; justify-content: space-between; margin: 8px -6px 0; color: var(--text-2); }
+.c-ctl--mini { bottom: 28px; opacity: 0; transform: translateY(10px); pointer-events: none; }
+.c-ctl--mini .track { height: 3px; }
+.c-mini { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.c-mini span { width: 40px; }
+.c-mini span:last-child { text-align: right; }
+.c-mini > div { display: flex; align-items: center; gap: 14px; }
+.c-mini .ib { font-size: 24px; color: var(--text-1); }
+.c-mini .ib--mid { width: 52px; height: 52px; font-size: 22px; color: var(--ink-1); }
+.c--phone .c-lyr { position: absolute; left: 0; right: 0; top: 112px; bottom: 116px; opacity: 0; pointer-events: none; transition: opacity 420ms var(--ease-out); }
+.c--phone .c-scroll { padding: 0 46px 0 40px; }
+.c--phone .c-rhythm { right: 12px; top: 18px; bottom: 18px; width: 20px; }
+.c--phone .pill { bottom: 132px; }
+.c--phone:not(.is-open) .pill { display: none; }
+
+.c--phone.is-open .c-cover { left: 20px; top: 60px; width: 44px; height: 44px; border-radius: 7px; box-shadow: none; cursor: pointer; }
+.c--phone.is-open .c-top, .c--phone.is-open .c-strip { opacity: 0; pointer-events: none; }
+.c--phone.is-open .c-meta--big { opacity: 0; transform: translateY(-12px); pointer-events: none; }
+.c--phone.is-open .c-meta--small { opacity: 1; transform: none; pointer-events: auto; }
+.c--phone.is-open .c-ctl--big { opacity: 0; transform: translateY(14px); pointer-events: none; }
+.c--phone.is-open .c-ctl--mini { opacity: 1; transform: none; pointer-events: auto; }
+.c--phone.is-open .c-lyr { opacity: 1; pointer-events: auto; transition-delay: 120ms; }
+
+/* ---------- Компьютер ---------- */
+.c--desk { --c-fs: 40px; --c-plain: 24px; }
+.c-dhead { position: absolute; z-index: 3; top: 24px; left: 32px; right: 32px; display: flex; align-items: center; gap: 14px; }
+.c-dhead img { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; }
+.c-dhead b { display: block; font-size: 15px; font-weight: 650; }
+.c-dhead small { color: var(--text-2); font-size: 13px; }
+.c--desk .c-lyr { position: absolute; inset: 0; }
+.c--desk .c-scroll { padding: 0 140px; }
+.c--desk .c-list { max-width: 860px; }
+.c--desk .c-line { padding: 10px 52px; }
+.c--desk .c-rhythm { right: 40px; top: 110px; bottom: 56px; width: 34px; }
+.c--desk .pill { bottom: 32px; }
