@@ -70,8 +70,9 @@
   transition: --accent var(--dur-mood) var(--ease-in-out), --amb-1 var(--dur-mood), --amb-2 var(--dur-mood), --amb-3 var(--dur-mood);
 }
 
-/* Тёмная тема — по умолчанию. .scheme-dark — тёмный остров внутри светлой темы: «сцена» полного
-   плеера остаётся тёмной, как у Apple Music и Spotify (цвет там приходит из обложки и волны) */
+/* Тёмная тема — по умолчанию. .scheme-dark — тёмный остров внутри светлой темы: цветные карточки
+   плеера в цвет обложки с белым текстом (Dock на iPad, плеер сбоку), как у Spotify.
+   Полный плеер в светлой теме — светлый (FullPlayer.vue) */
 :root,
 :root[data-theme='dark'],
 .scheme-dark {

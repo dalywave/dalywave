@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
   layout?: WaveLayout
   /** Элемент, который волна «обнимает» свечением (обложка в плеере) */
   box?: HTMLElement | null
-  /** Тёмная волна и на светлой теме — для «сцены» полного плеера */
+  /** Тёмная волна и на светлой теме — для тёмного острова (.scheme-dark) */
   dark?: boolean
 }>(), { layout: 'hero', box: null, dark: false })
 

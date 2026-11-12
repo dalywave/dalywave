@@ -273,9 +273,9 @@ onBeforeUnmount(() => {
 <template>
   <!-- Большой экран: сцена поверх содержимого -->
   <Transition v-if="variant === 'stage'" name="stage">
-    <section v-if="open && track" ref="beatEl" class="fp scheme-dark" :class="{ 'fp--lyrics': lyricsOn }" :aria-label="t('player.expand')">
+    <section v-if="open && track" ref="beatEl" class="fp" :class="{ 'fp--lyrics': lyricsOn }" :aria-label="t('player.expand')">
       <div class="fp__wave">
-        <MusicWaveCanvas layout="stage" :box="art" dark />
+        <MusicWaveCanvas layout="stage" :box="art" />
       </div>
       <UiIconButton class="fp__collapse" icon="ph:caret-down" :label="t('player.collapse')" :kbd="['Esc']" tone="glass" side="right" @click="close" />
       <div class="fp__context"><i class="fp__dot" :class="{ 'fp__dot--any': player.waveActive && player.wave.mood === 'any' }" />{{ contextLabel }}</div>
@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
       <DialogOverlay class="pp-scrim" :style="scrimStyle" />
       <DialogContent
         v-if="track"
-        class="pp scheme-dark"
+        class="pp"
         :class="{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet', 'is-lyrics': variant === 'phone' && lyricsOn, 'is-lyrics-pane': variant === 'tablet' && pane === 'lyrics', 'is-calm': calm }"
         :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
         :aria-describedby="undefined"
@@ -347,7 +347,7 @@ onBeforeUnmount(() => {
           <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
           <div class="pp__ambient" aria-hidden="true" />
-          <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" dark /></div>
+          <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" /></div>
 
           <!-- Планшет -->
           <div v-if="variant === 'tablet'" class="tp">
@@ -754,6 +754,73 @@ onBeforeUnmount(() => {
 .pp.is-lyrics-pane .pp__wave { opacity: 0.3; }
 .tp__pane.is-lyrics { background: color-mix(in oklab, var(--amb-3) 30%, rgba(10, 12, 16, 0.55)); }
 .tp__pane.is-lyrics .tp__pane-body { position: relative; overflow: hidden; padding-bottom: 0; }
+
+/* ---------- Светлая тема: светлая сцена ----------
+   Плеер не выпадает тёмным островом между светлыми панелями. Фон — спокойная пастель тона
+   обложки (те же --amb-*, что у фона приложения): яркость постоянная и высокая, насыщенность
+   ограничена — на любой обложке, даже жёлтой, тёмный текст читается (вторичный ≥ 6,5:1,
+   третичный ≥ 5:1). Волна — краской по бумаге и умножается на фон: бумага берёт цвет пастели */
+:root[data-theme='light'] .fp,
+:root[data-theme='light'] .pp {
+  --text-2: rgba(16, 18, 24, 0.74);
+  --text-3: rgba(16, 18, 24, 0.68);
+  --pastel: color-mix(in oklab, var(--amb-1) 12%, #f3f3f5);
+  --pastel-glow: color-mix(in oklab, var(--amb-1) 22%, transparent);
+  --pastel-glow-2: color-mix(in oklab, var(--amb-2) 16%, transparent);
+  /* Текст акцентом (почему играет, где играет) — глубже: на пастели обычный акцент не дотягивает до 4,5:1 */
+  --accent-ink: color-mix(in oklab, var(--accent) 72%, #101218);
+}
+@supports (color: oklch(from red l c h)) {
+  :root[data-theme='light'] .fp,
+  :root[data-theme='light'] .pp {
+    --pastel: oklch(from var(--amb-1) 0.945 min(c, 0.032) h);
+    --pastel-glow: oklch(from var(--amb-1) 0.89 min(c, 0.07) h / 0.7);
+    --pastel-glow-2: oklch(from var(--amb-2) 0.9 min(c, 0.06) h / 0.5);
+  }
+}
+:root[data-theme='light'] .fp__reason,
+:root[data-theme='light'] .pp__reason,
+:root[data-theme='light'] .fp :deep(.cc:not(.is-lost)),
+:root[data-theme='light'] .pp :deep(.cc:not(.is-lost)),
+:root[data-theme='light'] .pp :deep(.scrub__mid) { color: var(--accent-ink); }
+:root[data-theme='light'] .fp__pending { background: var(--glass-strong); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-1); }
+
+/* Сцена на компьютере */
+:root[data-theme='light'] .fp,
+:root[data-theme='light'] .fp--lyrics {
+  background:
+    radial-gradient(60% 55% at 50% 38%, var(--pastel-glow), transparent 75%),
+    radial-gradient(45% 40% at 96% 4%, var(--pastel-glow-2), transparent 72%),
+    var(--pastel);
+}
+:root[data-theme='light'] .fp__wave { mix-blend-mode: multiply; opacity: 0.75; }
+:root[data-theme='light'] .fp--lyrics .fp__wave { opacity: 0.22; }
+:root[data-theme='light'] .fp__wave::after { display: none; }
+:root[data-theme='light'] .fp__context,
+:root[data-theme='light'] .fp__mood { background: rgba(255, 255, 255, 0.62); box-shadow: inset 0 0 0 1px var(--hair), 0 6px 18px -12px rgba(16, 18, 24, 0.25); }
+
+/* Телефон и планшет */
+:root[data-theme='light'] .pp-scrim { background: var(--overlay); }
+:root[data-theme='light'] .pp__frame,
+:root[data-theme='light'] .pp.is-lyrics .pp__frame,
+:root[data-theme='light'] .pp.is-lyrics-pane .pp__frame { background-color: var(--pastel); }
+:root[data-theme='light'] .pp__ambient {
+  background:
+    radial-gradient(90% 46% at 50% 30%, var(--pastel-glow), transparent 72%),
+    radial-gradient(70% 40% at 92% 10%, var(--pastel-glow-2), transparent 70%);
+}
+:root[data-theme='light'] .pp__wave { mix-blend-mode: multiply; opacity: 0.6; }
+:root[data-theme='light'] .pp.is-lyrics .pp__wave { opacity: 0; }
+:root[data-theme='light'] .pp.is-lyrics-pane .pp__wave { opacity: 0.22; }
+:root[data-theme='light'] .pp__art :deep(.art),
+:root[data-theme='light'] .tp__art :deep(.art) { box-shadow: 0 24px 48px -24px rgba(16, 18, 24, 0.42), 0 0 0 1px rgba(16, 18, 24, 0.06); }
+:root[data-theme='light'] .pp__now-art { box-shadow: 0 8px 18px -10px rgba(16, 18, 24, 0.4); }
+:root[data-theme='light'] .tp__pane,
+:root[data-theme='light'] .tp__pane.is-lyrics { background: rgba(255, 255, 255, 0.5); box-shadow: 0 -1px 0 var(--hair); }
+@media (orientation: landscape) {
+  :root[data-theme='light'] .tp__pane { background: rgba(255, 255, 255, 0.45); box-shadow: inset 0 0 0 1px var(--hair); }
+  :root[data-theme='light'] .tp .tp__pane.is-lyrics { background: none; box-shadow: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .pp__frame, .pp-scrim { animation: none; }
