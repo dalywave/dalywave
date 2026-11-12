@@ -118,6 +118,7 @@ function playLiked(list: Track[], i: number) {
         <template v-else>{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</template>
       </NuxtLink>
       <h1 class="thead__hello">{{ greeting }}</h1>
+      <NotifyBell size="lg" class="thead__bell" />
     </header>
     <UiContextMenu v-if="ui.isTouch" :items="quickMenu" @open="onQuickContext">
       <nav class="quick" :aria-label="t('quick')">
@@ -150,10 +151,13 @@ function playLiked(list: Track[], i: number) {
         <div class="phead__date">{{ today.charAt(0).toUpperCase() + today.slice(1) }}</div>
         <h1 class="phead__hello">{{ greeting }}</h1>
       </div>
-      <NuxtLink to="/settings" class="phead__avatar" :aria-label="t('settings')">
-        <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="" class="phead__avatar-img">
-        <template v-else>{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</template>
-      </NuxtLink>
+      <div class="phead__tools">
+        <NotifyBell size="lg" />
+        <NuxtLink to="/settings" class="phead__avatar" :aria-label="t('settings')">
+          <img v-if="auth.user?.avatarUrl" :src="auth.user.avatarUrl" alt="" class="phead__avatar-img">
+          <template v-else>{{ (auth.user?.name ?? '?').charAt(0).toUpperCase() }}</template>
+        </NuxtLink>
+      </div>
     </header>
 
     <!-- Итоги года открылись, а слушатель их ещё не видел — «Твои итоги готовы» первым делом -->
@@ -238,6 +242,8 @@ function playLiked(list: Track[], i: number) {
 .phead__hello { margin: 0; font-size: 28px; font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }
 .phead__avatar { display: grid; place-items: center; width: 44px; height: 44px; flex: none; overflow: hidden; border-radius: 50%; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--hair); font-weight: 700; }
 .phead__avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.phead__tools { display: flex; flex: none; align-items: center; gap: 4px; }
+.thead__bell { margin-left: auto; }
 .thead { display: flex; align-items: center; gap: 14px; margin-bottom: -24px; }
 .thead__avatar { width: 40px; height: 40px; }
 .thead__hello { margin: 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); line-height: 1.15; }

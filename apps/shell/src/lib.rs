@@ -22,11 +22,13 @@ mod macos;
 mod media;
 #[cfg(desktop)]
 mod mini;
-// Локальные уведомления iPhone и iPad: «Итоги года готовы»
+// Системные уведомления компьютеров, пока приложение открыто (уведомления сервера по WebSocket)
 mod notify;
 mod offline;
 mod platform;
 mod player;
+// Push iPhone и iPad (APNs): разрешение, токен для сервера, значок, нажатие на уведомление
+mod push;
 mod recognize;
 mod settings;
 // Siri и «Команды» (iPhone, iPad): App Intents и SiriKit в Swift зовут сюда
@@ -103,6 +105,9 @@ pub fn run() {
     // Загрузчик музыки — sidecar (downloader.rs); права в capabilities не нужны: запускает Rust
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_shell::init());
+    // Windows: всплывающие уведомления, пока приложение открыто (notify.rs; права для JS не нужны)
+    #[cfg(windows)]
+    let builder = builder.plugin(tauri_plugin_notification::init());
     // «Поделиться» кладёт ссылку в буфер обмена (только запись — права в capabilities/main.json)
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_clipboard_manager::init());
@@ -225,8 +230,10 @@ pub fn run() {
             offline::offline_wave_react,
             offline::offline_played,
             haptics::haptic,
-            notify::notify_schedule,
-            notify::notify_cancel,
+            notify::notify_show,
+            push::push_state,
+            push::push_register,
+            push::push_set_badge,
             recognize::recognize_listen,
             recognize::recognize_cancel,
             recognize::recognize_take_pending,
@@ -266,6 +273,8 @@ pub fn run() {
     recognize::install(app.handle());
     // Siri: SiriKit будит приложение `application:handleIntent:…` — метод нужен до запуска цикла
     siri::install(app.handle());
+    // Push: токен APNs приходит делегату приложения — методы нужны до запуска цикла
+    push::install(app.handle());
     // Apple Watch: часы могут разбудить iPhone в фоне просьбой о ключе — приложение нужно сразу
     #[cfg(target_os = "ios")]
     watch::install(app.handle());

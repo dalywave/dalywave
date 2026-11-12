@@ -58,6 +58,8 @@ pub fn config() -> Config {
             url: "http://127.0.0.1:9".into(),
         },
         release_token: None,
+        // push — без каналов: тесты уведомлений ставят свои поддельные APNs и службу Web Push
+        push: Default::default(),
     }
 }
 

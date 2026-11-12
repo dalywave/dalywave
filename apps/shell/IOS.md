@@ -257,6 +257,72 @@ HTTP: раз в 2 с `POST /api/devices/remote` (отметиться и заб�
 `DALYWAVE_WATCH_SHEET=devices`, `DALYWAVE_WATCH_ACTIONS=toggle,next,like,calm,liked`. Переменные
 передаются как `SIMCTL_CHILD_…` при `xcrun simctl launch`.
 
+## Уведомления (push)
+
+Сервер присылает уведомления через APNs: новые релизы подписок, перенос музыки завершён, «Итоги года»
+открыты, администратору — спорные треки и проблемы источников. Разрешение приложение просит не при
+первом запуске, а после входа — мягким экраном или в «Настройки» → «Уведомления». Токен устройства
+интерфейс отправляет серверу при каждом запуске (`push_register`, `src/push.rs`). Нажатие открывает
+нужный экран (`dalywave://…`, `Sources/dalywave-shell/PushLink.swift`); пока приложение на экране,
+уведомление показывает сам интерфейс, а в системе остаётся только запись в центре уведомлений. На
+значке — число непрочитанных.
+
+Без ключа APNs на сервере всё остальное работает: центр уведомлений и тосты в приложении приходят по
+WebSocket, просто без push на заблокированный телефон.
+
+### Разовая настройка
+
+1. **Ключ APNs.** developer.apple.com → **Certificates, Identifiers & Profiles** → **Keys** → «+» →
+   Key Name «DalyWave Push» → галочка **Apple Push Notifications service (APNs)** → **Configure** →
+   Environment: **Sandbox & Production** (Key Restriction — Team Scoped) → Save → Continue → Register
+   → **Download** — файл `AuthKey_XXXXXXXXXX.p8` скачивается **один раз**. Запомните **Key ID**
+   (10 символов, он же в имени файла). Ключ в репозиторий не передаётся.
+2. **Push у App ID.** Там же → **Identifiers** → `rest.daly.wave` → Capabilities → галочка
+   **Push Notifications** → **Save** → Confirm. Профили разработки и App Store Xcode пересоздаст сам
+   при автоматической подписи (⌘R или `make testflight`). Если профиль разработки
+   `rest.daly.wave` уже содержит `aps-environment`, возможность включена — достаточно проверить
+   галочку. Без этого шага сборка падает с ошибкой
+   «Provisioning profile … doesn't include the aps-environment entitlement».
+3. **Ключ на сервер** (с Mac, из папки с файлом):
+   ```sh
+   ssh ubuntu@129.159.27.88 'mkdir -p ~/dalywave/secrets && chmod 700 ~/dalywave/secrets'
+   scp AuthKey_XXXXXXXXXX.p8 ubuntu@129.159.27.88:~/dalywave/secrets/
+   ssh ubuntu@129.159.27.88 'chmod 600 ~/dalywave/secrets/AuthKey_*.p8'
+   ```
+4. **Настройки сервера** — в `~/dalywave/.env` (папку `~/dalywave/secrets` воркер видит как `/secrets`):
+   ```sh
+   DALYWAVE_APNS_KEY_PATH=/secrets/AuthKey_XXXXXXXXXX.p8
+   DALYWAVE_APNS_KEY_ID=XXXXXXXXXX
+   DALYWAVE_APNS_TEAM_ID=Y5KR5JPCRG
+   ```
+   Топик по умолчанию — `rest.daly.wave`. Затем перезапустить воркер и API:
+   `docker compose --env-file .env -f infra/docker-compose.prod.yml up -d`.
+
+### Среда APNs
+
+В проекте у приложения `aps-environment = development`. Отладочная сборка (⌘R из Xcode, профиль
+разработчика) получает токены **песочницы**; симулятор — тоже. При экспорте для App Store
+(`make testflight`) Xcode переподписывает архив профилем дистрибуции, и право становится
+`production` (архив подписан с `development`, локальный экспорт для App Store —
+`production`): TestFlight и App Store получают **боевые** токены. Приложение определяет среду само —
+по `embedded.mobileprovision` в бандле (у TestFlight там `production`, у App Store профиля нет) — и
+сообщает её серверу вместе с токеном; сервер шлёт на `api.sandbox.push.apple.com` или
+`api.push.apple.com` по среде подписки. Один ключ `.p8` работает для обеих сред.
+
+### Проверка
+
+1. Войти, «Настройки» → «Уведомления» → включить на этом устройстве → «Разрешить».
+2. Там же «Прислать пробное» — заблокировать телефон: пробное уведомление придёт за пару секунд.
+3. Нажать на уведомление — откроется нужный экран (у пробного — центр уведомлений).
+
+Симулятор (iOS 16+ на Mac с Apple silicon) тоже получает push песочницы; без сервера проверить
+показ и нажатие можно файлом: `xcrun simctl push booted rest.daly.wave push.apns` с
+`{"aps":{"alert":{"title":"Проба","body":"Текст"}},"link":"dalywave://import"}`.
+
+На компьютерах (macOS, Windows) push с сервера нет: пока приложение открыто, уведомление приходит
+по WebSocket и, если окно не в фокусе, показывается системным (`src/notify.rs`). На macOS щелчок
+открывает нужный экран; на Windows — только окно приложения.
+
 ## Журнал
 
 Xcode → Window → Devices and Simulators → iPhone → Installed Apps → DalyWave → «…» → Download

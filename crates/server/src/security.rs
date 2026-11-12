@@ -184,6 +184,7 @@ mod tests {
             lrclib: Default::default(),
             yandex_music: Default::default(),
             release_token: None,
+            push: Default::default(),
         }
     }
 

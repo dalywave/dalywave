@@ -46,7 +46,9 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::IMPORT_APPLY, crate::import::jobs::run_apply)
         .register(kind::IMPORT_FILE, crate::import::files::run_file)
         .register(kind::LYRICS, crate::lyrics::run)
-        .register(kind::TRANSCODE, crate::renditions::run);
+        .register(kind::TRANSCODE, crate::renditions::run)
+        .register(kind::NOTIFY_SEND, crate::notify::run_send)
+        .register(kind::NOTIFY_PUSH, crate::notify::run_push);
     if fetcher.server {
         registry.register(kind::ACQUIRE, acquire::server::run);
     } else {
@@ -208,5 +210,15 @@ pub async fn refresh_artist(ctx: Arc<Context>, job: JobRow) -> JobResult {
 pub async fn sync_discography(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let p: SyncDiscographyPayload = job.payload()?;
     let report = catalog::sync_discography(&ctx.db, &ctx.deezer, p.artist_id).await?;
-    Ok(serde_json::to_value(report)?.into())
+    // Уведомление о новом релизе — не повод повторять сверку
+    let notified = match crate::notify::events::new_releases(&ctx.db, p.artist_id).await {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::warn!(error = %e, "could not notify about new releases");
+            0
+        }
+    };
+    let mut result = serde_json::to_value(report)?;
+    result["notified"] = json!(notified);
+    Ok(result.into())
 }

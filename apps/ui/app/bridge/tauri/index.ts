@@ -8,7 +8,7 @@ import type { AppUpdateState, Bridge, Platform, WindowChrome, WindowState } from
 import { createWebBridge } from '../web'
 import { NativeAudioEngine } from './audio'
 import { createTauriDownloader } from './downloader'
-import { createOfflineBridge, haptic, notify, withOffline } from './offline'
+import { appPush, createOfflineBridge, haptic, systemNotify, withOffline } from './offline'
 import { createTauriOutputs } from './outputs'
 import { createTauriRecognizer } from './recognize'
 import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell, type UpdateState } from './shell'
@@ -139,8 +139,9 @@ export function createTauriBridge(): Bridge {
     kind: 'tauri',
     offline,
     haptic,
-    // Уведомления — только на iPhone и iPad
-    notify: platform === 'ios' || platform === 'ipados' ? notify : null,
+    // Push (APNs) — на iPhone и iPad; на компьютере, пока приложение открыто, — системные уведомления
+    appPush: platform === 'ios' || platform === 'ipados' ? appPush : null,
+    systemNotify: platform === 'macos' || platform === 'windows' ? systemNotify : null,
     // «Без сети»: запросы на сервер не уходят — экраны берут локальную базу и скачанное
     blocked: () => forceOffline,
     platform,

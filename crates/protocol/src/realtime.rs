@@ -16,6 +16,7 @@ use crate::{
     },
     jam::{JamChanged, JamNowEvent, JamReaction},
     jobs::{AcquisitionStatus, JobStatus},
+    notifications::{Notification, NotificationsRead},
     sync::SyncEntity,
 };
 
@@ -65,6 +66,12 @@ pub enum ServerEvent {
     /// «Слушать вместе»: ❤ от участника (хозяину и гостям).
     #[serde(rename = "jam.reaction")]
     JamReaction(JamReaction),
+    /// Новое уведомление (или собранное из нескольких событий): тост и центр уведомлений.
+    #[serde(rename = "notification.new")]
+    NotificationNew(Notification),
+    /// Уведомления прочитаны (на этом или другом устройстве).
+    #[serde(rename = "notification.read")]
+    NotificationRead(NotificationsRead),
 }
 
 /// Сообщение клиента.

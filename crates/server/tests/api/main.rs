@@ -26,6 +26,7 @@ mod jobs;
 mod library;
 mod lyrics;
 mod mock;
+mod notifications;
 mod offline;
 mod password;
 mod playlists;

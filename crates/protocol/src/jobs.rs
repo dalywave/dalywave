@@ -44,6 +44,10 @@ pub mod kind {
     pub const LYRICS: &str = "lyrics";
     /// Облегчённая копия файла для сотовой сети: Opus 64 кбит/с (полоса «Сжатие для сотовой»).
     pub const TRANSCODE: &str = "transcode";
+    /// Разослать уведомление: окно приложения по WebSocket, push — задачами `notify_push` (полоса «Уведомления»).
+    pub const NOTIFY_SEND: &str = "notify_send";
+    /// Доставить push одного уведомления на одно устройство (APNs, Web Push), с повторами.
+    pub const NOTIFY_PUSH: &str = "notify_push";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]

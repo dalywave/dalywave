@@ -25,6 +25,11 @@ pub const DEFAULT_DEEZER_RATE_WORKER: u32 = 15;
 pub const MIN_ADMIN_PASSWORD_LEN: usize = 32;
 /// Токен выпусков открывает загрузку сборок, которые поставятся всем приложениям: тоже не короче.
 pub const MIN_RELEASE_TOKEN_LEN: usize = 32;
+/// APNs: боевая среда (TestFlight, App Store) и песочница (отладочные сборки из Xcode).
+pub const APNS_PRODUCTION_URL: &str = "https://api.push.apple.com";
+pub const APNS_SANDBOX_URL: &str = "https://api.sandbox.push.apple.com";
+/// Bundle ID приложения на iPhone и iPad — топик APNs.
+pub const DEFAULT_APNS_TOPIC: &str = "rest.daly.wave";
 
 #[derive(Clone)]
 pub struct Config {
@@ -54,6 +59,80 @@ pub struct Config {
     /// Токен конвейера выпусков (`make release-mac`, CI): загрузка сборки и регистрация выпуска
     /// приложения. `None` — выпускать нельзя.
     pub release_token: Option<String>,
+    /// Каналы push. Без настроек канал выключен, уведомления остаются в центре уведомлений и в окне приложения.
+    pub push: PushConfig,
+}
+
+/// Каналы push: APNs (iPhone, iPad) и Web Push (сайт). Android (FCM) добавится сюда же.
+#[derive(Clone, Debug, Default)]
+pub struct PushConfig {
+    pub apns: Option<ApnsConfig>,
+    pub vapid: Option<VapidConfig>,
+}
+
+/// APNs по ключу .p8 (токен JWT, ES256). Ключ — файл на сервере (`~/dalywave/secrets`), в .env — путь и id.
+#[derive(Clone, Debug)]
+pub struct ApnsConfig {
+    pub key_path: PathBuf,
+    /// Key ID ключа (10 символов) из портала разработчика.
+    pub key_id: String,
+    pub team_id: String,
+    /// Bundle ID приложения.
+    pub topic: String,
+    pub production_url: String,
+    pub sandbox_url: String,
+}
+
+/// Web Push: пара VAPID (P-256) в base64url — открытый ключ 65 байт, закрытый 32 байта.
+#[derive(Clone)]
+pub struct VapidConfig {
+    pub public_key: String,
+    pub private_key: [u8; 32],
+    /// Контакт для служб push: `mailto:…` или адрес сайта.
+    pub subject: String,
+}
+
+impl std::fmt::Debug for VapidConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VapidConfig")
+            .field("public_key", &self.public_key)
+            .field("subject", &self.subject)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Пара VAPID из .env. Открытый ключ необязателен: он выводится из закрытого, а заданный — сверяется.
+fn parse_vapid(
+    public: Option<String>,
+    private: Option<String>,
+    subject: Option<String>,
+    public_url: &str,
+) -> anyhow::Result<Option<VapidConfig>> {
+    let Some(private) = private else {
+        if public.is_some() {
+            tracing::warn!("DALYWAVE_VAPID_PRIVATE is not set: Web Push is off");
+        }
+        return Ok(None);
+    };
+    let bytes = crate::crypto::b64_decode(&private)
+        .filter(|b| b.len() == 32)
+        .context(
+            "DALYWAVE_VAPID_PRIVATE must be 32 bytes in base64url (dalywave-api vapid-keys)",
+        )?;
+    let mut private_key = [0u8; 32];
+    private_key.copy_from_slice(&bytes);
+    let derived = crate::notify::webpush::public_key(&private_key)
+        .context("DALYWAVE_VAPID_PRIVATE is not a valid P-256 key")?;
+    if let Some(public) = public
+        && public.trim_end_matches('=') != derived
+    {
+        bail!("DALYWAVE_VAPID_PUBLIC does not match DALYWAVE_VAPID_PRIVATE");
+    }
+    Ok(Some(VapidConfig {
+        public_key: derived,
+        private_key,
+        subject: subject.unwrap_or_else(|| public_url.to_string()),
+    }))
 }
 
 /// Сервис анализа звука (services/ml): векторы, темп, тональность, настроение. В базу он не ходит:
@@ -349,6 +428,38 @@ impl Config {
             ok
         });
 
+        let apns = match (
+            var("APNS_KEY_PATH"),
+            var("APNS_KEY_ID"),
+            var("APNS_TEAM_ID"),
+        ) {
+            (Some(key_path), Some(key_id), Some(team_id)) => Some(ApnsConfig {
+                key_path: PathBuf::from(key_path),
+                key_id,
+                team_id,
+                topic: var("APNS_TOPIC").unwrap_or_else(|| DEFAULT_APNS_TOPIC.into()),
+                production_url: APNS_PRODUCTION_URL.into(),
+                sandbox_url: APNS_SANDBOX_URL.into(),
+            }),
+            (None, None, None) => None,
+            // Ключ ещё не положили на сервер: остальное работает, push на iPhone выключен
+            _ => {
+                tracing::warn!(
+                    "DALYWAVE_APNS_KEY_PATH, DALYWAVE_APNS_KEY_ID and DALYWAVE_APNS_TEAM_ID go together: APNs is off"
+                );
+                None
+            }
+        };
+        let push = PushConfig {
+            apns,
+            vapid: parse_vapid(
+                var("VAPID_PUBLIC"),
+                var("VAPID_PRIVATE"),
+                var("VAPID_SUBJECT"),
+                &public_url,
+            )?,
+        };
+
         Ok(Self {
             database_url: var("DATABASE_URL").unwrap_or_else(|| DEFAULT_DATABASE_URL.into()),
             listen: var("LISTEN")
@@ -371,6 +482,7 @@ impl Config {
             lrclib,
             yandex_music,
             release_token,
+            push,
         })
     }
 
@@ -589,6 +701,53 @@ mod tests {
         assert!(parse_secret(&"ab".repeat(32)).is_ok());
         assert!(parse_secret(&"ab".repeat(16)).is_err());
         assert!(parse_secret("not hex").is_err());
+    }
+
+    #[test]
+    fn push_channels() {
+        let c = parse(&[]).unwrap();
+        assert!(c.push.apns.is_none() && c.push.vapid.is_none());
+        // Часть настроек APNs — канал выключен, сервер работает
+        assert!(
+            parse(&[("APNS_KEY_ID", "ABC123DEFG")])
+                .unwrap()
+                .push
+                .apns
+                .is_none()
+        );
+        let c = parse(&[
+            ("APNS_KEY_PATH", "/secrets/AuthKey_ABC123DEFG.p8"),
+            ("APNS_KEY_ID", "ABC123DEFG"),
+            ("APNS_TEAM_ID", "Y5KR5JPCRG"),
+        ])
+        .unwrap();
+        let apns = c.push.apns.unwrap();
+        assert_eq!(apns.topic, DEFAULT_APNS_TOPIC);
+        assert_eq!(apns.production_url, APNS_PRODUCTION_URL);
+
+        let (public, private) = crate::notify::webpush::generate_keys().unwrap();
+        let c = parse(&[("VAPID_PRIVATE", &private)]).unwrap();
+        let vapid = c.push.vapid.unwrap();
+        assert_eq!(vapid.public_key, public);
+        assert_eq!(vapid.subject, DEFAULT_PUBLIC_URL);
+        assert!(
+            parse(&[
+                ("VAPID_PRIVATE", &private),
+                ("VAPID_PUBLIC", &public),
+                ("VAPID_SUBJECT", "mailto:owner@example.com"),
+            ])
+            .is_ok()
+        );
+        let (other, _) = crate::notify::webpush::generate_keys().unwrap();
+        assert!(parse(&[("VAPID_PRIVATE", &private), ("VAPID_PUBLIC", &other)]).is_err());
+        assert!(parse(&[("VAPID_PRIVATE", "short")]).is_err());
+        assert!(
+            parse(&[("VAPID_PUBLIC", &public)])
+                .unwrap()
+                .push
+                .vapid
+                .is_none()
+        );
     }
 
     #[test]

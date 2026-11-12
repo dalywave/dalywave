@@ -23,6 +23,7 @@
 		27CD3BD0450D79D2C614686E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6C18721B1459AAA3822C5D /* ShareViewController.swift */; };
 		2BBE475EF6512BD0CBC946F5 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51D42D29EB38AED4AEBFFAAE /* libapp.a */; };
 		2BD83F6EA8D32A703800721E /* WidgetColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F18935882415C3AB7A43757 /* WidgetColor.swift */; };
+		30C6D39129658D17C16862B0 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23AC2109AB9EA57AAE92D6E7 /* UserNotifications.framework */; };
 		324F940418CA3A1E7DE562F1 /* Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84263A8382F149B6EDD7B6C2 /* Snapshot.swift */; };
 		34680CA9D2759AE11324C23E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8939A14EB49E4F5DEA32F192 /* MetalKit.framework */; };
 		375B423D75A2B9F5DB97CD93 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D517CCC2BCF9B66A4AFCB7C8 /* SwiftUI.framework */; };
@@ -48,6 +49,7 @@
 		70F6F09D1150B49EA7E8E5B3 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06F48107150D751B1FEB95D3 /* AudioToolbox.framework */; };
 		7627E31190D782C1E9B5D995 /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CE9544FBFC46CCB95BAEB85 /* Intents.framework */; };
 		7905B613D62DAF6DA31A5D77 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA9586AE765B48537E1CACE /* WidgetIntents.swift */; };
+		7D019E868FC4DCC16DD17B98 /* PushLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */; };
 		801FFC16D4C3E13DA9F5938C /* DalyWaveWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B6E52155C4370AF324D1115 /* DalyWaveWidgets.swift */; };
 		83EC042FCFE693BBDB283AB7 /* WidgetActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E57474B4D74E653C678BC0 /* WidgetActions.swift */; };
 		84C971547A042D29EAC3B33A /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA9586AE765B48537E1CACE /* WidgetIntents.swift */; };
@@ -190,6 +192,7 @@
 		186F9B3EE551C347F9025F98 /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
 		1AD983A4882E2E568FD6593D /* audio.rs */ = {isa = PBXFileReference; path = audio.rs; sourceTree = "<group>"; };
 		21915CE4038CA63D3585AB63 /* ios.rs */ = {isa = PBXFileReference; path = ios.rs; sourceTree = "<group>"; };
+		23AC2109AB9EA57AAE92D6E7 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		253DBBE975A202E6D5DF3810 /* error.rs */ = {isa = PBXFileReference; path = error.rs; sourceTree = "<group>"; };
 		2CE9544FBFC46CCB95BAEB85 /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
 		2D04B6D747348AD00887D70E /* DalyWaveWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DalyWaveWatch.entitlements; sourceTree = "<group>"; };
@@ -240,11 +243,13 @@
 		898856C9584657AB9634E073 /* ios_bg.rs */ = {isa = PBXFileReference; path = ios_bg.rs; sourceTree = "<group>"; };
 		8A151DCAB003AEFCE1F36018 /* DalyWaveWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DalyWaveWatchWidgets.entitlements; sourceTree = "<group>"; };
 		8C3B438F7E947EA5654BACA1 /* WidgetStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetStyle.swift; sourceTree = "<group>"; };
+		8F2DA7FA3A01AC4E6A8C9B87 /* push.rs */ = {isa = PBXFileReference; path = push.rs; sourceTree = "<group>"; };
 		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
 		9F6C18721B1459AAA3822C5D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushLink.swift; sourceTree = "<group>"; };
 		A03ED3BF81A7DD119B85A122 /* ShareExtensionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionTests.swift; sourceTree = "<group>"; };
 		A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginSheetTests.swift; sourceTree = "<group>"; };
 		A1E6D8BAACB5F170BB90DD7A /* dalywave-shell_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "dalywave-shell_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -323,6 +328,7 @@
 				C66D69EAD3DD94DBCED00FA3 /* AVFoundation.framework in Frameworks */,
 				E7893E2054D9A0C7D9692783 /* CoreMedia.framework in Frameworks */,
 				7627E31190D782C1E9B5D995 /* Intents.framework in Frameworks */,
+				30C6D39129658D17C16862B0 /* UserNotifications.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -368,6 +374,7 @@
 				D517CCC2BCF9B66A4AFCB7C8 /* SwiftUI.framework */,
 				81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */,
 				8680BC5BA77A8F5D01DAD70A /* UIKit.framework */,
+				23AC2109AB9EA57AAE92D6E7 /* UserNotifications.framework */,
 				CFA224F3B3C52421C49FE531 /* WebKit.framework */,
 				B072C937A128077FC78C55AE /* WidgetKit.framework */,
 			);
@@ -409,6 +416,7 @@
 				A462480DDBDB86390D4EC8A0 /* notify.rs */,
 				912A4D203E5A5DB0B2FF559B /* platform.rs */,
 				88A58456576E3E031E1A9E3E /* player.rs */,
+				8F2DA7FA3A01AC4E6A8C9B87 /* push.rs */,
 				78F428E4B3B528B3EF4190E7 /* recognize.rs */,
 				39AE223214B55ED7B90ABF77 /* settings.rs */,
 				5D9A41810C91F9D868EDDF83 /* siri.rs */,
@@ -530,6 +538,7 @@
 				BDAF17457D058E173A55F65C /* DalyWaveWidgets.swift */,
 				7308B27218CBD8E0512FE115 /* Localizable.strings */,
 				3C12E0D418269F691759B755 /* main.mm */,
+				A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */,
 				7D83F5EA2B1684EDBDFED036 /* WatchLink.swift */,
 				DED358B6B88BF8B301EF74AC /* bindings */,
 			);
@@ -623,20 +632,6 @@
 				AA7CA547CF66672A2C67B62F /* WidgetsHomeScreenTests.swift */,
 			);
 			path = UITests;
-			sourceTree = "<group>";
-		};
-		"TEMP_22F7955C-757D-4CBE-B0FF-B55541F62CB1" /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = arm64;
-			sourceTree = "<group>";
-		};
-		"TEMP_2846FA17-1D42-44FA-BB63-E998AA337B57" /* x86_64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = x86_64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -948,6 +943,7 @@
 			files = (
 				4453EC8CDDA6393E3AA90D2E /* DalyWaveIntents.swift in Sources */,
 				6F41A88FFFF8C01323B3FF67 /* DalyWaveWidgets.swift in Sources */,
+				7D019E868FC4DCC16DD17B98 /* PushLink.swift in Sources */,
 				6A692535A52091224D15651A /* WatchLink.swift in Sources */,
 				CFB1D069AAFBA803D648D022 /* WidgetColor.swift in Sources */,
 				387E3C4D1D238F662F4A66FF /* WidgetData.swift in Sources */,

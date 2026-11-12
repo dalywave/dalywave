@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id FROM push_subscriptions p\n         LEFT JOIN sessions s ON s.id = p.session_id\n         WHERE p.user_id = $1 AND p.disabled_at IS NULL AND p.channel = ANY($2)\n           AND (p.session_id IS NULL OR (s.revoked_at IS NULL AND s.expires_at > now()))\n         ORDER BY p.created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "push_subscriptions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "20c94f0de2cd664bd380718a19c5c118865f217933cd59abf9883ea30b2de197"
+}

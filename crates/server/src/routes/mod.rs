@@ -13,6 +13,7 @@ pub mod imports;
 pub mod jam;
 pub mod library;
 pub mod lyrics;
+pub mod notifications;
 pub mod offline;
 pub mod playlist_folders;
 pub mod playlists;
@@ -95,6 +96,7 @@ pub fn router(state: AppState) -> Router {
         .merge(sync::routes())
         .merge(settings::routes())
         .merge(imports::routes())
+        .merge(notifications::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
     let play = events::routes()
         .merge(stream::routes())

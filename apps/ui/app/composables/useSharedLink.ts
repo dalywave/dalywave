@@ -29,14 +29,26 @@ export function ownRoute(url: URL): string | null {
   return kind && id && KINDS.includes(kind as ShareKind) && UUID.test(id) ? `/${kind}/${id}` : null
 }
 
-/** Ссылка на экран приложения: `dalywave://album/{id}` (виджет «Недавнее» на iPhone) → `/album/{id}` */
+/** Разделы, которые открываются ссылкой приложения как есть (уведомления: перенос, итоги, админка) */
+const SECTIONS = ['import', 'rewind', 'notifications', 'history', 'library', 'settings', 'liked']
+const ADMIN_SECTIONS = ['disputed', 'sources', 'downloads', 'import', 'catalog', 'storage', 'reco', 'access', 'log', 'settings']
+
+/** Ссылка на экран приложения → путь: `dalywave://album/{id}` (виджет «Недавнее», уведомление) →
+ *  `/album/{id}`, `dalywave://rewind?year=2026` → `/rewind?year=2026`, `dalywave://admin/disputed` → `/admin/disputed` */
 export function appRoute(text: string): string | null {
   const raw = text.trim()
   if (!raw.startsWith('dalywave://')) return null
   try {
     const url = new URL(raw)
-    const [id] = url.pathname.split('/').filter(Boolean)
-    return id && KINDS.includes(url.host as ShareKind) && UUID.test(id) ? `/${url.host}/${id}` : null
+    const host = url.host
+    const parts = url.pathname.split('/').filter(Boolean)
+    if (KINDS.includes(host as ShareKind)) {
+      const [id] = parts
+      return id && UUID.test(id) ? `/${host}/${id}` : null
+    }
+    if (SECTIONS.includes(host) && !parts.length) return `/${host}${url.search}`
+    if (host === 'admin' && parts.length <= 1 && (!parts[0] || ADMIN_SECTIONS.includes(parts[0]))) return `/admin${parts[0] ? `/${parts[0]}` : ''}${url.search}`
+    return null
   }
   catch {
     return null

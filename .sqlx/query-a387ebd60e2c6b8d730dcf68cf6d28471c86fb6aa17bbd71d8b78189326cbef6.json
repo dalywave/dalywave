@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM acquisition_attempts\n           WHERE outcome = 'postponed' AND error_code = ANY($1)\n             AND created_at > now() - interval '30 minutes'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a387ebd60e2c6b8d730dcf68cf6d28471c86fb6aa17bbd71d8b78189326cbef6"
+}

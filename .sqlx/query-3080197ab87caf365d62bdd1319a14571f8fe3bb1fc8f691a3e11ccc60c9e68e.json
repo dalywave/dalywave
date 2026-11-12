@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE notifications SET title = $2, body = $3, link = $4, image = $5, items = $6,\n                        count = $7, updated_at = now()\n                 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3080197ab87caf365d62bdd1319a14571f8fe3bb1fc8f691a3e11ccc60c9e68e"
+}

@@ -184,6 +184,9 @@ const language = computed({
       </SettingsRow>
     </SettingsGroup>
 
+    <!-- Уведомления: push на этом устройстве, виды, тихие часы -->
+    <SettingsNotifications />
+
     <!-- Сюда одной строкой встают разделы других модулей, например <DownloaderSettings /> -->
     <!-- Приложение: загрузки на это устройство (умный офлайн) -->
     <SettingsDownloads />

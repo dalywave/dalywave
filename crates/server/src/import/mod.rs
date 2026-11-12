@@ -978,6 +978,11 @@ pub async fn finish(db: &PgPool, import_id: Uuid) -> Result<(), sqlx::Error> {
         .await?;
     }
     tx.commit().await?;
+    if user.is_some()
+        && let Err(e) = crate::notify::events::import_done(db, import_id).await
+    {
+        tracing::warn!(error = %e, "could not notify about a finished import");
+    }
     Ok(())
 }
 

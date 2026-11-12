@@ -121,6 +121,8 @@ objc2-shazam-kit = { version = "0.3.2", default-features = false, features = [
 ] }
 
 [target.'cfg(windows)'.dependencies]
+# Всплывающие уведомления, пока приложение открыто (notify.rs); на macOS — UNUserNotificationCenter
+tauri-plugin-notification = "2"
 # «Сейчас играет» и медиаклавиши Windows (SMTC); на macOS и iOS — MediaPlayer из движка
 souvlaki = "0.9.3"
 window-vibrancy = "0.8.1"

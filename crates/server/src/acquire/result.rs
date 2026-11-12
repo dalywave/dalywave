@@ -959,6 +959,17 @@ pub async fn settle(
     }
     log_attempt(&mut tx, &payload, job.id, executor, &ex, outcome).await?;
     tx.commit().await?;
+    // Администраторам: спорное ждёт решения, YouTube перестал отдавать звук
+    let notified = match (outcome, ex.error_code.as_deref()) {
+        (AttemptOutcome::Disputed, _) => crate::notify::events::disputed(db).await,
+        (AttemptOutcome::Postponed, Some(code)) => {
+            crate::notify::events::source_blocked(db, code).await
+        }
+        _ => Ok(()),
+    };
+    if let Err(e) = notified {
+        tracing::warn!(error = %e, "could not notify admins");
+    }
     if ex.discard_upload {
         discard(storage, expected.upload_key.as_deref()).await;
     }

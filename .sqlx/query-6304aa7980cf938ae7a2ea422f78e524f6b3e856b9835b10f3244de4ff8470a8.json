@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE push_subscriptions SET disabled_at = now(), disabled_reason = $2, updated_at = now()\n                 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6304aa7980cf938ae7a2ea422f78e524f6b3e856b9835b10f3244de4ff8470a8"
+}

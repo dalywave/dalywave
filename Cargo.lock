@@ -627,6 +627,7 @@ dependencies = [
 name = "dalywave-server"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "anyhow",
  "axum",
  "axum-extra",
@@ -639,6 +640,7 @@ dependencies = [
  "futures-util",
  "getrandom 0.4.3",
  "hex",
+ "hkdf 0.13.0",
  "http-body-util",
  "image",
  "ipnet",
@@ -781,6 +783,7 @@ dependencies = [
  "digest 0.11.3",
  "ff",
  "group",
+ "hkdf 0.13.0",
  "hybrid-array",
  "pem-rfc7468",
  "pkcs8",

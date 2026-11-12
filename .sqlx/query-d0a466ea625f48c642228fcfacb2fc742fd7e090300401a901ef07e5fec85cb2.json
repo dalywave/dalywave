@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT disabled_kinds, quiet_enabled, quiet_from, quiet_to, utc_offset_min\n         FROM notification_settings WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "disabled_kinds",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "notification_settings",
+            "name": "disabled_kinds"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "quiet_enabled",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "notification_settings",
+            "name": "quiet_enabled"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "quiet_from",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "notification_settings",
+            "name": "quiet_from"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "quiet_to",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "notification_settings",
+            "name": "quiet_to"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "utc_offset_min",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "notification_settings",
+            "name": "utc_offset_min"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d0a466ea625f48c642228fcfacb2fc742fd7e090300401a901ef07e5fec85cb2"
+}

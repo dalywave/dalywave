@@ -1,0 +1,140 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT f.user_id, f.download_policy, al.id AS album_id, al.title, al.record_type,\n                  al.artist_id AS main_artist, al.cover_key, al.cover_source, ar.name AS artist_name,\n                  (SELECT count(*) FROM tracks t JOIN recordings r ON r.id = t.recording_id\n                   WHERE t.album_id = al.id AND r.audio_status <> 'ready') AS \"missing!\",\n                  (SELECT count(*) FROM tracks t WHERE t.album_id = al.id) AS \"tracks!\"\n           FROM followed_artists f\n           JOIN users u ON u.id = f.user_id AND NOT u.disabled\n           JOIN artist_releases rel ON rel.artist_id = f.artist_id\n           JOIN albums al ON al.id = rel.album_id\n           JOIN artists ar ON ar.id = f.artist_id\n           WHERE f.artist_id = $1 AND f.notify\n             AND al.release_date IS NOT NULL AND al.release_date <= $2 AND al.release_date >= $3\n             -- Вышедшее до подписки — не новость\n             AND al.release_date >= (f.created_at AT TIME ZONE 'UTC')::date\n           ORDER BY al.release_date, al.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "download_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "followed_artists",
+            "name": "download_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "album_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "record_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "record_type"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "main_artist",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "cover_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_key"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "cover_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_source"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "artist_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "missing!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "ecf918f1ddfdcc885430932c281c6709cf45057eaf5188ac376edfae6d9927f1"
+}

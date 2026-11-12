@@ -20,6 +20,8 @@ onMounted(() => useConnectStore().start())
 onMounted(() => useJamStore().init())
 // Настройки слушателя (фильтр нецензурного, качество, порядок плейлистов) — общие для устройств
 onMounted(() => void useAccountSettings().load())
+// Уведомления: центр, живые `notification.*`, push этого устройства (без запроса разрешения)
+onMounted(() => useNotificationsStore().init())
 
 // Окно приложения: во весь экран «светофора» нет, без фокуса заголовок приглушён
 const { win, titlebar, titlebarStyle } = useTitlebar()

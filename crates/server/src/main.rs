@@ -6,6 +6,18 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // `dalywave-api vapid-keys` — новая пара Web Push для .env. Печатает только строки для .env (без логов),
+    // чтобы вывод можно было сразу дописать в файл: `… vapid-keys >> .env`
+    if std::env::args().nth(1).as_deref() == Some("vapid-keys") {
+        let (public, private) = dalywave_server::notify::webpush::generate_keys()?;
+        println!(
+            "# Web Push (VAPID): dalywave-api vapid-keys, {}",
+            chrono::Utc::now().format("%Y-%m-%d")
+        );
+        println!("DALYWAVE_VAPID_PUBLIC={public}");
+        println!("DALYWAVE_VAPID_PRIVATE={private}");
+        return Ok(());
+    }
     // Локально настройки лежат в .env в корне репозитория, на сервере их передаёт compose
     let _ = dotenvy::dotenv();
     // dalywave_api — сам бинарник (этот файл), dalywave_server — библиотека с обработчиками
@@ -22,6 +34,8 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(
         public_url = %state.config.public_url,
         oidc = state.oidc.is_some(),
+        apns = state.config.push.apns.is_some(),
+        web_push = state.config.push.vapid.is_some(),
         password = state.config.admin_password.is_some(),
         static_dir = ?state.config.static_dir,
         storage = ?state.storage,

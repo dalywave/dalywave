@@ -10,7 +10,7 @@ import type {
   SavedAlbumPage, SearchResults, Track,
 } from '~/api/types'
 import type {
-  Bridge, DownloadKind, HapticKind, LocalNotify, OfflineBridge, OfflineReserve, OfflineSettings, OfflineStatus, SourceResult, TrackDownload,
+  AppPush, Bridge, DownloadKind, HapticKind, OfflineBridge, OfflineReserve, OfflineSettings, OfflineStatus, PushPermission, SourceResult, SystemNotify, TrackDownload,
   WaveSettings, WaveStart, WaveTrack,
 } from '../types'
 import { gainFor } from '../web'
@@ -66,12 +66,18 @@ export function haptic(kind: HapticKind) {
   void call('haptic', { kind }).catch(() => {})
 }
 
-/** Локальные уведомления оболочки (apps/shell/src/notify.rs): на iPhone и iPad, на компьютере — false */
-export const notify: LocalNotify = {
-  schedule: n => call<boolean>('notify_schedule', { id: n.id, title: n.title, body: n.body, atMs: n.atMs ?? null }).catch(() => false),
-  cancel: async (id) => {
-    await call('notify_cancel', { id }).catch(() => {})
+/** Push приложения на iPhone и iPad (APNs): разрешение, токен устройства, число на значке */
+export const appPush: AppPush = {
+  state: () => call<{ supported: boolean, permission: PushPermission }>('push_state').catch(() => ({ supported: false, permission: 'default' as const })),
+  register: prompt => call<{ token: string, environment: 'sandbox' | 'production' } | null>('push_register', { prompt }).catch(() => null),
+  setBadge: (count) => {
+    void call('push_set_badge', { count }).catch(() => {})
   },
+}
+
+/** Приложение для компьютера: системное уведомление, пока окно не в фокусе */
+export const systemNotify: SystemNotify = {
+  show: n => call<boolean>('notify_show', { id: n.id, title: n.title, body: n.body, link: n.link }).catch(() => false),
 }
 
 interface LocalSource {

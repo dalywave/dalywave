@@ -13,6 +13,7 @@ publish = false
 dalywave-protocol = { path = "crates/protocol" }
 dalywave-transitions = { path = "crates/transitions" }
 
+aes-gcm = "0.10"
 anyhow = "1"
 axum = { version = "0.8.9", features = ["ws"] }
 axum-extra = { version = "0.12", features = ["cookie-private", "cookie-key-expansion"] }
@@ -23,6 +24,7 @@ dotenvy = "0.15"
 futures-util = "0.3"
 getrandom = "0.4"
 hex = "0.4"
+hkdf = "0.13"
 http-body-util = "0.1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 ipnet = "2"
@@ -30,8 +32,9 @@ object_store = { version = "0.14", default-features = false, features = ["aws"] 
 # Сеть вкуса на сервере: onnxruntime статически (готовые сборки pyke, в том числе linux aarch64),
 # загрузка при сборке — по rustls, без OpenSSL в образе сборки
 ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-rustls", "api-24"] }
-p256 = { version = "0.14", features = ["ecdsa"] }
-reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+p256 = { version = "0.14", features = ["ecdsa", "ecdh"] }
+# http2 — APNs принимает только HTTP/2
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "http2"] }
 semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
