@@ -2,8 +2,10 @@
 import { SliderRoot, SliderThumb, SliderTrack } from 'reka-ui'
 import { EQ_BANDS_HZ, EQ_MAX_DB, EQ_PRESETS, type EqPresetId } from '~/utils/eq'
 
-// Содержимое эквалайзера: список пресетов и, для «Своего», десять вертикальных полос.
-// И в листе на телефоне, и во всплывающей панели на компьютере
+// Эквалайзер по частям: `presets` — список пресетов (в листе и всплывающей панели), `bands` — десять
+// вертикальных полос «Своего» (прямо на странице настроек, где их удобно двигать)
+const props = withDefaults(defineProps<{ section?: 'presets' | 'bands' }>(), { section: 'presets' })
+const emit = defineEmits<{ picked: [id: EqPresetId] }>()
 const sound = useSoundStore()
 const { t, locale } = useI18n()
 
@@ -30,7 +32,7 @@ function fill(v: number) {
 
 <template>
   <div class="eq">
-    <div role="radiogroup" :aria-label="t('sound.eq')" class="eq__list">
+    <div v-if="props.section === 'presets'" role="radiogroup" :aria-label="t('sound.eq')" class="eq__list">
       <button
         v-for="id in PRESETS"
         :key="id"
@@ -39,14 +41,14 @@ function fill(v: number) {
         class="eq__preset"
         :class="{ 'is-selected': sound.eq.preset === id }"
         :aria-checked="sound.eq.preset === id"
-        @click="sound.setPreset(id)"
+        @click="sound.setPreset(id); emit('picked', id)"
       >
         <span class="eq__name">{{ t(`sound.preset.${id}`) }}</span>
         <Icon v-if="sound.eq.preset === id" name="ph:check-bold" class="eq__check" />
       </button>
     </div>
 
-    <div v-if="custom" class="eq__custom" data-sheet-nodrag>
+    <div v-else-if="custom" class="eq__custom" data-sheet-nodrag>
       <div class="eq__bands">
         <div v-for="(hz, i) in EQ_BANDS_HZ" :key="hz" class="eq__band">
           <SliderRoot
@@ -94,10 +96,10 @@ function fill(v: number) {
 .eq__preset.is-selected .eq__name { font-weight: 600; }
 .eq__check { font-size: 16px; color: var(--accent); flex: none; }
 
-.eq__custom { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 6px 4px 0; padding: 14px 6px 6px; border-top: 1px solid var(--hair); }
+.eq__custom { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
 .eq__bands { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px; }
 .eq__band { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
-.eq__slider { position: relative; display: flex; justify-content: center; width: 28px; height: 116px; touch-action: none; user-select: none; cursor: pointer; }
+.eq__slider { position: relative; display: flex; justify-content: center; width: 32px; height: 180px; touch-action: none; user-select: none; cursor: pointer; }
 /* Полоса и черта нуля посередине: подъём — вверх от неё, провал — вниз */
 .eq__track { position: relative; width: 4px; height: 100%; border-radius: 4px; background: rgba(232, 236, 244, 0.14); }
 .eq__track::after { content: ''; position: absolute; left: -5px; right: -5px; top: 50%; height: 1px; background: var(--line-strong); }
@@ -115,7 +117,7 @@ function fill(v: number) {
   .eq__list { display: flex; flex-direction: column; }
   .eq__preset { min-height: 48px; }
   .eq__preset.is-selected { background: transparent; }
-  .eq__slider { height: 168px; width: 32px; }
+  .eq__slider { height: 200px; width: 32px; }
   .eq__thumb { width: 22px; height: 22px; }
   .eq__reset { min-height: 44px; }
 }
