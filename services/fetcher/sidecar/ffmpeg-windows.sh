@@ -11,6 +11,8 @@
 set -euo pipefail
 
 OUT=${1:?папка результата}
+# Абсолютный путь: дальше скрипт переходит в папку исходников, и относительный указывал бы не туда
+mkdir -p "$OUT" && OUT=$(cd "$OUT" && pwd)
 WORK=${WORK:-$(mktemp -d)}
 FFMPEG_VERSION=9.0.2
 # Совпадает с build.sh (и формулой Homebrew ffmpeg 9.0.2)
