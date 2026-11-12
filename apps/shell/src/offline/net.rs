@@ -4,6 +4,8 @@
 //! macOS и iOS — SCNetworkReachability (SystemConfiguration): флаги для «любого адреса» отвечают
 //! мгновенно и без запроса в сеть. Сотовая — флаг `IsWWAN` (есть только на iOS).
 
+// На Windows тип сети пока не определяется (всегда Unknown): остальные варианты там не создаются
+#[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Wifi,
