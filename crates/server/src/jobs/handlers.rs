@@ -41,6 +41,7 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::SCOUT_CHARTS, scout::scout_charts)
         .register(kind::TASTE, taste::run)
         .register(kind::WAVE_POOL, prep::pool_run)
+        .register(kind::DESCRIBE_REFRESH, crate::reco::describe::refresh_run)
         .register(kind::TASTE_MODEL, crate::reco::model::run)
         .register(kind::IMPORT_MATCH, crate::import::jobs::run_match)
         .register(kind::IMPORT_APPLY, crate::import::jobs::run_apply)

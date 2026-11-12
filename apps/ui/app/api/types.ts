@@ -244,6 +244,12 @@ export type WavePreset = Schemas['WavePreset']
 export type WavePresetList = Schemas['WavePresetList']
 export type NewWavePreset = Schemas['NewWavePreset']
 export type WavePresetPatch = Schemas['WavePresetPatch']
+
+// Плейлист по описанию
+export type DescribeBrief = Schemas['DescribeBrief']
+export type DescribePreview = Schemas['DescribePreview']
+export type DescribedPlaylist = Schemas['DescribedPlaylist']
+export type SaveDescribed = Schemas['SaveDescribed']
 export type RecoOverview = Schemas['RecoOverview']
 export type RecoSettings = Schemas['RecoSettings']
 export type RecoSettingsPatch = Schemas['RecoSettingsPatch']

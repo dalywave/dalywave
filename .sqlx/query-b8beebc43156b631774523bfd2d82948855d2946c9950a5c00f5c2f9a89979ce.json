@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT tt.track_id AS \"id!\" FROM artist_related r\n               JOIN artist_top_tracks tt ON tt.artist_id = r.related_id\n               WHERE r.artist_id = ANY($1) AND NOT (r.related_id = ANY($1))\n               ORDER BY tt.position, r.position, tt.track_id\n               LIMIT 150",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artist_top_tracks",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b8beebc43156b631774523bfd2d82948855d2946c9950a5c00f5c2f9a89979ce"
+}

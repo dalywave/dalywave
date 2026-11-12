@@ -361,6 +361,11 @@ async function create() {
   }
 }
 
+function byDescription() {
+  createOpen.value = false
+  void navigateTo('/describe')
+}
+
 async function newFolder() {
   createOpen.value = false
   const id = await tree.createFolder()
@@ -402,6 +407,7 @@ const friends = useFriendsStore()
             <input v-model="newTitle" class="newpl__input" :placeholder="t('newPlaceholder')" :aria-label="t('newPlaylist')" maxlength="120" enterkeyhint="done" autofocus>
             <UiButton type="submit" variant="primary" size="lg" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('create') }}</UiButton>
             <UiButton size="lg" icon="ph:folder-simple-plus" block @click="newFolder">{{ tg('folder.new') }}</UiButton>
+            <UiButton size="lg" icon="ph:note-pencil" block @click="byDescription">{{ t('byDescription') }}</UiButton>
           </form>
         </UiSheet>
       </template>
@@ -412,6 +418,7 @@ const friends = useFriendsStore()
         <form class="newpl" @submit.prevent="create">
           <input v-model="newTitle" class="newpl__input" :placeholder="t('newPlaceholder')" :aria-label="t('newPlaylist')" maxlength="120" autofocus>
           <UiButton type="submit" variant="primary" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('create') }}</UiButton>
+          <UiButton icon="ph:note-pencil" block @click="byDescription">{{ t('byDescription') }}</UiButton>
         </form>
       </UiPopover>
       <UiIconButton v-if="!ui.isTouchUi" icon="ph:folder-simple-plus" :label="tg('folder.new')" size="sm" class="lib__folder" @click="newFolder" />
@@ -650,6 +657,7 @@ const friends = useFriendsStore()
     "removeAlbum": "Убрать из медиатеки",
     "unfollow": "Отписаться",
     "newPlaylist": "Новый плейлист",
+    "byDescription": "Плейлист по описанию",
     "newPlaceholder": "Название",
     "create": "Создать",
     "created": "Плейлист «{title}» создан",
@@ -692,6 +700,7 @@ const friends = useFriendsStore()
     "removeAlbum": "Remove from library",
     "unfollow": "Unfollow",
     "newPlaylist": "New playlist",
+    "byDescription": "Playlist from a description",
     "newPlaceholder": "Title",
     "create": "Create",
     "created": "Playlist “{title}” created",

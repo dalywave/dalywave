@@ -91,10 +91,54 @@ watch(() => pui.reordered, (r) => {
   if (r?.id === id.value) void refresh()
 })
 
+// ---------- Собран по описанию: «Ещё в том же духе» и обновление раз в неделю ----------
+
+const described = computed(() => mine.value && pl.value?.generator === 'describe')
+const weekly = ref<boolean | null>(null)
+watch([described, id], async ([d]) => {
+  weekly.value = null
+  if (!d) return
+  try {
+    weekly.value = (await bridge.describe.get(id.value))?.weekly ?? null
+  }
+  catch {
+    // Пункт меню просто не покажется
+  }
+}, { immediate: true })
+const extending = ref(false)
+async function moreLikeThis() {
+  if (extending.value) return
+  extending.value = true
+  try {
+    const added = await bridge.describe.extend(id.value, 10)
+    await refresh()
+    void library.loadPlaylists(true).catch(() => {})
+    toast.show({ text: added.length ? t('moreAdded', { n: formatCount(added.length, 'track', lang.value) }) : t('noMore'), icon: 'ph:plus' })
+  }
+  catch {
+    toast.error(tg('pl.failed'))
+  }
+  finally {
+    extending.value = false
+  }
+}
+async function toggleWeekly() {
+  const next = !weekly.value
+  try {
+    weekly.value = (await bridge.describe.setWeekly(id.value, next)).weekly
+    toast.show({ text: next ? t('weeklyOn') : t('weeklyOff'), icon: 'ph:calendar-check' })
+  }
+  catch {
+    toast.error(tg('pl.failed'))
+  }
+}
+
 const moreItems = computed<MenuEntry[]>(() => {
   if (!pl.value) return []
   return [
     ...(mine.value ? [{ label: t('addTracks'), icon: 'ph:plus', onSelect: () => (addOpen.value = true) }] : []),
+    ...(described.value ? [{ label: t('moreLikeThis'), icon: 'ph:list-plus', onSelect: () => void moreLikeThis() }] : []),
+    ...(described.value && weekly.value !== null ? [{ label: t('weekly'), icon: 'ph:calendar-check', checked: weekly.value, onSelect: () => void toggleWeekly() }] : []),
     ...pla.menuFor(pl.value, { page: true }),
     { kind: 'separator' },
     shareMenu.entry('playlist', pl.value.id, pl.value.title),
@@ -193,6 +237,7 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
         </template>
         <template #tools>
           <UiIconButton v-if="mine && !ui.isPhone" icon="ph:plus" :label="t('addTracks')" size="lg" @click="addOpen = true" />
+          <UiIconButton v-if="described && !ui.isPhone" icon="ph:list-plus" :label="t('moreLikeThis')" size="lg" :disabled="extending" @click="moreLikeThis" />
           <UiIconButton v-if="owner && !ui.isPhone" icon="ph:pencil-simple" :label="tg('pl.edit')" size="lg" @click="startEdit" />
           <UiIconButton v-if="mine && !ui.isPhone" :icon="owner ? 'ph:user-plus' : 'ph:users-three'" :label="owner ? (pl.collaborative ? tg('pl.people') : tg('pl.invite')) : tg('pl.people')" size="lg" @click="pui.openPeople(pl)" />
           <UiIconButton v-if="!mine && !ui.isPhone" icon="ph:plus-circle" :label="tg('pl.saveAs')" size="lg" @click="pla.duplicate(pl)" />
@@ -248,7 +293,13 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
     "empty": "В плейлисте пока пусто",
     "emptyMine": "Найдите треки или возьмите из подходящих",
     "you": "вы",
-    "andMore": "{names} и ещё {n}"
+    "andMore": "{names} и ещё {n}",
+    "moreLikeThis": "Ещё в том же духе",
+    "moreAdded": "Добавлено: {n}",
+    "noMore": "Больше подходящего пока нет",
+    "weekly": "Обновлять каждую неделю",
+    "weeklyOn": "Каждую неделю прослушанное сменится новым",
+    "weeklyOff": "Плейлист больше не обновляется сам"
   },
   "en": {
     "title": "Playlist",
@@ -259,7 +310,13 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
     "empty": "This playlist is empty",
     "emptyMine": "Search for tracks or pick from suggestions",
     "you": "you",
-    "andMore": "{names} and {n} more"
+    "andMore": "{names} and {n} more",
+    "moreLikeThis": "More like this",
+    "moreAdded": "Added: {n}",
+    "noMore": "Nothing more fits yet",
+    "weekly": "Refresh every week",
+    "weeklyOn": "What you've played will be swapped weekly",
+    "weeklyOff": "This playlist no longer refreshes"
   }
 }
 </i18n>
