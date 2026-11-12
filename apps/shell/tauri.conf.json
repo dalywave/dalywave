@@ -67,7 +67,7 @@
   },
   "plugins": {
     "discord": {
-      "clientId": ""
+      "clientId": "1569366706219130900"
     },
     "deep-link": {
       "desktop": {
