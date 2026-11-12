@@ -7,6 +7,9 @@ export const useUiStore = defineStore('ui', () => {
   const panelOpen = ref(false)
   const panelTab = ref<PanelTab>('queue')
   const playerOpen = ref(false)
+  /** Текст песни «сценой» внутри полного плеера: на телефоне — вместо обложки, на iPad — вкладка
+   *  рядом с плеером, на компьютере — колонка справа от обложки */
+  const playerLyrics = ref(false)
   /** Шторка на телефоне вместо правой панели */
   const sheetTab = ref<PanelTab | null>(null)
   /** Счётчик запросов «фокус в поиск» (⌘K) — поле поиска следит за ним */
@@ -34,7 +37,17 @@ export const useUiStore = defineStore('ui', () => {
   const sidePlayer = computed(() => canSidePlayer.value && usePrefsStore().sidePlayer && !!usePlayerStore().current)
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
+  /** Под пальцем текст открывается в самом плеере, а не листом поверх */
+  function openLyricsInPlayer(): boolean {
+    if (!isTouchUi.value || !usePlayerStore().current) return false
+    playerLyrics.value = true
+    playerOpen.value = true
+    sheetTab.value = null
+    return true
+  }
+
   function openPanel(tab: PanelTab) {
+    if (tab === 'lyrics' && openLyricsInPlayer()) return
     if (isTouchUi.value) {
       sheetTab.value = tab
       return
@@ -44,6 +57,11 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function togglePanel(tab: PanelTab) {
+    if (tab === 'lyrics' && isTouchUi.value && playerOpen.value) {
+      playerLyrics.value = !playerLyrics.value
+      return
+    }
+    if (tab === 'lyrics' && openLyricsInPlayer()) return
     if (isTouchUi.value) {
       sheetTab.value = sheetTab.value === tab ? null : tab
       return
@@ -83,5 +101,5 @@ export const useUiStore = defineStore('ui', () => {
     searchFocus.value++
   }
 
-  return { panelOpen, panelTab, playerOpen, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
+  return { panelOpen, panelTab, playerOpen, playerLyrics, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
 })

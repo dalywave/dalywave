@@ -28,7 +28,7 @@ const title = computed(() => (tab.value === 'jam' ? t('jam.title') : tab.value ?
     <MusicJamPanel v-else-if="tab === 'jam'" variant="sheet" />
     <div v-else class="pad">
       <MusicQueuePanel v-if="tab === 'queue'" />
-      <MusicLyricsView v-else-if="tab === 'lyrics'" variant="sheet" />
+      <MusicLyricsView v-else-if="tab === 'lyrics'" class="lyrics" />
       <MusicAboutTrack v-else-if="tab === 'about'" :track="player.current?.track ?? null" />
     </div>
   </UiSheet>
@@ -36,4 +36,6 @@ const title = computed(() => (tab.value === 'jam' ? t('jam.title') : tab.value ?
 
 <style scoped>
 .pad { padding: 0 8px 16px; }
+/* Текст под пальцем открывается в плеере; здесь — только «ничего не играет» */
+.lyrics { height: 50dvh; }
 </style>

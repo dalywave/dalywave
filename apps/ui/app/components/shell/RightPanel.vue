@@ -30,7 +30,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
         <UiTabs v-model="tab" :items="tabs" :label="t('player.panel')" class="panel__tabs" />
         <UiIconButton icon="ph:x" :label="t('common.close')" size="sm" side="left" @click="ui.panelOpen = false" />
       </header>
-      <div class="panel__body no-scrollbar">
+      <div class="panel__body no-scrollbar" :class="{ 'is-lyrics': ui.panelTab === 'lyrics' }">
         <MusicQueuePanel v-if="ui.panelTab === 'queue'" />
         <MusicLyricsView v-else-if="ui.panelTab === 'lyrics'" />
         <div v-else-if="ui.panelTab === 'devices'" class="panel__devices">
@@ -63,6 +63,8 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
 .panel__tabs :deep(.tabs__item) { height: 50px; }
 .panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 24px; border-top: 1px solid var(--hair); }
 .panel__devices { padding: 12px 0; }
+/* Текст: лента сама держит строку — без прокрутки панели */
+.panel__body.is-lyrics { position: relative; overflow: hidden; padding: 0 4px; }
 
 /* Планшет: панель ложится поверх содержимого; рядом со сценой плеера — встаёт в ряд */
 @media (max-width: 1099px) {

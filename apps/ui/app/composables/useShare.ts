@@ -31,12 +31,13 @@ export function useShare() {
     await navigator.clipboard.writeText(text)
   }
 
-  async function share(kind: ShareKind, id: string, title?: string) {
+  /** `text` — цитата перед ссылкой (строка песни); `copyOnly` — сразу в буфер, без системного меню */
+  async function share(kind: ShareKind, id: string, title?: string, text?: string, opts: { copyOnly?: boolean } = {}) {
     const url = shareUrl(kind, id)
     const touch = ui.isPhone || bridge.platform === 'ios' || bridge.platform === 'ipados'
-    if (touch && typeof navigator.share === 'function') {
+    if (touch && !opts.copyOnly && typeof navigator.share === 'function') {
       try {
-        await navigator.share({ title, url })
+        await navigator.share(text ? { title, text, url } : { title, url })
         return
       }
       catch (e) {
@@ -45,9 +46,9 @@ export function useShare() {
       }
     }
     try {
-      await copy(url)
+      await copy(text ? `${text}\n${url}` : url)
       bridge.haptic('light')
-      toast.show({ text: t('share.copied'), icon: 'ph:link' })
+      toast.show(text ? { text: t('share.textCopied'), icon: 'ph:copy' } : { text: t('share.copied'), icon: 'ph:link' })
     }
     catch {
       toast.error(t('share.failed'))

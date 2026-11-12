@@ -1,4 +1,4 @@
-import type { LyricsLine, TrackLyrics } from '~/api/types'
+import type { TrackLyrics } from '~/api/types'
 
 // Тексты песен: один кеш на всё приложение — панель, лист и плеер не спрашивают сервер дважды.
 // Найденный текст не меняется; «не нашли» и ошибка через несколько минут спрашиваются снова
@@ -64,22 +64,6 @@ export function useTrackLyrics(trackId: Ref<string | null | undefined>) {
 
   watch(trackId, id => void load(id), { immediate: true })
   return { state, retry: () => load(trackId.value) }
-}
-
-/** Индекс текущей строки: последняя, что началась к `ms`; -1 — до первой */
-export function lineAt(lines: LyricsLine[], ms: number): number {
-  let lo = 0
-  let hi = lines.length - 1
-  let found = -1
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (lines[mid]!.tMs <= ms) {
-      found = mid
-      lo = mid + 1
-    }
-    else hi = mid - 1
-  }
-  return found
 }
 
 /** Позиция плеера с ходом между обновлениями: строка меняется вовремя, а не раз в четверть секунды

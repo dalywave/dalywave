@@ -183,6 +183,7 @@
     "seek": "Track position",
     "queue": "Queue",
     "lyrics": "Lyrics",
+    "hideLyrics": "Hide lyrics",
     "devices": "Devices",
     "about": "About",
     "volume": "Volume",
@@ -601,6 +602,7 @@
   "share": {
     "action": "Share",
     "copied": "Link copied",
+    "textCopied": "Line copied",
     "failed": "Couldn’t copy the link"
   },
   "jam": {

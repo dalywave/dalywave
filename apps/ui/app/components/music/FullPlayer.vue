@@ -34,6 +34,67 @@ const paneOptions = computed(() => [
 ])
 const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
 
+// ---------- Текст песни «сценой» ----------
+// Телефон: кнопка «Текст» — обложка уезжает в шапку (рядом название и исполнитель), текст занимает
+// экран, управление остаётся внизу. Слушает и не трогает — управление тихо уходит, касание его
+// возвращает. Компьютер: текст колонкой справа от обложки. iPad: вкладка «Текст» рядом с плеером
+const lyricsOn = computed(() => ui.playerLyrics)
+/** Текст смонтирован, как только его открыли: повторное открытие — без загрузки и проезда */
+const lyricsMounted = ref(ui.playerLyrics)
+watch(lyricsOn, (v) => {
+  if (v) lyricsMounted.value = true
+})
+watch(() => ui.playerLyrics, (v) => {
+  if (v && props.variant === 'tablet') pane.value = 'lyrics'
+}, { immediate: true })
+const lyricsView = ref<{ synced: boolean } | null>(null)
+const lyricsFollowing = ref(true)
+const calm = ref(false)
+let calmTimer: ReturnType<typeof setTimeout> | undefined
+function wake() {
+  calm.value = false
+  clearTimeout(calmTimer)
+  if (props.variant !== 'phone' || !lyricsOn.value) return
+  calmTimer = setTimeout(() => {
+    if (lyricsOn.value && lyricsFollowing.value && lyricsView.value?.synced && player.playing && !menuOpen.value && open.value) calm.value = true
+  }, 4000)
+}
+watch([lyricsOn, lyricsFollowing, () => player.playing, menuOpen, () => ui.playerOpen], wake)
+
+// Обложка «перелетает» между большой и маленькой в шапке (FLIP): меряем до и после смены раскладки
+const mini = ref<HTMLElement | null>(null)
+function flip(from: HTMLElement | null, to: () => HTMLElement | null) {
+  const a = from?.getBoundingClientRect()
+  void nextTick(() => {
+    const el = to()
+    if (!a?.width || !el || ui.reducedMotion) return
+    const b = el.getBoundingClientRect()
+    if (!b.width) return
+    el.animate?.([
+      { transformOrigin: 'top left', transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width})` },
+      { transformOrigin: 'top left', transform: 'none' },
+    ], { duration: 520, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' })
+  })
+}
+function toggleLyrics() {
+  const on = !ui.playerLyrics
+  if (props.variant === 'phone') flip(on ? art.value : mini.value, () => (on ? mini.value : art.value))
+  ui.playerLyrics = on
+}
+/** Нижняя граница текста на телефоне — над полосой прокрутки; в тишине — до низа экрана */
+const scrub = ref<{ $el: HTMLElement } | null>(null)
+const lyricsBottom = ref(260)
+function measureDock() {
+  const s = scrub.value?.$el
+  const body = s?.offsetParent as HTMLElement | null
+  if (s && body) lyricsBottom.value = Math.max(120, body.clientHeight - s.offsetTop + 6)
+}
+watch(lyricsOn, () => void nextTick(() => {
+  measureDock()
+  // Сцена на компьютере: обложка переехала — волна снова находит её
+  if (props.variant === 'stage') window.dispatchEvent(new Event('resize'))
+}))
+
 const { label: contextLabel, kicker, title: phoneTitle } = useNowPlayingContext()
 /** Планшет горизонтально: закрепить плеер колонкой сбоку и свернуть этот слой */
 const prefs = usePrefsStore()
@@ -74,6 +135,7 @@ const audible = computed(() => player.playing && !player.pending && !player.mute
 
 onMounted(() => {
   window.addEventListener('keydown', onKey)
+  window.addEventListener('resize', measureDock)
   offBeat = getWaveEngine().onFrame((s) => {
     const v = audible.value ? s.pulse.toFixed(3) : '0'
     beatEl.value?.style.setProperty('--beat', v)
@@ -201,6 +263,8 @@ function onSheetClick(e: MouseEvent) {
 }
 onBeforeUnmount(() => {
   offCollapse?.()
+  clearTimeout(calmTimer)
+  window.removeEventListener('resize', measureDock)
   window.removeEventListener('keydown', onKey)
   offBeat?.()
 })
@@ -209,7 +273,7 @@ onBeforeUnmount(() => {
 <template>
   <!-- Большой экран: сцена поверх содержимого -->
   <Transition v-if="variant === 'stage'" name="stage">
-    <section v-if="open && track" ref="beatEl" class="fp scheme-dark" :aria-label="t('player.expand')">
+    <section v-if="open && track" ref="beatEl" class="fp scheme-dark" :class="{ 'fp--lyrics': lyricsOn }" :aria-label="t('player.expand')">
       <div class="fp__wave">
         <MusicWaveCanvas layout="stage" :box="art" dark />
       </div>
@@ -221,6 +285,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="fp__stage">
+        <div class="fp__col">
         <div ref="art" class="fp__art">
           <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
           <div v-if="player.pending" class="fp__pending">
@@ -249,6 +314,13 @@ onBeforeUnmount(() => {
           <UiButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" @click="player.toggleLike()">{{ liked ? t('player.liked') : t('player.like') }}</UiButton>
           <UiButton v-if="track.album" icon="ph:disc" :to="`/album/${track.album.id}`" @click="close">{{ t('track.goAlbum') }}</UiButton>
         </div>
+        </div>
+        <!-- Текст справа от обложки: кнопка «Текст» в панели плеера внизу -->
+        <Transition name="fp-lyrics">
+          <div v-if="lyricsOn" class="fp__lyrics">
+            <MusicLyricsView variant="stage" :anchor="0.36" />
+          </div>
+        </Transition>
       </div>
     </section>
   </Transition>
@@ -260,11 +332,12 @@ onBeforeUnmount(() => {
       <DialogContent
         v-if="track"
         class="pp scheme-dark"
-        :class="{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet' }"
+        :class="{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet', 'is-lyrics': variant === 'phone' && lyricsOn, 'is-lyrics-pane': variant === 'tablet' && pane === 'lyrics', 'is-calm': calm }"
         :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
         :aria-describedby="undefined"
         @open-auto-focus.prevent
         @pointerdown="onSheetDown"
+        @pointerdown.capture="wake"
         @pointermove="onSheetMove"
         @pointerup="onSheetUp"
         @pointercancel="onSheetCancel"
@@ -343,10 +416,10 @@ onBeforeUnmount(() => {
               </div>
 
               <!-- Текст и очередь: свой жест (прокрутка, перетаскивание) — плеер отсюда не смахивается -->
-              <section class="tp__pane" data-no-dismiss>
+              <section class="tp__pane" :class="{ 'is-lyrics': pane === 'lyrics' }" data-no-dismiss>
                 <UiSegmentedControl v-model="pane" :options="paneOptions" :label="t('player.panel')" block class="tp__tabs" />
                 <div class="tp__pane-body no-scrollbar">
-                  <MusicLyricsView v-if="pane === 'lyrics'" />
+                  <MusicLyricsView v-if="pane === 'lyrics'" variant="stage" :anchor="0.3" :active="open" />
                   <MusicQueuePanel v-else />
                 </div>
               </section>
@@ -356,7 +429,15 @@ onBeforeUnmount(() => {
           <div v-else class="pp__body">
             <header class="pp__head">
               <UiIconButton icon="ph:caret-down" :label="t('player.collapse')" size="lg" tone="solid" :tooltip="false" @click="close" />
-              <div class="pp__ctx">
+              <!-- С текстом обложка уменьшается сюда: рядом название и исполнитель; нажатие — обратно к обложке -->
+              <button v-if="lyricsOn" type="button" class="pp__now" :aria-label="t('player.hideLyrics')" @click="toggleLyrics">
+                <span ref="mini" class="pp__now-art"><MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager /></span>
+                <span class="pp__now-titles">
+                  <span class="pp__now-title ellipsis">{{ track.title }}</span>
+                  <span class="pp__now-artist ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</span>
+                </span>
+              </button>
+              <div v-else class="pp__ctx">
                 <div class="pp__kicker">{{ kicker }}</div>
                 <div class="pp__ctx-title ellipsis">{{ phoneTitle }}</div>
               </div>
@@ -365,7 +446,7 @@ onBeforeUnmount(() => {
               </UiMenu>
             </header>
 
-            <div ref="art" class="pp__art">
+            <div v-show="!lyricsOn" ref="art" class="pp__art">
               <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
@@ -373,7 +454,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="pp__info">
+            <div v-show="!lyricsOn" class="pp__info">
               <div class="pp__titlerow">
                 <div class="pp__titles">
                   <div class="pp__title ellipsis">{{ track.title }}</div>
@@ -389,8 +470,17 @@ onBeforeUnmount(() => {
               <div v-if="entry?.reason" class="pp__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
             </div>
 
+            <!-- Текст: между шапкой и управлением; свой жест — плеер отсюда не смахивается -->
+            <Transition name="pp-lyrics">
+              <div v-if="lyricsMounted" v-show="lyricsOn" class="pp__lyrics" :style="{ bottom: calm ? 'calc(var(--safe-bottom) + 8px)' : `${lyricsBottom}px` }">
+                <MusicLyricsView ref="lyricsView" variant="stage" :anchor="76" :active="lyricsOn && open" @interact="wake" @following="lyricsFollowing = $event" />
+              </div>
+            </Transition>
+            <i class="pp__spacer" aria-hidden="true" />
+
             <MusicScrubber
-              class="pp__scrub"
+              ref="scrub"
+              class="pp__scrub pp__dock"
               :peaks="phonePeaks"
               :position-ms="player.positionMs"
               :duration-ms="player.durationMs || track.durationMs"
@@ -401,14 +491,14 @@ onBeforeUnmount(() => {
               @seek="player.seek"
             />
 
-            <MusicPlayerControls class="pp__controls" :play-size="80" />
+            <MusicPlayerControls class="pp__controls pp__dock" :play-size="80" />
 
-            <MusicConnectChip class="pp__connect" />
-            <div class="pp__secondary">
+            <MusicConnectChip class="pp__connect pp__dock" />
+            <div class="pp__secondary pp__dock">
               <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
               <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
               <MusicSleepTimerButton />
-              <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" @click="ui.openPanel('lyrics')" />
+              <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" :active="lyricsOn" :pressed="lyricsOn" @click="toggleLyrics" />
               <UiIconButton icon="ph:queue" :label="t('player.queue')" size="lg" :tooltip="false" @click="ui.openPanel('queue')" />
             </div>
           </div>
@@ -464,6 +554,22 @@ onBeforeUnmount(() => {
 }
 .fp__mood-label { font-size: var(--fs-caption); font-weight: 550; color: var(--text-3); }
 .fp__stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; height: 100%; padding: 72px 40px 32px; }
+.fp__col { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; width: 100%; min-width: 0; }
+/* С текстом: обложка и название — колонкой слева, текст — справа, как в прототипе А */
+.fp--lyrics .fp__stage { flex-direction: row; align-items: stretch; gap: 0; padding: 0 0 0 40px; }
+.fp--lyrics .fp__col { width: min(46%, 520px); flex: none; padding: 72px 24px 32px 0; }
+.fp--lyrics .fp__art { width: min(400px, 46vh, 100%); }
+.fp--lyrics .fp__info { max-width: 100%; }
+.fp--lyrics .fp__title { font-size: var(--fs-h2); }
+.fp__lyrics { position: relative; flex: 1; min-width: 0; padding: 0 56px 0 24px; }
+.fp-lyrics-enter-active, .fp-lyrics-leave-active { transition: opacity var(--dur-4) var(--ease-out); }
+.fp-lyrics-enter-from, .fp-lyrics-leave-to { opacity: 0; }
+/* Тона обложки под текстом: волна тише, чтобы не спорить со строками */
+.fp__wave { transition: opacity var(--dur-4) var(--ease-out); }
+.fp--lyrics { background: color-mix(in oklab, var(--amb-3) 62%, #020509); }
+.fp--lyrics .fp__wave { opacity: 0.4; }
+/* Откуда играет — над колонкой с обложкой, а не над строками */
+.fp--lyrics .fp__context { left: calc(40px + min(46%, 520px) / 2 - 12px); max-width: min(42%, 480px); }
 .fp__art { position: relative; width: min(380px, 42vh, 100%); flex: none; border-radius: var(--r-4); }
 .fp__art :deep(.art) { width: 100%; border-radius: var(--r-4); box-shadow: var(--shadow-cover); transform: scale(calc(1 + var(--beat, 0) * 0.012)); }
 .fp__pending {
@@ -564,6 +670,35 @@ onBeforeUnmount(() => {
 .pp__titlerow:has(.pp__like) .pp__titles { flex: 1; }
 .pp__connect { justify-content: center; margin-top: clamp(8px, 1.6vh, 14px); flex: none; }
 .pp__secondary { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 10px; flex: none; }
+/* ---------- Телефон: текст «сценой» ---------- */
+.pp__spacer { display: none; }
+.pp.is-lyrics .pp__spacer { display: block; flex: 1; }
+.pp.is-lyrics .pp__secondary { margin-top: 0; }
+.pp__now { display: flex; align-items: center; gap: 12px; min-width: 0; height: 52px; margin: 0 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pp__now-art { width: 44px; height: 44px; flex: none; border-radius: 8px; box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.6); }
+.pp__now-art :deep(.art) { width: 100%; height: 100%; border-radius: 8px; }
+.pp__now-titles { display: flex; flex-direction: column; min-width: 0; }
+.pp__now-title { font-size: 16px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; }
+.pp__now-artist { font-size: 14px; color: var(--text-2); line-height: 1.3; }
+.pp__now:active { opacity: 0.75; }
+.pp__lyrics {
+  position: absolute;
+  top: calc(var(--safe-top) + 52px);
+  left: 6px;
+  right: 6px;
+  z-index: 1;
+  transition: bottom 520ms var(--ease-out), opacity 420ms var(--ease-out) 120ms;
+}
+.pp-lyrics-enter-from, .pp-lyrics-leave-to { opacity: 0; }
+/* Слушает и не трогает — управление уходит, текст занимает экран */
+.pp__dock { transition: opacity 420ms var(--ease-out), transform 520ms var(--ease-out); }
+.pp.is-calm .pp__dock { opacity: 0; transform: translateY(18px); pointer-events: none; }
+/* С текстом фон — тона обложки на весь экран, волна уходит, чтобы не спорить со строками */
+.pp__wave, .pp__ambient { transition: opacity var(--dur-4) var(--ease-out), height var(--dur-4) var(--ease-out); }
+.pp.is-lyrics .pp__wave { opacity: 0; }
+.pp.is-lyrics .pp__ambient { height: 100%; }
+.pp__frame { transition: background-color var(--dur-4) var(--ease-out); }
+.pp.is-lyrics .pp__frame { background-color: color-mix(in oklab, var(--amb-3) 62%, #020509); }
 /* ---------- Планшет ---------- */
 .pp--tablet .pp__wave { height: 100%; opacity: 0.55; -webkit-mask-image: none; mask-image: none; }
 .pp--tablet .pp__ambient { height: 100%; }
@@ -611,7 +746,14 @@ onBeforeUnmount(() => {
   .tp__art { width: min(100%, 46vh); }
   .tp__pane { flex: 1; margin: 0; padding: 14px 16px 0; border-radius: var(--r-5); background: rgba(255, 255, 255, 0.04); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
   .tp__pane-body { padding-bottom: 16px; }
+  /* Текст — прямо на сцене, без карточки: как справа от обложки на компьютере */
+  .tp .tp__pane.is-lyrics { padding: 14px 0 0; background: none; box-shadow: none; }
 }
+/* Текст «сценой»: фон — тона обложки, лента сама держит строку, без своей прокрутки */
+.pp.is-lyrics-pane .pp__frame { background-color: color-mix(in oklab, var(--amb-3) 62%, #020509); }
+.pp.is-lyrics-pane .pp__wave { opacity: 0.3; }
+.tp__pane.is-lyrics { background: color-mix(in oklab, var(--amb-3) 30%, rgba(10, 12, 16, 0.55)); }
+.tp__pane.is-lyrics .tp__pane-body { position: relative; overflow: hidden; padding-bottom: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .pp__frame, .pp-scrim { animation: none; }

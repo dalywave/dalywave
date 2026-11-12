@@ -20,6 +20,15 @@ function openPlayer() {
   if (track.value) ui.playerOpen = !ui.playerOpen
 }
 
+// «Текст»: при открытом плеере — колонкой справа от обложки на самой сцене, иначе — вкладкой панели
+const lyricsActive = computed(() => (ui.playerOpen ? ui.playerLyrics : ui.panelOpen && ui.panelTab === 'lyrics'))
+function toggleLyrics() {
+  if (!ui.playerOpen) return ui.togglePanel('lyrics')
+  ui.playerLyrics = !ui.playerLyrics
+  // Тот же текст во вкладке панели рядом не нужен
+  if (ui.playerLyrics && ui.panelOpen && ui.panelTab === 'lyrics') ui.panelOpen = false
+}
+
 // «⋯»: таймер сна и мини-плеер (приложение для компьютера)
 const sound = useSoundStore()
 const bridge = useBridge()
@@ -95,7 +104,7 @@ const moreItems = computed<MenuEntry[]>(() => {
       <!-- Таймер сна стоит: луна с остатком -->
       <MusicSleepTimerButton v-if="sound.sleepActive" size="sm" />
       <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" :web="!connect.djAvailable" :next-at="nextAt" icon size="sm" />
-      <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="sm" :active="ui.panelOpen && ui.panelTab === 'lyrics'" @click="ui.togglePanel('lyrics')" />
+      <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="sm" :active="lyricsActive" :pressed="lyricsActive" @click="toggleLyrics" />
       <UiIconButton icon="ph:queue" :label="t('player.queue')" size="sm" :active="ui.panelOpen && ui.panelTab === 'queue'" @click="ui.togglePanel('queue')" />
       <MusicDevicePicker :devices="player.devices" :playing="player.playing" @open="player.loadDevices()" @select="player.selectDevice" />
       <!-- Пульт: громкость активного устройства -->

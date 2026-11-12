@@ -25,14 +25,18 @@ const nextAt = computed(() => ((player.nextEntry || player.waveActive) && !playe
 const menuOpen = ref(false)
 const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
 
-// Текущая строка синхронного текста — как в полном тексте, чуть раньше пения. Текст без времени
-// или его нет — строки нет совсем; между строками место держится, чтобы ничего не прыгало.
-// Колонка скрыта (карточка, вертикально) — текст не спрашиваем и часы не крутим
+// Текущая строка синхронного текста в духе «сцены» (MusicLyricsView): крупно и жирно, смена — мягкая,
+// с лёгким размытием; в проигрыше — три дышащие точки, после последней строки — пусто. Модель та же,
+// что у полного текста (utils/lyrics.ts). Текст без времени или его нет — строки нет совсем; между
+// строками место держится, чтобы ничего не прыгало. Колонка скрыта (карточка, вертикально) — текст не
+// спрашиваем и часы не крутим
 const { state: lyrics } = useTrackLyrics(computed(() => (ui.sidePlayer ? track.value?.id ?? null : null)))
-const lines = computed(() => (lyrics.value.status === 'ready' && lyrics.value.data.kind === 'synced' && lyrics.value.data.lines.length ? lyrics.value.data.lines : null))
-const clock = usePlaybackClock(computed(() => !!lines.value))
-const lyricIndex = computed(() => (lines.value ? lineAt(lines.value, clock.value + 250) : -1))
-const lyric = computed(() => (lyricIndex.value >= 0 ? lines.value?.[lyricIndex.value]?.text.trim() ?? '' : ''))
+const lyricItems = computed(() => (lyrics.value.status === 'ready' && lyrics.value.data.kind === 'synced' ? buildLyrics(lyrics.value.data.lines, player.durationMs || track.value?.durationMs || 0) : []))
+const lines = computed(() => lyricItems.value.length > 0)
+const clock = usePlaybackClock(lines)
+const lyricIndex = computed(() => (lines.value ? lyricAt(lyricItems.value, clock.value) : -1))
+const lyricItem = computed(() => lyricItems.value[lyricIndex.value] ?? null)
+const lyric = computed(() => (lyricItem.value?.type === 'line' ? lyricItem.value.main : ''))
 
 /** Обратно в плавающую карточку внизу — и запомнить: колонка не вернётся, пока её не закрепят снова */
 function unpin() {
@@ -79,7 +83,8 @@ function openDevices() {
         <!-- Строка текста: нажатие — весь текст листом -->
         <button v-if="lines" type="button" class="side__lyric" :aria-label="t('player.lyrics')" @click="ui.openPanel('lyrics')">
           <Transition name="side-line" mode="out-in">
-            <span :key="lyricIndex" class="side__lyric-text">{{ lyric }}</span>
+            <span v-if="lyricItem?.type === 'break'" :key="lyricIndex" class="side__dots" :aria-label="t('player.lyrics')"><i /><i /><i /></span>
+            <span v-else :key="lyricIndex" class="side__lyric-text">{{ lyric }}</span>
           </Transition>
         </button>
 
@@ -184,25 +189,35 @@ function openDevices() {
 .side__space--top { max-height: 40px; min-height: 4px; }
 .side__low { display: flex; flex-direction: column; flex: none; }
 .side__lyric {
-  display: block;
-  min-height: calc(19px * 1.3 * 2);
-  margin: 0 0 12px;
+  display: flex;
+  align-items: flex-end;
+  min-height: calc(23px * 1.16 * 2);
+  margin: 0 0 14px;
   padding: 0;
   border: 0;
   background: none;
   color: var(--text-1);
   font: inherit;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  line-height: 1.3;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.022em;
+  line-height: 1.16;
   text-align: left;
 }
 .side__lyric-text { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; text-wrap: pretty; }
 .side__lyric:active { opacity: 0.7; }
-.side-line-enter-active, .side-line-leave-active { transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out); }
-.side-line-enter-from { opacity: 0; transform: translateY(6px); }
-.side-line-leave-to { opacity: 0; transform: translateY(-6px); }
+/* Проигрыш — три точки, как в полном тексте */
+.side__dots { display: inline-flex; gap: 8px; padding-bottom: 8px; animation: side-breathe 1.7s ease-in-out infinite alternate; }
+.side__dots i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+@keyframes side-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.14); }
+}
+/* Смена строки мягкая: старая уходит вверх и расплывается, новая проявляется снизу */
+.side-line-enter-active { transition: opacity 420ms var(--ease-out), transform 520ms var(--ease-out), filter 420ms var(--ease-out); }
+.side-line-leave-active { transition: opacity 220ms ease-in, transform 220ms ease-in, filter 220ms ease-in; }
+.side-line-enter-from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+.side-line-leave-to { opacity: 0; transform: translateY(-10px); filter: blur(4px); }
 
 .side__titlerow { display: flex; align-items: flex-start; gap: 12px; }
 .side__titles { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
@@ -221,5 +236,6 @@ function openDevices() {
 .side-enter-from, .side-leave-to { opacity: 0; transform: translateX(24px); }
 @media (prefers-reduced-motion: reduce) {
   .side-enter-active, .side-leave-active, .side-line-enter-active, .side-line-leave-active { transition: none; }
+  .side__dots { animation: none; }
 }
 </style>
