@@ -77,6 +77,8 @@ export const usePlayerStore = defineStore('player', () => {
   const context = ref<PlayContext | null>(null)
   const playing = ref(false)
   const buffering = ref(false)
+  /** Приложение: системный вывод звука не отвечает — движок ждёт и повторяет сам */
+  const soundLost = ref(false)
   const positionMs = ref(0)
   const durationMs = ref(0)
   const source = ref<TrackSource | null>(null)
@@ -1429,6 +1431,9 @@ export const usePlayerStore = defineStore('player', () => {
       visual()?.setPlaying(s.playing)
       if (changed) publishNowPlaying()
     })
+    engine.on('sound', (available) => {
+      soundLost.value = !available
+    })
     engine.on('error', (_e, uid) => {
       if (mirrored.value || previewing.value || !current.value || (uid && uid !== current.value.uid)) return
       toast.error(t('player.trackFailed', { title: current.value.track.title }))
@@ -1459,7 +1464,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   return {
-    current, manual, upcoming, history, context, playing, buffering, positionMs, durationMs, source, pending, volume, muted,
+    current, manual, upcoming, history, context, playing, buffering, soundLost, positionMs, durationMs, source, pending, volume, muted,
     transition, expressiveness, normalize, wave, waveSessionId, waveLoading, wavePrep, waveStarting, waveActive, effectiveMode, fadeMs,
     transitionAtMs, progress, nextEntry, peaks, devices,
     play, pause, toggle, next, prev, seek, playTracks, swapCurrent, replaceQueued, startWave, cancelWavePrep, playNext, enqueue, enqueueMany, remove, clearManual, moveManual,

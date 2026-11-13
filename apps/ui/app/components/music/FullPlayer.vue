@@ -301,6 +301,9 @@ onBeforeUnmount(() => {
             <MusicPendingNote :pending="player.pending" long />
             <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
           </div>
+          <div v-else-if="player.soundLost" class="fp__pending">
+            <MusicSoundNote long />
+          </div>
         </div>
         <div class="fp__info">
           <h2 class="fp__title" :title="track.title">{{ track.title }}</h2>
@@ -387,6 +390,9 @@ onBeforeUnmount(() => {
                     <MusicPendingNote :pending="player.pending" long />
                     <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
                   </div>
+                  <div v-else-if="player.soundLost" class="fp__pending">
+                    <MusicSoundNote long />
+                  </div>
                 </div>
 
                 <div class="tp__info">
@@ -468,6 +474,9 @@ onBeforeUnmount(() => {
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
                 <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
+              </div>
+              <div v-else-if="player.soundLost" class="fp__pending">
+                <MusicSoundNote long />
               </div>
             </div>
 

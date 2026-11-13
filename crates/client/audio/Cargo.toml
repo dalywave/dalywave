@@ -30,7 +30,7 @@ objc2 = "0.6.5"
 block2 = "0.6"
 objc2-foundation = { version = "0.3.2", features = ["NSString", "NSDictionary", "NSValue", "NSNotification", "NSOperation", "NSData", "NSObject", "NSArray", "NSError", "block2"] }
 objc2-media-player = { version = "0.3.2", default-features = false, features = ["std", "block2", "objc2-core-foundation", "MPNowPlayingInfoCenter", "MPRemoteCommandCenter", "MPRemoteCommand", "MPRemoteCommandEvent", "MPRemoteControlTypes", "MPMediaItem"] }
-objc2-core-foundation = { version = "0.3.2", features = ["CFCGTypes", "CFString"] }
+objc2-core-foundation = { version = "0.3.2", features = ["CFCGTypes", "CFString", "CFNumber", "CFPreferences"] }
 # Буферизованный вывод AirPlay 2 (renderer.rs): AVSampleBufferAudioRenderer + синхронизатор,
 # PCM микшера — в CMSampleBuffer
 objc2-av-foundation = { version = "0.3.2", default-features = false, features = ["std", "objc2-core-media", "AVAudioProcessingSettings", "AVQueuedSampleBufferRendering", "AVSampleBufferAudioRenderer", "AVSampleBufferRenderSynchronizer"] }
