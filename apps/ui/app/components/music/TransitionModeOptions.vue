@@ -11,12 +11,7 @@ const mode = defineModel<TransitionMode>('mode', { required: true })
 const expressiveness = defineModel<number>('expressiveness', { default: 0.6 })
 const { t } = useI18n()
 
-const MODES: { value: TransitionMode, icon: string }[] = [
-  { value: 'gapless', icon: 'ph:link-simple-horizontal' },
-  { value: 'smooth', icon: 'ph:wave-sine' },
-  { value: 'smart', icon: 'ph:sparkle' },
-  { value: 'dj', icon: 'ph:vinyl-record' },
-]
+const MODES = TRANSITION_MODES.map(value => ({ value, icon: TRANSITION_ICONS[value] }))
 const exprLabel = computed(() => (expressiveness.value < 0.34 ? t('transition.subtle') : expressiveness.value < 0.67 ? t('transition.set') : t('transition.bold')))
 </script>
 

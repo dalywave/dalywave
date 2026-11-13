@@ -207,7 +207,6 @@
     "trackFailed": "“{title}” didn’t start — playing the next one",
     "transitionAt": "Transition at {time}",
     "preview": "30 s preview",
-    "quality": "Opus 160",
     "playingFrom": "Playing from",
     "waveContext": "My Wave · {mood}",
     "nothing": "Nothing playing",

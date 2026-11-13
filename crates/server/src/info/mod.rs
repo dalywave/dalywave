@@ -125,6 +125,8 @@ pub struct Sources {
     pub musicbrainz: musicbrainz::MusicBrainz,
     pub wiki: wiki::Wiki,
     pub apple: apple::AppleCharts,
+    /// Чарты, которые собираются сейчас
+    pub charts: crate::charts::Refreshing,
 }
 
 impl Sources {
@@ -133,6 +135,7 @@ impl Sources {
             musicbrainz: musicbrainz::MusicBrainz::new(&config.musicbrainz_url)?,
             wiki: wiki::Wiki::new(&config.wikidata_url, &config.wikipedia_url)?,
             apple: apple::AppleCharts::new(&config.apple_charts_url)?,
+            charts: Default::default(),
         })
     }
 
@@ -146,6 +149,7 @@ impl Sources {
             )?,
             wiki: wiki::Wiki::new(&config.wikidata_url, &config.wikipedia_url)?,
             apple: apple::AppleCharts::new(&config.apple_charts_url)?,
+            charts: Default::default(),
         })
     }
 }

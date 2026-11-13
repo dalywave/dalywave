@@ -15,7 +15,7 @@ const { playArtist, isPlayingContext, loading } = usePlayActions()
 const sub = computed(() => {
   if (props.meta) return props.meta
   if (library.isFollowed(props.artist)) return t('artist.following')
-  return props.artist.fans ? formatCount(props.artist.fans, 'listener', lang.value) : t('record.artist')
+  return props.artist.fans ? formatCompactCount(props.artist.fans, 'listener', lang.value) : t('record.artist')
 })
 </script>
 
@@ -39,5 +39,9 @@ const sub = computed(() => {
 .card--artist .card__link { border-radius: 50%; }
 .card--artist .card__body { align-items: center; width: 100%; }
 .card--artist .card__title { justify-content: center; }
+/* По центру колонки ширина строки — по содержимому: без предела длинное имя или число вылезало к соседу */
+.card--artist .card__title, .card--artist .card__sub { max-width: 100%; }
+/* «2,5 млн слушателей» в узкой карточке телефона — в две строки, а не обрезанным */
+.card--artist .card__sub { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; text-wrap: balance; }
 .card--artist .card__play { right: 4px; bottom: 4px; }
 </style>

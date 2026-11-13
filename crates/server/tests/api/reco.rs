@@ -367,8 +367,10 @@ async fn moods_and_activities_bound_the_wave(db: PgPool) {
                 .iter()
                 .any(|t| (x.2 / t - 1.0).abs() <= 0.06)
     });
-    // «Засыпаю»: спокойно, медленно и всё тише
-    let f = run(json!({ "activity": "sleep" }), 6).await;
+    // «Засыпаю»: спокойно, медленно и всё тише. Цель энергии падает на 0,02 за трек, а у сетки шаг 0,1:
+    // на шести треках это один шаг сетки, и случайная добавка оценки с переходами по темпу изредка
+    // переворачивали половины. На десяти — почти два шага, ход виден при любом зерне сессии
+    let f = run(json!({ "activity": "sleep" }), 10).await;
     check("sleep", &f, &|x| x.0 <= 0.5 + 1e-4 && x.2 <= 115.0);
     let half = f.len() / 2;
     let mean = |s: &[Features]| s.iter().map(|x| x.0).sum::<f32>() / s.len() as f32;
@@ -377,7 +379,7 @@ async fn moods_and_activities_bound_the_wave(db: PgPool) {
         "энергия снижается: {f:?}"
     );
     // «Просыпаюсь» — наоборот
-    let f = run(json!({ "activity": "wake" }), 8).await;
+    let f = run(json!({ "activity": "wake" }), 10).await;
     let half = f.len() / 2;
     assert!(
         mean(&f[..half]) <= mean(&f[half..]),

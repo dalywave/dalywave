@@ -45,7 +45,6 @@ async function logout() {
 
 // ---------- Воспроизведение ----------
 
-const MODES: TransitionMode[] = ['gapless', 'smooth', 'smart', 'dj']
 const hasExpressiveness = (m: TransitionMode) => m === 'smart' || m === 'dj'
 const exprLabel = computed(() => (player.expressiveness < 0.34 ? tg('transition.subtle') : player.expressiveness < 0.67 ? tg('transition.set') : tg('transition.bold')))
 
@@ -133,24 +132,14 @@ const language = computed({
       </SettingsRow>
     </SettingsGroup>
 
-    <SettingsGroup :title="t('quality')">
-      <SettingsRow :title="t('qualityWifi')">
-        <UiSegmentedControl v-model="qualityWifi" :options="[{ value: 'high', label: t('q.high') }, { value: 'normal', label: t('q.normal') }]" :label="t('qualityWifi')" :size="segSize" />
-      </SettingsRow>
-      <SettingsRow :title="t('qualityCellular')">
-        <UiSegmentedControl v-model="qualityCellular" :options="[{ value: 'normal', label: t('q.normal') }, { value: 'saver', label: t('q.saver') }]" :label="t('qualityCellular')" :size="segSize" />
-      </SettingsRow>
-      <SettingsRow v-if="offline.available" :title="t('qualityDownload')">
-        <UiSegmentedControl v-model="qualityDownload" :options="[{ value: 'high', label: t('q.high') }, { value: 'normal', label: t('q.normal') }]" :label="t('qualityDownload')" :size="segSize" />
-      </SettingsRow>
-    </SettingsGroup>
-
+    <!-- Сразу за воспроизведением: тот же выбор, что у кнопки «Переходы» в плеере -->
     <SettingsGroup :title="t('transitions')">
       <div role="radiogroup" :aria-label="t('transitions')" class="set__radios">
-        <template v-for="m in MODES" :key="m">
+        <template v-for="m in TRANSITION_MODES" :key="m">
           <SettingsRow
             as="button"
             radio
+            :icon="TRANSITION_ICONS[m]"
             :checked="player.transition === m"
             :description="tg(`transition.${m}Desc`)"
             @click="player.transition = m"
@@ -167,6 +156,18 @@ const language = computed({
           </SettingsRow>
         </template>
       </div>
+    </SettingsGroup>
+
+    <SettingsGroup :title="t('quality')">
+      <SettingsRow :title="t('qualityWifi')">
+        <UiSegmentedControl v-model="qualityWifi" :options="[{ value: 'high', label: t('q.high') }, { value: 'normal', label: t('q.normal') }]" :label="t('qualityWifi')" :size="segSize" />
+      </SettingsRow>
+      <SettingsRow :title="t('qualityCellular')">
+        <UiSegmentedControl v-model="qualityCellular" :options="[{ value: 'normal', label: t('q.normal') }, { value: 'saver', label: t('q.saver') }]" :label="t('qualityCellular')" :size="segSize" />
+      </SettingsRow>
+      <SettingsRow v-if="offline.available" :title="t('qualityDownload')">
+        <UiSegmentedControl v-model="qualityDownload" :options="[{ value: 'high', label: t('q.high') }, { value: 'normal', label: t('q.normal') }]" :label="t('qualityDownload')" :size="segSize" />
+      </SettingsRow>
     </SettingsGroup>
 
     <!-- Приложения: наушники перешли на другое устройство — музыка за ними -->
@@ -259,7 +260,9 @@ const language = computed({
 .set__chev { font-size: 18px; color: var(--text-3); }
 
 /* Выразительность — под выбранным «Умным» или «Диджеем» */
-.expr { display: flex; flex: 1; flex-direction: column; gap: 6px; padding-right: 32px; }
+.expr { display: flex; flex: 1; flex-direction: column; gap: 6px; padding-right: 32px; padding-left: 38px; }
+/* Значки режимов — как в листе плеера; выбранный — акцентом */
+.set__radios :deep(.is-checked .sr__lead) { color: var(--accent); }
 .expr__head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--fs-caption); color: var(--text-3); }
 .expr :deep(.sl__thumb) { transform: scale(1); }
 
