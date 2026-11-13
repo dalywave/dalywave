@@ -11,7 +11,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::{keys, musickit::AlbumQuery, RECHECK_DAYS};
+use super::{RECHECK_DAYS, keys, musickit::AlbumQuery};
 use crate::{
     import::audio::{self, AudioError},
     jobs::{
@@ -79,12 +79,9 @@ pub async fn run(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let Some(musickit) = ctx.musickit.clone() else {
         return Ok(json!({ "skipped": "no_musickit" }).into());
     };
-    let Some(album) = sqlx::query!(
-        "SELECT title, upc FROM albums WHERE id = $1",
-        p.album_id
-    )
-    .fetch_optional(&ctx.db)
-    .await?
+    let Some(album) = sqlx::query!("SELECT title, upc FROM albums WHERE id = $1", p.album_id)
+        .fetch_optional(&ctx.db)
+        .await?
     else {
         return Ok(json!({ "skipped": "gone" }).into());
     };
@@ -149,12 +146,7 @@ pub async fn run(ctx: Arc<Context>, job: JobRow) -> JobResult {
         let size = ctx.storage.put_file(&key, &out, "video/mp4").await?;
         stored.push((shape, key, size));
     }
-    let key_of = |shape: &str| {
-        stored
-            .iter()
-            .find(|s| s.0 == shape)
-            .map(|s| s.1.clone())
-    };
+    let key_of = |shape: &str| stored.iter().find(|s| s.0 == shape).map(|s| s.1.clone());
     let size: u64 = stored.iter().map(|s| s.2).sum();
     let saved = sqlx::query!(
         "INSERT INTO album_motion (album_id, state, apple_album_id, square_key, tall_key, size_bytes, checked_at)
@@ -216,7 +208,10 @@ pub fn choose_variant(m3u8: &str, min_width: u32) -> Option<String> {
             .and_then(|r| r.split('x').next())
             .and_then(|w| w.parse::<u32>().ok())
             .unwrap_or(0);
-        if let Some(uri) = lines.by_ref().find(|l| !l.is_empty() && !l.starts_with('#')) {
+        if let Some(uri) = lines
+            .by_ref()
+            .find(|l| !l.is_empty() && !l.starts_with('#'))
+        {
             variants.push((width, uri.to_string()));
         }
     }
@@ -296,8 +291,14 @@ v1080/index.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=900000,RESOLUTION=720x720
 v720/index.m3u8
 ";
-        assert_eq!(choose_variant(master, 720).as_deref(), Some("v720/index.m3u8"));
-        assert_eq!(choose_variant(master, 2000).as_deref(), Some("v1080/index.m3u8"));
+        assert_eq!(
+            choose_variant(master, 720).as_deref(),
+            Some("v720/index.m3u8")
+        );
+        assert_eq!(
+            choose_variant(master, 2000).as_deref(),
+            Some("v1080/index.m3u8")
+        );
         assert_eq!(choose_variant("#EXTM3U\n#EXTINF:4,\nseg0.ts\n", 720), None);
     }
 }

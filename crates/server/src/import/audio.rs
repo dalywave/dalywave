@@ -374,6 +374,48 @@ pub async fn transcode_opus(input: &Path, output: &Path, kbps: u32) -> Result<()
     Ok(())
 }
 
+/// Копия для AVPlayer (Apple TV не играет Opus): AAC-LC с заданным битрейтом в MP4, `+faststart`.
+/// Частота — 48 кГц (24/96 в AAC не уложить), громкость не меняется: выравнивание берёт её у источника.
+pub async fn transcode_aac(input: &Path, output: &Path, kbps: u32) -> Result<(), AudioError> {
+    let bitrate = format!("{kbps}k");
+    let out = run(
+        "ffmpeg",
+        &[
+            "-nostdin".as_ref(),
+            "-hide_banner".as_ref(),
+            "-v".as_ref(),
+            "error".as_ref(),
+            "-y".as_ref(),
+            "-i".as_ref(),
+            input.as_os_str(),
+            "-map".as_ref(),
+            "0:a:0".as_ref(),
+            "-map_metadata".as_ref(),
+            "-1".as_ref(),
+            "-c:a".as_ref(),
+            "aac".as_ref(),
+            "-b:a".as_ref(),
+            bitrate.as_ref(),
+            "-ar".as_ref(),
+            "48000".as_ref(),
+            "-movflags".as_ref(),
+            "+faststart".as_ref(),
+            "-f".as_ref(),
+            "mp4".as_ref(),
+            output.as_os_str(),
+        ],
+    )
+    .await?;
+    if !out.status.success() {
+        let err = tail(&out.stderr);
+        if err.contains("Invalid data") {
+            return Err(AudioError::Unreadable(err));
+        }
+        return Err(AudioError::Failed(format!("ffmpeg: {err}")));
+    }
+    Ok(())
+}
+
 /// Громкость, истинный пик и огибающая.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Loudness {

@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT user_code, platform, device_name, expires_at FROM tv_logins\n         WHERE user_code = $1 AND used_at IS NULL AND approved_at IS NULL AND expires_at > now()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tv_logins",
+            "name": "user_code"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tv_logins",
+            "name": "platform"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "device_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tv_logins",
+            "name": "device_name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tv_logins",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9f238bb7788456dba8f8fe7c50619ad229736145f2105b2a38bad1cc00abcca1"
+}

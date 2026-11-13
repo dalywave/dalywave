@@ -5,8 +5,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (isMiniWindow()) return to.path === '/mini' ? undefined : navigateTo('/mini')
   // «Слушать вместе»: страница гостя открыта без входа — у гостя свой токен этой сессии
   if (to.path.startsWith('/jam/')) return
+  // Оверлей для стрима (OBS): без входа — у ссылки свой секретный ключ
+  if (to.path === '/overlay') return
   const auth = useAuthStore()
   const bridge = useBridge()
+  // Сцена вечеринки: телевизор без входа показывает код, вход подтверждают с телефона
+  if (to.path === '/party') {
+    void bridge.ready()
+    // Не «тихо»: у браузера телевизора после входа кодом нет отметки о входе, только cookie
+    await auth.load()
+    return
+  }
   const isAuthPage = to.path === '/login' || to.path === '/waiting'
   const isDev = import.meta.dev && to.path.startsWith('/dev')
 

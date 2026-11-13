@@ -26,7 +26,7 @@ settingGroups:
       # для iOS 18–25 — оба называются DalyWave
       ASSETCATALOG_COMPILER_APPICON_NAME: DalyWave
       TARGETED_DEVICE_FAMILY: "1,2"
-      MARKETING_VERSION: 0.1.7
+      MARKETING_VERSION: 0.1.8
       CURRENT_PROJECT_VERSION: 1
 targets:
   dalywave-shell_iOS:
@@ -193,7 +193,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: 0.1.7
+        MARKETING_VERSION: 0.1.8
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
@@ -227,7 +227,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: 0.1.7
+        MARKETING_VERSION: 0.1.8
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
@@ -263,7 +263,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: 0.1.7
+        MARKETING_VERSION: 0.1.8
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ARCHS: [arm64]
@@ -347,7 +347,7 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "4"
-        MARKETING_VERSION: 0.1.7
+        MARKETING_VERSION: 0.1.8
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -383,12 +383,108 @@ targets:
         DEVELOPMENT_TEAM: Y5KR5JPCRG
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "4"
-        MARKETING_VERSION: 0.1.7
+        MARKETING_VERSION: 0.1.8
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
   # ---------- /Apple Watch ----------
+  # ---------- Apple TV ----------
+  # Приложение для Apple TV на SwiftUI (TVApp): само играет звук (AVQueuePlayer, копии AAC с сервера —
+  # `/stream?aac=true`), устройство «Где играть» (вид tv), «Моя волна», медиатека, поиск и вечеринка
+  # с QR для гостей. Вход без клавиатуры: код на экране + подтверждение на телефоне или сайте
+  # (`/api/auth/tv/*`). Та же запись App Store Connect, что у iPhone: bundle id rest.daly.wave, платформа
+  # tvOS (универсальная покупка), версия — общая MARKETING_VERSION (IOS.md, раздел «Apple TV»)
+  dalywave-tv:
+    type: application
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TVApp
+      - path: TVShared
+    info:
+      path: TVApp/Info.plist
+      properties:
+        CFBundleDisplayName: DalyWave
+        CFBundleDevelopmentRegion: ru
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: ""
+        UIRequiresFullScreen: true
+        # Музыка играет и при заставке, и когда открыто другое приложение
+        UIBackgroundModes: [audio]
+        # Ссылки Top Shelf: dalywave-tv://wave, dalywave-tv://play?type=…&id=…
+        CFBundleURLTypes:
+          - CFBundleURLName: rest.daly.wave
+            CFBundleURLSchemes: [dalywave-tv]
+        # Разработка: свой сервер на Mac (http)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: TVApp/DalyWaveTV.entitlements
+      properties:
+        # Снимок для Top Shelf (TVShared/TopShelfSnapshot.swift)
+        com.apple.security.application-groups: [group.rest.daly.wave]
+    dependencies:
+      - target: dalywave-tv-topshelf
+      - sdk: AVFoundation.framework
+      - sdk: MediaPlayer.framework
+      - sdk: TVServices.framework
+    settings:
+      base:
+        PRODUCT_NAME: DalyWaveTV
+        # Тот же bundle id, что у iPhone: tvOS — вторая платформа записи DalyWave
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "3"
+        MARKETING_VERSION: 0.1.8
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: App Icon & Top Shelf Image
+  # Top Shelf: верхняя полка Apple TV — «Моя волна» по настроениям, недавнее и плейлисты из снимка
+  # приложения (в сеть не ходит)
+  dalywave-tv-topshelf:
+    type: app-extension
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TVTopShelf
+        excludes: ["Images"]
+      - path: TVTopShelf/Images
+        type: folder
+        buildPhase: resources
+      - path: TVShared
+    info:
+      path: TVTopShelf/Info.plist
+      properties:
+        CFBundleDisplayName: DalyWave
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.tv-top-shelf
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentProvider
+    entitlements:
+      path: TVTopShelf/DalyWaveTopShelf.entitlements
+      properties:
+        com.apple.security.application-groups: [group.rest.daly.wave]
+    dependencies:
+      - sdk: TVServices.framework
+    settings:
+      base:
+        PRODUCT_NAME: DalyWaveTopShelf
+        # Расширение — с префиксом id приложения (rest.daly.wave.*), как share, siri и widgets у iPhone
+        PRODUCT_BUNDLE_IDENTIFIER: rest.daly.wave.topshelf
+        DEVELOPMENT_TEAM: Y5KR5JPCRG
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "3"
+        MARKETING_VERSION: 0.1.8
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        APPLICATION_EXTENSION_API_ONLY: YES
+  # ---------- /Apple TV ----------
 schemes:
   dalywave-shell_iOS:
     build:
@@ -429,3 +525,14 @@ schemes:
       config: debug
     archive:
       config: release
+  # ---------- Apple TV ----------
+  # Apple TV отдельно: сборка, запуск на симуляторе Apple TV и архив для App Store Connect
+  dalywave-tv:
+    build:
+      targets:
+        dalywave-tv: all
+    run:
+      config: debug
+    archive:
+      config: release
+  # ---------- /Apple TV ----------

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO parties (user_id, active_until, energetic, no_artist_repeat, dj)\n         VALUES ($1, CASE WHEN $2 THEN $3::timestamptz ELSE NULL END,\n                 coalesce($4, false), coalesce($5, true), coalesce($6, true))\n         ON CONFLICT (user_id) DO UPDATE SET\n             active_until = CASE WHEN $2 THEN $3::timestamptz ELSE parties.active_until END,\n             energetic = coalesce($4, parties.energetic),\n             no_artist_repeat = coalesce($5, parties.no_artist_repeat),\n             dj = coalesce($6, parties.dj),\n             updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Timestamptz",
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c7a480111186daee6898d705805f62fdcd5cab27cb2ae519e9c0a8875a3ad754"
+}

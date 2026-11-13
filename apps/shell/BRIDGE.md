@@ -78,7 +78,7 @@ const shell = createShell({ invoke, listen })
 **iPhone и iPad.** Окна нет: WebView во весь экран, под вырезом и полоской «домой». Отступы —
 `env(safe-area-inset-*)` (в интерфейсе `--safe-top`, `--safe-bottom`; в `<meta name="viewport">`
 нужен `viewport-fit=cover`). Строка состояния и системные окна — в теме приложения (см. «Тема»).
-Из команд `window_*` там есть только `window_set_theme`; `update_*` нет.
+Из команд `window_*` там есть только `window_set_theme` и `window_set_back_swipe`; `update_*` нет.
 
 **macOS (`mac-inset`).** Кнопки 14×14 с шагом 23: x 18–78, по центру строки высотой 48
 (как `.sidebar__chrome` в макете «Полночь»). Левее x = 90 ничего интерактивного не ставить.
@@ -139,6 +139,7 @@ const shell = createShell({ invoke, listen })
 | `window.startDragging()` | `window_start_dragging` | — |
 | `window.isMaximized()` | `window_is_maximized` | `boolean` |
 | `window.setTheme(theme)` | `window_set_theme { theme }` | — `'dark'`, `'light'` или `null` (как в системе); все окна, запоминается. Есть и на iPhone, iPad |
+| `window.setBackSwipe(enabled)` | `window_set_back_swipe { enabled }` | — iPhone, iPad: «назад» смахиванием от левого края (штатный жест WKWebView со снимком предыдущей страницы). Интерфейс включает его на вложенных страницах с историей позади; на корневых вкладках, под листом и полным плеером — выключает. «Вперёд» от правого края выключен всегда. На других системах — ничего |
 | `window.setSnapArea(rect)` | `window_set_snap_area { rect }` | — (только Windows; `trackSnapArea` вызывает сам) |
 | `auth.login()` | `auth_login` | `Session` — ждёт возврата из браузера до 10 минут |
 | `auth.cancel()` | `auth_cancel` | `boolean` — был ли незаконченный вход |
@@ -181,6 +182,7 @@ const shell = createShell({ invoke, listen })
 | `recognize.cancel()` | `recognize_cancel` | `boolean` — шло ли распознавание |
 | `recognize.takePending()` | `recognize_take_pending` | `boolean` — просили открыть экран до загрузки страницы |
 | `siri.take()` | `siri_take` | `SiriCommand[]` — команды Siri, которые интерфейс ещё не выполнил (и забыть их), см. «Siri» |
+| — | `focus_wave` | `FocusWave \| null` — сочетание волны из фильтра фокуса iOS (`{ id, name, mood?, activity?, character?, language? }`), см. «Фокусирование» |
 | `links.take()` | `links_take` | `string \| null` — последняя необработанная ссылка `dalywave://…` (и забыть её), см. «Поделиться» |
 | `discord.state()` | `discord_state` | `DiscordState` — `{ available, enabled, connected }`, macOS и Windows |
 | `discord.setEnabled(enabled)` | `discord_set_enabled { enabled }` | `DiscordState` — переключатель «Статус в Discord», запоминается |
@@ -207,6 +209,8 @@ const shell = createShell({ invoke, listen })
 | `player:now` | `PlayerNow \| null` | только окну мини-плеера: другой трек, пауза, конец очереди |
 | `audio:outputs` | `AudioOutputs` | появилось или пропало устройство вывода, сменились устройство по умолчанию или маршрут |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |
+| `system:lock` | `{ locked }` | macOS: экран заблокирован или разблокирован (подхват на другом устройстве, `presence.rs`) |
+| `focus:wave` | `FocusWave \| null` | iPhone и iPad: включился фокус с сочетанием DalyWave или выключился (`focus.rs`) |
 | `update:available` | `UpdateInfo` | проверка нашла обновление, скачивание началось |
 | `update:progress` | `{ downloadedBytes, totalBytes }` | ход скачивания, до 4 раз в секунду |
 | `update:ready` | `UpdateInfo` | скачано и проверено подписью — можно «Перезапустить» |
@@ -607,6 +611,14 @@ Swift — `gen/apple/Sources/dalywave-shell/DalyWaveIntents.swift` и `gen/apple
 «Моя волна» и её сочетание — `siri:command` с `wave` (характер и язык — только у сочетаний). Нажатие
 на альбом, плейлист или артиста в «Недавнем» — ссылка `dalywave://album/{id}` (`playlist`, `artist`):
 `deep-link:open` → `links.take()` → экран (`useSharedLink`, `appRoute`).
+
+## Фокусирование
+
+Фильтр фокуса iOS 16+ (`gen/apple/Sources/dalywave-shell/DalyWaveFocus.swift`, `SetFocusFilterIntent`):
+«Настройки» → «Фокусирование» → режим → «Фильтры фокусирования» → DalyWave → сочетание волны (те же,
+что у виджета). Система зовёт фильтр при включении и выключении фокуса — и когда приложение не запущено:
+Swift запоминает выбор и зовёт `dalywave_focus_changed` → событие `focus:wave`; при запуске и открытии
+интерфейс спрашивает `focus_wave`. Применяет ли он сочетание — настройка «Фокусирование» (stores/focus.ts).
 
 ## Окно и приложение
 

@@ -10,11 +10,7 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use dalywave_server::{
-    config::MusicKitConfig,
-    jobs::worker::Outcome,
-    video::clips,
-};
+use dalywave_server::{config::MusicKitConfig, jobs::worker::Outcome, video::clips};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -54,7 +50,9 @@ async fn report_clip(app: &TestApp, token: &str, id: &str, result: Value) -> Res
 }
 
 async fn clips_of(app: &TestApp, auth: &Auth, ids: &[&str]) -> Vec<Value> {
-    let res = app.post("/api/clips", json!({ "trackIds": ids }), auth).await;
+    let res = app
+        .post("/api/clips", json!({ "trackIds": ids }), auth)
+        .await;
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
     assert_eq!(res.headers["cache-control"], "no-store");
     res.body["items"].as_array().unwrap().clone()
@@ -73,7 +71,10 @@ async fn clip_is_found_by_the_downloader_and_shown_in_the_feed(db: PgPool) {
     let res = hello_claim(&app, &token).await;
     assert_eq!(res.status, StatusCode::NO_CONTENT);
     assert_eq!(res.headers["retry-after"], "1");
-    assert_eq!(claim_clip(&app, &token).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        claim_clip(&app, &token).await.status,
+        StatusCode::NO_CONTENT
+    );
 
     // Лента просит видео: клипа ещё нет — ищется; ключа MusicKit нет — живой обложки нет
     let items = clips_of(&app, &me, &[&track]).await;
@@ -120,7 +121,10 @@ async fn clip_is_found_by_the_downloader_and_shown_in_the_feed(db: PgPool) {
     let key = upload_key(job["upload"]["url"].as_str().unwrap());
     assert!(key.starts_with(&format!("video/clips/{track}/")), "{key}");
     // Клип в работе: следующего нет, и запрос скачивания снова ждёт
-    assert_eq!(claim_clip(&app, &token).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        claim_clip(&app, &token).await.status,
+        StatusCode::NO_CONTENT
+    );
     assert_eq!(hello_claim(&app, &token).await.headers["retry-after"], "1");
 
     // Отчёт «готово» без файла не принимается: задание вернётся в очередь
@@ -171,13 +175,18 @@ async fn clip_is_found_by_the_downloader_and_shown_in_the_feed(db: PgPool) {
     .fetch_one(&app.state.db)
     .await
     .unwrap();
-    assert_eq!(row, ("ready".into(), Some("dQw4w9WgXcQ".into()), Some(75_000), 4));
+    assert_eq!(
+        row,
+        ("ready".into(), Some("dQw4w9WgXcQ".into()), Some(75_000), 4)
+    );
 
     // Неизвестные id пропускаются, больше 20 — ошибка
     let unknown = Uuid::now_v7().to_string();
     assert!(clips_of(&app, &me, &[&unknown]).await.is_empty());
     let many: Vec<String> = (0..21).map(|_| Uuid::now_v7().to_string()).collect();
-    let res = app.post("/api/clips", json!({ "trackIds": many }), &me).await;
+    let res = app
+        .post("/api/clips", json!({ "trackIds": many }), &me)
+        .await;
     assert_eq!(res.status, StatusCode::BAD_REQUEST);
 }
 
@@ -353,9 +362,19 @@ async fn fake_hls(State(f): State<FakeApple>, Path(file): Path<String>) -> impl 
 /// HLS из синтетического видео: главный плейлист с одним вариантом. `None` — ffmpeg нет.
 fn make_hls(dir: &std::path::Path) -> Option<PathBuf> {
     let out = std::process::Command::new("ffmpeg")
-        .args(["-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i"])
+        .args([
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+        ])
         .arg("testsrc=size=320x320:rate=30")
-        .args(["-t", "2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-f", "hls"])
+        .args([
+            "-t", "2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-f", "hls",
+        ])
         .args(["-hls_time", "1", "-hls_playlist_type", "vod"])
         .arg(dir.join("v.m3u8"))
         .output()

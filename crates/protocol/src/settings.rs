@@ -54,6 +54,22 @@ pub enum PlaylistSort {
 
 names!(PlaylistSort { Recent => "recent", Title => "title", Custom => "custom" });
 
+/// «Подхват на другом устройстве»: наушники перешли с компьютера на телефон (или телефон открыли, пока
+/// компьютер заблокирован) — музыка за ними. По умолчанию — предложение: ложный перенос (наушники просто
+/// сели) останавливает музыку там, где её слушали, а предложение стоит одного нажатия.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandoffMode {
+    Off,
+    /// «Продолжить здесь?» на устройстве, куда ушли наушники.
+    #[default]
+    Suggest,
+    /// Сразу: музыка переходит сама, если наушники совпали по имени.
+    Auto,
+}
+
+names!(HandoffMode { Off => "off", Suggest => "suggest", Auto => "auto" });
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserSettings {
@@ -64,6 +80,9 @@ pub struct UserSettings {
     pub quality_cellular: CellularQuality,
     pub quality_download: DownloadQuality,
     pub playlist_sort: PlaylistSort,
+    /// Подхват музыки на другом устройстве (`connect.signal` → `connect.handoff`).
+    #[serde(default)]
+    pub handoff: HandoffMode,
     /// `null` — ни разу не меняли (всё по умолчанию).
     #[schema(required = true)]
     pub updated_at: Option<DateTime<Utc>>,
@@ -83,6 +102,8 @@ pub struct UserSettingsPatch {
     pub quality_download: Option<DownloadQuality>,
     #[serde(default)]
     pub playlist_sort: Option<PlaylistSort>,
+    #[serde(default)]
+    pub handoff: Option<HandoffMode>,
 }
 
 /// Настройки в синхронизации приложений: одна строка, `rev` — как у строк медиатеки.
@@ -106,6 +127,7 @@ mod tests {
         assert_eq!(s.quality_cellular.as_str(), "normal");
         assert_eq!(s.quality_download.as_str(), "high");
         assert_eq!(s.playlist_sort.as_str(), "recent");
+        assert_eq!(s.handoff.as_str(), "suggest");
         let json = serde_json::to_value(&s).unwrap();
         assert_eq!(json["qualityCellular"], "normal");
         assert_eq!(json["playlistSort"], "recent");

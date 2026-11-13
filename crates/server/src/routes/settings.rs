@@ -6,8 +6,8 @@ use dalywave_protocol::{
     ErrorBody,
     realtime::{LibraryChange, ServerEvent},
     settings::{
-        CellularQuality, DownloadQuality, PlaylistSort, UserSettings, UserSettingsPatch,
-        WifiQuality,
+        CellularQuality, DownloadQuality, HandoffMode, PlaylistSort, UserSettings,
+        UserSettingsPatch, WifiQuality,
     },
     sync::SyncEntity,
 };
@@ -29,7 +29,8 @@ pub fn routes() -> Router<AppState> {
 /// Настройки человека; строки нет — значения по умолчанию.
 pub async fn of(db: impl PgExecutor<'_>, user: Uuid) -> Result<UserSettings, sqlx::Error> {
     let row = sqlx::query!(
-        "SELECT hide_explicit, quality_wifi, quality_cellular, quality_download, playlist_sort, updated_at
+        "SELECT hide_explicit, quality_wifi, quality_cellular, quality_download, playlist_sort, handoff,
+                updated_at
          FROM user_settings WHERE user_id = $1",
         user,
     )
@@ -46,6 +47,7 @@ pub async fn of(db: impl PgExecutor<'_>, user: Uuid) -> Result<UserSettings, sql
                 .unwrap_or(CellularQuality::Normal),
             quality_download: r.quality_download.parse().unwrap_or(DownloadQuality::High),
             playlist_sort: r.playlist_sort.parse().unwrap_or(PlaylistSort::Recent),
+            handoff: r.handoff.parse().unwrap_or_default(),
             updated_at: Some(r.updated_at),
         },
     })
@@ -96,6 +98,7 @@ pub async fn update(
              quality_cellular = COALESCE($4, quality_cellular),
              quality_download = COALESCE($5, quality_download),
              playlist_sort = COALESCE($6, playlist_sort),
+             handoff = COALESCE($7, handoff),
              updated_at = now()
          WHERE user_id = $1",
         user,
@@ -104,6 +107,7 @@ pub async fn update(
         patch.quality_cellular.map(CellularQuality::as_str),
         patch.quality_download.map(DownloadQuality::as_str),
         patch.playlist_sort.map(PlaylistSort::as_str),
+        patch.handoff.map(HandoffMode::as_str),
     )
     .execute(&mut *tx)
     .await?;

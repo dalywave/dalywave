@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ta.artist_id AS \"id!\" FROM tracks t JOIN track_artists ta ON ta.track_id = t.id\n           WHERE t.recording_id = ANY($1) OR t.id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_artists",
+            "name": "artist_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cb502ab5b773d41780a568b27dec0a650e2077a5ebdf5611862f381112e3e38c"
+}

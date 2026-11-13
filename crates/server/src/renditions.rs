@@ -5,6 +5,9 @@
 //! «Экономия» — облегчённая копия Opus 64 кбит/с: делается воркером при первом запросе
 //! (пока её нет — отдаётся обычный файл), лежит в хранилище вторым файлом и вычищается по давности
 //! использования, когда копий больше предела.
+//!
+//! Плеер без Opus (AVPlayer на Apple TV, `aac=true`) получает файл, который он умеет играть, а если
+//! у записи таких нет — копию AAC 256 кбит/с: её делает тот же воркер, пока плеер ждёт пару секунд.
 
 use std::{sync::Arc, time::Duration};
 
@@ -31,6 +34,11 @@ pub const LANE: &str = "transcode";
 /// Вид облегчённой копии.
 pub const OPUS64: &str = "opus64";
 const OPUS64_KBPS: i32 = 64;
+/// Вид копии для AVPlayer.
+pub const AAC256: &str = "aac256";
+const AAC256_KBPS: i32 = 256;
+/// Копию для плеера, который её ждёт, — раньше копий «Экономии».
+const WAITING_PRIORITY: i16 = 50;
 /// Предел копий в хранилище; сверх него уходят давно не игравшие. `DALYWAVE_RENDITIONS_MAX_GB`.
 const DEFAULT_LIMIT_GB: u64 = 20;
 /// `last_used_at` обновляется не чаще: каждое воспроизведение не пишет в базу.
@@ -109,12 +117,8 @@ fn choose(files: &[FileRow], quality: StreamQuality) -> Option<&FileRow> {
 
 /// Файл записи под качество. `None` — запись не готова. Для «Экономии» без готовой копии ставит её в
 /// очередь и отдаёт обычный файл.
-pub async fn pick(
-    db: &PgPool,
-    recording: Uuid,
-    quality: StreamQuality,
-) -> Result<Option<Picked>, sqlx::Error> {
-    let files = sqlx::query_as!(
+async fn files_of(db: &PgPool, recording: Uuid) -> Result<Vec<FileRow>, sqlx::Error> {
+    sqlx::query_as!(
         FileRow,
         r#"SELECT f.id, f.storage_key, f.codec, f.container, f.lossless, f.bitrate_kbps, f.duration_ms,
                   f.loudness_lufs, f.true_peak_db, f.waveform,
@@ -127,14 +131,22 @@ pub async fn pick(
         recording,
     )
     .fetch_all(db)
-    .await?;
+    .await
+}
+
+pub async fn pick(
+    db: &PgPool,
+    recording: Uuid,
+    quality: StreamQuality,
+) -> Result<Option<Picked>, sqlx::Error> {
+    let files = files_of(db, recording).await?;
     let Some(chosen) = choose(&files, quality) else {
         return Ok(None);
     };
     if quality == StreamQuality::Saver
         && let Some(primary) = files.iter().find(|f| f.primary)
     {
-        if let Some(copy) = rendition(db, primary).await? {
+        if let Some(copy) = rendition(db, primary, OPUS64).await? {
             return Ok(Some(Picked {
                 file: copy,
                 quality: StreamQuality::Saver,
@@ -158,15 +170,90 @@ pub async fn pick(
     }))
 }
 
+/// Плеер с одними «яблочными» кодеками (AVPlayer): Opus и Vorbis он не играет, FLAC — только в своём файле.
+pub fn apple_playable(codec: AudioCodec, container: AudioContainer) -> bool {
+    matches!(
+        (codec, container),
+        (AudioCodec::Aac | AudioCodec::Alac, AudioContainer::Mp4)
+            | (AudioCodec::Mp3, AudioContainer::Mp3)
+            | (AudioCodec::Flac, AudioContainer::Flac)
+            | (AudioCodec::Pcm, AudioContainer::Wav)
+    )
+}
+
+impl FileRow {
+    fn apple(&self) -> bool {
+        match (self.codec.parse(), self.container.parse()) {
+            (Ok(codec), Ok(container)) => apple_playable(codec, container),
+            _ => false,
+        }
+    }
+}
+
+/// Файл для AVPlayer или «копию делают».
+#[derive(Debug, Clone)]
+pub enum ApplePick {
+    Ready(Picked),
+    /// Копия AAC поставлена в очередь: спросить снова через пару секунд.
+    Preparing,
+}
+
+/// Файл записи для плеера без Opus: выбранный под качество, если он годится; иначе другой годный
+/// (lossless — только при «Высоком»); иначе копия AAC 256 основного файла, а пока её нет — в очередь.
+pub async fn pick_apple(
+    db: &PgPool,
+    recording: Uuid,
+    quality: StreamQuality,
+) -> Result<Option<ApplePick>, sqlx::Error> {
+    let files = files_of(db, recording).await?;
+    let Some(chosen) = choose(&files, quality) else {
+        return Ok(None);
+    };
+    let high = quality == StreamQuality::High;
+    let usable = std::iter::once(chosen)
+        .chain(files.iter())
+        .find(|f| f.apple() && (high || !f.lossless));
+    if let Some(file) = usable
+        && let Some(playable) = file.playable()
+    {
+        return Ok(Some(ApplePick::Ready(Picked {
+            file: playable,
+            quality: if high {
+                StreamQuality::High
+            } else {
+                StreamQuality::Normal
+            },
+            lossless: file.lossless,
+        })));
+    }
+    let Some(primary) = files.iter().find(|f| f.primary) else {
+        return Ok(None);
+    };
+    if let Some(copy) = rendition(db, primary, AAC256).await? {
+        return Ok(Some(ApplePick::Ready(Picked {
+            file: copy,
+            quality: StreamQuality::Normal,
+            lossless: false,
+        })));
+    }
+    let mut conn = db.acquire().await?;
+    request_kind(&mut conn, primary.id, AAC256).await?;
+    Ok(Some(ApplePick::Preparing))
+}
+
 /// Готовая копия основного файла; отмечает, что её снова играли.
-async fn rendition(db: &PgPool, source: &FileRow) -> Result<Option<PlayableFile>, sqlx::Error> {
+async fn rendition(
+    db: &PgPool,
+    source: &FileRow,
+    kind: &str,
+) -> Result<Option<PlayableFile>, sqlx::Error> {
     let row = sqlx::query!(
         "UPDATE audio_renditions SET last_used_at = CASE
              WHEN last_used_at < now() - $3::text::interval THEN now() ELSE last_used_at END
          WHERE source_file_id = $1 AND kind = $2
          RETURNING id, storage_key, codec, container, bitrate_kbps, duration_ms",
         source.id,
-        OPUS64,
+        kind,
         TOUCH_EVERY,
     )
     .fetch_optional(db)
@@ -189,23 +276,62 @@ async fn rendition(db: &PgPool, source: &FileRow) -> Result<Option<PlayableFile>
 
 /// Поставить облегчённую копию файла в очередь (одна задача на файл).
 pub async fn request(conn: &mut PgConnection, file_id: Uuid) -> Result<(), sqlx::Error> {
+    request_kind(conn, file_id, OPUS64).await
+}
+
+/// Поставить копию вида `copy` в очередь (одна задача на файл и вид). Копию AAC ждёт плеер — она первее.
+pub async fn request_kind(
+    conn: &mut PgConnection,
+    file_id: Uuid,
+    copy: &str,
+) -> Result<(), sqlx::Error> {
+    let (dedupe, payload_kind, priority) = if copy == AAC256 {
+        (
+            format!("transcode:{file_id}:{AAC256}"),
+            Some(AAC256.to_string()),
+            WAITING_PRIORITY,
+        )
+    } else {
+        (format!("transcode:{file_id}"), None, 0)
+    };
     queue::enqueue(
         conn,
-        NewJob::new(kind::TRANSCODE, LANE, TranscodePayload { file_id })
-            .dedupe(format!("transcode:{file_id}"))
-            .max_attempts(3),
+        NewJob::new(
+            kind::TRANSCODE,
+            LANE,
+            TranscodePayload {
+                file_id,
+                kind: payload_kind,
+            },
+        )
+        .dedupe(dedupe)
+        .priority(priority)
+        .max_attempts(3),
     )
     .await?;
     Ok(())
 }
 
 pub fn key(file_id: Uuid) -> String {
-    format!("renditions/{file_id}/{OPUS64}.m4a")
+    key_of(file_id, OPUS64)
 }
 
-/// Задача `transcode`: скачать источник, сжать в Opus 64 кбит/с, положить рядом.
+pub fn key_of(file_id: Uuid, copy: &str) -> String {
+    format!("renditions/{file_id}/{copy}.m4a")
+}
+
+/// Задача `transcode`: скачать источник, сжать в Opus 64 кбит/с (или AAC 256 для AVPlayer), положить рядом.
 pub async fn run(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let p: TranscodePayload = job.payload()?;
+    let copy = match p.kind.as_deref() {
+        Some(AAC256) => AAC256,
+        _ => OPUS64,
+    };
+    let (codec, kbps) = if copy == AAC256 {
+        (AudioCodec::Aac, AAC256_KBPS)
+    } else {
+        (AudioCodec::Opus, OPUS64_KBPS)
+    };
     let Some(source) = sqlx::query!(
         "SELECT f.storage_key, f.duration_ms FROM audio_files f WHERE f.id = $1",
         p.file_id
@@ -218,7 +344,7 @@ pub async fn run(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let done = sqlx::query_scalar!(
         "SELECT id FROM audio_renditions WHERE source_file_id = $1 AND kind = $2",
         p.file_id,
-        OPUS64
+        copy
     )
     .fetch_optional(&ctx.db)
     .await?;
@@ -235,7 +361,12 @@ pub async fn run(ctx: Arc<Context>, job: JobRow) -> JobResult {
         }
         Err(e) => return Err(e.into()),
     }
-    match audio::transcode_opus(&input, &output, OPUS64_KBPS as u32).await {
+    let made = if codec == AudioCodec::Aac {
+        audio::transcode_aac(&input, &output, kbps as u32).await
+    } else {
+        audio::transcode_opus(&input, &output, kbps as u32).await
+    };
+    match made {
         Ok(()) => {}
         Err(AudioError::Missing(tool)) => {
             let msg = format!("на сервере нет {tool}");
@@ -247,21 +378,22 @@ pub async fn run(ctx: Arc<Context>, job: JobRow) -> JobResult {
         Err(AudioError::Unreadable(e)) => return Err(JobError::permanent(e)),
         Err(AudioError::Failed(e)) => return Err(JobError::retry(e)),
     }
-    let key = key(p.file_id);
+    let key = key_of(p.file_id, copy);
     let size = ctx
         .storage
-        .put_file(&key, &output, &AudioContainer::Mp4.mime(AudioCodec::Opus))
+        .put_file(&key, &output, &AudioContainer::Mp4.mime(codec))
         .await? as i64;
     let inserted = sqlx::query_scalar!(
         "INSERT INTO audio_renditions (source_file_id, kind, storage_key, codec, container, bitrate_kbps,
                                        duration_ms, size_bytes)
-         VALUES ($1, $2, $3, 'opus', 'mp4', $4, $5, $6)
+         VALUES ($1, $2, $3, $4, 'mp4', $5, $6, $7)
          ON CONFLICT (source_file_id, kind) DO NOTHING
          RETURNING id",
         p.file_id,
-        OPUS64,
+        copy,
         key,
-        OPUS64_KBPS,
+        codec.as_str(),
+        kbps,
         source.duration_ms,
         size,
     )

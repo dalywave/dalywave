@@ -12,6 +12,7 @@ import { EventQueue } from './events'
 import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
 import { createJam } from './jam'
 import { createLive } from './live'
+import { createParty } from './party'
 import { devOutputs, safariOutputs } from './outputs'
 import { devRecognizer } from '../mock/recognize'
 
@@ -316,6 +317,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       onState: opts.window?.onState ?? (() => () => {}),
       trackSnap: opts.window?.trackSnap ?? (() => () => {}),
       setTheme: opts.window?.setTheme ?? (() => {}),
+      setBackSwipe: opts.window?.setBackSwipe ?? (() => {}),
     },
     updates: opts.updates ?? devUpdates() ?? { onAvailable: () => () => {}, state: async () => null, onState: () => () => {}, check: noWindow, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
@@ -482,6 +484,13 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       update: patch => unwrap(api.PATCH('/api/settings', { body: patch })),
     },
 
+    overlay: {
+      get: () => unwrap(api.GET('/api/overlay')),
+      rotate: () => unwrap(api.POST('/api/overlay/link')),
+      update: patch => unwrap(api.PATCH('/api/overlay', { body: patch })),
+      disable: () => done(api.DELETE('/api/overlay')),
+    },
+
     playlists: {
       list: () => unwrap(api.GET('/api/playlists')),
       get: id => unwrap(api.GET('/api/playlists/{id}', { params: { path: { id } } })),
@@ -643,6 +652,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
 
     jam: createJam(http),
+
+    party: createParty(http),
 
     admin: {
       health: () => unwrap(api.GET('/api/healthz')),

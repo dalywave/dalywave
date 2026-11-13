@@ -245,9 +245,10 @@ pub async fn settle(
     match r.status {
         ClipOutcome::Ready => {
             let key = keys::clip(p.track_id, job.id);
-            let Some(meta) = storage.head(&key).await.map_err(|e| {
-                AppError::Unavailable(format!("хранилище недоступно: {e}"))
-            })?
+            let Some(meta) = storage
+                .head(&key)
+                .await
+                .map_err(|e| AppError::Unavailable(format!("хранилище недоступно: {e}")))?
             else {
                 let closed = jobs::fail(db, job.id, executor, "файл клипа не загружен", true)
                     .await?

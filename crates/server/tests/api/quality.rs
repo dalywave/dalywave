@@ -17,7 +17,7 @@ fn ffmpeg() -> String {
     std::env::var("DALYWAVE_FFMPEG").unwrap_or_else(|_| "ffmpeg".into())
 }
 
-fn ffmpeg_available() -> bool {
+pub fn ffmpeg_available() -> bool {
     std::process::Command::new(ffmpeg())
         .arg("-version")
         .output()
@@ -25,7 +25,7 @@ fn ffmpeg_available() -> bool {
 }
 
 /// Три секунды синуса в Opus внутри MP4 — как файлы с YouTube.
-fn opus_bytes() -> Vec<u8> {
+pub fn opus_bytes() -> Vec<u8> {
     let dir = tempfile::tempdir().unwrap();
     let out = dir.path().join("a.m4a");
     let res = std::process::Command::new(ffmpeg())
@@ -56,7 +56,7 @@ fn opus_bytes() -> Vec<u8> {
     std::fs::read(out).unwrap()
 }
 
-async fn recording_of(db: &PgPool, track: Uuid) -> Uuid {
+pub async fn recording_of(db: &PgPool, track: Uuid) -> Uuid {
     sqlx::query_scalar("SELECT recording_id FROM tracks WHERE id = $1")
         .bind(track)
         .fetch_one(db)
@@ -64,7 +64,7 @@ async fn recording_of(db: &PgPool, track: Uuid) -> Uuid {
         .unwrap()
 }
 
-async fn add_file(
+pub async fn add_file(
     db: &PgPool,
     rec: Uuid,
     codec: &str,
@@ -90,7 +90,7 @@ async fn add_file(
     .unwrap()
 }
 
-async fn make_primary(db: &PgPool, rec: Uuid, file: Uuid) {
+pub async fn make_primary(db: &PgPool, rec: Uuid, file: Uuid) {
     sqlx::query("UPDATE recordings SET audio_status = 'ready', primary_file_id = $2 WHERE id = $1")
         .bind(rec)
         .bind(file)
@@ -114,7 +114,7 @@ async fn settings(app: &TestApp, auth: &Auth, body: Value) {
     assert_eq!(res.status, StatusCode::OK, "{}", res.text);
 }
 
-async fn transcode_jobs(db: &PgPool) -> i64 {
+pub async fn transcode_jobs(db: &PgPool) -> i64 {
     sqlx::query_scalar("SELECT count(*) FROM jobs WHERE kind = 'transcode' AND status = 'queued'")
         .fetch_one(db)
         .await

@@ -145,7 +145,7 @@ async fn loopback_redirect_and_bad_requests(db: PgPool) {
     assert_eq!(query(&res.location())["error"], "invalid_request");
     let res = app
         .get(
-            &start_uri("dalywave://auth").replace("platform=macos", "platform=tvos"),
+            &start_uri("dalywave://auth").replace("platform=macos", "platform=playstation"),
             &Auth::None,
         )
         .await;

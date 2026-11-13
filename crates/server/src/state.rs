@@ -43,6 +43,8 @@ pub struct AppState {
     pub info: Arc<crate::info::Sources>,
     /// Страницы и oEmbed чужих сервисов для «Поделиться → DalyWave» (в тестах — заглушка)
     pub links: Arc<crate::links::Links>,
+    /// Подхват на другом устройстве: недавние сигналы устройств (наушники, блокировка экрана)
+    pub handoff: Arc<crate::handoff::Memory>,
 }
 
 impl AppState {
@@ -72,6 +74,7 @@ impl AppState {
         Ok(Self {
             info: Arc::new(crate::info::Sources::new(&config.info)?),
             links: Arc::new(crate::links::Links::new()?),
+            handoff: Arc::default(),
             lrclib: Arc::new(lrclib),
             deezer: Arc::new(deezer),
             storage: Arc::new(storage),

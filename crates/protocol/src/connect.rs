@@ -32,6 +32,8 @@ pub enum ConnectKind {
     Tablet,
     /// Часы: пульт на запястье.
     Watch,
+    /// Телевизор: Apple TV или браузер на большом экране.
+    Tv,
 }
 
 names!(ConnectKind {
@@ -41,6 +43,7 @@ names!(ConnectKind {
     Phone => "phone",
     Tablet => "tablet",
     Watch => "watch",
+    Tv => "tv",
 });
 
 /// Что устройство умеет — пульт прячет то, чего нет.
@@ -458,6 +461,89 @@ pub struct ConnectActive {
     /// Последний снимок, позиция досчитана на момент отправки.
     #[schema(required = true)]
     pub state: Option<Box<PlaybackState>>,
+}
+
+// ---------- Подхват на другом устройстве ----------
+
+/// Устройство вывода звука, о котором сообщает `connect.signal`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectOutput {
+    /// Имя, как его показывает система: «AirPods Захара».
+    pub name: String,
+    /// `builtin`, `headphones`, `bluetooth`, `airplay`, `usb`, `hdmi`, `other`.
+    pub kind: String,
+}
+
+impl ConnectOutput {
+    /// Наушники — личный вывод: за ними музыка и переходит. Колонки и AirPlay — нет.
+    pub fn personal(&self) -> bool {
+        matches!(self.kind.as_str(), "headphones" | "bluetooth")
+    }
+}
+
+/// Что случилось с устройством.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectSignalKind {
+    /// Пропал вывод, на который шёл звук (наушники ушли на другое устройство, сели, их сняли).
+    OutputLost,
+    /// Появился и стал текущим вывод (подключились наушники).
+    OutputAdded,
+    /// Экран компьютера заблокирован (человек отошёл).
+    Locked,
+    Unlocked,
+    /// Приложение открыли; `output` — наушники, если звук сейчас пошёл бы в них.
+    Foreground,
+}
+
+names!(ConnectSignalKind {
+    OutputLost => "output_lost",
+    OutputAdded => "output_added",
+    Locked => "locked",
+    Unlocked => "unlocked",
+    Foreground => "foreground",
+});
+
+/// `connect.signal`: повод подхватить музыку на другом устройстве. Сервер сводит сигналы всех устройств
+/// человека и решает: перенести, предложить или ничего.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectSignal {
+    pub signal: ConnectSignalKind,
+    #[serde(default)]
+    pub output: Option<ConnectOutput>,
+    /// У `output_lost`: звук здесь играл, когда вывод пропал.
+    #[serde(default)]
+    pub playing: bool,
+}
+
+/// Почему музыка переходит.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandoffReason {
+    /// Наушники с тем же именем ушли с одного устройства на другое.
+    Headphones,
+    /// Компьютер заблокирован, а к телефону подключили наушники.
+    Away,
+}
+
+names!(HandoffReason { Headphones => "headphones", Away => "away" });
+
+/// `connect.handoff`: музыку подхватили (`transferred`) или предлагают подхватить на устройстве `to`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectHandoff {
+    pub to: String,
+    pub from: String,
+    pub reason: HandoffReason,
+    /// Имя наушников («AirPods Захара»), если причина — они.
+    #[schema(required = true)]
+    pub output: Option<String>,
+    /// Перенос уже сделан (режим «Сразу»); иначе — предложение «Продолжить здесь?».
+    pub transferred: bool,
+    /// Продолжить со звуком (на прежнем устройстве музыка играла).
+    pub play: bool,
 }
 
 /// `GET /api/devices`: устройства и последнее состояние.

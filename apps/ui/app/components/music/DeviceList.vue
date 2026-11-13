@@ -25,6 +25,7 @@ const ICON: Record<PlaybackDevice['kind'], string> = {
   tablet: 'ph:device-tablet',
   web: 'ph:browser',
   watch: 'ph:watch',
+  tv: 'ph:television-simple',
 }
 
 // Звук играет не здесь — активное устройство первым, отдельным разделом
@@ -58,6 +59,17 @@ const jamHint = computed(() => {
 function openJam() {
   emit('jam')
   void jam.open()
+}
+
+// «Режим вечеринки» — сцена на весь экран (телевизор, проектор, AirPlay): во весь экран просим
+// прямо по нажатию, пока жест ещё действует
+const party = usePartyStore()
+const ui = useUiStore()
+const partyHint = computed(() => (party.active ? t('party.running') : t('party.hint')))
+function openParty() {
+  emit('jam')
+  if (!ui.isTouch) void document.documentElement.requestFullscreen?.().catch(() => {})
+  void navigateTo('/party')
 }
 const systemHint = computed(() => (out.state.value.followsSystem ? out.current.value?.name ?? '' : ''))
 </script>
@@ -114,6 +126,14 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
         <span class="drow__text">
           <span class="drow__name ellipsis">{{ t('jam.title') }}</span>
           <span class="drow__meta ellipsis">{{ jamHint }}</span>
+        </span>
+        <Icon name="ph:caret-right" class="drow__chev" />
+      </button>
+      <button type="button" class="drow" :class="{ 'is-current': party.active }" @click="openParty">
+        <Icon name="ph:confetti" class="drow__icon" :class="{ 'drow__icon--accent': party.active }" />
+        <span class="drow__text">
+          <span class="drow__name ellipsis">{{ t('party.title') }}</span>
+          <span class="drow__meta ellipsis">{{ partyHint }}</span>
         </span>
         <Icon name="ph:caret-right" class="drow__chev" />
       </button>
@@ -217,6 +237,14 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
       <span class="dev__text">
         <span class="dev__name ellipsis">{{ t('jam.title') }}</span>
         <span class="dev__meta ellipsis">{{ jamHint }}</span>
+      </span>
+      <Icon name="ph:caret-right" class="dev__chev" />
+    </button>
+    <button type="button" role="listitem" class="dev" :class="{ 'is-current': party.active }" @click="openParty">
+      <span class="dev__icon"><Icon name="ph:confetti" /></span>
+      <span class="dev__text">
+        <span class="dev__name ellipsis">{{ t('party.title') }}</span>
+        <span class="dev__meta ellipsis">{{ partyHint }}</span>
       </span>
       <Icon name="ph:caret-right" class="dev__chev" />
     </button>

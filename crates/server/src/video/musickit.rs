@@ -48,7 +48,10 @@ pub enum MusicKitError {
 impl MusicKitError {
     /// Повтор позже поможет.
     pub fn transient(&self) -> bool {
-        matches!(self, Self::Network(_) | Self::Busy | Self::Status(500..=599))
+        matches!(
+            self,
+            Self::Network(_) | Self::Busy | Self::Status(500..=599)
+        )
     }
 }
 

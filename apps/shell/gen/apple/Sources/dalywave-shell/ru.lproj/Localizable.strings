@@ -55,3 +55,11 @@
 "Playing" = "Играет";
 "Character" = "Характер";
 "Language" = "Язык";
+
+/* Фокусирование (DalyWaveFocus.swift): фильтр «Моей волны» */
+"Set My Wave" = "Волна в фокусе";
+"My Wave plays the chosen mix while this Focus is on." = "Пока включён этот фокус, «Моя волна» играет выбранное сочетание.";
+"Wave" = "Волна";
+"Work" = "Работа";
+"Road" = "Дорога";
+"Night" = "Ночь";

@@ -671,6 +671,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/tv/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/tv/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["code"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/tv/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/tv/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["lookup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/deezer/{kind}/{deezerId}": {
         parameters: {
             query?: never;
@@ -1935,6 +1999,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/overlay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["info"];
+        put?: never;
+        post?: never;
+        delete: operations["disable"];
+        options?: never;
+        head?: never;
+        patch: operations["update"];
+        trace?: never;
+    };
+    "/api/overlay/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/overlay/now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["now"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/overlay/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stream_now"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/party": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_party"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_party"];
+        trace?: never;
+    };
     "/api/playlist-folders": {
         parameters: {
             query?: never;
@@ -1964,7 +2108,7 @@ export interface paths {
         delete: operations["remove_delete_playlist_folders_id_"];
         options?: never;
         head?: never;
-        patch: operations["update"];
+        patch: operations["update_patch_playlist_folders_id_"];
         trace?: never;
     };
     "/api/playlist-folders/{id}/move": {
@@ -3756,6 +3900,9 @@ export interface components {
         }) | (components["schemas"]["ConnectTransfer"] & {
             /** @enum {string} */
             type: "connect.transfer";
+        }) | (components["schemas"]["ConnectSignal"] & {
+            /** @enum {string} */
+            type: "connect.signal";
         });
         /** @description Запрос задания клипа: ответ сразу — задание или 204. */
         ClipClaimRequest: {
@@ -3917,6 +4064,18 @@ export interface components {
             /** @description Необязательная метка — для журнала клиента; сервер её не читает. */
             id?: string | null;
         };
+        /** @description `connect.handoff`: музыку подхватили (`transferred`) или предлагают подхватить на устройстве `to`. */
+        ConnectHandoff: {
+            from: string;
+            /** @description Имя наушников («AirPods Захара»), если причина — они. */
+            output: string | null;
+            /** @description Продолжить со звуком (на прежнем устройстве музыка играла). */
+            play: boolean;
+            reason: components["schemas"]["HandoffReason"];
+            to: string;
+            /** @description Перенос уже сделан (режим «Сразу»); иначе — предложение «Продолжить здесь?». */
+            transferred: boolean;
+        };
         /** @description Первое сообщение устройства после `hello` сервера: кто оно. Повторяется после каждого переподключения. */
         ConnectHello: {
             appVersion?: string | null;
@@ -3932,7 +4091,14 @@ export interface components {
          * @description Вид устройства — для значка в списке.
          * @enum {string}
          */
-        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch";
+        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch" | "tv";
+        /** @description Устройство вывода звука, о котором сообщает `connect.signal`. */
+        ConnectOutput: {
+            /** @description `builtin`, `headphones`, `bluetooth`, `airplay`, `usb`, `hdmi`, `other`. */
+            kind: string;
+            /** @description Имя, как его показывает система: «AirPods Захара». */
+            name: string;
+        };
         /** @description `GET /api/devices`: устройства и последнее состояние. */
         ConnectOverview: {
             activeDeviceId: string | null;
@@ -3949,6 +4115,21 @@ export interface components {
             id: string;
             to: string;
         };
+        /**
+         * @description `connect.signal`: повод подхватить музыку на другом устройстве. Сервер сводит сигналы всех устройств
+         *     человека и решает: перенести, предложить или ничего.
+         */
+        ConnectSignal: {
+            output?: components["schemas"]["ConnectOutput"] | null;
+            /** @description У `output_lost`: звук здесь играл, когда вывод пропал. */
+            playing?: boolean;
+            signal: components["schemas"]["ConnectSignalKind"];
+        };
+        /**
+         * @description Что случилось с устройством.
+         * @enum {string}
+         */
+        ConnectSignalKind: "output_lost" | "output_added" | "locked" | "unlocked" | "foreground";
         /** @description Снимок активного устройства — всем устройствам человека. */
         ConnectState: {
             deviceId: string;
@@ -4542,6 +4723,18 @@ export interface components {
             /** @description Что поменялось: `requests`, `friends`, `privacy`. */
             what: string;
         };
+        /**
+         * @description «Подхват на другом устройстве»: наушники перешли с компьютера на телефон (или телефон открыли, пока
+         *     компьютер заблокирован) — музыка за ними. По умолчанию — предложение: ложный перенос (наушники просто
+         *     сели) останавливает музыку там, где её слушали, а предложение стоит одного нажатия.
+         * @enum {string}
+         */
+        HandoffMode: "off" | "suggest" | "auto";
+        /**
+         * @description Почему музыка переходит.
+         * @enum {string}
+         */
+        HandoffReason: "headphones" | "away";
         /** @description Голова сети вкуса на отложенных по времени данных: у сети и у правил. */
         HeadMetrics: {
             /** Format: double */
@@ -5669,6 +5862,52 @@ export interface components {
             /** @description Подпись кнопки входа, например `daly.rest`. */
             title: string;
         };
+        /** @description `GET /api/overlay`: ссылки ещё нет — `link: null`. */
+        OverlayInfo: {
+            link: components["schemas"]["OverlayLink"] | null;
+        };
+        /** @description Ссылка на оверлей: `GET /api/overlay`, `POST /api/overlay/link`. */
+        OverlayLink: {
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Плашка прячется, пока идёт приватная сессия. */
+            hidePrivate: boolean;
+            /** @description Адрес страницы для OBS без параметров вида: `https://…/overlay?k=dwo_…`. */
+            url: string;
+        };
+        /** @description Что показать на плашке: `GET /api/overlay/now`, события `now` потока `/api/overlay/stream`. */
+        OverlayNow: {
+            /**
+             * Format: date-time
+             * @description Время сервера.
+             */
+            at: string;
+            /** Format: int32 */
+            durationMs: number;
+            playing: boolean;
+            /**
+             * Format: int32
+             * @description Позиция на момент `at`; пока играет, время идёт.
+             */
+            positionMs: number;
+            track: components["schemas"]["OverlayTrack"] | null;
+            /** @description Показывать плашку: играет и не приватная сессия. Иначе — тихо спрятать. */
+            visible: boolean;
+        };
+        /** @description `PATCH /api/overlay`. */
+        OverlayPatch: {
+            hidePrivate?: boolean | null;
+        };
+        /** @description Трек на плашке. */
+        OverlayTrack: {
+            /** @description Артисты через запятую. */
+            artist: string;
+            /** @description Обложка 250×250 (путь `/api/images/…` или адрес Deezer). */
+            cover: string | null;
+            /** Format: uuid */
+            id: string;
+            title: string;
+        };
         /**
          * @description Сессия для сопряжённого устройства (Apple Watch) от уже вошедшего приложения. Это не новый
          *     способ входа: человек уже вошёл через daly.rest на iPhone, часы получают дочернюю сессию.
@@ -5679,6 +5918,33 @@ export interface components {
             deviceName?: string | null;
             /** @description Только `watchos`. */
             platform: components["schemas"]["Platform"];
+        };
+        /** @description `GET /api/party`; событие `party.changed`. */
+        Party: {
+            /** @description Вечеринка идёт. */
+            active: boolean;
+            settings: components["schemas"]["PartySettings"];
+            /**
+             * Format: date-time
+             * @description Закончится сама в это время.
+             */
+            until: string | null;
+        };
+        /** @description `PATCH /api/party`. Включение открывает «Слушать вместе», если оно ещё не открыто. */
+        PartyPatch: {
+            active?: boolean | null;
+            dj?: boolean | null;
+            energetic?: boolean | null;
+            noArtistRepeat?: boolean | null;
+        };
+        /** @description Настройки вечеринки. */
+        PartySettings: {
+            /** @description Переходы «Диджей» на устройстве, где играет звук. */
+            dj: boolean;
+            /** @description Волна — только энергичное. */
+            energetic: boolean;
+            /** @description Волна не повторяет артистов, которые уже звучали на этой вечеринке. */
+            noArtistRepeat: boolean;
         };
         PasswordLogin: {
             password: string;
@@ -5709,7 +5975,7 @@ export interface components {
             id?: string | null;
         };
         /** @enum {string} */
-        Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android" | "watchos";
+        Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android" | "watchos" | "tvos";
         /** @description Что играет: альбом, плейлист, волна… */
         PlayContext: {
             id?: string | null;
@@ -6865,6 +7131,9 @@ export interface components {
         }) | (components["schemas"]["ConnectAck"] & {
             /** @enum {string} */
             type: "connect.ack";
+        }) | (components["schemas"]["ConnectHandoff"] & {
+            /** @enum {string} */
+            type: "connect.handoff";
         }) | (components["schemas"]["JamChanged"] & {
             /** @enum {string} */
             type: "jam.changed";
@@ -6886,6 +7155,9 @@ export interface components {
         }) | (components["schemas"]["FriendActivityEvent"] & {
             /** @enum {string} */
             type: "friends.activity";
+        }) | (components["schemas"]["Party"] & {
+            /** @enum {string} */
+            type: "party.changed";
         });
         /** @description Серверный fetcher — второй исполнитель (`DALYWAVE_FETCHER_MODE` с `server`). */
         ServerFetcher: {
@@ -7204,6 +7476,14 @@ export interface components {
              * @description Сколько скачиваний впереди; 0 — следующее или уже идёт.
              */
             queuePosition: number;
+        };
+        /** @description Копию в нужном формате делают. */
+        StreamPreparing: {
+            /**
+             * Format: int32
+             * @description Спросить снова не раньше, мс.
+             */
+            retryAfterMs: number;
         };
         /**
          * @description Какой файл записи отдать.
@@ -7830,6 +8110,9 @@ export interface components {
         }) | (components["schemas"]["StreamPending"] & {
             /** @enum {string} */
             status: "waiting_for_downloader";
+        }) | (components["schemas"]["StreamPreparing"] & {
+            /** @enum {string} */
+            status: "preparing";
         });
         /** @description Одна версия песни: по одной на вид. */
         TrackVersion: {
@@ -7911,6 +8194,64 @@ export interface components {
          * @enum {string}
          */
         TransitionMode: "gapless" | "smooth" | "smart" | "dj";
+        /** @description `POST /api/auth/tv/approve`. */
+        TvApprove: {
+            /** @description Код с экрана; регистр, пробелы и дефис не важны. */
+            userCode: string;
+        };
+        /** @description Код для экрана телевизора. */
+        TvCode: {
+            /** @description Секрет телевизора для `POST /api/auth/tv/token`; на экран не выводится. */
+            deviceCode: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /**
+             * Format: int32
+             * @description Не спрашивать чаще, секунд.
+             */
+            intervalSecs: number;
+            /** @description Короткий код для экрана, например `KQ7M-4TXP`. */
+            userCode: string;
+            /** @description Куда идти подтверждать: `https://wave.daly.rest/tv`. */
+            verificationUrl: string;
+            /** @description То же с кодом — для QR. */
+            verificationUrlComplete: string;
+        };
+        /** @description `POST /api/auth/tv/code`: телевизор просит код. */
+        TvCodeRequest: {
+            /** @description Имя для «Доступа»; по умолчанию «Apple TV» или «Телевизор». */
+            deviceName?: string | null;
+            /** @description `tvos` — приложение Apple TV (получит токен `dwd_…`), `web` — браузер телевизора (получит cookie). */
+            platform: components["schemas"]["Platform"];
+        };
+        /** @description `GET /api/auth/tv/{code}`: что подтверждает человек. */
+        TvLogin: {
+            deviceName: string;
+            /** Format: date-time */
+            expiresAt: string;
+            platform: components["schemas"]["Platform"];
+            userCode: string;
+        };
+        /** @description Браузер телевизора вошёл: cookie `dw_session` уже стоит. */
+        TvSignedIn: {
+            user: components["schemas"]["User"];
+        };
+        /** @description Ответ `POST /api/auth/tv/token`; поле `status` говорит, какой. */
+        TvToken: {
+            /** @enum {string} */
+            status: "pending";
+        } | (components["schemas"]["AppToken"] & {
+            /** @enum {string} */
+            status: "ready";
+        }) | (components["schemas"]["TvSignedIn"] & {
+            /** @enum {string} */
+            status: "signed_in";
+        });
+        /** @description `POST /api/auth/tv/token`. */
+        TvTokenRequest: {
+            appVersion?: string | null;
+            deviceCode: string;
+        };
         /**
          * @description Ответ в формате tauri-plugin-updater. Имена полей задаёт плагин (`pub_date`), поэтому здесь
          *     не camelCase.
@@ -7963,6 +8304,8 @@ export interface components {
             roles?: components["schemas"]["Role"][] | null;
         };
         UserSettings: {
+            /** @description Подхват музыки на другом устройстве (`connect.signal` → `connect.handoff`). */
+            handoff?: components["schemas"]["HandoffMode"];
             /**
              * @description «Без нецензурного»: explicit-треки не играют в волне, миксах и автопродолжении, в списках — серым;
              *     если в каталоге есть чистая версия, играет она.
@@ -7980,6 +8323,7 @@ export interface components {
         };
         /** @description Изменить часть настроек; не названные поля остаются как были. */
         UserSettingsPatch: {
+            handoff?: components["schemas"]["HandoffMode"] | null;
             hideExplicit?: boolean | null;
             playlistSort?: components["schemas"]["PlaylistSort"] | null;
             qualityCellular?: components["schemas"]["CellularQuality"] | null;
@@ -9882,6 +10226,198 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthProviders"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TvApprove"];
+            };
+        };
+        responses: {
+            /** @description Вход подтверждён: телевизор получит сессию при следующем опросе */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Кода нет, он истёк или уже подтверждён (`tv_code_unknown`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 10 попыток в минуту с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    code: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TvCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Код для экрана телевизора и секрет для опроса; живёт 10 минут */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TvCode"];
+                };
+            };
+            /** @description Платформа — не телевизор (`tvos` или `web`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 10 кодов в минуту с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TvTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description `pending` — ещё не подтвердили; `ready` — токен Apple TV (один раз); `signed_in` — браузеру поставлена cookie `dw_session` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TvToken"];
+                };
+            };
+            /** @description Код неверный, истёк или уже использован (`invalid_grant`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Аккаунт заблокирован */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 60 запросов в минуту с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    lookup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код с экрана телевизора */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Какой телевизор просит вход */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TvLogin"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Кода нет, он истёк или уже подтверждён (`tv_code_unknown`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 20 проверок в минуту с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -13086,6 +13622,205 @@ export interface operations {
             };
         };
     };
+    info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ссылка на оверлей; `link: null` — ещё не создана */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayInfo"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Оверлей выключен: ссылка больше не работает */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverlayPatch"];
+            };
+        };
+        responses: {
+            /** @description Ссылка после правки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayInfo"];
+                };
+            };
+            /** @description Ссылки ещё нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Новая ссылка; прежняя перестала работать */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayLink"];
+                };
+            };
+        };
+    };
+    now: {
+        parameters: {
+            query: {
+                /** @description Токен из ссылки (`dwo_…`). */
+                k: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Что сейчас играет у владельца ссылки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayNow"];
+                };
+            };
+            /** @description Ссылка неверна, сменена или выключена */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    stream_now: {
+        parameters: {
+            query: {
+                /** @description Токен из ссылки (`dwo_…`). */
+                k: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SSE: событие `now` (OverlayNow) сразу и при каждой перемене; `gone` — ссылка больше не работает */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Ссылка неверна, сменена или выключена */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_party: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Идёт ли вечеринка и её настройки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Party"];
+                };
+            };
+        };
+    };
+    update_party: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyPatch"];
+            };
+        };
+        responses: {
+            /** @description Вечеринка с новыми настройками. Включение открывает «Слушать вместе» (QR для гостей) и продлевает вечеринку на 12 часов; всем устройствам — `party.changed` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Party"];
+                };
+            };
+        };
+    };
     create: {
         parameters: {
             query?: never;
@@ -13160,7 +13895,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_patch_playlist_folders_id_: {
         parameters: {
             query?: never;
             header?: never;
@@ -15795,6 +16530,11 @@ export interface operations {
                 quality?: components["schemas"]["StreamQuality"];
                 /** @description Сеть устройства; без неё — Wi-Fi (сайт). */
                 network?: components["schemas"]["NetworkKind"];
+                /**
+                 * @description Плеер без Opus и Vorbis (AVPlayer на Apple TV): отдать AAC, ALAC или MP3, а если у записи только
+                 *     такие файлы — копию AAC 256 кбит/с (пока её делают — ответ `preparing`).
+                 */
+                aac?: boolean;
             };
             header?: never;
             path: {
@@ -15814,7 +16554,7 @@ export interface operations {
                     "application/json": components["schemas"]["TrackStream"];
                 };
             };
-            /** @description `status: acquiring` — трек скачивается вне очереди; `waiting_for_downloader` — в очереди, но качать некому: загрузчик на Mac не на связи */
+            /** @description `status: acquiring` — трек скачивается вне очереди; `waiting_for_downloader` — в очереди, но качать некому: загрузчик на Mac не на связи; `preparing` (`aac=true`) — делается копия AAC, спросить снова через 2 с */
             202: {
                 headers: {
                     [name: string]: unknown;

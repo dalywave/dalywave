@@ -85,13 +85,13 @@ pub async fn prepare_clips(
         (status = 404, description = "Нет такого альбома", body = ErrorBody),
     ),
 )]
-pub async fn album_motion(
-    State(st): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> AppResult<Response> {
-    let exists = sqlx::query_scalar!("SELECT EXISTS (SELECT 1 FROM albums WHERE id = $1) AS \"e!\"", id)
-        .fetch_one(&st.db)
-        .await?;
+pub async fn album_motion(State(st): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Response> {
+    let exists = sqlx::query_scalar!(
+        "SELECT EXISTS (SELECT 1 FROM albums WHERE id = $1) AS \"e!\"",
+        id
+    )
+    .fetch_one(&st.db)
+    .await?;
     if !exists {
         return Err(AppError::NotFound);
     }

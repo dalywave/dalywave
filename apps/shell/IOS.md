@@ -64,6 +64,13 @@ DalyWave?» → «Открыть».
 | 11 | Альбом → «Скачать», свернуть приложение на пару минут | Загрузка шла в фоне: кольца на строках, в «Медиатеке» → «Скачанное» — альбом |
 | 12 | Авиарежим → «Моя волна» | Играет из скачанного, пропуски и настроения учитываются; альбом из «Скачанного» играет |
 | 13 | Лайк, «играть», «следующий», шторка по ступеням, долгое нажатие | Лёгкий тактильный отклик |
+| 14 | Открыть альбом или плейлист, провести пальцем от левого края экрана вправо | Страница уезжает за пальцем, под ней — предыдущая; отпустить дальше середины (или резко) — назад, раньше — остаётся. На главной, в поиске и медиатеке, под листом и в полном плеере жест ничего не делает |
+
+«Назад» смахиванием — штатный жест WKWebView со снимком предыдущей страницы (`src/ios.rs`,
+`install_back_swipe`); где он включён, решает интерфейс (`apps/ui/app/plugins/back-swipe.client.ts`).
+Проверка на симуляторе — `BackSwipeTests`: приложение с токеном локального сервера запускает
+скрипт снаружи (`xcrun simctl launch`, договор — файлы `ready`/`launched` в `TEST_RUNNER_SHOTS_DIR`,
+см. комментарий в тесте), тест касается экрана по координатам и снимает кадры.
 
 ## «Поделиться → DalyWave»
 
@@ -256,6 +263,65 @@ HTTP: раз в 2 с `POST /api/devices/remote` (отметиться и заб�
 симулятор): `DALYWAVE_WATCH_PAGE` (0 — «Сейчас играет», 1 — «Моя волна», 2 — медиатека),
 `DALYWAVE_WATCH_SHEET=devices`, `DALYWAVE_WATCH_ACTIONS=toggle,next,like,calm,liked`. Переменные
 передаются как `SIMCTL_CHILD_…` при `xcrun simctl launch`.
+
+## Apple TV
+
+Приложение на SwiftUI (`gen/apple/TVApp`, tvOS 17+, схема `dalywave-tv`) — платформа tvOS той же
+записи DalyWave (Bundle ID `rest.daly.wave`, как у iPhone, версия — общая `MARKETING_VERSION`) — полноценное устройство «Где играть»: звук играет само (AVQueuePlayer), выполняет
+команды телефона, часов и сайта, публикует снимки состояния. Экраны: «Сейчас играет» (сцена: обложка,
+крупно название, текст песни, «Дальше», имя гостя «Слушать вместе», на вечеринке — QR «Добавить
+трек»), «Моя волна» (настроения, сочетания), «Медиатека» (Любимые, недавнее, плейлисты), «Поиск»
+(клавиатура и диктовка tvOS), «Вечеринка» (включить, QR для гостей, «Только энергичное», «Без
+повторов артистов», «Диджей»). Top Shelf (`gen/apple/TVTopShelf`, `rest.daly.wave.topshelf`):
+«Моя волна» по настроениям, недавнее и плейлисты из снимка приложения в `group.rest.daly.wave`;
+ссылки `dalywave-tv://wave`, `dalywave-tv://play?type=…&id=…`.
+
+**Вход.** Без клавиатуры: телевизор просит код (`POST /api/auth/tv/code`), показывает его и QR на
+`https://wave.daly.rest/tv?code=…`; человек, уже вошедший на телефоне или сайте, подтверждает.
+Телевизор опрашивает `POST /api/auth/tv/token` и получает свой токен `dwd_…` — отдельная строка
+«Apple TV» в «Доступе», отзывается как любая другая (тогда телевизор снова покажет код). Код живёт
+10 минут, одноразовый; истёк — на экране новый.
+
+**Звук.** AVPlayer не играет Opus в WebM/Ogg, поэтому телевизор просит `/stream?aac=true`: сервер
+отдаёт AAC, ALAC, MP3 или FLAC в своём файле, а для остального делает копию AAC 256 кбит/с (ответ
+`preparing`, телевизор ждёт пару секунд). Следующий трек грузится заранее — переход без паузы.
+
+### App Store Connect
+
+tvOS — вторая платформа записи **DalyWave** (одна покупка, одно имя): у телевизора тот же Bundle ID
+`rest.daly.wave`, у Top Shelf — `rest.daly.wave.topshelf`. Версия общая (`MARKETING_VERSION`, её
+меняет `make bump-version`), номер сборки свой — дата и время сборки.
+
+Один раз вручную:
+1. **App Store Connect → Приложения → DalyWave** → в левой колонке «+» рядом с «iOS App» → **tvOS**.
+   Появится раздел «tvOS App» с той же версией: описание и снимки 1920×1080 или 3840×2160.
+2. **developer.apple.com → Identifiers → `rest.daly.wave.topshelf`** (App ID создала первая сборка) →
+   Capabilities → **App Groups** → Configure → `group.rest.daly.wave` → Save. Без этого экспорт
+   падает: «Provisioning profile … rest.daly.wave.topshelf doesn't support the group.rest.daly.wave
+   App Group». У `rest.daly.wave` App Group уже отмечен (виджеты iPhone).
+3. **Сборка и загрузка:** `make testflight-tv` — архив схемы `dalywave-tv`, подпись для App Store и
+   загрузка тем же ключом API, что `make testflight`. Проверка без загрузки:
+   `EXPORT=local make testflight-tv` — подписанный `DalyWaveTV.ipa` в
+   `apps/shell/target/testflight/<сборка>-tvOS`. Сборка появится в TestFlight записи DalyWave (вкладка
+   tvOS); на Apple TV — приложение TestFlight.
+
+Apple TV в команде нет, поэтому профиль разработки для подписи архива не выпустить: скрипт собирает
+архив без подписи, ставит права (App Group) временной подписью, а подписывает экспорт — профиль App
+Store устройств не требует. Связка ключей телевизора хранит токен под сервисом `rest.daly.wave.tv` —
+от Bundle ID это не зависит.
+
+Для выкладки в App Store tvOS нужны: значок-«стопка» и Top Shelf (уже в
+`TVApp/Assets.xcassets`, сделаны из знака), снимки экрана 1920×1080 или 3840×2160 и описание.
+
+### Симулятор
+
+`xcodebuild -scheme dalywave-tv -destination 'platform=tvOS Simulator,name=Apple TV 4K (4th
+generation)' build`, установить `DalyWaveTV.app`. Без входа кодом: `DALYWAVE_DEV_TOKEN` /
+`DALYWAVE_DEV_SERVER` (только симулятор). Проверки без пульта (только симулятор): `DALYWAVE_TV_TAB`
+(now, wave, library, search, party), `DALYWAVE_TV_SEARCH`, `DALYWAVE_TV_ACTIONS`
+(wave, calm, liked, pause, party, `track:<id>+<id>`, `probe:<url>|<url>` — играет ли AVPlayer
+файл), `DALYWAVE_TV_SIGNED_OUT=1` — экран входа. В симуляторе звук всегда выключен
+(`DALYWAVE_TV_SOUND=1` — включить); в журнал раз в 3 с пишется состояние AVPlayer (`DWTV player`).
 
 ## Уведомления (push)
 

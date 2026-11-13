@@ -17,8 +17,8 @@ import type {
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
-  MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
-  Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
+  MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch, OverlayInfo, OverlayLink,
+  Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack, Party, PartyPatch, TvCode, TvLogin, TvToken,
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
   WhyTrack,
@@ -124,7 +124,7 @@ export type SourceResult =
 export interface PlaybackDevice {
   id: string
   name: string
-  kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web' | 'watch'
+  kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web' | 'watch' | 'tv'
   /** Это устройство */
   current: boolean
   online: boolean
@@ -472,6 +472,20 @@ export interface JamGuestClient {
 }
 
 /** «Слушать вместе», как Jam у Spotify: сессия хозяина, гости по ссылке без аккаунта */
+/** Большой экран: режим вечеринки и вход на телевизоре кодом с экрана */
+export interface PartyBridge {
+  get(): Promise<Party>
+  /** Включение открывает «Слушать вместе» (QR для гостей) */
+  update(patch: PartyPatch): Promise<Party>
+  /** Телевизор (этот браузер) просит код для экрана */
+  code(): Promise<TvCode>
+  /** Подтверждён ли вход: `signed_in` — cookie сайта уже стоит */
+  token(deviceCode: string): Promise<TvToken>
+  /** Что подтверждает вошедший: код с экрана телевизора */
+  lookup(code: string): Promise<TvLogin>
+  approve(code: string): Promise<void>
+}
+
 export interface JamBridge {
   get(): Promise<Jam | null>
   start(): Promise<Jam>
@@ -513,6 +527,9 @@ export interface Bridge {
     /** Тема окна и системных частей вокруг страницы («светофор», Mica, строка состояния, фон
      * под WebView); null — как в системе. На сайте ничего не делает */
     setTheme(theme: 'dark' | 'light' | null): void
+    /** iPhone и iPad: «назад» смахиванием от левого края (штатный жест WebView). Включает
+     * интерфейс там, где позади есть страница; на сайте и компьютерах ничего не делает */
+    setBackSwipe(enabled: boolean): void
   }
 
   /** Обновления приложения (на сайте и телефонах — ничего: `state()` отдаёт null) */
@@ -799,6 +816,15 @@ export interface Bridge {
     update(patch: UserSettingsPatch): Promise<UserSettings>
   }
 
+  /** Оверлей «Сейчас играет» для стрима: секретная ссылка для OBS */
+  overlay: {
+    get(): Promise<OverlayInfo>
+    /** Новая ссылка; прежняя перестаёт работать */
+    rotate(): Promise<OverlayLink>
+    update(patch: { hidePrivate?: boolean }): Promise<OverlayInfo>
+    disable(): Promise<void>
+  }
+
   /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */
   wave: {
     /** Новая сессия под настройки (они у сессии не меняются: другие настройки — новая сессия)
@@ -856,6 +882,8 @@ export interface Bridge {
 
   /** «Слушать вместе» */
   jam: JamBridge
+
+  party: PartyBridge
 
   admin: {
     health(): Promise<Health>

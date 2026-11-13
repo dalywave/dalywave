@@ -403,6 +403,8 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       isMaximized: () => call<boolean>('window_is_maximized'),
       /** Тема системных частей окна; null — как в системе */
       setTheme: (theme: Theme | null) => call<void>('window_set_theme', { theme }),
+      /** iPhone и iPad: «назад» смахиванием от левого края; на других системах ничего не делает */
+      setBackSwipe: (enabled: boolean) => call<void>('window_set_back_swipe', { enabled }),
       /** Windows 11: где кнопка «развернуть» (для меню привязки окон); null — убрать */
       setSnapArea: (rect: Rect | null) => call<void>('window_set_snap_area', { rect }),
     },

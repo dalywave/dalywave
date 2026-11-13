@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tv_logins SET user_id = $2, auth_method = $3, approved_at = now()\n         WHERE user_code = $1 AND used_at IS NULL AND approved_at IS NULL AND expires_at > now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "03498849de3634baab2ebf5c2b1184ec29f45741122e3cfc0a7c1feb0a951128"
+}

@@ -136,6 +136,7 @@ export type SetApplied = Schemas['SetApplied']
 // Настройки слушателя (общие для устройств): фильтр нецензурного, качество, порядок плейлистов
 export type UserSettings = Schemas['UserSettings']
 export type UserSettingsPatch = Schemas['UserSettingsPatch']
+export type HandoffMode = Schemas['HandoffMode']
 export type WifiQuality = Schemas['WifiQuality']
 export type CellularQuality = Schemas['CellularQuality']
 export type DownloadQuality = Schemas['DownloadQuality']
@@ -184,6 +185,15 @@ export type ConnectDevice = Schemas['ConnectDevice']
 export type ConnectKind = Schemas['ConnectKind']
 export type ConnectOverview = Schemas['ConnectOverview']
 export type PlaybackState = Schemas['PlaybackState']
+// Подхват на другом устройстве
+export type ConnectOutput = Schemas['ConnectOutput']
+export type ConnectSignalKind = Schemas['ConnectSignalKind']
+export type ConnectHandoff = Schemas['ConnectHandoff']
+// Оверлей «Сейчас играет» для стрима
+export type OverlayInfo = Schemas['OverlayInfo']
+export type OverlayLink = Schemas['OverlayLink']
+export type OverlayNow = Schemas['OverlayNow']
+export type OverlayTrack = Schemas['OverlayTrack']
 export type RemoteCommand = Schemas['RemoteCommand']
 export type ConnectQueueItem = Schemas['QueueItem']
 
@@ -203,6 +213,14 @@ export type JamQueueItem = Schemas['JamQueueItem']
 export type JamSkip = Schemas['JamSkip']
 export type JamStream = Schemas['JamStream']
 export type JamReaction = Schemas['JamReaction']
+
+// Большой экран: вход на телевизоре кодом и режим вечеринки
+export type Party = Schemas['Party']
+export type PartyPatch = Schemas['PartyPatch']
+export type PartySettings = Schemas['PartySettings']
+export type TvCode = Schemas['TvCode']
+export type TvToken = Schemas['TvToken']
+export type TvLogin = Schemas['TvLogin']
 
 // Админка
 export type Health = Schemas['Health']
