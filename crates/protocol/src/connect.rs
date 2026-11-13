@@ -93,6 +93,127 @@ pub struct ConnectDevice {
     /// Звук играет здесь (даже если устройство пропало из сети).
     pub active: bool,
     pub last_seen_at: DateTime<Utc>,
+    /// Где играть музыку, выбранную на этом устройстве, пока она играет на другом.
+    #[serde(default)]
+    pub choice: PlayChoice,
+    /// Медиаплеер (компьютер у колонок): пока звук на нём, выбор на других устройствах идёт сюда.
+    #[serde(default)]
+    pub media_player: bool,
+}
+
+// ---------- Где заиграет выбранная музыка ----------
+
+/// «Когда выбираю музыку здесь» — настройка устройства, где выбирают.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PlayChoice {
+    /// По присутствию: человек у активного устройства — там, отошёл от него — здесь.
+    #[default]
+    Auto,
+    /// Всегда здесь: активное ставится на паузу.
+    Here,
+    /// Там, где уже играет (это устройство — пульт), как в Spotify.
+    There,
+}
+
+names!(PlayChoice { Auto => "auto", Here => "here", There => "there" });
+
+/// Откуда устройство знает о вводе: система (простой мыши и клавиатуры) или только своя страница.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum InputSource {
+    System,
+    Page,
+}
+
+names!(InputSource { System => "system", Page => "page" });
+
+/// `connect.presence`: устройство, где играет звук, раз в ~30 с сообщает, как давно его трогали.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectPresence {
+    /// Сколько миллисекунд не было ввода (мышь, клавиатура, касание).
+    pub idle_ms: u64,
+    pub source: InputSource,
+    /// Звук идёт в наушники.
+    #[serde(default)]
+    pub headphones: bool,
+}
+
+/// Музыку выбрали на этом устройстве — где ей играть, решает сервер ([`ConnectSend::pick`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectPick {
+    /// Здесь подключены наушники.
+    #[serde(default)]
+    pub headphones: bool,
+}
+
+/// Почему выбранная музыка заиграла там, где заиграла.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PlaceReason {
+    /// Настройка «Всегда здесь» или «Там, где уже играет».
+    Setting,
+    /// Наушники у того, кто выбирает (или у того, где играет).
+    Headphones,
+    /// Запомненная поправка для этой пары устройств.
+    Learned,
+    /// Там, где играет, — медиаплеер.
+    MediaPlayer,
+    /// У активного устройства давно не было ввода.
+    Away,
+    /// Активным устройством пользуются.
+    InUse,
+    /// Не знаем, есть ли кто у активного: как раньше — туда.
+    Unknown,
+}
+
+names!(PlaceReason {
+    Setting => "setting",
+    Headphones => "headphones",
+    Learned => "learned",
+    MediaPlayer => "media_player",
+    Away => "away",
+    InUse => "in_use",
+    Unknown => "unknown",
+});
+
+/// `connect.placed`: где заиграет музыка, выбранная командой с `pick`. `here` — на этом устройстве:
+/// пульт включает её сам (активное уже стало им, прежнее остановится).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectPlaced {
+    /// Id команды.
+    pub id: String,
+    pub here: bool,
+    /// Где заиграет.
+    pub device_id: String,
+    /// Второе устройство пары — для «Включить на …».
+    pub other: String,
+    pub reason: PlaceReason,
+}
+
+/// `connect.learned`: две одинаковые поправки подряд — сервер запомнил, где играть выбранное на `from`,
+/// пока звук на `to` (на 12 часов или до обратной поправки).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectLearned {
+    pub from: String,
+    pub to: String,
+    /// Играть на `from` (иначе — на `to`).
+    pub here: bool,
+    pub until: DateTime<Utc>,
+}
+
+/// `PATCH /api/devices/{id}`: настройки устройства; не заданное не меняется.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectDevicePatch {
+    #[serde(default)]
+    pub choice: Option<PlayChoice>,
+    #[serde(default)]
+    pub media_player: Option<bool>,
 }
 
 /// Список устройств: активное — первым, затем в сети, затем недавние.
@@ -407,6 +528,10 @@ pub struct ConnectSend {
     pub id: String,
     pub to: String,
     pub command: Box<RemoteCommand>,
+    /// Это новая музыка (`playTracks`, `startWave`), выбранная на пульте: сервер решает, играть её
+    /// на активном устройстве или здесь, и отвечает `connect.placed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick: Option<ConnectPick>,
 }
 
 /// Команда от устройства `from`: выполнить и ответить `connect.ack`.

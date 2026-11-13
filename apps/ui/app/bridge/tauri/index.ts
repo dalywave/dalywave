@@ -157,6 +157,8 @@ export function createTauriBridge(): Bridge {
     // Обучение рекомендаций на этом компьютере (apps/shell/src/trainer.rs)
     trainer: platform === 'macos' || platform === 'windows' ? createTauriTrainer(loadShell) : null,
     outputs: createTauriOutputs(platform, loadShell),
+    // Простой системы — для «где заиграет музыка, выбранная на другом устройстве» (stores/connect.ts)
+    systemIdle: desktop ? async () => (await loadShell()).system.idleMs() : null,
     baseUrl,
     token: getToken,
     // «Экспорт»: на компьютере — окно «Сохранить как», файл качает оболочка потоком (apps/shell/src/export.rs);

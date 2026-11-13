@@ -28,6 +28,7 @@ import type {
   DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
   AlbumMotion, TrackClip, ClipView, ClipChoice, ClipReportList,
   AppDownloads,
+  ConnectDevicePatch, ConnectDevices,
 } from '~/api/types'
 import type { DownloaderSnapshot, TrainerSnapshot } from './tauri/shell'
 
@@ -145,6 +146,10 @@ export interface PlaybackDevice {
   remote?: boolean
   /** Платформа: у Stream Deck вид `desktop`, а значок свой */
   platform?: string
+  /** «Когда выбираю музыку здесь»: по присутствию, всегда здесь или там, где уже играет */
+  choice?: 'auto' | 'here' | 'there'
+  /** Медиаплеер (компьютер у колонок): пока звук на нём, выбор на других устройствах идёт сюда */
+  mediaPlayer?: boolean
 }
 
 /** Куда идёт звук этого устройства: динамики, наушники, Bluetooth, AirPlay */
@@ -581,6 +586,10 @@ export interface Bridge {
   /** Куда идёт звук (AirPlay, Bluetooth, динамики); null — платформа не умеет, строки нет */
   readonly outputs: AudioRoutes | null
 
+  /** Простой системы: сколько мс не трогали мышь и клавиатуру (приложение на компьютере, presence.rs);
+   *  null — платформа не знает (сайт, телефоны): там считается ввод на странице */
+  readonly systemIdle: (() => Promise<number | null>) | null
+
   /** Загрузки на устройство и медиатека без сети (приложение); на сайте — null */
   readonly offline: OfflineBridge | null
 
@@ -951,6 +960,9 @@ export interface Bridge {
   }
 
   devices(): Promise<PlaybackDevice[]>
+
+  /** Настройки устройства из «Где играть» (любого устройства человека); ответ — свежий список */
+  updateDevice(id: string, patch: ConnectDevicePatch): Promise<ConnectDevices>
 
   /** «Слушать вместе» */
   jam: JamBridge

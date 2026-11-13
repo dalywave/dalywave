@@ -260,7 +260,20 @@
     "system": "Как в системе",
     "tab": "Вкладка браузера",
     "onlineOne": "В сети",
-    "remote": "Пульт"
+    "remote": "Пульт",
+    "mediaPlayer": "Медиаплеер",
+    "mediaPlayerHint": "Им управляют с других устройств",
+    "settings": "Настройки устройства",
+    "choiceHere": "Когда выбираю музыку здесь",
+    "choiceThere": "Когда выбираю музыку на нём",
+    "choiceAuto": "Авто",
+    "choiceAutoLong": "Автоматически",
+    "choiceAutoHint": "Где вы сейчас — там и играет",
+    "choiceSelf": "Здесь",
+    "choiceSelfLong": "Всегда здесь",
+    "choiceOn": "На нём",
+    "choiceActive": "Где играет",
+    "choiceActiveLong": "Там, где уже играет"
   },
   "queue": {
     "now": "Сейчас",
@@ -580,7 +593,14 @@
     "failed": "«{name}» не смог это выполнить",
     "movedTo": "Теперь играет на «{name}»",
     "remoteVolume": "Громкость на «{name}»",
-    "wasOn": "Было на: {name}"
+    "wasOn": "Было на: {name}",
+    "placedHere": "Играет здесь",
+    "placed": "Играет на «{name}»",
+    "moveTo": "Включить на «{name}»",
+    "moveHere": "Включить здесь",
+    "learned": "Запомнил: с «{from}» — на «{to}»",
+    "learnedSame": "Запомнил: выбранное на «{from}» играет на нём",
+    "saveFailed": "Не удалось сохранить настройку"
   },
   "offline": {
     "download": "Скачать",

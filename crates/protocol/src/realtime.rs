@@ -12,7 +12,8 @@ use crate::{
     catalog::AudioStatus,
     connect::{
         ConnectAck, ConnectActive, ConnectCommand, ConnectDevices, ConnectEmpty, ConnectHandoff,
-        ConnectHello, ConnectPublish, ConnectSend, ConnectSignal, ConnectState, ConnectTransfer,
+        ConnectHello, ConnectLearned, ConnectPlaced, ConnectPresence, ConnectPublish, ConnectSend,
+        ConnectSignal, ConnectState, ConnectTransfer,
     },
     jam::{JamChanged, JamNowEvent, JamReaction},
     jobs::{AcquisitionStatus, JobStatus},
@@ -62,6 +63,12 @@ pub enum ServerEvent {
     /// Подхват на другом устройстве: музыка перешла сюда (или отсюда) или предложение «Продолжить здесь?».
     #[serde(rename = "connect.handoff")]
     ConnectHandoff(ConnectHandoff),
+    /// Где заиграет музыка, выбранная на этом пульте (ответ на `connect.command` с `pick`).
+    #[serde(rename = "connect.placed")]
+    ConnectPlaced(ConnectPlaced),
+    /// После двух одинаковых поправок сервер запомнил, где играть выбранное на устройстве.
+    #[serde(rename = "connect.learned")]
+    ConnectLearned(ConnectLearned),
     /// «Слушать вместе»: участники, настройки или треки гостей изменились (хозяину и гостям).
     #[serde(rename = "jam.changed")]
     JamChanged(JamChanged),
@@ -120,6 +127,9 @@ pub enum ClientMessage {
     /// заблокирован, приложение открыли.
     #[serde(rename = "connect.signal")]
     ConnectSignal(ConnectSignal),
+    /// Устройство, где играет звук: как давно его трогали (раз в ~30 с, пока играет).
+    #[serde(rename = "connect.presence")]
+    ConnectPresence(ConnectPresence),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

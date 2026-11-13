@@ -456,6 +456,10 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       /** iPhone, iPad: системное окно выбора AirPlay и Bluetooth */
       showPicker: () => call<void>('audio_show_picker'),
     },
+    system: {
+      /** macOS, Windows: сколько мс не трогали мышь и клавиатуру; null — система не сообщает */
+      idleMs: () => call<number | null>('system_idle_ms'),
+    },
     /** http, https, mailto — в системном браузере */
     openExternal: (url: string) => call<void>('open_external', { url }),
     /** Ссылки dalywave:// для интерфейса (`dalywave://share?url=…` — «Поделиться → DalyWave»): последняя

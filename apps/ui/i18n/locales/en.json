@@ -260,7 +260,20 @@
     "system": "System default",
     "tab": "Browser tab",
     "onlineOne": "Online",
-    "remote": "Remote"
+    "remote": "Remote",
+    "mediaPlayer": "Media player",
+    "mediaPlayerHint": "Controlled from other devices",
+    "settings": "Device settings",
+    "choiceHere": "When I pick music here",
+    "choiceThere": "When I pick music on it",
+    "choiceAuto": "Auto",
+    "choiceAutoLong": "Automatically",
+    "choiceAutoHint": "Plays where you are",
+    "choiceSelf": "Here",
+    "choiceSelfLong": "Always here",
+    "choiceOn": "On it",
+    "choiceActive": "Where playing",
+    "choiceActiveLong": "Where it’s already playing"
   },
   "queue": {
     "now": "Now",
@@ -580,7 +593,14 @@
     "failed": "“{name}” couldn’t do that",
     "movedTo": "Now playing on “{name}”",
     "remoteVolume": "Volume on “{name}”",
-    "wasOn": "Was on: {name}"
+    "wasOn": "Was on: {name}",
+    "placedHere": "Playing here",
+    "placed": "Playing on “{name}”",
+    "moveTo": "Play on “{name}”",
+    "moveHere": "Play here",
+    "learned": "Got it: from “{from}”, play on “{to}”",
+    "learnedSame": "Got it: picks on “{from}” play on it",
+    "saveFailed": "Couldn’t save the setting"
   },
   "offline": {
     "download": "Download",

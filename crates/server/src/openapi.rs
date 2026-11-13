@@ -254,6 +254,7 @@ use crate::routes::{
         connect::remote_presence,
         connect::remote_command,
         connect::remote_transfer,
+        connect::update_device,
         jam::overview,
         jam::start,
         jam::update,

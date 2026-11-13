@@ -1252,6 +1252,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_device"];
+        trace?: never;
+    };
     "/api/downloads": {
         parameters: {
             query?: never;
@@ -4447,6 +4463,9 @@ export interface components {
         }) | (components["schemas"]["ConnectSignal"] & {
             /** @enum {string} */
             type: "connect.signal";
+        }) | (components["schemas"]["ConnectPresence"] & {
+            /** @enum {string} */
+            type: "connect.presence";
         });
         /** @description Кандидат в клипы из выдачи YouTube с оценкой загрузчика. */
         ClipCandidate: {
@@ -4711,14 +4730,23 @@ export interface components {
             active: boolean;
             appVersion: string | null;
             capabilities: components["schemas"]["ConnectCapabilities"];
+            /** @description Где играть музыку, выбранную на этом устройстве, пока она играет на другом. */
+            choice?: components["schemas"]["PlayChoice"];
             id: string;
             kind: components["schemas"]["ConnectKind"];
             /** Format: date-time */
             lastSeenAt: string;
+            /** @description Медиаплеер (компьютер у колонок): пока звук на нём, выбор на других устройствах идёт сюда. */
+            mediaPlayer?: boolean;
             name: string;
             /** @description Соединение открыто и устройство напоминало о себе за последние 15 с. */
             online: boolean;
             platform: components["schemas"]["Platform"];
+        };
+        /** @description `PATCH /api/devices/{id}`: настройки устройства; не заданное не меняется. */
+        ConnectDevicePatch: {
+            choice?: components["schemas"]["PlayChoice"] | null;
+            mediaPlayer?: boolean | null;
         };
         /** @description Список устройств: активное — первым, затем в сети, затем недавние. */
         ConnectDevices: {
@@ -4758,6 +4786,18 @@ export interface components {
          * @enum {string}
          */
         ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch" | "tv";
+        /**
+         * @description `connect.learned`: две одинаковые поправки подряд — сервер запомнил, где играть выбранное на `from`,
+         *     пока звук на `to` (на 12 часов или до обратной поправки).
+         */
+        ConnectLearned: {
+            from: string;
+            /** @description Играть на `from` (иначе — на `to`). */
+            here: boolean;
+            to: string;
+            /** Format: date-time */
+            until: string;
+        };
         /** @description Устройство вывода звука, о котором сообщает `connect.signal`. */
         ConnectOutput: {
             /** @description `builtin`, `headphones`, `bluetooth`, `airplay`, `usb`, `hdmi`, `other`. */
@@ -4771,6 +4811,36 @@ export interface components {
             devices: components["schemas"]["ConnectDevice"][];
             state: components["schemas"]["PlaybackState"] | null;
         };
+        /** @description Музыку выбрали на этом устройстве — где ей играть, решает сервер ([`ConnectSend::pick`]). */
+        ConnectPick: {
+            /** @description Здесь подключены наушники. */
+            headphones?: boolean;
+        };
+        /**
+         * @description `connect.placed`: где заиграет музыка, выбранная командой с `pick`. `here` — на этом устройстве:
+         *     пульт включает её сам (активное уже стало им, прежнее остановится).
+         */
+        ConnectPlaced: {
+            /** @description Где заиграет. */
+            deviceId: string;
+            here: boolean;
+            /** @description Id команды. */
+            id: string;
+            /** @description Второе устройство пары — для «Включить на …». */
+            other: string;
+            reason: components["schemas"]["PlaceReason"];
+        };
+        /** @description `connect.presence`: устройство, где играет звук, раз в ~30 с сообщает, как давно его трогали. */
+        ConnectPresence: {
+            /** @description Звук идёт в наушники. */
+            headphones?: boolean;
+            /**
+             * Format: int64
+             * @description Сколько миллисекунд не было ввода (мышь, клавиатура, касание).
+             */
+            idleMs: number;
+            source: components["schemas"]["InputSource"];
+        };
         /** @description Активное устройство публикует снимок. */
         ConnectPublish: {
             state: components["schemas"]["PlaybackState"];
@@ -4779,6 +4849,7 @@ export interface components {
         ConnectSend: {
             command: components["schemas"]["RemoteCommand"];
             id: string;
+            pick?: components["schemas"]["ConnectPick"] | null;
             to: string;
         };
         /**
@@ -5813,6 +5884,11 @@ export interface components {
              */
             size: number;
         };
+        /**
+         * @description Откуда устройство знает о вводе: система (простой мыши и клавиатуры) или только своя страница.
+         * @enum {string}
+         */
+        InputSource: "system" | "page";
         Invite: {
             /** Format: date-time */
             createdAt: string;
@@ -6850,8 +6926,18 @@ export interface components {
         Ping: {
             id?: string | null;
         };
+        /**
+         * @description Почему выбранная музыка заиграла там, где заиграла.
+         * @enum {string}
+         */
+        PlaceReason: "setting" | "headphones" | "learned" | "media_player" | "away" | "in_use" | "unknown";
         /** @enum {string} */
         Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android" | "watchos" | "tvos" | "streamdeck";
+        /**
+         * @description «Когда выбираю музыку здесь» — настройка устройства, где выбирают.
+         * @enum {string}
+         */
+        PlayChoice: "auto" | "here" | "there";
         /** @description Что играет: альбом, плейлист, волна… */
         PlayContext: {
             id?: string | null;
@@ -8058,6 +8144,12 @@ export interface components {
         }) | (components["schemas"]["ConnectHandoff"] & {
             /** @enum {string} */
             type: "connect.handoff";
+        }) | (components["schemas"]["ConnectPlaced"] & {
+            /** @enum {string} */
+            type: "connect.placed";
+        }) | (components["schemas"]["ConnectLearned"] & {
+            /** @enum {string} */
+            type: "connect.learned";
         }) | (components["schemas"]["JamChanged"] & {
             /** @enum {string} */
             type: "jam.changed";
@@ -12764,6 +12856,51 @@ export interface operations {
             };
             /** @description Нет сессии */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id устройства из списка «Где играть» */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectDevicePatch"];
+            };
+        };
+        responses: {
+            /** @description Настройки сохранены; свежий список — и всем устройствам по WebSocket */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectDevices"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого устройства */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

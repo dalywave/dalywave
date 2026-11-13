@@ -401,7 +401,8 @@ export const usePlayerStore = defineStore('player', () => {
     if (!allowed) return
     tracks = allowed.tracks
     index = allowed.index
-    if (routed(remotePlayTracks(tracks, index, ctx, opts))) return
+    // Пульт: где заиграет, решит сервер; «здесь» — этот же вызов, когда плеер снова свой
+    if (routed(remotePlayTracks(tracks, index, ctx, opts), () => playTracks(tracks, index, ctx, opts))) return
     // «Перемешать» включает перемешивание насовсем, как в Spotify: со случайного трека
     if (opts.shuffle) shuffle.value = true
     const entries = tracks.map(tr => entryOf(tr, 'context'))
@@ -534,7 +535,7 @@ export const usePlayerStore = defineStore('player', () => {
    *  и, если его ещё нет на сервере, сначала скачивает: до тех пор — «Готовим волну…», а то, что играло, играет */
   async function startWave(settings?: Partial<WaveSettings>, radio?: { seed: WaveSeed, title: string }) {
     // Радио от затравки пульт пока не передаёт — оно запускается здесь
-    if (!radio && routed({ action: 'startWave', settings: settings ? { ...wave.value, ...settings } : null })) return
+    if (!radio && routed({ action: 'startWave', settings: settings ? { ...wave.value, ...settings } : null }, () => startWave(settings))) return
     if (settings) wave.value = { ...wave.value, ...settings }
     applyMood(wave.value.mood)
     const run = ++prepRun

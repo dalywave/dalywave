@@ -171,6 +171,7 @@ const shell = createShell({ invoke, listen })
 | `player.remote(action)` | `player_remote { action }` | — `toggle`, `play`, `pause`, `next`, `previous` как с пульта |
 | `mini.open()` / `close()` / `toggle()` | `mini_open` / `mini_close` / `mini_toggle` | — мини-плеер, macOS и Windows |
 | `audio.outputs()` | `audio_outputs` | `AudioOutputs` — куда идёт звук (см. «Звук») |
+| `system.idleMs()` | `system_idle_ms` | `number \| null` — сколько мс не трогали мышь и клавиатуру (macOS, Windows; `presence.rs`) |
 | `audio.setOutput(id)` | `audio_set_output { id }` | `AudioOutputs` — macOS и Windows; `null` — как в системе |
 | `audio.showPicker()` | `audio_show_picker` | — системное окно AirPlay и Bluetooth; iPhone и iPad |
 | `downloader.state()` | `downloader_state` | `DownloaderSnapshot` — macOS и Windows |
