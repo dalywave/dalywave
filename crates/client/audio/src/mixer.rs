@@ -996,6 +996,7 @@ impl Mixer {
     /// Да — если звучащие деки (затихающие тоже) дают `frames` кадров или кончаются, либо ничего не
     /// звучит, но дека «сейчас» набрала порог старта. Ждущие своей очереди деки (кроссфейд,
     /// «Диджей») рендер не держат, как и `hold`: в реальном времени их готовят заранее.
+    #[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
     pub fn can_feed(&self, frames: usize) -> bool {
         if self.paused && !self.pause_env.active {
             return false;
@@ -1026,6 +1027,7 @@ impl Mixer {
 
     /// Буферизованный вывод: принять команды контроллера, не рендеря звук (вывод ждёт данных или
     /// стоит на паузе) — иначе новая дека так и не подключится.
+    #[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
     pub fn poll(&mut self) {
         self.drain_commands();
         for i in 0..MAX_DECKS {

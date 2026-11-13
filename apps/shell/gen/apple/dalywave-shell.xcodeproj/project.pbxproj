@@ -804,14 +804,14 @@
 			path = TVApp;
 			sourceTree = "<group>";
 		};
-		"TEMP_1D59DEE3-4355-4832-A10F-33DF0EF67CED" /* x86_64 */ = {
+		"TEMP_2F994E09-E688-4E68-9F15-448429F79EDE" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
 			sourceTree = "<group>";
 		};
-		"TEMP_8D148B3F-76C6-4EA2-AF95-31F60ED64783" /* arm64 */ = {
+		"TEMP_B1473B61-2369-4B2D-B218-54E91A17FEDC" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
