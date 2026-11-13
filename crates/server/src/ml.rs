@@ -209,6 +209,80 @@ impl Ml {
         }
     }
 
+    /// Карта звучания (`POST /v1/layout`): UMAP векторов `rows × dim`, начатый с прошлой карты `prev`
+    /// (у новых треков — `None`). Тело — двоичное: векторы float16 little-endian подряд, затем прошлые
+    /// координаты float32 (x, y; NaN — нет). Ответ — точки в порядке строк, без выравнивания.
+    pub async fn layout(
+        &self,
+        data: &[f32],
+        rows: usize,
+        dim: usize,
+        prev: &[Option<[f32; 2]>],
+    ) -> Result<Vec<[f32; 2]>, MlError> {
+        #[derive(Deserialize)]
+        struct Layout {
+            points: Vec<[f32; 2]>,
+        }
+        let _slot = self
+            .slot
+            .acquire()
+            .await
+            .map_err(|_| MlError::Unreachable("клиент остановлен".into()))?;
+        let mut body = Vec::with_capacity(rows * dim * 2 + rows * 8);
+        for x in &data[..rows * dim] {
+            body.extend_from_slice(&dalywave_taste::f16::to_bits(*x).to_le_bytes());
+        }
+        for p in prev.iter().take(rows) {
+            let [x, y] = p.unwrap_or([f32::NAN, f32::NAN]);
+            body.extend_from_slice(&x.to_le_bytes());
+            body.extend_from_slice(&y.to_le_bytes());
+        }
+        let body = bytes::Bytes::from(body);
+        let started = Instant::now();
+        let mut pause = self.busy_pause;
+        loop {
+            let res = self
+                .http
+                .post(format!("{}/v1/layout?rows={rows}&dim={dim}", self.base))
+                .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
+                .body(body.clone())
+                // UMAP десятков тысяч точек — до нескольких минут
+                .timeout(Duration::from_secs(20 * 60))
+                .send()
+                .await
+                .map_err(|e| MlError::Unreachable(e.to_string()))?;
+            let status = res.status();
+            if status.is_success() {
+                return res
+                    .json::<Layout>()
+                    .await
+                    .map(|l| l.points)
+                    .map_err(|e| MlError::Decode(e.to_string()));
+            }
+            if status.as_u16() == 409 && started.elapsed() + pause <= self.busy_wait {
+                tokio::time::sleep(pause).await;
+                pause = (pause * 2).min(MAX_BUSY_PAUSE);
+                continue;
+            }
+            let error: Value = res.json().await.unwrap_or(Value::Null);
+            let text = |key: &str| {
+                error
+                    .pointer(&format!("/error/{key}"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            };
+            return Err(if status.as_u16() == 409 {
+                MlError::Busy
+            } else {
+                MlError::Api {
+                    status: status.as_u16(),
+                    code: text("code").unwrap_or_else(|| "unknown".into()),
+                    message: text("message").unwrap_or_else(|| format!("HTTP {status}")),
+                }
+            });
+        }
+    }
+
     /// Вектор текстового запроса в пространстве CLAP. Русский запрос сервис переводит словарём.
     pub async fn embed_text(&self, text: &str) -> Result<TextVector, MlError> {
         self.post(

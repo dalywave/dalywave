@@ -56,6 +56,8 @@ pub mod kind {
     pub const ALBUM_MOTION: &str = "album_motion";
     /// Клип трека для ленты открытий: ищет и нарезает загрузчик на Mac (полоса «Клипы»).
     pub const CLIP: &str = "clip";
+    /// Карта звучания для «Как подобран»: UMAP всего индекса раз в сутки, выровненный к прошлой карте.
+    pub const TRACK_MAP: &str = "track_map";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]

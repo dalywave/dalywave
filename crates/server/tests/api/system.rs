@@ -279,6 +279,7 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/tracks/{id}/wrong-recording",
         "/api/updates/{target}/{arch}/{current_version}",
         "/api/versions/choices",
+        "/api/wave/explain",
         "/api/wave/presets",
         "/api/wave/presets/order",
         "/api/wave/presets/{id}",

@@ -136,6 +136,9 @@ function close() {
 
 // Клип: квадратом вместо обложки, целиком с подсветкой, фоном или «кино» — по настройке
 const clip = usePlayerClip({ track, open, art, busy: () => menuOpen.value || lyricsOn.value })
+// «Как подобран»: у трека волны вместо обложки — карта вкуса (на компьютере — не рядом с текстом)
+const map = usePlayerMap({ open })
+const mapShown = computed(() => map.on && !(lyricsOn.value && props.variant !== 'tablet'))
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.variant === 'stage' && ui.playerOpen) close()
@@ -286,12 +289,13 @@ onBeforeUnmount(() => {
 <template>
   <!-- Большой экран: сцена поверх содержимого -->
   <Transition v-if="variant === 'stage'" name="stage">
-    <section v-if="open && track" ref="beatEl" class="fp" :class="[{ 'fp--lyrics': lyricsOn }, clip.classes]" :aria-label="t('player.expand')">
+    <section v-if="open && track" ref="beatEl" class="fp" :class="[{ 'fp--lyrics': lyricsOn, 'fp--map': mapShown }, clip.classes]" :aria-label="t('player.expand')">
       <div class="fp__wave">
         <MusicWaveCanvas layout="stage" :box="art" />
       </div>
       <MusicPlayerClip :clip="clip" place="screen" :image="track.album?.image" :active="open" />
       <UiIconButton class="fp__collapse" icon="ph:caret-down" :label="t('player.collapse')" :kbd="['Esc']" tone="glass" side="right" @click="close" />
+      <MusicPlayerViewSwitch v-if="map.available && !lyricsOn" class="fp__view" :map="map" />
       <div class="fp__context"><i class="fp__dot" :class="{ 'fp__dot--any': player.waveActive && player.wave.mood === 'any' }" />{{ contextLabel }}</div>
       <div v-if="player.waveActive" class="fp__mood">
         <span class="fp__mood-label">{{ t('wave.mood.label') }}</span>
@@ -302,7 +306,8 @@ onBeforeUnmount(() => {
         <div class="fp__col">
         <div ref="art" class="fp__art" :style="clip.artStyle">
           <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-          <MusicPlayerClip :clip="clip" place="art" :image="track.album?.image" :active="open" />
+          <MusicPlayerClip v-if="!mapShown" :clip="clip" place="art" :image="track.album?.image" :active="open" />
+          <MusicTasteMap v-else class="fp__map" :data="map.data" :active="open" />
           <div v-if="player.pending" class="fp__pending">
             <MusicPendingNote :pending="player.pending" long />
             <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -354,7 +359,7 @@ onBeforeUnmount(() => {
       <DialogContent
         v-if="track"
         class="pp"
-        :class="[{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet', 'is-lyrics': variant === 'phone' && lyricsOn, 'is-lyrics-pane': variant === 'tablet' && pane === 'lyrics', 'is-calm': calm }, clip.classes]"
+        :class="[{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet', 'is-lyrics': variant === 'phone' && lyricsOn, 'is-lyrics-pane': variant === 'tablet' && pane === 'lyrics', 'is-calm': calm, 'is-map': mapShown }, clip.classes]"
         :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
         :aria-describedby="undefined"
         @open-auto-focus.prevent
@@ -399,7 +404,8 @@ onBeforeUnmount(() => {
               <div class="tp__player">
                 <div ref="art" class="tp__art" :style="clip.artStyle">
                   <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-                  <MusicPlayerClip :clip="clip" place="art" :image="track.album?.image" :active="open" />
+                  <MusicPlayerClip v-if="!mapShown" :clip="clip" place="art" :image="track.album?.image" :active="open" />
+                  <MusicTasteMap v-else class="fp__map" :data="map.data" :active="open" compact />
                   <div v-if="player.pending" class="fp__pending">
                     <MusicPendingNote :pending="player.pending" long />
                     <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -449,6 +455,7 @@ onBeforeUnmount(() => {
                   <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
                   <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
                   <MusicSleepTimerButton />
+                  <MusicPlayerViewSwitch v-if="map.available" :map="map" icon />
                 </div>
               </div>
 
@@ -485,7 +492,8 @@ onBeforeUnmount(() => {
 
             <div v-show="!lyricsOn" ref="art" class="pp__art" :style="clip.artStyle">
               <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-              <MusicPlayerClip :clip="clip" place="art" :image="track.album?.image" :active="open && !lyricsOn" />
+              <MusicPlayerClip v-if="!mapShown" :clip="clip" place="art" :image="track.album?.image" :active="open && !lyricsOn" />
+              <MusicTasteMap v-else class="fp__map" :data="map.data" :active="open && !lyricsOn" compact />
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
                 <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -543,6 +551,7 @@ onBeforeUnmount(() => {
               <UiIconButton icon="ph:devices" :label="t('player.devices')" size="lg" :tooltip="false" @click="ui.openPanel('devices'); player.loadDevices()" />
               <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" icon :web="!connect.djAvailable" :next-at="nextAt" />
               <MusicSleepTimerButton />
+              <MusicPlayerViewSwitch v-if="map.available" :map="map" icon />
               <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="lg" :tooltip="false" :active="lyricsOn" :pressed="lyricsOn" @click="toggleLyrics" />
               <UiIconButton icon="ph:queue" :label="t('player.queue')" size="lg" :tooltip="false" @click="ui.openPanel('queue')" />
             </div>
@@ -821,6 +830,16 @@ onBeforeUnmount(() => {
 .pp.is-lyrics-pane .pp__wave { opacity: 0.3; }
 .tp__pane.is-lyrics { background: color-mix(in oklab, var(--amb-3) 30%, rgba(10, 12, 16, 0.55)); }
 .tp__pane.is-lyrics .tp__pane-body { position: relative; overflow: hidden; padding-bottom: 0; }
+
+/* ---------- «Как подобран»: карта вкуса на месте обложки (usePlayerMap, TasteMap.vue) ---------- */
+.fp :deep(.fp__view) { position: absolute; left: 68px; top: 12px; z-index: 2; }
+:is(.fp__art, .pp__art, .tp__art) > .fp__map { position: absolute; inset: 0; }
+:is(.fp--map, .pp.is-map) :is(.fp__art, .pp__art, .tp__art) > :deep(.art) { display: none; }
+/* Волна вокруг обложки здесь ни к чему (visibility: светлая тема задаёт волне свою прозрачность) */
+.fp.fp--map .fp__wave, .pp.is-map .pp__wave { visibility: hidden; }
+.fp--map .fp__art { width: min(1040px, 100%, 100vh); aspect-ratio: 1040 / 560; }
+.pp.is-map .pp__art { width: 100%; height: clamp(180px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 400px), 520px); }
+.pp.is-map .tp__art { width: 100%; height: min(46vh, 480px); }
 
 /* ---------- Клип в плеере (usePlayerClip, PlayerClip.vue) ----------
    «Широкий»: блок обложки — по пропорциям клипа, горизонтальный клип чуть шире квадрата;

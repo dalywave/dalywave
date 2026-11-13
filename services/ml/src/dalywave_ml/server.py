@@ -15,11 +15,12 @@ from typing import Any, Literal
 import httpx
 import onnxruntime as ort
 from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from . import __version__
+from . import __version__, layout
 from .analysis import Analyzer, TooShortError
 from .audio import AudioError, decode, ffmpeg_version
 from .config import Settings
@@ -235,6 +236,28 @@ def create_app(settings: Settings | None = None, analyzer: Analyzer | None = Non
                 result["timingsMs"]["total"],
             )
             return result
+
+    @app.post("/v1/layout")
+    async def map_layout(request: Request, rows: int, dim: int) -> dict[str, Any]:
+        """Карта звучания: UMAP векторов индекса (тело — двоичное, см. layout.decode_body).
+        Занимает те же ядра, что анализ, — под тем же замком."""
+        if rows < 1 or dim < 1 or rows * dim > 200_000_000:
+            raise ApiError(422, "invalid_request", "Неверный запрос: rows и dim")
+        body = await request.body()
+        try:
+            vectors, prev = layout.decode_body(body, rows, dim)
+        except ValueError as e:
+            raise ApiError(422, "invalid_request", f"Неверный запрос: {e}") from e
+
+        def work() -> dict[str, Any]:
+            with exclusive():
+                started = time.perf_counter()
+                points = layout.layout(vectors, prev)
+                took = round((time.perf_counter() - started) * 1000)
+                log.info("карта звучания: %d точек за %d мс", rows, took)
+                return {"points": points.round(5).tolist(), "tookMs": took}
+
+        return await run_in_threadpool(work)
 
     @app.post("/v1/embed-text")
     def embed_text(req: EmbedTextRequest) -> dict[str, Any]:

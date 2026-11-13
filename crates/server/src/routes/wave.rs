@@ -11,7 +11,7 @@ use dalywave_protocol::{
     ErrorBody,
     wave::{
         NewWaveSession, NextQuery, SimilarQuery, SoundSearch, SoundSearchResults, SuggestRequest,
-        WaveFeedback, WaveItems, WaveSession, WhyQuery, WhyTrack,
+        WaveExplain, WaveFeedback, WaveItems, WaveSession, WhyQuery, WhyTrack,
     },
 };
 use uuid::Uuid;
@@ -21,7 +21,7 @@ use crate::{
     cursor,
     error::AppResult,
     extract::{Json, Path, Query},
-    reco::{prep, suggest, wave, why as explain},
+    reco::{explain as map_explain, prep, suggest, wave, why as explain},
     state::AppState,
 };
 
@@ -33,6 +33,7 @@ pub fn routes() -> Router<AppState> {
         .route("/wave/sessions/{id}/next", get(next))
         .route("/wave/sessions/{id}/feedback", post(feedback))
         .route("/wave/why", get(why))
+        .route("/wave/explain", get(explain_map))
 }
 
 /// Похожие и поиск по звучанию — часть каталога.
@@ -245,5 +246,27 @@ pub async fn why(
     let admin = principal.can(dalywave_protocol::auth::Permission::Admin);
     Ok(Json(
         explain::explain(&st.db, principal.user.id, q.track_id, q.session_id, admin).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/wave/explain",
+    tag = "wave",
+    security(("session" = []), ("device" = [])),
+    params(WhyQuery),
+    responses(
+        (status = 200, description = "«Как подобран»: карта вкуса — грани облаками, что играло в сессии, варианты этого \
+                                      подбора и отсеянное, выбранный трек, соперники и причины. Только свои показы", body = WaveExplain),
+        (status = 404, description = "Волна не предлагала этот трек слушателю или у трека нет места на карте", body = ErrorBody),
+    ),
+)]
+pub async fn explain_map(
+    State(st): State<AppState>,
+    principal: Principal,
+    Query(q): Query<WhyQuery>,
+) -> AppResult<Json<WaveExplain>> {
+    Ok(Json(
+        map_explain::explain(&st.db, principal.user.id, q.track_id, q.session_id).await?,
     ))
 }

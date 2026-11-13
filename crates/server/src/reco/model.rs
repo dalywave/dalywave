@@ -1381,7 +1381,11 @@ pub async fn annotate(db: &PgPool, entries: &mut [Entry], live: &Live<'_>) -> Op
     let n = probs.len();
     let raw: Vec<(usize, f32)> = probs
         .into_iter()
-        .map(|(i, p)| (i, metrics::wave_score(&p)))
+        .map(|(i, p)| {
+            // Сами вероятности — в след подбора («Как подобран»)
+            entries[i].cand.model_probs = Some(p);
+            (i, metrics::wave_score(&p))
+        })
         .collect();
     let mean = raw.iter().map(|(_, r)| r).sum::<f32>() / n as f32;
     for (i, r) in raw {

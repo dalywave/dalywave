@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT map_x AS \"x!\", map_y AS \"y!\" FROM track_analysis\n           WHERE map_x IS NOT NULL AND map_y IS NOT NULL ORDER BY md5(recording_id::text) LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "x!",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "map_x"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "y!",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "map_y"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "d59a586209c8777e8c26f389d14469f3e2c2eb0aa8642fa99274ad619800ec31"
+}

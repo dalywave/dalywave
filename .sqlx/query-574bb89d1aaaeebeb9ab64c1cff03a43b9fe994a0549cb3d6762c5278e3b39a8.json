@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM jobs WHERE kind = $1\n                                AND (status IN ('queued', 'running')\n                                     OR (status IN ('done', 'failed') AND finished_at > now() - make_interval(hours => $2))))\n                  AND (SELECT count(*) FROM track_analysis WHERE sound IS NOT NULL) >= $3\n                  AS \"due!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "due!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "574bb89d1aaaeebeb9ab64c1cff03a43b9fe994a0549cb3d6762c5278e3b39a8"
+}

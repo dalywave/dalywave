@@ -320,6 +320,7 @@ export type ModelVersionView = Schemas['ModelVersionView']
 export type TrainTaskView = Schemas['TrainTaskView']
 export type WhyTrack = Schemas['WhyTrack']
 export type WhyLine = Schemas['WhyLine']
+export type WaveExplain = Schemas['WaveExplain']
 export type WhyKind = Schemas['WhyKind']
 
 // «Поделиться»: карточка ссылки и разбор чужих ссылок

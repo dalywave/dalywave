@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, label, weight, map_x AS \"x!\", map_y AS \"y!\", COALESCE(map_r, 0.05)::real AS \"r!\"\n           FROM taste_facets WHERE user_id = $1 AND map_x IS NOT NULL AND map_y IS NOT NULL\n           ORDER BY position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "label"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "weight",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "weight"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "x!",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "map_x"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "y!",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "taste_facets",
+            "name": "map_y"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "r!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "cab85a471868da461a172ef2735b20bc1a5621c5e783ea10e591c1987ce6553d"
+}
