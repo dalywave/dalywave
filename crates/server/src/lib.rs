@@ -51,6 +51,7 @@ pub mod storage;
 pub mod story;
 pub mod users;
 pub mod versions;
+pub mod video;
 
 pub use config::Config;
 pub use state::AppState;

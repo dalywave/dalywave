@@ -41,6 +41,7 @@ pub mod taste;
 pub mod tv;
 pub mod updates;
 pub mod versions;
+pub mod video;
 pub mod wave;
 pub mod wave_presets;
 pub mod ws;
@@ -131,6 +132,7 @@ pub fn router(state: AppState) -> Router {
         .merge(tv::party_routes())
         .merge(overlay::routes())
         .merge(story::routes())
+        .merge(video::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())
@@ -147,6 +149,7 @@ pub fn router(state: AppState) -> Router {
         .merge(library)
         .merge(play)
         .merge(fetcher::routes())
+        .merge(video::fetcher_routes())
         .nest("/auth", auth::routes().merge(tv::auth_routes()))
         .nest("/admin", admin)
         .method_not_allowed_fallback(method_not_allowed)

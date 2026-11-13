@@ -308,6 +308,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       <template v-else>
         <SearchRecent :limit="ui.isPhone ? 4 : 6" />
         <RecognizeHistory :limit="ui.isPhone ? 4 : 6" />
+        <MusicDiscoverTile />
         <SearchCharts />
         <SearchBrowse />
         <MusicShelf v-if="followed.length" :title="t('yourArtists')" :cols="8" phone-width="88px" class="search__artists">

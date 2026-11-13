@@ -368,3 +368,9 @@ export type PrivacyPatch = Schemas['PrivacyPatch']
 export type PlaylistAccess = Schemas['PlaylistAccess']
 export type PlaylistInvite = Schemas['PlaylistInvite']
 export type FriendActivityEvent = Schemas['FriendActivityEvent']
+
+// Видео без звука: живые обложки альбомов и клипы ленты «Открытия»
+export type VideoState = Schemas['VideoState']
+export type AlbumMotion = Schemas['AlbumMotion']
+export type TrackClip = Schemas['TrackClip']
+export type ClipList = Schemas['ClipList']

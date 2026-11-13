@@ -24,6 +24,7 @@ import type {
   WhyTrack,
   FriendList, FriendProfile, FriendRequestResult, InviteLink, PeopleList, PersonCard, Privacy, PrivacyPatch, PlaylistInvite,
   DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
+  AlbumMotion, TrackClip,
 } from '~/api/types'
 import type { DownloaderSnapshot, TrainerSnapshot } from './tauri/shell'
 
@@ -650,6 +651,14 @@ export interface Bridge {
   }
 
   home(): Promise<Home>
+
+  /** Видео без звука: живая обложка альбома и клипы ленты «Открытия» (ссылки живут несколько часов) */
+  video: {
+    /** Живая обложка: `pending` — ищется, `none` — нет */
+    albumMotion(albumId: string): Promise<AlbumMotion>
+    /** Видео карточек ленты, до 20: клип или `pending`, плюс живая обложка альбома */
+    clips(trackIds: string[]): Promise<TrackClip[]>
+  }
 
   /** «Мой вкус»: грани, статистика и ручки управления рекомендациями */
   taste: {

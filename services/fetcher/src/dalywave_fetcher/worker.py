@@ -12,6 +12,15 @@
     POST {server}/api/fetcher/jobs/{id}/result
         {"workerId": "...", "result": <ответ POST /v1/acquire>}
         ← 204; 409 — задание уже не наше (аренда кончилась, его отменили)
+    POST {server}/api/fetcher/clips/claim
+        {"workerId": "..."}
+        ← 200 {"job": ClipJob} (`models.ClipJob`); 204 — клипов нет (сразу, без ожидания);
+          404 — сервер клипов не знает: не спрашиваем час
+    POST {server}/api/fetcher/clips/{id}/result
+        {"workerId": "...", "result": <ClipResult, см. `clip.ClipMaker.make`>}
+
+Клипы ленты открытий — работа второго плана: о них спрашиваем, только когда сервер ответил,
+что скачивать нечего (с `clip` в `capabilities.kinds` он отвечает 204 сразу, если клипы ждут).
 
 Задание выдаётся в аренду (`leaseExpiresAt`): пока идёт скачивание, загрузчик продлевает её
 раз в минуту. Не отчитался к сроку — сервер возвращает задание в очередь.
@@ -35,8 +44,9 @@ import httpx
 
 from . import __version__, progress
 from .acquire import SYSTEMIC_ERRORS, Fetcher
-from .download import YT_DLP_VERSION
-from .models import Job
+from .clip import ClipMaker, error_code
+from .download import YT_DLP_VERSION, Downloader
+from .models import ClipJob, Job
 
 # YouTube заподозрил бота — долгая пауза лучше, чем бан адреса.
 SYSTEMIC_PAUSE_S = 15 * 60
@@ -44,6 +54,8 @@ SYSTEMIC_PAUSE_S = 15 * 60
 LEASE_RENEW_S = 60.0
 # Код сбоя исполнителя, с которым сервер откладывает задачу, не тратя попытку.
 GIVE_BACK_CODE = "network"
+# Сервер не знает клипов (старая версия) — не спрашиваем столько.
+CLIPS_OFF_S = 3600.0
 
 # Коды выхода `run`.
 EXIT_OK = 0
@@ -227,8 +239,19 @@ class Worker:
         control: Control | None = None,
         events: WorkerEvents | None = None,
         cooldown_until: float = 0.0,
+        clips: ClipMaker | None | bool = True,
     ) -> None:
         self.fetcher = fetcher
+        # Клипы ленты открытий: по умолчанию — через загрузчик аудио того же Fetcher
+        self.clips: ClipMaker | None = None
+        if isinstance(clips, ClipMaker):
+            self.clips = clips
+        elif clips is True:
+            downloader = getattr(fetcher, "downloader", None)
+            if isinstance(downloader, Downloader):
+                self.clips = ClipMaker(downloader)
+        # До этого момента (time.time()) о клипах не спрашиваем: сервер их не знает
+        self.clips_off_until = 0.0
         self.worker_id = worker_id or socket.gethostname()
         self.poll_s = poll_s
         self.cooldown_s = cooldown_s
@@ -259,7 +282,7 @@ class Worker:
             "workerId": self.worker_id,
             "version": __version__,
             "capabilities": {
-                "kinds": ["acquire"],
+                "kinds": ["acquire", "clip"] if self.clips else ["acquire"],
                 "potProvider": s.pot_url is not None,
                 "cookies": s.cookies_file is not None,
                 "playerClients": list(s.player_clients),
@@ -304,6 +327,14 @@ class Worker:
                     return EXIT_TOKEN_REJECTED
                 if response.status_code == 204:
                     failures = 0
+                    clip = self._clip_turn()
+                    if clip is not None:
+                        if once:
+                            return EXIT_OK
+                        if clip in SYSTEMIC_ERRORS:
+                            self.cooldown_until = time.time() + SYSTEMIC_PAUSE_S
+                            self.cooldown_code = clip
+                        continue
                     self.events.idle()
                     if once:
                         return EXIT_OK
@@ -333,6 +364,71 @@ class Worker:
                 elif code != "interrupted":
                     control.wait(self.cooldown_s)
         return EXIT_OK
+
+    # ───────────── клипы ─────────────
+
+    def _clip_turn(self) -> str | None:
+        """Взять и сделать один клип, если сервер его даёт. None — клипа не было; иначе код сбоя
+        результата или пустая строка."""
+        if self.clips is None or self.control.stopped or time.time() < self.clips_off_until:
+            return None
+        try:
+            response = self.http.post(
+                "/api/fetcher/clips/claim", json={"workerId": self.worker_id}, timeout=10.0
+            )
+        except httpx.HTTPError as e:
+            self.log(f"клипы: сервер недоступен ({type(e).__name__})")
+            return None
+        if response.status_code in (404, 405):
+            self.clips_off_until = time.time() + CLIPS_OFF_S
+            self.log("клипы: сервер их не знает — не спрашиваю час")
+            return None
+        if response.status_code != 200:
+            return None
+        try:
+            job = ClipJob.model_validate(response.json()["job"])
+        except (ValueError, KeyError) as e:
+            self.log(f"клипы: задание не разобрать ({type(e).__name__})")
+            return None
+        return self._run_clip(job)
+
+    def _run_clip(self, job: ClipJob) -> str:
+        assert self.clips is not None
+        who = ", ".join(job.artists[:2])
+        self.log(f"клип {job.id}: {who} — {job.title}")
+        try:
+            result = self.clips.make(
+                title=job.title,
+                artists=job.artists,
+                duration_ms=job.duration_ms,
+                hook_start_ms=job.hook_start_ms,
+                length_ms=job.length_ms,
+                exclude_video_ids=job.exclude_video_ids,
+                upload=job.upload,
+            )
+        except Exception as e:  # noqa: BLE001 — сбой одного клипа не роняет цикл загрузчика
+            result = {"status": "error", "error": f"unknown: {type(e).__name__}: {e}"[:300]}
+        self.log(f"клип {job.id}: {result.get('status')}")
+        self._report_clip(job, result)
+        return error_code(result) or ""
+
+    def _report_clip(self, job: ClipJob, result: dict[str, Any]) -> int | None:
+        payload = {"workerId": self.worker_id, "result": result}
+        for attempt in range(3):
+            try:
+                response = self.http.post(f"/api/fetcher/clips/{job.id}/result", json=payload)
+            except httpx.HTTPError as e:
+                self.log(f"клип {job.id}: отчёт не ушёл ({type(e).__name__}), повтор")
+                self.control.wait(2**attempt)
+                continue
+            if response.is_success or (
+                400 <= response.status_code < 500 and response.status_code != 429
+            ):
+                if not response.is_success:
+                    self.log(f"клип {job.id}: сервер не принял отчёт ({response.status_code})")
+                return response.status_code
+            self.control.wait(2**attempt)
+        return None
 
     def _trace(self, name: str, _: dict[str, Any]) -> None:
         # httpcore: тело запроса ушло — дальше сервер держит запрос до ~25 секунд

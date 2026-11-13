@@ -7,6 +7,7 @@ Opus из WebM и AAC перекладываются в MP4 (ISO BMFF, `.m4a`, `
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import re
@@ -15,6 +16,7 @@ import subprocess
 import threading
 import time
 import urllib.parse
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -356,6 +358,18 @@ class Downloader:
         if cookies:
             opts["cookiefile"] = str(cookies)
         return opts
+
+    @contextlib.contextmanager
+    def paced(self) -> Iterator[None]:
+        """Одно обращение к YouTube за раз и пауза после предыдущего — для клипов и поиска."""
+        with self._lock:
+            wait = self._last_finished + self.settings.min_download_interval_s - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                yield
+            finally:
+                self._last_finished = time.monotonic()
 
     def download(self, video_id: str, out_dir: Path, basename: str) -> DownloadResult:
         with self._lock:

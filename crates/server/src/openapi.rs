@@ -11,7 +11,7 @@ use crate::routes::{
     events, export, fetcher, friends, home, images, imports, info, jam, library, lyrics,
     notifications, offline, overlay, playlist_folders, playlist_set, playlists, presaves, queue,
     reco, recognize, rewind, settings, share, sources, story, stream, sync, system, taste, tv,
-    updates, versions, wave, wave_presets, ws,
+    updates, versions, video, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -264,6 +264,10 @@ use crate::routes::{
         overlay::disable,
         overlay::now,
         overlay::stream_now,
+        video::prepare_clips,
+        video::album_motion,
+        video::claim_clip,
+        video::report_clip,
     ),
     components(schemas(
         dalywave_protocol::imports::ImportJobPayload,

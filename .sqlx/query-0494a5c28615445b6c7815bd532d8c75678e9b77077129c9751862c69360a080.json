@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT album_id, state, square_key, tall_key,\n                  checked_at < now() - make_interval(days => $2) AS \"stale!\"\n           FROM album_motion WHERE album_id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "album_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "album_motion",
+            "name": "album_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "album_motion",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "square_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "album_motion",
+            "name": "square_key"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "tall_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "album_motion",
+            "name": "tall_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "stale!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "0494a5c28615445b6c7815bd532d8c75678e9b77077129c9751862c69360a080"
+}

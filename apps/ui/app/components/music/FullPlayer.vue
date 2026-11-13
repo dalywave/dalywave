@@ -111,6 +111,9 @@ watch(lyricsOn, () => void nextTick(() => {
 const { label: contextLabel, kicker, title: phoneTitle } = useNowPlayingContext()
 /** Планшет горизонтально: закрепить плеер колонкой сбоку и свернуть этот слой */
 const prefs = usePrefsStore()
+const motion = useMotionStore()
+// Видео вместо обложки заказывается, как только трек заиграл: к раскрытию плеера оно уже готово
+watch(() => track.value?.id, id => motion.prefetch(id), { immediate: true })
 function pinSide() {
   prefs.sidePlayer = true
   void ui.collapsePlayer()
@@ -297,6 +300,7 @@ onBeforeUnmount(() => {
         <div class="fp__col">
         <div ref="art" class="fp__art">
           <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
+          <MusicMotionCover :track="track" :active="open" />
           <div v-if="player.pending" class="fp__pending">
             <MusicPendingNote :pending="player.pending" long />
             <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -363,6 +367,12 @@ onBeforeUnmount(() => {
           <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
           <div class="pp__ambient" aria-hidden="true" />
+          <!-- Текст «сценой» на телефоне: видео вместо обложки — тихим фоном за строками -->
+          <Transition name="pp-backdrop">
+            <div v-if="variant === 'phone' && lyricsOn && motion.src(track, 'tall')" class="pp__backdrop" aria-hidden="true">
+              <MusicMotionCover :track="track" shape="tall" :active="open && lyricsOn" />
+            </div>
+          </Transition>
           <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" /></div>
 
           <!-- Планшет -->
@@ -386,6 +396,7 @@ onBeforeUnmount(() => {
               <div class="tp__player">
                 <div ref="art" class="tp__art">
                   <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
+                  <MusicMotionCover :track="track" :active="open" />
                   <div v-if="player.pending" class="fp__pending">
                     <MusicPendingNote :pending="player.pending" long />
                     <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -471,6 +482,7 @@ onBeforeUnmount(() => {
 
             <div v-show="!lyricsOn" ref="art" class="pp__art">
               <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
+              <MusicMotionCover :track="track" :active="open && !lyricsOn" />
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
                 <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -602,6 +614,8 @@ onBeforeUnmount(() => {
 .fp--lyrics .fp__context { left: calc(40px + min(46%, 520px) / 2 - 12px); max-width: min(42%, 480px); }
 .fp__art { position: relative; width: min(380px, 42vh, 100%); flex: none; border-radius: var(--r-4); }
 .fp__art :deep(.art) { width: 100%; border-radius: var(--r-4); box-shadow: var(--shadow-cover); transform: scale(calc(1 + var(--beat, 0) * 0.012)); }
+/* Живая обложка — поверх картинки, в той же рамке и с тем же дыханием */
+.fp__art :deep(.mc) { border-radius: var(--r-4); transform: scale(calc(1 + var(--beat, 0) * 0.012)); }
 .fp__pending {
   position: absolute;
   inset: auto 12px 12px;
@@ -686,6 +700,7 @@ onBeforeUnmount(() => {
 .pp__kicker { font-size: 10.5px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .pp__ctx-title { font-size: 15px; font-weight: 650; }
 .pp__art { position: relative; width: clamp(180px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 400px), 100%); margin: clamp(10px, 2.2vh, 18px) auto 0; flex: none; border-radius: 14px; }
+.pp__art :deep(.mc) { border-radius: 14px; transform: scale(calc(1 + var(--beat, 0) * 0.008)); }
 .pp__art :deep(.art) { width: 100%; border-radius: 14px; box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06); transform: scale(calc(1 + var(--beat, 0) * 0.008)); }
 .pp__info { margin-top: clamp(16px, 3.4vh, 28px); flex: none; }
 .pp__titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -731,6 +746,20 @@ onBeforeUnmount(() => {
 .pp__wave, .pp__ambient { transition: opacity var(--dur-4) var(--ease-out), height var(--dur-4) var(--ease-out); }
 .pp.is-lyrics .pp__wave { opacity: 0; }
 .pp.is-lyrics .pp__ambient { height: 100%; }
+/* Фон из живой обложки: приглушён и растворяется к управлению — строки читаются поверх */
+.pp__backdrop {
+  position: absolute;
+  /* С запасом: размытые края не темнеют */
+  inset: -16px;
+  pointer-events: none;
+  opacity: 0.3;
+  filter: blur(8px) saturate(1.15);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 70%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 70%);
+}
+.pp__backdrop :deep(.mc) { border-radius: 0; }
+.pp-backdrop-enter-active, .pp-backdrop-leave-active { transition: opacity var(--dur-4) var(--ease-out); }
+.pp-backdrop-enter-from, .pp-backdrop-leave-to { opacity: 0; }
 .pp__frame { transition: background-color var(--dur-4) var(--ease-out); }
 .pp.is-lyrics .pp__frame { background-color: color-mix(in oklab, var(--amb-3) 62%, #020509); }
 /* ---------- Планшет ---------- */
@@ -749,6 +778,7 @@ onBeforeUnmount(() => {
 .tp__main { display: flex; flex: 1; flex-direction: column; gap: 20px; min-height: 0; }
 .tp__player { display: flex; flex-direction: column; align-items: stretch; width: min(560px, 100%); margin: 0 auto; flex: none; }
 .tp__art { position: relative; width: min(100%, 38vh, 440px); margin: 8px auto 0; flex: none; border-radius: var(--r-4); }
+.tp__art :deep(.mc) { border-radius: var(--r-4); transform: scale(calc(1 + var(--beat, 0) * 0.008)); }
 .tp__art :deep(.art) { width: 100%; border-radius: var(--r-4); box-shadow: 0 28px 56px -24px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06); transform: scale(calc(1 + var(--beat, 0) * 0.008)); }
 .tp__info { margin-top: 24px; }
 .tp__title { font-size: 26px; }
@@ -844,6 +874,7 @@ onBeforeUnmount(() => {
     radial-gradient(70% 40% at 92% 10%, var(--pastel-glow-2), transparent 70%);
 }
 :root[data-theme='light'] .pp__wave { mix-blend-mode: multiply; opacity: 0.6; }
+:root[data-theme='light'] .pp__backdrop { opacity: 0.2; }
 :root[data-theme='light'] .pp.is-lyrics .pp__wave { opacity: 0; }
 :root[data-theme='light'] .pp.is-lyrics-pane .pp__wave { opacity: 0.22; }
 :root[data-theme='light'] .pp__art :deep(.art),

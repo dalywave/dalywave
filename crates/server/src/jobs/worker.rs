@@ -56,6 +56,8 @@ pub struct Context {
     pub lrclib: Arc<Lrclib>,
     /// Виды задач на паузе после сбоя исполнителя (YouTube заподозрил бота, сервис анализа лежит)
     pub cooldowns: Cooldowns,
+    /// Apple Music API (живые обложки); без ключа MusicKit — `None`
+    pub musickit: Option<Arc<crate::video::musickit::MusicKit>>,
 }
 
 impl Context {
@@ -89,7 +91,18 @@ impl Context {
             .build()?;
         let lrclib = Arc::new(Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?);
         let push = Arc::new(crate::notify::push::Push::from_config(&config.push)?);
+        let musickit = match &config.info.musickit {
+            Some(cfg) => match crate::video::musickit::MusicKit::load(cfg) {
+                Ok(m) => Some(Arc::new(m)),
+                Err(e) => {
+                    tracing::warn!(error = %e, "MusicKit key is unusable: animated covers are off");
+                    None
+                }
+            },
+            None => None,
+        };
         Ok(Self {
+            musickit,
             push,
             db,
             config,
@@ -603,6 +616,11 @@ impl Worker {
                         Ok(0) => {}
                         Ok(n) => tracing::info!(users = n, "year in review warmed up"),
                         Err(e) => tracing::warn!(error = %e, "could not warm up year in review"),
+                    }
+                    match crate::video::clips::trim(&self.ctx.db, crate::video::clips::limit_bytes()).await {
+                        Ok(t) if t == crate::video::clips::Trimmed::default() => {}
+                        Ok(t) => tracing::info!(expired = t.expired, evicted = t.evicted, "clips trimmed"),
+                        Err(e) => tracing::warn!(error = %e, "could not trim clips"),
                     }
                     match crate::renditions::trim(&self.ctx.db, &self.ctx.storage, crate::renditions::limit_bytes()).await {
                         Ok(t) if t == crate::renditions::Trimmed::default() => {}

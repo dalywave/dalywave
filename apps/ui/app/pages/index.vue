@@ -165,6 +165,9 @@ function playLiked(list: Track[], i: number) {
 
     <MusicWaveHero :greeting="ui.isTouchUi ? undefined : greeting" />
 
+    <!-- «Открытия»: лента клипов нового для слушателя -->
+    <MusicDiscoverTile />
+
     <!-- Итоги года — плиткой, пока событие открыто и истории уже посмотрены -->
     <RewindCard home />
 

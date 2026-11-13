@@ -52,6 +52,10 @@ pub mod kind {
     pub const NOTIFY_SEND: &str = "notify_send";
     /// Доставить push одного уведомления на одно устройство (APNs, Web Push), с повторами.
     pub const NOTIFY_PUSH: &str = "notify_push";
+    /// Живая обложка альбома из Apple Music: найти, переложить в MP4, положить в хранилище (полоса «Живые обложки»).
+    pub const ALBUM_MOTION: &str = "album_motion";
+    /// Клип трека для ленты открытий: ищет и нарезает загрузчик на Mac (полоса «Клипы»).
+    pub const CLIP: &str = "clip";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]

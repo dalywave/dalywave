@@ -479,6 +479,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/albums/{id}/motion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["album_motion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/artists/{id}": {
         parameters: {
             query?: never;
@@ -767,6 +783,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["prepare_clips"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/describe": {
         parameters: {
             query?: never;
@@ -1017,6 +1049,38 @@ export interface paths {
         get: operations["export_playlist"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fetcher/clips/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["claim_clip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fetcher/clips/{id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["report_clip"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3597,6 +3661,16 @@ export interface components {
             tracks: components["schemas"]["Track"][];
             upc: string | null;
         };
+        /** @description Живая обложка альбома. */
+        AlbumMotion: {
+            /** Format: uuid */
+            albumId: string;
+            /** @description Квадратное видео (MP4, H.264, без звука), подписанная ссылка на несколько часов. */
+            square: string | null;
+            state: components["schemas"]["VideoState"];
+            /** @description Вертикальное видео для телефона, если у обложки оно есть. */
+            tall: string | null;
+        };
         AlbumRef: {
             /** Format: uuid */
             id: string;
@@ -3976,11 +4050,110 @@ export interface components {
             /** @enum {string} */
             type: "connect.signal";
         });
+        /** @description Запрос задания клипа: ответ сразу — задание или 204. */
+        ClipClaimRequest: {
+            workerId: string;
+        };
+        ClipClaimResponse: {
+            job: components["schemas"]["ClipJob"];
+        };
+        /**
+         * @description Задание загрузчику: найти официальный клип трека, вырезать отрывок вокруг припева и положить
+         *     MP4 по подписанной ссылке.
+         */
+        ClipJob: {
+            /** @description Исполнители по порядку. */
+            artists: string[];
+            /**
+             * Format: int32
+             * @description Длина трека, мс: клип сверяется с ней.
+             */
+            durationMs: number;
+            /** @description Видео, которые уже пробовали и отвергли: не предлагать снова. */
+            excludeVideoIds: string[];
+            /**
+             * Format: int32
+             * @description Где в треке припев, мс.
+             */
+            hookStartMs: number;
+            /**
+             * Format: uuid
+             * @description id задачи очереди: с ним отчёт.
+             */
+            id: string;
+            isrc: string | null;
+            /**
+             * Format: date-time
+             * @description Не пришёл отчёт к этому сроку — задание вернётся в очередь.
+             */
+            leaseExpiresAt: string;
+            /**
+             * Format: int32
+             * @description Сколько вырезать, мс (10–15 секунд).
+             */
+            lengthMs: number;
+            title: string;
+            /** Format: uuid */
+            trackId: string;
+            upload: components["schemas"]["UploadTarget"];
+        };
+        ClipList: {
+            /** @description В порядке запроса; неизвестные треки пропущены. */
+            items: components["schemas"]["TrackClip"][];
+        };
+        /**
+         * @description Чем кончилось задание клипа.
+         * @enum {string}
+         */
+        ClipOutcome: "ready" | "none" | "error";
+        ClipReport: {
+            result: components["schemas"]["ClipResult"];
+            workerId: string;
+        };
+        /** @description Отчёт загрузчика о клипе. */
+        ClipResult: {
+            /**
+             * Format: int32
+             * @description С какого места ролика вырезано, мс.
+             */
+            clipStartMs?: number | null;
+            /** @description Что ещё загрузчик хочет сохранить в журнале (кандидаты, тайминги). */
+            details?: Record<string, never>;
+            /**
+             * Format: int32
+             * @description Длина отрывка, мс.
+             */
+            durationMs?: number | null;
+            /** @description Код и текст сбоя для журнала задачи. */
+            error?: string | null;
+            /** Format: int32 */
+            height?: number | null;
+            /** Format: int64 */
+            sizeBytes?: number | null;
+            status: components["schemas"]["ClipOutcome"];
+            /**
+             * Format: int32
+             * @description Длина ролика целиком, мс.
+             */
+            videoDurationMs?: number | null;
+            /** @description id ролика YouTube. */
+            videoId?: string | null;
+            /** Format: int32 */
+            width?: number | null;
+        };
         /**
          * @description Откуда отрывок встраиваемого плеера.
          * @enum {string}
          */
         ClipSource: "chorus" | "preview";
+        /**
+         * @description Подготовить видео ленты: клипы и живые обложки этих треков ставятся в очередь, готовые —
+         *     со ссылками.
+         */
+        ClipsRequest: {
+            /** @description До 20 треков. */
+            trackIds: string[];
+        };
         /** @description Подтверждение команды: клиент шлёт его с `to` (кому), сервер доставляет с `from` (от кого). */
         ConnectAck: {
             /** @description Машинная причина: `offline` (устройства нет в сети), `failed`, `unsupported`. */
@@ -8033,6 +8206,20 @@ export interface components {
             name: string;
             role: components["schemas"]["ArtistRole"];
         };
+        /** @description Клип трека для ленты открытий. */
+        TrackClip: {
+            /**
+             * Format: int32
+             * @description Длина отрывка, мс.
+             */
+            durationMs: number | null;
+            motion: components["schemas"]["AlbumMotion"] | null;
+            state: components["schemas"]["VideoState"];
+            /** Format: uuid */
+            trackId: string;
+            /** @description MP4 (H.264, 480p, без звука), подписанная ссылка на несколько часов. */
+            url: string | null;
+        };
         /** @description Ответ `GET /api/tracks/{id}/credits`. */
         TrackCredits: {
             label: string | null;
@@ -8356,6 +8543,11 @@ export interface components {
          * @enum {string}
          */
         VersionKind: "original" | "slowed" | "super_slowed" | "sped_up";
+        /**
+         * @description Есть ли видео.
+         * @enum {string}
+         */
+        VideoState: "ready" | "pending" | "none";
         /**
          * @description Занятие: задаёт границы энергии и темпа и ход сессии («Засыпаю» снижает энергию, «Просыпаюсь» — поднимает).
          * @enum {string}
@@ -9804,6 +9996,38 @@ export interface operations {
             };
         };
     };
+    album_motion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id альбома */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Живая обложка альбома (Apple Music): квадратная и вертикальная. `pending` — ищется; `none` — нет */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlbumMotion"];
+                };
+            };
+            /** @description Нет такого альбома */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     artist: {
         parameters: {
             query?: never;
@@ -10496,6 +10720,39 @@ export interface operations {
             };
         };
     };
+    prepare_clips: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClipsRequest"];
+            };
+        };
+        responses: {
+            /** @description Видео карточек ленты: клип (отрывок официального видео вокруг припева) и живая обложка альбома. `pending` — ищется, спросить снова через несколько секунд */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipList"];
+                };
+            };
+            /** @description Больше 20 треков */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     describe_preview: {
         parameters: {
             query?: never;
@@ -11132,6 +11389,98 @@ export interface operations {
             };
             /** @description Сервер уже собирает несколько выгрузок */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    claim_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClipClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Задание клипа: трек, место припева, подписанная ссылка для MP4 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipClaimResponse"];
+                };
+            };
+            /** @description Клипов нет (сразу, без ожидания) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Токен загрузчика не принят */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    report_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id задания */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClipReport"];
+            };
+        };
+        responses: {
+            /** @description Отчёт принят */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Токен загрузчика не принят */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого задания */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Задание уже не ваше (`job_not_yours`) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

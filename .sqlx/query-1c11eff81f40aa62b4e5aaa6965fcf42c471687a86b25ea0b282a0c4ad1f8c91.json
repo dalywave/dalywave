@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.isrc AS \"isrc!\" FROM tracks t\n           WHERE t.album_id = $1 AND t.isrc IS NOT NULL\n           ORDER BY t.disc_number, t.track_position LIMIT 3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "isrc!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "1c11eff81f40aa62b4e5aaa6965fcf42c471687a86b25ea0b282a0c4ad1f8c91"
+}

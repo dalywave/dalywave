@@ -56,6 +56,7 @@ mod taste_model;
 mod tv;
 mod updates;
 mod versions;
+mod video;
 mod watch;
 mod wave_prep;
 mod wave_presets;
