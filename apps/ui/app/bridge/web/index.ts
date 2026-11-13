@@ -2,7 +2,7 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, Section, SourceResult, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, BeatHaptics, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, ScreensaverBridge, Section, SourceResult, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
@@ -71,6 +71,10 @@ export interface WebBridgeOptions extends HttpOptions {
   appPush?: AppPush | null
   /** Системные уведомления приложения для компьютера */
   systemNotify?: SystemNotify | null
+  /** «Почувствуй бит» (приложение на iPhone) */
+  beat?: BeatHaptics | null
+  /** Заставка для Mac (приложение на macOS) */
+  screensaver?: ScreensaverBridge | null
   /** Сохранить выгрузку (приложение): окно «Сохранить как» или «Поделиться»; по умолчанию — загрузка браузера */
   saveFile?: (path: string, name: string, http: Http) => Promise<SaveResult>
 }
@@ -365,6 +369,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
     appPush: opts.appPush ?? null,
     systemNotify: opts.systemNotify ?? null,
+    beat: opts.beat ?? null,
+    screensaver: opts.screensaver ?? null,
 
     auth: {
       providers: () => unwrap(api.GET('/api/auth/providers')),
@@ -412,6 +418,16 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       charts: () => unwrap(api.GET('/api/charts')),
       chart: id => unwrap(api.GET('/api/charts/{id}', { params: { path: { id } } })),
       hook: id => unwrap(api.GET('/api/tracks/{id}/hook', { params: { path: { id } } })),
+      storyAudio: async (id) => {
+        const res = await http.raw('GET', `/api/tracks/${id}/story/audio`)
+        if (!res.ok) throw toApiError(res.status, await res.json().catch(() => null))
+        return await res.arrayBuffer()
+      },
+      storyVideo: async (id, video) => {
+        const res = await http.raw('POST', `/api/tracks/${id}/story`, { body: video, headers: { 'Content-Type': video.type || 'video/mp4' } })
+        if (!res.ok) throw toApiError(res.status, await res.json().catch(() => null))
+        return new Blob([await res.arrayBuffer()], { type: 'video/mp4' })
+      },
       credits: id => unwrap(api.GET('/api/tracks/{id}/credits', { params: { path: { id } } })),
       about: id => unwrap(api.GET('/api/artists/{id}/about', { params: { path: { id } } })),
     },
@@ -469,6 +485,9 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       unlike: id => done(api.DELETE('/api/library/tracks/{id}', { params: { path: { id } } })),
       saveAlbum: id => done(api.PUT('/api/library/albums/{id}', { params: { path: { id } } })),
       unsaveAlbum: id => done(api.DELETE('/api/library/albums/{id}', { params: { path: { id } } })),
+      upcoming: () => unwrap(api.GET('/api/library/upcoming')),
+      presave: id => unwrap(api.PUT('/api/library/presaves/{id}', { params: { path: { id } } })),
+      unpresave: id => done(api.DELETE('/api/library/presaves/{id}', { params: { path: { id } } })),
       follow: (id, request) => done(api.PUT('/api/library/artists/{id}', { params: { path: { id } }, body: request ?? {} })),
       unfollow: id => done(api.DELETE('/api/library/artists/{id}', { params: { path: { id } } })),
       blocked: () => unwrap(api.GET('/api/library/blocked')),

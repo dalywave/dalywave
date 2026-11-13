@@ -13,6 +13,7 @@ import { createTauriTrainer } from './trainer'
 import { appPush, createOfflineBridge, haptic, systemNotify, withOffline } from './offline'
 import { createTauriOutputs } from './outputs'
 import { createTauriRecognizer } from './recognize'
+import { createBeat, createScreensaver } from './extras'
 import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell, type UpdateState } from './shell'
 
 export function isTauri(): boolean {
@@ -143,6 +144,8 @@ export function createTauriBridge(): Bridge {
     // Push (APNs) — на iPhone и iPad; на компьютере, пока приложение открыто, — системные уведомления
     appPush: platform === 'ios' || platform === 'ipados' ? appPush : null,
     systemNotify: platform === 'macos' || platform === 'windows' ? systemNotify : null,
+    beat: createBeat(platform),
+    screensaver: createScreensaver(platform),
     // «Без сети»: запросы на сервер не уходят — экраны берут локальную базу и скачанное
     blocked: () => forceOffline,
     platform,

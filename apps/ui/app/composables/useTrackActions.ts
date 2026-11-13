@@ -12,6 +12,7 @@ export function useTrackActions() {
   const pui = usePlaylistUi()
   const share = useShare()
   const report = useReportRecording()
+  const story = useStory()
   const hookPreview = useHookPreviewStore()
   const why = useWhyTrack()
   const versions = useVersionsStore()
@@ -80,6 +81,8 @@ export function useTrackActions() {
     // Играющий трек — «Слушать вместе»: позвать друзей добавлять треки в эту очередь
     if (opts.nowPlaying) entries.push({ label: t('jam.title'), icon: 'ph:users-three', onSelect: () => void useJamStore().open() })
     entries.push(share.entry('track', track.id, track.title))
+    // Видео-история 9:16 для Instagram и TikTok: обложка, волна, строка текста и 15 с с припева
+    entries.push({ label: t('story.action'), icon: 'ph:film-strip', onSelect: () => story.show(track) })
     // «Неверная запись» — только у того, что уже на сервере: жалуются на услышанное
     if (opts.nowPlaying || library.statusOf(track) === 'ready') entries.push({ label: t('track.wrongRecording'), icon: 'ph:flag', onSelect: () => report.show(track) })
     if (opts.extra?.length) entries.push(...opts.extra)

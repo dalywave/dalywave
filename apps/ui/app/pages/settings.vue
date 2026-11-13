@@ -223,6 +223,9 @@ const language = computed({
     <!-- Приложение для компьютера: статус «Слушает DalyWave» в Discord -->
     <SettingsDiscord />
 
+    <!-- Приложение на Mac: заставка с волной -->
+    <SettingsScreensaver />
+
     <!-- Плашка «Сейчас играет» для OBS: секретная ссылка, вид, предпросмотр -->
     <SettingsOverlay />
 

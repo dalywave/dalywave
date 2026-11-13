@@ -399,6 +399,7 @@ pub fn on_player_event(app: &AppHandle, ev: &Event) {
     // Виджетам позиция не нужна — только смена трека и «играет или пауза»
     if force || track_changed {
         crate::widgets::now_playing(app, now.as_ref());
+        crate::screensaver::now_playing(app, now.as_ref());
     }
     *media.synced.lock().unwrap_or_else(|e| e.into_inner()) = now.as_ref().map(|n| Synced {
         at: Instant::now(),

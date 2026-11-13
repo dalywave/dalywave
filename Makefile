@@ -55,18 +55,20 @@ sidecar: ## загрузчик для приложения: собрать, ес
 # Подпись: Developer ID из связки ключей (иначе ad-hoc), ключ обновлений — вне репозитория,
 # пароль к нему — в связке ключей (apps/shell/README.md). Программы загрузчика в Contents/MacOS
 # Tauri подписывает тем же ключом с apps/shell/entitlements.plist. CI=true: DMG без AppleScript
-# к Finder. Свои ключи сборки: make app TAURI_ARGS='--debug --bundles app'
+# к Finder. Свои ключи сборки: make app TAURI_ARGS='--debug --bundles app'. Заставка (apps/shell/saver,
+# swiftc) подписывается тем же ключом и ложится в Contents/Resources/DalyWave.saver
 UPDATER_KEY ?= $(HOME)/.tauri/dalywave-updater.key
-app: sidecar ## приложение macOS с загрузчиком: DalyWave.app и .dmg в apps/shell/target/release/bundle
+app: sidecar ## приложение macOS с загрузчиком и заставкой: DalyWave.app и .dmg в apps/shell/target/release/bundle
 	@cd apps/shell && \
 	id="$${APPLE_SIGNING_IDENTITY:-$$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n1)}"; \
-	extra=(); \
+	APPLE_SIGNING_IDENTITY="$${id:--}" bash saver/build.sh target/saver || exit 1; \
+	extra=(--config '{"bundle":{"resources":{"target/saver/DalyWave.saver/":"DalyWave.saver/"}}}'); \
 	if [ -f "$(UPDATER_KEY)" ]; then \
 	  export TAURI_SIGNING_PRIVATE_KEY="$(UPDATER_KEY)"; \
 	  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$$(security find-generic-password -s dalywave-updater-key -a "$$USER" -w)"; \
 	else \
 	  echo "Нет $(UPDATER_KEY) — сборка без файлов автообновления"; \
-	  extra=(--config '{"bundle":{"createUpdaterArtifacts":false}}'); \
+	  extra+=(--config '{"bundle":{"createUpdaterArtifacts":false}}'); \
 	fi; \
 	echo "Подпись: $${id:-ad-hoc}"; \
 	CI=true APPLE_SIGNING_IDENTITY="$${id:--}" cargo tauri build "$${extra[@]}" $(TAURI_ARGS)

@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT al.release_date, al.title, al.record_type, al.cover_key, al.cover_source,\n                      ar.name AS artist_name,\n                      (SELECT count(*) FROM tracks t WHERE t.album_id = al.id) AS \"tracks!\"\n               FROM albums al JOIN artists ar ON ar.id = al.artist_id WHERE al.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "release_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "release_date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "record_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "record_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "cover_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cover_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "cover_source"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "artist_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "tracks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "12a781a8d8515247d1bd5a25d9672cb13126766ce67992b30b059e8300b9c371"
+}

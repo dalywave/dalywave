@@ -157,6 +157,8 @@ targets:
       - sdk: Intents.framework
       # Push: разрешение, токен APNs, нажатие на уведомление (src/push.rs, PushLink.swift)
       - sdk: UserNotifications.framework
+      # «Почувствуй бит»: удары Taptic Engine на сильных долях (src/beat.rs, DalyWaveBeat.swift)
+      - sdk: CoreHaptics.framework
     preBuildScripts:
       # Своя фаза вместо `cargo tauri ios xcode-script`: работает из Xcode без запущенного CLI
       - script: |

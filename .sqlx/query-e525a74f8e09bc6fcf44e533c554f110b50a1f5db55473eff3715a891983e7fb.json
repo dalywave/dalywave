@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM album_presaves WHERE user_id = $1 AND album_id = $2 AND delivered_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e525a74f8e09bc6fcf44e533c554f110b50a1f5db55473eff3715a891983e7fb"
+}

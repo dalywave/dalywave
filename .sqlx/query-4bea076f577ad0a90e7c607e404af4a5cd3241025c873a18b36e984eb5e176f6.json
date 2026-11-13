@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO album_presaves (user_id, album_id) VALUES ($1, $2)\n         ON CONFLICT (user_id, album_id) DO UPDATE SET created_at = now(), delivered_at = NULL, cancelled_at = NULL\n         WHERE album_presaves.delivered_at IS NOT NULL OR album_presaves.cancelled_at IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4bea076f577ad0a90e7c607e404af4a5cd3241025c873a18b36e984eb5e176f6"
+}

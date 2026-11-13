@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH presaved AS (\n               SELECT album_id FROM album_presaves\n               WHERE user_id = $1 AND delivered_at IS NULL AND cancelled_at IS NULL\n           ), announced AS (\n               SELECT DISTINCT r.album_id FROM followed_artists f\n               JOIN artist_releases r ON r.artist_id = f.artist_id\n               JOIN albums al ON al.id = r.album_id\n               WHERE f.user_id = $1 AND al.release_date > $2\n           )\n           SELECT al.id,\n                  al.id IN (SELECT album_id FROM presaved) AS \"presaved!\",\n                  EXISTS (SELECT 1 FROM followed_artists f JOIN artist_releases r ON r.artist_id = f.artist_id\n                          WHERE f.user_id = $1 AND r.album_id = al.id) AS \"followed!\"\n           FROM albums al\n           WHERE al.id IN (SELECT album_id FROM presaved UNION SELECT album_id FROM announced)\n           ORDER BY al.release_date NULLS LAST, al.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "presaved!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "followed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "b66b8635129d088c696b26f6d0bfe647227219a48575df6d3ef017cc0c968aee"
+}

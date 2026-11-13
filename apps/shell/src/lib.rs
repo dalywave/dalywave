@@ -6,6 +6,8 @@
 
 mod audio;
 mod auth;
+// «Почувствуй бит» (iPhone): удары Taptic Engine на сильных долях — Core Haptics в Swift
+mod beat;
 // Статус «Слушает DalyWave» в Discord (Rich Presence)
 #[cfg(desktop)]
 mod discord;
@@ -36,6 +38,8 @@ mod presence;
 // Push iPhone и iPad (APNs): разрешение, токен для сервера, значок, нажатие на уведомление
 mod push;
 mod recognize;
+// Заставка для Mac: установка и «что играет» для неё на 127.0.0.1
+mod screensaver;
 mod settings;
 // Siri и «Команды» (iPhone, iPad): App Intents и SiriKit в Swift зовут сюда
 mod siri;
@@ -132,6 +136,8 @@ pub fn run() {
             app.manage(auth::Auth::new(&app.package_info().version.to_string()));
             app.manage(media::Media::default());
             widgets::init(handle);
+            beat::init(handle);
+            screensaver::init(handle);
             links::init(handle);
             #[cfg(desktop)]
             discord::init(handle);
@@ -250,6 +256,11 @@ pub fn run() {
             offline::offline_wave_react,
             offline::offline_played,
             haptics::haptic,
+            beat::beat_state,
+            beat::beat_set,
+            beat::beat_check,
+            screensaver::screensaver_state,
+            screensaver::screensaver_install,
             notify::notify_show,
             push::push_state,
             push::push_register,

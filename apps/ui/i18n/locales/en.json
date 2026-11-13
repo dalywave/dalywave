@@ -613,6 +613,14 @@
     "endOfTrack": "End of Track",
     "mini": "Mini Player"
   },
+  "beat": {
+    "label": "Feel the beat",
+    "noGrid": "Not available for this track",
+    "on": "Your phone taps along on strong beats while DalyWave is open"
+  },
+  "story": {
+    "action": "Share as a story"
+  },
   "share": {
     "action": "Share",
     "copied": "Link copied",

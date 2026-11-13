@@ -118,6 +118,11 @@ impl Player {
         token
     }
 
+    /// HTTP-клиент плеера и токен устройства для сервера (beat.rs берёт анализ трека так же, как движок).
+    pub(crate) fn client_for(&self, server: &str) -> (reqwest::Client, Option<String>) {
+        (self.http.clone(), self.token_for(server))
+    }
+
     /// iOS: приложение в фоне (WebView усыплён) — Siri включает музыку сама, не через интерфейс.
     #[cfg_attr(not(target_os = "ios"), allow(dead_code))]
     pub fn in_background(&self) -> bool {

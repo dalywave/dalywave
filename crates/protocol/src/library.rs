@@ -68,6 +68,33 @@ pub struct FollowedArtistPage {
     pub next_cursor: Option<String>,
 }
 
+/// Анонсированный релиз: дата выхода ещё не наступила (по часовому поясу слушателя).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpcomingRelease {
+    /// Дата выхода — `album.releaseDate`.
+    pub album: AlbumSummary,
+    /// Сохранён заранее: в день выхода сервер положит его в медиатеку и пришлёт уведомление.
+    pub presaved: bool,
+    /// Артист релиза — в подписках.
+    pub followed: bool,
+}
+
+/// «Скоро выйдет»: сохранённое заранее и анонсы артистов из подписок, ближайшие первыми.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpcomingList {
+    pub items: Vec<UpcomingRelease>,
+}
+
+/// Ответ «Сохранить заранее».
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PresaveResult {
+    /// Релиз уже вышел — альбом сразу сохранён в медиатеку (предсохранения нет).
+    pub saved_now: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LikedTrack {

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE album_presaves SET delivered_at = now() WHERE user_id = $1 AND album_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "603dc8551fd79ca56eb6cfcd5f44fe01cf0201c43eec6b8a745600131624236f"
+}

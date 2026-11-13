@@ -93,6 +93,22 @@ export function formatShortDate(iso: string, locale: Locale = 'ru', now = new Da
   return `${d}${NBSP}${MONTHS_RU[m - 1]}${sameYear ? '' : `${NBSP}${y}`}`
 }
 
+const MONTHS_RU_FULL = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+const MONTHS_EN_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/** День выхода релиза: «12 декабря», в другом году — «15 января 2027»; «завтра», «сегодня» */
+export function formatReleaseDay(iso: string, locale: Locale = 'ru', now = new Date()): string {
+  const { y, m, d } = parseDay(iso)
+  const day = Date.UTC(y, m - 1, d)
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  const diff = Math.round((day - today) / 86_400_000)
+  if (diff === 0) return locale === 'en' ? 'today' : 'сегодня'
+  if (diff === 1) return locale === 'en' ? 'tomorrow' : 'завтра'
+  const sameYear = y === now.getFullYear()
+  if (locale === 'en') return `${MONTHS_EN_FULL[m - 1]} ${d}${sameYear ? '' : `, ${y}`}`
+  return `${d}${NBSP}${MONTHS_RU_FULL[m - 1]}${sameYear ? '' : `${NBSP}${y}`}`
+}
+
 export function formatYear(iso: string | null | undefined): string {
   return iso ? iso.slice(0, 4) : ''
 }

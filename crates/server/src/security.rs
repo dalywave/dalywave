@@ -77,6 +77,13 @@ fn raw_upload(path: &str) -> bool {
     {
         return !id.is_empty() && !id.contains('/');
     }
+    // Видео истории без звука — сервер добавляет звук (story.rs)
+    if let Some(id) = path
+        .strip_prefix("/tracks/")
+        .and_then(|r| r.strip_suffix("/story"))
+    {
+        return !id.is_empty() && !id.contains('/');
+    }
     let Some(rest) = path.strip_prefix("/imports/") else {
         return false;
     };

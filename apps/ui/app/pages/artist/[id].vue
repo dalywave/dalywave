@@ -94,6 +94,15 @@ const moreItems = computed<MenuEntry[]>(() => {
         <MusicTrackList :tracks="top" hook :context="{ type: 'artist', id: artist.id, title: artist.name }" :label="t('popular')" />
       </section>
 
+      <section v-if="data.upcoming?.length" class="artist__soon" :aria-label="t('soon')">
+        <header class="artist__head">
+          <h2 class="artist__h2">{{ t('soon') }}</h2>
+        </header>
+        <div class="artist__soon-list">
+          <MusicUpcomingRelease v-for="r in data.upcoming" :key="r.album.id" :release="r" />
+        </div>
+      </section>
+
       <MusicShelf v-for="s in shelves" :key="s.key" :title="s.title" :cols="5">
         <MusicAlbumCard v-for="a in s.items" :key="a.id" :album="a" :meta="releaseMeta(a)" />
       </MusicShelf>
@@ -116,12 +125,16 @@ const moreItems = computed<MenuEntry[]>(() => {
 .is-following { box-shadow: inset 0 0 0 1px var(--accent-line); }
 .is-following :deep(.iconify) { color: var(--accent); }
 .artist__top { display: flex; flex-direction: column; gap: 8px; }
+.artist__soon { display: flex; flex-direction: column; gap: 8px; }
+.artist__soon-list { display: flex; flex-direction: column; }
 .artist__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .artist__h2 { margin: 0; font-size: var(--fs-h3); font-weight: 700; letter-spacing: var(--tr-title); }
 .artist__note { align-self: center; }
 @media (max-width: 699px) {
   .artist { gap: 32px; }
   .artist__top { padding: 0 8px; }
+  .artist__soon { padding: 0 8px; }
+  .artist__soon-list { padding: 0 8px; }
   .artist__head { padding: 0 8px; }
 }
 </style>
@@ -138,6 +151,7 @@ const moreItems = computed<MenuEntry[]>(() => {
     "more": "Показать 10",
     "less": "Свернуть",
     "related": "Похожие артисты",
+    "soon": "Скоро",
     "empty": "Релизов пока нет",
     "kinds": {
       "albumsTitle": "Альбомы",
@@ -155,6 +169,7 @@ const moreItems = computed<MenuEntry[]>(() => {
     "more": "Show 10",
     "less": "Show less",
     "related": "Similar artists",
+    "soon": "Coming soon",
     "empty": "No releases yet",
     "kinds": {
       "albumsTitle": "Albums",
