@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.embeddable FROM playlists p\n         WHERE p.id = $1 AND (p.user_id = $2 OR (p.collaborative AND EXISTS (\n             SELECT 1 FROM playlist_members m WHERE m.playlist_id = p.id AND m.user_id = $2)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "embeddable",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "embeddable"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8cf55ed78e3a2a7fb0d6e5bbda3eebbfa19f19176b270aa0046f96bfbf07f337"
+}

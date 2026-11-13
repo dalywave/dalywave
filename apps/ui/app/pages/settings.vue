@@ -115,6 +115,8 @@ const language = computed({
       <SettingsRow as="button" :title="t('import')" :description="t('importDesc')" @click="navigateTo('/import')">
         <Icon name="ph:caret-right" class="set__chev" aria-hidden="true" />
       </SettingsRow>
+      <!-- Выгрузка медиатеки в файл: CSV, M3U8, JSON, ZIP -->
+      <SettingsExport />
     </SettingsGroup>
 
     <!-- Друзья: что видно друзьям и приватная сессия -->

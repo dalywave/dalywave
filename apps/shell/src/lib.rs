@@ -12,6 +12,8 @@ mod discord;
 #[cfg(desktop)]
 mod downloader;
 mod error;
+#[cfg(desktop)]
+mod export;
 // Фокусирование iOS: сочетание волны из фильтра фокуса (Swift зовёт сюда)
 mod focus;
 mod haptics;
@@ -118,6 +120,9 @@ pub fn run() {
     // «Поделиться» кладёт ссылку в буфер обмена (только запись — права в capabilities/main.json)
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_clipboard_manager::init());
+    // «Экспорт»: окно «Сохранить как» открывает Rust (export.rs) — права в capabilities не нужны
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_dialog::init());
     let app = builder
         .setup(|app| {
             let handle = app.handle();
@@ -202,6 +207,8 @@ pub fn run() {
             auth::auth_logout,
             auth::auth_token,
             auth::auth_session,
+            #[cfg(desktop)]
+            export::export_save,
             player::player_load,
             player::player_set_upcoming,
             player::player_play,

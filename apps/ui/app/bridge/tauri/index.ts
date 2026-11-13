@@ -5,7 +5,8 @@
 // Звук — движок на Rust (./audio.ts); «Сейчас играет» и пульт системы ведёт он же.
 import type { Me } from '~/api/types'
 import type { AppUpdateState, Bridge, Platform, WindowChrome, WindowState } from '../types'
-import { createWebBridge } from '../web'
+import { createWebBridge, shareOrSaveBlob } from '../web'
+import { toApiError } from '../web/http'
 import { NativeAudioEngine } from './audio'
 import { createTauriDownloader } from './downloader'
 import { createTauriTrainer } from './trainer'
@@ -155,6 +156,18 @@ export function createTauriBridge(): Bridge {
     outputs: createTauriOutputs(platform, loadShell),
     baseUrl,
     token: getToken,
+    // «Экспорт»: на компьютере — окно «Сохранить как», файл качает оболочка потоком (apps/shell/src/export.rs);
+    // на iPhone и iPad — файл целиком и системное «Поделиться»
+    async saveFile(path, name, http) {
+      if (desktop) {
+        const { invoke } = await import('@tauri-apps/api/core')
+        const saved = await invoke<string | null>('export_save', { path, name })
+        return saved ? 'saved' : 'cancelled'
+      }
+      const res = await http.raw('GET', path)
+      if (!res.ok) throw toApiError(res.status, await res.json().catch(() => null))
+      return shareOrSaveBlob(await res.blob(), name)
+    },
     // 401 на любом запросе: токен отозван — стираем его, экран входа покажет хранилище входа
     onUnauthorized: () => {
       token = null

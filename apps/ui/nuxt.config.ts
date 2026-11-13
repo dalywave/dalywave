@@ -59,6 +59,8 @@ export default defineNuxtConfig({
   nitro: {
     devProxy: {
       '/api': { target: `${devApi}/api`, ws: true },
+      // Встраиваемый плеер отдаёт сервер (страница без бандла интерфейса)
+      '/embed': { target: `${devApi}/embed` },
     },
   },
 

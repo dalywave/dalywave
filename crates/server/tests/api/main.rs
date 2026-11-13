@@ -14,6 +14,7 @@ mod deezer;
 mod describe;
 mod events;
 mod explicit;
+mod export;
 mod fake_ml;
 mod fetcher;
 mod folders;

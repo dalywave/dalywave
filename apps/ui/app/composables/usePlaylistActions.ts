@@ -15,6 +15,7 @@ export function usePlaylistActions() {
   const offline = useOfflineStore()
   const ui = useUiStore()
   const pui = usePlaylistUi()
+  const exporter = useExport()
   const toast = useToast()
   const route = useRoute()
   const { playPlaylist } = usePlayActions()
@@ -182,6 +183,8 @@ export function usePlaylistActions() {
         ? { label: t('offline.remove'), icon: 'ph:x-circle', onSelect: () => void offline.unpin('playlist', p.id, p.title) }
         : { label: t('pl.download'), icon: 'ph:arrow-circle-down', onSelect: () => void offline.pin('playlist', p.id, p.title) })
     }
+    // Выгрузка в файл — свой плейлист или совместный, где человек участник (чужой сервер не отдаст)
+    if (!viewer && p.tracksCount) entries.push(exporter.entry(f => exporter.playlist(p.id, p.title, f)))
     if (mine) {
       entries.push(
         { label: t('pl.duplicate'), icon: 'ph:copy', onSelect: () => void duplicate(p) },

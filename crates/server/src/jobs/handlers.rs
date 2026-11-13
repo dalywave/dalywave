@@ -48,6 +48,7 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::IMPORT_FILE, crate::import::files::run_file)
         .register(kind::LYRICS, crate::lyrics::run)
         .register(kind::TRANSCODE, crate::renditions::run)
+        .register(kind::EMBED_CLIP, crate::embed::run_clip)
         .register(kind::NOTIFY_SEND, crate::notify::run_send)
         .register(kind::NOTIFY_PUSH, crate::notify::run_push);
     if fetcher.server {
