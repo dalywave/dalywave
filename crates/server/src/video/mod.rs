@@ -2,6 +2,7 @@
 //! ([`clips`], ищет и нарезает загрузчик на Mac). Файлы — в хранилище под `video/`, связи — в
 //! `album_motion` и `track_clips`; «видео нет» тоже запоминается и перепроверяется раз в месяц.
 
+pub mod clip_settings;
 pub mod clips;
 pub mod motion;
 pub mod musickit;

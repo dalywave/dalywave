@@ -1,9 +1,36 @@
 <script setup lang="ts">
-import type { DownloadPolicy, Lane, LanePatch, ServerSettings } from '~/api/types'
+import type { DownloadPolicy, Lane, LanePatch, ServerSettings, SettingsSection } from '~/api/types'
 
-// Настройки сервера: что качать по новой подписке, скорость загрузок по полосам, расписание
-// (например, дискографии — только ночью) и часовой пояс владельца
+// Настройки сервера по вкладкам: общее (часовой пояс, итоги года), вход, музыка (подписки, скорость
+// и расписание загрузок), хранилище, клипы, рекомендации, уведомления, интеграции. На каждой
+// вкладке внизу — что задано переменными окружения: видно, но меняется только на сервере
 definePageMeta({ layout: 'admin' })
+
+type Tab = 'general' | 'signin' | 'music' | 'storage' | 'clips' | 'reco' | 'notifications' | 'integrations'
+const TABS: { key: Tab, icon: string, section: SettingsSection }[] = [
+  { key: 'general', icon: 'ph:gear-six', section: 'general' },
+  { key: 'signin', icon: 'ph:sign-in', section: 'sign_in' },
+  { key: 'music', icon: 'ph:music-notes', section: 'music' },
+  { key: 'storage', icon: 'ph:hard-drives', section: 'storage' },
+  { key: 'clips', icon: 'ph:film-strip', section: 'clips' },
+  { key: 'reco', icon: 'ph:sparkle', section: 'reco' },
+  { key: 'notifications', icon: 'ph:bell', section: 'notifications' },
+  { key: 'integrations', icon: 'ph:plugs', section: 'integrations' },
+]
+const route = useRoute()
+const router = useRouter()
+const tab = computed<Tab>({
+  get: () => TABS.find(x => x.key === route.query.tab)?.key ?? 'general',
+  set: v => void router.replace({ query: { ...route.query, tab: v === 'general' ? undefined : v } }),
+})
+const section = computed(() => TABS.find(x => x.key === tab.value)!.section)
+// Телефон: выбранная вкладка — в видимой части строки (пришли по ссылке на «Клипы»)
+const tabsEl = ref<HTMLElement | null>(null)
+function revealTab() {
+  tabsEl.value?.querySelector<HTMLElement>('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'instant' as ScrollBehavior })
+}
+onMounted(() => void nextTick(revealTab))
+watch(tab, () => void nextTick(revealTab))
 
 const bridge = useBridge()
 const toast = useToast()
@@ -105,6 +132,75 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
       <h1 class="ap-title">{{ t('title') }}</h1>
     </header>
 
+    <nav ref="tabsEl" class="ap-chips se__tabs" :aria-label="t('tabs')">
+      <button
+        v-for="x in TABS"
+        :key="x.key"
+        type="button"
+        class="ap-chip"
+        :class="{ 'is-active': tab === x.key }"
+        :aria-pressed="tab === x.key"
+        @click="tab = x.key"
+      >
+        <Icon :name="x.icon" />{{ t(`tab.${x.key}`) }}
+      </button>
+    </nav>
+
+    <template v-if="tab === 'general'">
+      <SettingsGroup v-if="settings" :title="t('tz.title')">
+        <SettingsRow :title="t('tz.label')" :description="t('tz.hint')">
+          <AdminSelect :model-value="settings.utcOffsetMin" :options="offsetOptions" :label="t('tz.label')" align="end" @update:model-value="setOffset" />
+        </SettingsRow>
+      </SettingsGroup>
+      <!-- Итоги года: стиль историй и когда они открыты -->
+      <AdminRewindEvent />
+    </template>
+
+    <template v-else-if="tab === 'signin'">
+      <SettingsGroup :title="t('signin.title')">
+        <SettingsRow as="button" :title="t('signin.access')" :description="t('signin.accessHint')" @click="navigateTo('/admin/access')">
+          <Icon name="ph:caret-right" class="se__go" />
+        </SettingsRow>
+        <SettingsRow as="button" :title="t('signin.users')" :description="t('signin.usersHint')" @click="navigateTo('/admin/users')">
+          <Icon name="ph:caret-right" class="se__go" />
+        </SettingsRow>
+      </SettingsGroup>
+    </template>
+
+    <template v-else-if="tab === 'storage'">
+      <SettingsGroup :title="t('storage.title')">
+        <SettingsRow as="button" :title="t('storage.open')" :description="t('storage.hint')" @click="navigateTo('/admin/storage')">
+          <Icon name="ph:caret-right" class="se__go" />
+        </SettingsRow>
+        <SettingsRow as="button" :title="t('storage.backups')" :description="t('storage.backupsHint')" @click="navigateTo('/admin/backups')">
+          <Icon name="ph:caret-right" class="se__go" />
+        </SettingsRow>
+      </SettingsGroup>
+    </template>
+
+    <template v-else-if="tab === 'clips'">
+      <AdminState :loading="!settings && !failed.settings" :error="failed.settings && !settings" :rows="6" @retry="loadSettings">
+        <AdminClipSettings v-if="settings" :clips="settings.clips" @saved="c => settings && (settings.clips = c)" />
+      </AdminState>
+    </template>
+
+    <template v-else-if="tab === 'reco'">
+      <SettingsGroup :title="t('reco.title')">
+        <SettingsRow as="button" :title="t('reco.open')" :description="t('reco.hint')" @click="navigateTo('/admin/reco')">
+          <Icon name="ph:caret-right" class="se__go" />
+        </SettingsRow>
+      </SettingsGroup>
+    </template>
+
+    <template v-else-if="tab === 'notifications'">
+      <p class="ap-hint">{{ t('notifications.hint') }}</p>
+    </template>
+
+    <template v-else-if="tab === 'integrations'">
+      <p class="ap-hint">{{ t('integrations.hint') }}</p>
+    </template>
+
+    <template v-if="tab === 'music'">
     <AdminState :loading="!settings && !failed.settings" :error="failed.settings && !settings" :rows="6" @retry="loadSettings">
       <SettingsGroup v-if="settings && server.deezer && server.downloader" :title="t('follow.title')" :footnote="t('follow.note')">
         <SettingsRow v-for="k in POLICY" :key="k" :title="t(`follow.${k}`)">
@@ -138,19 +234,19 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
       </template>
     </SettingsGroup>
 
-    <SettingsGroup v-if="settings" :title="t('tz.title')">
-      <SettingsRow :title="t('tz.label')" :description="t('tz.hint')">
-        <AdminSelect :model-value="settings.utcOffsetMin" :options="offsetOptions" :label="t('tz.label')" align="end" @update:model-value="setOffset" />
-      </SettingsRow>
-    </SettingsGroup>
+    </template>
 
-    <!-- Итоги года: стиль историй и когда они открыты -->
-    <AdminRewindEvent />
+    <AdminEnvList :key="section" :section="section" />
   </div>
 </template>
 
 <style scoped>
 .se { max-width: 760px; }
+.se__tabs { margin-bottom: -8px; }
+@media (min-width: 700px) {
+  .se__tabs { flex-wrap: wrap; overflow: visible; }
+}
+.se__go { color: var(--text-3); }
 .se__window { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--text-2); }
 .se :deep(.sr__control) .asl { min-width: 0; }
 /* Одинаковая ширина у выпадающих списков всех полос — колонки ровные */
@@ -165,6 +261,13 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
 {
   "ru": {
     "title": "Настройки",
+    "tabs": "Разделы настроек",
+    "tab": { "general": "Общее", "signin": "Вход", "music": "Музыка", "storage": "Хранилище", "clips": "Клипы", "reco": "Рекомендации", "notifications": "Уведомления", "integrations": "Интеграции" },
+    "signin": { "title": "Вход", "access": "Приглашения и способы входа", "accessHint": "Провайдеры, приглашения, сессии", "users": "Пользователи и роли", "usersHint": "Свои аккаунты, роли, блокировка" },
+    "storage": { "title": "Хранилище", "open": "Место и файлы", "hint": "Аудио, обложки, сжатые копии и их цена", "backups": "Резервные копии базы", "backupsHint": "Ежедневные дампы и пробная проверка" },
+    "reco": { "title": "Рекомендации", "open": "Разведчик и модель вкуса", "hint": "Сколько нового в день, размер индекса, смелость разведки" },
+    "notifications": { "hint": "Уведомления на телефон и в браузер настраиваются ключами на сервере. Что получать — каждый выбирает у себя в настройках" },
+    "integrations": { "hint": "Тексты песен, перенос из других сервисов, живые обложки и выпуски приложений — внешние сервисы с адресами и ключами на сервере" },
     "saved": "Сохранено",
     "failed": "Не получилось сохранить — попробуйте ещё раз",
     "laneSaved": "«{title}»: сохранено",
@@ -208,6 +311,13 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
   },
   "en": {
     "title": "Settings",
+    "tabs": "Settings sections",
+    "tab": { "general": "General", "signin": "Sign-in", "music": "Music", "storage": "Storage", "clips": "Clips", "reco": "Recommendations", "notifications": "Notifications", "integrations": "Integrations" },
+    "signin": { "title": "Sign-in", "access": "Invites and sign-in methods", "accessHint": "Providers, invites, sessions", "users": "Users and roles", "usersHint": "Own accounts, roles, blocking" },
+    "storage": { "title": "Storage", "open": "Space and files", "hint": "Audio, covers, compressed copies and their cost", "backups": "Database backups", "backupsHint": "Daily dumps and a trial check" },
+    "reco": { "title": "Recommendations", "open": "Scout and taste model", "hint": "New tracks per day, index size, how bold the scout is" },
+    "notifications": { "hint": "Phone and browser notifications are set up with keys on the server. What to receive — everyone picks in their own settings" },
+    "integrations": { "hint": "Lyrics, imports from other services, animated covers and app releases — external services with addresses and keys on the server" },
     "saved": "Saved",
     "failed": "Couldn't save — try again",
     "laneSaved": "“{title}”: saved",

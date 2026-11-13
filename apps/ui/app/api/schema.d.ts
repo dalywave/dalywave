@@ -95,6 +95,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["backups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/backups/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["check_backup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/clips/reports": {
         parameters: {
             query?: never;
@@ -138,6 +170,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revoke_downloader"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -415,6 +463,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["releases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/rewind": {
         parameters: {
             query?: never;
@@ -477,6 +541,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_settings"];
+        trace?: never;
+    };
+    "/api/admin/settings/env": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["env_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/admin/sources": {
@@ -3991,6 +4071,30 @@ export interface components {
             items: components["schemas"]["AdminAcquisition"][];
             nextCursor: string | null;
         };
+        AdminHealth: {
+            checks: components["schemas"]["HealthCheck"][];
+            /**
+             * Format: int64
+             * @description Открытых соединений WebSocket.
+             */
+            connections: number;
+            /**
+             * Format: int64
+             * @description Размер базы, байт.
+             */
+            dbBytes: number;
+            /** Format: int64 */
+            failed24h: number;
+            /** @description Последние упавшие задачи (до 20). */
+            failures: components["schemas"]["HealthFailure"][];
+            /** Format: int64 */
+            queued: number;
+            /** Format: int64 */
+            running: number;
+            /** Format: int64 */
+            uptimeS: number;
+            version: string;
+        };
         AdminImport: {
             /** Format: date-time */
             createdAt: string;
@@ -4209,6 +4313,16 @@ export interface components {
             target: string;
             version: string;
         };
+        AppReleases: {
+            /** @description Приложения, заходившие за 60 дней, по версиям. */
+            installs: components["schemas"]["VersionShare"][];
+            /** @description Последний выпуск по каждой цели, затем остальные — свежие первыми (до 40). */
+            items: components["schemas"]["ReleaseItem"][];
+            /** @description Последняя версия по цели: `darwin` → `0.1.16`. */
+            latest: components["schemas"]["LatestRelease"][];
+            /** @description Версия сервера (и сайта — он собирается вместе с ним). */
+            serverVersion: string;
+        };
         AppToken: {
             device: components["schemas"]["Device"];
             /** @description `dwd_…`: передаётся как `Authorization: Bearer`. Показывается один раз. */
@@ -4381,6 +4495,47 @@ export interface components {
          * @enum {string}
          */
         AuthVia: "oidc" | "password" | "device" | "local";
+        /** @description Итог пробной проверки копии. */
+        BackupCheck: {
+            /** Format: date-time */
+            checkedAt: string;
+            /**
+             * Format: int64
+             * @description Сколько объектов создаёт копия (таблицы, индексы, функции…).
+             */
+            entries: number | null;
+            error: string | null;
+            /** @description `sql` — дамп распакован целиком (контрольная сумма gzip), проверены начало и конец дампа. */
+            method: string;
+            name: string;
+            ok: boolean;
+            /**
+             * Format: int64
+             * @description Таблиц с данными в копии.
+             */
+            tables: number | null;
+        };
+        BackupCheckRequest: {
+            /** @description Имя файла копии; без него — самая свежая. */
+            name?: string | null;
+        };
+        BackupFile: {
+            /** Format: date-time */
+            createdAt: string;
+            name: string;
+            /** Format: int64 */
+            sizeBytes: number;
+        };
+        Backups: {
+            /** @description Папка с копиями задана (`DALYWAVE_BACKUP_DIR`) и читается. */
+            configured: boolean;
+            dir: string | null;
+            /** @description Свежие первыми. */
+            files: components["schemas"]["BackupFile"][];
+            lastCheck: components["schemas"]["BackupCheck"] | null;
+            /** Format: int64 */
+            totalBytes: number;
+        };
         /** @description «Не рекомендовать»: трек или артист. */
         BlockedItem: {
             artist: components["schemas"]["ArtistSummary"] | null;
@@ -4501,6 +4656,8 @@ export interface components {
              */
             updatedAt: string | null;
         };
+        /** @enum {string} */
+        CheckState: "ok" | "warn" | "down" | "off";
         /**
          * @description Запрос задания. Пока заданий нет, сервер держит запрос до ~25 секунд, затем отвечает 204
          *     с `Retry-After` — через сколько секунд спросить снова.
@@ -4618,6 +4775,11 @@ export interface components {
             excludeVideoIds: string[];
             /**
              * Format: int32
+             * @description Высота кадра (360–1080). Старый загрузчик её не знает и режет 480p.
+             */
+            height?: number;
+            /**
+             * Format: int32
              * @description Где в треке припев, мс.
              */
             hookStartMs: number;
@@ -4641,12 +4803,19 @@ export interface components {
             lengthMs: number;
             /** @description Что сделать: найти и нарезать, нарезать выбранный, только кандидаты, перепроверить. */
             mode: components["schemas"]["ClipMode"];
+            /**
+             * @description Целиком и в такт: подписанная ссылка на звук трека, с которым загрузчик сопоставит звук
+             *     ролика. Не сошлось — режет кусок с припевом.
+             */
+            syncAudioUrl?: string | null;
             title: string;
             /** Format: uuid */
             trackId: string;
             upload: components["schemas"]["UploadTarget"];
             /** @description `pinned`: ролик, который выбрал администратор. */
             videoId: string | null;
+            /** @description Клип целиком, а не кусок `length_ms` с припевом. Только загрузчику с `clip-whole`. */
+            whole?: boolean;
         };
         ClipList: {
             /** @description В порядке запроса; неизвестные треки пропущены. */
@@ -4715,6 +4884,7 @@ export interface components {
             /** @description Чей канал (см. [`ClipCandidate::source`]). */
             source?: string | null;
             status: components["schemas"]["ClipOutcome"];
+            sync?: components["schemas"]["ClipSync"] | null;
             /**
              * Format: int32
              * @description Длина ролика целиком, мс.
@@ -4724,14 +4894,91 @@ export interface components {
             videoId?: string | null;
             /** @description Название ролика. */
             videoTitle?: string | null;
+            /** @description Нарезан клип целиком. */
+            whole?: boolean;
             /** Format: int32 */
             width?: number | null;
+        };
+        /** @description Клипы вместо обложки: качество, что качать, сроки хранения и потолок места. */
+        ClipSettings: {
+            /** @description Искать клипы сами, когда трек показывается. Выкл. — только выбранные администратором. */
+            autoSearch: boolean;
+            /**
+             * Format: int64
+             * @description Средний размер готового клипа при нынешних настройках, байт (по уже нарезанным; нет —
+             *     оценка по битрейту).
+             */
+            avgBytes: number;
+            /**
+             * Format: int32
+             * @description Высота кадра: 360, 480, 720 или 1080.
+             */
+            height: number;
+            /**
+             * Format: int32
+             * @description Сколько дней клип живёт с последнего показа.
+             */
+            keepDays: number;
+            /**
+             * Format: int32
+             * @description То же для треков в любимых.
+             */
+            keepLikedDays: number;
+            /**
+             * Format: int32
+             * @description Длина куска с припевом, с (6–30).
+             */
+            lengthS: number;
+            /**
+             * Format: int32
+             * @description Потолок места под клипы, ГБ.
+             */
+            maxGb: number;
+            /** @description Потолок задан переменной `DALYWAVE_CLIPS_MAX_GB`: здесь не меняется. */
+            maxGbFromEnv: boolean;
+            /**
+             * Format: int64
+             * @description Сколько клипов в хранилище сейчас и сколько они занимают.
+             */
+            stored: number;
+            /** Format: int64 */
+            storedBytes: number;
+            /**
+             * @description Клип целиком идёт в такт с треком: сервер сопоставляет звук клипа с треком. Не вышло —
+             *     кусок с припевом по кругу.
+             */
+            sync: boolean;
+            /** @description Клип целиком, а не кусок с припевом. */
+            whole: boolean;
+        };
+        /** @description Изменение настроек клипов: только переданные поля. */
+        ClipSettingsPatch: {
+            autoSearch?: boolean | null;
+            /** Format: int32 */
+            height?: number | null;
+            /** Format: int32 */
+            keepDays?: number | null;
+            /** Format: int32 */
+            keepLikedDays?: number | null;
+            /** Format: int32 */
+            lengthS?: number | null;
+            /** Format: int32 */
+            maxGb?: number | null;
+            sync?: boolean | null;
+            whole?: boolean | null;
         };
         /**
          * @description Откуда отрывок встраиваемого плеера.
          * @enum {string}
          */
         ClipSource: "chorus" | "preview";
+        /** @description Клип целиком в такт с треком: позиция трека = `offset_ms` + позиция видео × `rate`. */
+        ClipSync: {
+            /** Format: int32 */
+            offsetMs: number;
+            /** Format: double */
+            rate: number;
+        };
         /** @description Клип трека для листа «Клип». */
         ClipView: {
             /** @description Может выбирать клип (администратор). Остальные — только «Скрыть клип». */
@@ -5328,6 +5575,20 @@ export interface components {
          * @enum {string}
          */
         EndReason: "completed" | "skipped" | "previous" | "stopped" | "error" | "interrupted" | "transferred";
+        /** @description Настройка, заданная переменной окружения: видна, но меняется только на сервере. */
+        EnvSetting: {
+            /** @description Имя переменной: `DALYWAVE_PUBLIC_URL`. */
+            name: string;
+            secret: boolean;
+            section: components["schemas"]["SettingsSection"];
+            /** @description Переменная задана. */
+            set: boolean;
+            /** @description Значение; у секретов — `null` (видно только, задан ли). */
+            value: string | null;
+        };
+        EnvSettings: {
+            items: components["schemas"]["EnvSetting"][];
+        };
         /** @description Тело любой ошибки API: `{ "error": { "code": "...", "message": "..." } }`. */
         ErrorBody: {
             error: components["schemas"]["ErrorInfo"];
@@ -5685,6 +5946,29 @@ export interface components {
              */
             uptimeS: number;
             version: string;
+        };
+        /** @description Проверка одной части сервера. */
+        HealthCheck: {
+            /** @description Короткое пояснение для человека или текст ошибки. */
+            detail: string | null;
+            /** @description `database`, `storage`, `realtime`, `worker`, `ml`, `fetcher`, `backups`. */
+            key: string;
+            /**
+             * Format: int64
+             * @description Сколько ответа ждали, мс.
+             */
+            latencyMs: number | null;
+            state: components["schemas"]["CheckState"];
+        };
+        /** @description Задача, упавшая за сутки. */
+        HealthFailure: {
+            /** Format: date-time */
+            at: string;
+            error: string | null;
+            /** Format: uuid */
+            jobId: string;
+            kind: string;
+            lane: string;
         };
         /** @enum {string} */
         HealthStatus: "ok" | "error";
@@ -6394,6 +6678,12 @@ export interface components {
             from?: number | null;
             /** Format: int32 */
             until?: number | null;
+        };
+        LatestRelease: {
+            /** Format: date-time */
+            publishedAt: string;
+            target: string;
+            version: string;
         };
         Lease: {
             /** Format: date-time */
@@ -7682,6 +7972,21 @@ export interface components {
          * @enum {string}
          */
         Relation: "me" | "none" | "friend" | "outgoing" | "incoming";
+        ReleaseItem: {
+            arch: string;
+            /** Format: uuid */
+            id: string;
+            /** @description Есть установщик для сайта. */
+            installer: boolean;
+            notes: string | null;
+            /** Format: date-time */
+            publishedAt: string;
+            /** Format: int64 */
+            sizeBytes: number;
+            /** @description `darwin`, `windows`, `linux`, `streamdeck`. */
+            target: string;
+            version: string;
+        };
         /**
          * @description Загрузчик бросает задание (приложение закрывают посреди скачивания): задание сразу возвращается
          *     в очередь, попытка не тратится.
@@ -8416,6 +8721,8 @@ export interface components {
             url: string | null;
         };
         ServerSettings: {
+            /** @description Клипы вместо обложки. */
+            clips: components["schemas"]["ClipSettings"];
             /** @description Что докачивать по новой подписке, если человек не выбрал сам. */
             followPolicy: components["schemas"]["DownloadPolicy"];
             /** Format: date-time */
@@ -8428,6 +8735,7 @@ export interface components {
         };
         /** @description Изменение настроек: только переданные поля. */
         ServerSettingsPatch: {
+            clips?: components["schemas"]["ClipSettingsPatch"] | null;
             followPolicy?: components["schemas"]["DownloadPolicy"] | null;
             /**
              * Format: int32
@@ -8525,6 +8833,11 @@ export interface components {
              */
             unplaced: number;
         };
+        /**
+         * @description Раздел настроек, к которому относится переменная окружения.
+         * @enum {string}
+         */
+        SettingsSection: "general" | "sign_in" | "music" | "storage" | "clips" | "reco" | "notifications" | "integrations";
         /** @description Карточка для ссылки: то же видят превью в мессенджерах и статус в Discord. */
         ShareCard: {
             /** Format: uuid */
@@ -9311,6 +9624,7 @@ export interface components {
             durationMs: number | null;
             motion: components["schemas"]["AlbumMotion"] | null;
             state: components["schemas"]["VideoState"];
+            sync: components["schemas"]["ClipSync"] | null;
             /** Format: uuid */
             trackId: string;
             /** @description MP4 (H.264, 480p, без звука), подписанная ссылка на несколько часов. */
@@ -9797,6 +10111,19 @@ export interface components {
          * @enum {string}
          */
         VersionKind: "original" | "slowed" | "super_slowed" | "sped_up";
+        /** @description Сколько устройств на этой версии. */
+        VersionShare: {
+            /** Format: int64 */
+            devices: number;
+            /** @description Есть выпуск новее для этой платформы. */
+            outdated: boolean;
+            /** Format: int64 */
+            people: number;
+            /** @description Платформа устройства: `macos`, `windows`, `ios`, `streamdeck`… */
+            platform: string;
+            /** @description `null` — версия не сообщена (старое приложение). */
+            version: string | null;
+        };
         /**
          * @description Есть ли видео.
          * @enum {string}
@@ -10310,6 +10637,77 @@ export interface operations {
             };
         };
     };
+    backups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Резервные копии базы в папке `DALYWAVE_BACKUP_DIR` и последняя проверка */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Backups"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    check_backup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackupCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Копия прочитана целиком: распакована, начало и конец дампа на месте, таблицы посчитаны */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupCheck"];
+                };
+            };
+            /** @description Нет такой копии */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Папка с копиями не задана (`no_backups`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     clip_reports: {
         parameters: {
             query?: never;
@@ -10413,6 +10811,35 @@ export interface operations {
             };
             /** @description Нет такого живого загрузчика */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Проверки частей сервера, очередь и упавшие за сутки задачи */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHealth"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11071,6 +11498,35 @@ export interface operations {
             };
         };
     };
+    releases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Выпуски приложений и плагина и кто на какой версии */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppReleases"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     event_settings: {
         parameters: {
             query?: never;
@@ -11255,8 +11711,37 @@ export interface operations {
                     "application/json": components["schemas"]["ServerSettings"];
                 };
             };
-            /** @description Часовой пояс — от −720 до 840 минут */
+            /** @description Часовой пояс — от −720 до 840 минут; неверные настройки клипов (или потолок места задан переменной окружения) */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    env_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Настройки из переменных окружения: только чтение, у секретов — без значения */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvSettings"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

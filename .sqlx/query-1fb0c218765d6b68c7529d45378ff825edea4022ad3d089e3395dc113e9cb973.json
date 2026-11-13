@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FILTER (WHERE status = 'queued' AND run_after <= now()) AS \"queued!\",\n                  count(*) FILTER (WHERE status = 'running') AS \"running!\",\n                  count(*) FILTER (WHERE status = 'failed' AND updated_at > now() - interval '1 day') AS \"failed!\",\n                  max(finished_at) AS last_done\n           FROM jobs",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "queued!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_done",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "1fb0c218765d6b68c7529d45378ff825edea4022ad3d089e3395dc113e9cb973"
+}

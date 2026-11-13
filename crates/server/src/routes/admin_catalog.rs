@@ -500,9 +500,12 @@ async fn load_settings(st: &AppState) -> AppResult<ServerSettings> {
     )
     .fetch_one(&st.db)
     .await?;
+    let mut conn = st.db.acquire().await?;
+    let clips = crate::video::clip_settings::view(&mut conn).await?;
     Ok(ServerSettings {
         follow_policy: serde_json::from_value(row.follow_policy).unwrap_or_default(),
         utc_offset_min: row.utc_offset_min,
+        clips,
         updated_at: row.updated_at.max(row.reco_updated_at),
     })
 }
@@ -529,7 +532,8 @@ pub async fn settings(State(st): State<AppState>) -> AppResult<Json<ServerSettin
     request_body = ServerSettingsPatch,
     responses(
         (status = 200, description = "Настройки после изменения", body = ServerSettings),
-        (status = 400, description = "Часовой пояс — от −720 до 840 минут", body = ErrorBody),
+        (status = 400, description = "Часовой пояс — от −720 до 840 минут; неверные настройки клипов \
+                                      (или потолок места задан переменной окружения)", body = ErrorBody),
     ),
 )]
 pub async fn update_settings(
@@ -565,12 +569,15 @@ pub async fn update_settings(
         .execute(&mut *tx)
         .await?;
     }
+    if let Some(clips) = &patch.clips {
+        crate::video::clip_settings::update(&mut tx, clips).await?;
+    }
     audit::record(
         &mut *tx,
         Some(principal.user.id),
         audit::SETTINGS_CHANGED,
         None,
-        json!({ "followPolicy": policy, "utcOffsetMin": patch.utc_offset_min }),
+        json!({ "followPolicy": policy, "utcOffsetMin": patch.utc_offset_min, "clips": patch.clips }),
     )
     .await?;
     tx.commit().await?;

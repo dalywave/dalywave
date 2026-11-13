@@ -617,7 +617,8 @@ impl Worker {
                         Ok(n) => tracing::info!(users = n, "year in review warmed up"),
                         Err(e) => tracing::warn!(error = %e, "could not warm up year in review"),
                     }
-                    match crate::video::clips::trim(&self.ctx.db, crate::video::clips::limit_bytes()).await {
+                    let clip_settings = crate::video::clip_settings::load(&self.ctx.db).await.unwrap_or_default();
+                    match crate::video::clips::trim(&self.ctx.db, &clip_settings).await {
                         Ok(t) if t == crate::video::clips::Trimmed::default() => {}
                         Ok(t) => tracing::info!(expired = t.expired, evicted = t.evicted, "clips trimmed"),
                         Err(e) => tracing::warn!(error = %e, "could not trim clips"),

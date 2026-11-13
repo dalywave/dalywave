@@ -7,11 +7,12 @@ use utoipa::{
 };
 
 use crate::routes::{
-    accounts, acquisitions, admin, admin_catalog, admin_library, admin_users, analysis, auth,
-    catalog, collab, connect, describe, downloads, embed, events, export, fetcher, friends, home,
-    images, imports, info, jam, library, lyrics, notifications, offline, overlay, playlist_folders,
-    playlist_set, playlists, presaves, queue, reco, recognize, rewind, settings, share, sources,
-    story, stream, sync, system, taste, tv, updates, versions, video, wave, wave_presets, ws,
+    accounts, acquisitions, admin, admin_catalog, admin_library, admin_system, admin_users,
+    analysis, auth, catalog, collab, connect, describe, downloads, embed, events, export, fetcher,
+    friends, home, images, imports, info, jam, library, lyrics, notifications, offline, overlay,
+    playlist_folders, playlist_set, playlists, presaves, queue, reco, recognize, rewind, settings,
+    share, sources, story, stream, sync, system, taste, tv, updates, versions, video, wave,
+    wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -57,6 +58,11 @@ use crate::routes::{
         admin::list_sessions,
         admin::revoke_session,
         admin::audit_log,
+        admin_system::env_settings,
+        admin_system::health,
+        admin_system::backups,
+        admin_system::check_backup,
+        admin_system::releases,
         admin_users::directory,
         admin_users::live,
         admin_users::detail,

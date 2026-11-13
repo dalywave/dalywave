@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id AS \"id!\", t.album_id, c.state AS \"state?\", c.storage_key, c.duration_ms AS \"clip_ms?\",\n                  (c.checked_at < now() - make_interval(days => $2)) AS \"stale?\",\n                  (p.track_id IS NOT NULL AND p.video_id IS NULL) AS \"off!\",\n                  EXISTS (SELECT 1 FROM clip_hidden h\n                          WHERE h.user_id = $3 AND h.track_id = t.id AND h.video_id = c.video_id) AS \"hidden!\"\n           FROM tracks t\n           LEFT JOIN track_clips c ON c.track_id = t.id\n           LEFT JOIN track_clip_pins p ON p.track_id = t.id\n           WHERE t.id = ANY($1)",
+  "query": "SELECT t.id AS \"id!\", t.album_id, c.state AS \"state?\", c.storage_key, c.duration_ms AS \"clip_ms?\",\n                  c.sync_offset_ms, c.sync_rate,\n                  (c.checked_at < now() - make_interval(days => $2)) AS \"stale?\",\n                  (p.track_id IS NOT NULL AND p.video_id IS NULL) AS \"off!\",\n                  EXISTS (SELECT 1 FROM clip_hidden h\n                          WHERE h.user_id = $3 AND h.track_id = t.id AND h.video_id = c.video_id) AS \"hidden!\"\n           FROM tracks t\n           LEFT JOIN track_clips c ON c.track_id = t.id\n           LEFT JOIN track_clip_pins p ON p.track_id = t.id\n           WHERE t.id = ANY($1)",
   "describe": {
     "columns": [
       {
@@ -60,18 +60,40 @@
       },
       {
         "ordinal": 5,
+        "name": "sync_offset_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "sync_offset_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "sync_rate",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "sync_rate"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
         "name": "stale?",
         "type_info": "Bool",
         "origin": "Expression"
       },
       {
-        "ordinal": 6,
+        "ordinal": 8,
         "name": "off!",
         "type_info": "Bool",
         "origin": "Expression"
       },
       {
-        "ordinal": 7,
+        "ordinal": 9,
         "name": "hidden!",
         "type_info": "Bool",
         "origin": "Expression"
@@ -90,10 +112,12 @@
       true,
       true,
       true,
+      true,
+      true,
       null,
       null,
       null
     ]
   },
-  "hash": "426c92453a3dbf9ae7eae7c0373167dbbfdad5c2d63571548fa034570952056f"
+  "hash": "182f626e6bf12a5dede7bf73813e8d916c794b00616ec145a2f74add5e8f6524"
 }

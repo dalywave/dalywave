@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdminRecording, AudioStatus } from '~/api/types'
+import type { ViewPreset, ViewState } from '~/components/admin/SavedViews.vue'
 import type { MenuEntry } from '~/types/ui'
 
 // Каталог: записи на сервере с техническими данными — файл, формат, битрейт, громкость, источник,
@@ -18,8 +19,13 @@ useHead({ title: () => t('title') })
 const items = ref<AdminRecording[] | null>(null)
 const cursor = ref<string | null>(null)
 const failed = ref(false)
-const q = ref('')
-const status = ref<'' | AudioStatus>('ready')
+// Поиск по админке ведёт сюда с готовым запросом: /admin/catalog?q=…
+const route = useRoute()
+const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
+watch(() => route.query.q, (v) => {
+  if (typeof v === 'string' && v !== q.value) q.value = v
+})
+const status = ref<'' | AudioStatus>(q.value ? '' : 'ready')
 const source = ref('')
 const verified = ref<'all' | 'yes' | 'no'>('all')
 
@@ -46,6 +52,22 @@ async function load() {
 }
 onMounted(load)
 watchDebounced(q, () => void load(), { debounce: 300 })
+
+// Виды: готовые и свои (сохранённые фильтры)
+const viewState = computed<ViewState>(() => ({ q: q.value.trim(), status: status.value, source: source.value, verified: verified.value === 'all' ? '' : verified.value }))
+const viewPresets = computed<ViewPreset[]>(() => [
+  { key: 'ready', label: t('view.ready'), state: { status: 'ready' } },
+  { key: 'unverified', label: t('view.unverified'), state: { status: 'ready', verified: 'no' } },
+  { key: 'failed', label: t('view.failed'), state: { status: 'failed' } },
+  { key: 'disputed', label: t('view.disputed'), state: { status: 'disputed' } },
+  { key: 'all', label: t('view.all'), state: {} },
+])
+function applyView(s: ViewState) {
+  q.value = typeof s.q === 'string' ? s.q : ''
+  status.value = (typeof s.status === 'string' ? s.status : '') as '' | AudioStatus
+  source.value = typeof s.source === 'string' ? s.source : ''
+  verified.value = s.verified === 'yes' || s.verified === 'no' ? s.verified : 'all'
+}
 watch([status, source, verified], () => void load())
 
 const more = ref(false)
@@ -137,6 +159,7 @@ function menu(r: AdminRecording): MenuEntry[] {
       <h1 class="ap-title">{{ t('title') }}</h1>
     </header>
 
+    <AdminSavedViews storage-key="catalog" :presets="viewPresets" :state="viewState" class="cat__views" @apply="applyView" />
     <div class="ap-filters cat__filters">
       <input v-model="q" class="ap-input cat__search" type="search" :placeholder="t('search')" :aria-label="t('search')">
       <AdminSelect v-model="status" :options="statusOptions" :label="t('status')" />
@@ -224,6 +247,7 @@ function menu(r: AdminRecording): MenuEntry[] {
 <i18n lang="json">
 {
   "ru": {
+    "view": { "ready": "Готовые", "unverified": "Не проверены", "failed": "С ошибкой", "disputed": "Спорные", "all": "Все записи" },
     "title": "Каталог",
     "search": "Название или артист",
     "status": "Состояние",
@@ -259,6 +283,7 @@ function menu(r: AdminRecording): MenuEntry[] {
     "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Загружен", "local": "Своя папка", "other": "Другое" }
   },
   "en": {
+    "view": { "ready": "Ready", "unverified": "Not verified", "failed": "Failed", "disputed": "Disputed", "all": "All recordings" },
     "title": "Catalog",
     "search": "Title or artist",
     "status": "State",

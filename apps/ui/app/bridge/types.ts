@@ -13,6 +13,7 @@ import type {
   PlaylistPatch, PlaylistSummary, PresaveResult, SavedAlbumPage, SearchResults, UpcomingList, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
   UserDirectory, UserDetail, UserHistoryPage, LiveOverview,
+  AdminHealth, AppReleases, BackupCheck, Backups, EnvSettings,
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
   LyricsSearchResults, TrackLyrics, TrackVersions, VersionChoice, VersionKind,
@@ -989,6 +990,15 @@ export interface Bridge {
     deleteUser(id: string, confirmName: string): Promise<void>
     /** «Сейчас»: кто в сети и что слушает */
     live(): Promise<LiveOverview>
+    /** Настройки из переменных окружения: только чтение */
+    envSettings(): Promise<EnvSettings>
+    /** Здоровье сервера: проверки частей, очередь, упавшие задачи */
+    serverHealth(): Promise<AdminHealth>
+    backups(): Promise<Backups>
+    /** Пробная проверка копии базы; без имени — самой свежей */
+    checkBackup(name?: string | null): Promise<BackupCheck>
+    /** Выпуски приложений и кто на какой версии */
+    releases(): Promise<AppReleases>
     /** Способы входа (только чтение — настраиваются переменными окружения) */
     authOverview(): Promise<AuthOverview>
     createUser(user: NewUser): Promise<CreatedUser>

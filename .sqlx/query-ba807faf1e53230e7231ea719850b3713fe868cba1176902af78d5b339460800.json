@@ -1,0 +1,110 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT clip_height, clip_whole, clip_sync, clip_length_s, clip_keep_days, clip_keep_liked_days,\n                clip_max_gb, clip_auto\n         FROM server_settings WHERE id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "clip_height",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_height"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "clip_whole",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_whole"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "clip_sync",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_sync"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "clip_length_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_length_s"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "clip_keep_days",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_keep_days"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "clip_keep_liked_days",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_keep_liked_days"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "clip_max_gb",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_max_gb"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "clip_auto",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "server_settings",
+            "name": "clip_auto"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ba807faf1e53230e7231ea719850b3713fe868cba1176902af78d5b339460800"
+}

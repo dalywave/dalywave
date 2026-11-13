@@ -17,6 +17,8 @@ pub const ROLES_CHANGED: &str = "user.roles_changed";
 pub const USER_DISABLED: &str = "user.disabled";
 pub const USER_ENABLED: &str = "user.enabled";
 pub const USER_RENAMED: &str = "user.renamed";
+/// Пробная проверка резервной копии базы
+pub const BACKUP_CHECKED: &str = "backup.checked";
 /// Аккаунт удалён со всеми данными
 pub const USER_DELETED: &str = "user.deleted";
 /// Все сессии человека отозваны («выйти везде»)

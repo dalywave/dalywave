@@ -459,6 +459,8 @@ pub struct ServerSettings {
     pub follow_policy: DownloadPolicy,
     /// Часовой пояс владельца в минутах от UTC: окна работы полос, время суток у граней вкуса.
     pub utc_offset_min: i16,
+    /// Клипы вместо обложки.
+    pub clips: crate::admin_settings::ClipSettings,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -471,6 +473,8 @@ pub struct ServerSettingsPatch {
     /// −720…840.
     #[serde(default)]
     pub utc_offset_min: Option<i16>,
+    #[serde(default)]
+    pub clips: Option<crate::admin_settings::ClipSettingsPatch>,
 }
 
 // ───────────── Своя музыка ─────────────

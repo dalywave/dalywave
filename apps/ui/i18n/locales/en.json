@@ -495,8 +495,12 @@
       "groupSystem": "System",
       "users": "Users",
       "live": "Now",
-      "library": "Library",
-      "groupPeople": "People"
+      "groupPeople": "People",
+      "clips": "Clips",
+      "health": "Health",
+      "backups": "Backups",
+      "releases": "Releases",
+      "search": "Search"
     },
     "failed": "Didn't load",
     "retry": "Retry",

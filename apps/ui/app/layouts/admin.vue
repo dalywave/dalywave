@@ -21,15 +21,19 @@ const ALL_GROUPS: { key: string, title?: string, items: NavItem[] }[] = [
   ] },
   { key: 'music', title: 'groupMusic', items: [
     { to: '/admin/catalog', key: 'catalog', icon: 'ph:vinyl-record' },
-    { to: '/admin/library', key: 'library', icon: 'ph:folder-open' },
+    { to: '/admin/library', key: 'library', icon: 'ph:folders' },
     { to: '/admin/downloads', key: 'downloads', icon: 'ph:download-simple', needs: 'downloader' },
     { to: '/admin/disputed', key: 'disputed', icon: 'ph:scales', count: 'disputed', needs: 'downloader' },
     { to: '/admin/sources', key: 'sources', icon: 'ph:plugs-connected', needs: 'downloader' },
+    { to: '/admin/clips', key: 'clips', icon: 'ph:film-strip' },
     { to: '/admin/import', key: 'import', icon: 'ph:tray-arrow-down' },
     { to: '/admin/reco', key: 'reco', icon: 'ph:sparkle' },
   ] },
   { key: 'system', title: 'groupSystem', items: [
+    { to: '/admin/health', key: 'health', icon: 'ph:heartbeat' },
     { to: '/admin/storage', key: 'storage', icon: 'ph:hard-drives' },
+    { to: '/admin/backups', key: 'backups', icon: 'ph:database' },
+    { to: '/admin/releases', key: 'releases', icon: 'ph:package' },
     { to: '/admin/log', key: 'log', icon: 'ph:scroll' },
     { to: '/admin/settings', key: 'settings', icon: 'ph:sliders-horizontal' },
   ] },
@@ -47,6 +51,17 @@ const current = computed(() => {
   return ITEMS.value.find(i => i.to === path)?.to ?? ITEMS.value.find(i => i.to !== '/admin' && path.startsWith(`${i.to}/`))?.to ?? '/admin'
 })
 const countOf = (i: NavItem) => (i.count ? counts.value[i.count] : 0)
+
+// Поиск по админке: ⌘K / Ctrl+K отовсюду (кроме полей ввода, где это сочетание ничего не делает —
+// перехватываем и там: в админке нет полей, которым оно нужно)
+const searchOpen = ref(false)
+const sections = computed(() => ITEMS.value.map(i => ({ to: i.to, label: t(`admin.nav.${i.key}`), icon: i.icon })))
+useEventListener(window, 'keydown', (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    searchOpen.value = !searchOpen.value
+  }
+})
 
 onMounted(() => void refresh())
 // Счётчики живут вместе с данными: спорные появляются по событиям скачивания
@@ -76,6 +91,11 @@ onMounted(() => void nextTick(revealTab))
         <BrandLogo />
         <span class="adm__brand-sub">{{ t('admin.title') }}</span>
       </div>
+      <button type="button" class="adm__search" @click="searchOpen = true">
+        <Icon name="ph:magnifying-glass" />
+        <span class="adm__label">{{ t('admin.nav.search') }}</span>
+        <UiKbd :keys="['⌘', 'K']" />
+      </button>
       <nav class="adm__nav" :aria-label="t('admin.sections')">
         <div v-for="g in GROUPS" :key="g.key" class="adm__group">
           <span v-if="g.title" class="adm__group-title">{{ t(`admin.nav.${g.title}`) }}</span>
@@ -102,6 +122,7 @@ onMounted(() => void nextTick(revealTab))
         <div class="adm__phone-bar">
           <UiIconButton to="/" icon="ph:arrow-left" :label="t('admin.back')" size="lg" :tooltip="false" />
           <span class="adm__phone-title">{{ t('admin.title') }}</span>
+          <span class="adm__phone-search"><UiIconButton icon="ph:magnifying-glass" :label="t('admin.nav.search')" size="lg" :tooltip="false" @click="searchOpen = true" /></span>
         </div>
         <nav ref="tabs" class="adm__tabs" :aria-label="t('admin.sections')">
           <NuxtLink
@@ -118,6 +139,7 @@ onMounted(() => void nextTick(revealTab))
       </header>
       <slot />
     </main>
+    <AdminCommand v-model:open="searchOpen" :sections="sections" />
   </div>
 </template>
 
@@ -129,6 +151,11 @@ onMounted(() => void nextTick(revealTab))
 .adm__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 4px; }
 .adm__brand-sub { font-size: var(--fs-small); font-weight: 600; color: var(--text-3); }
 .adm__nav { display: flex; flex: 1; flex-direction: column; gap: 16px; }
+.adm__search { display: flex; align-items: center; gap: 12px; height: 36px; margin-bottom: -4px; padding: 0 8px 0 12px; border: 0; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; transition: color var(--dur-1), box-shadow var(--dur-1); }
+.adm__search :deep(.iconify) { flex: none; font-size: 17px; }
+.adm__search:hover { color: var(--text-1); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.adm__search:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.adm__phone-search { margin-left: auto; }
 .adm__group { display: flex; flex-direction: column; gap: 2px; }
 .adm__group-title { padding: 0 12px 6px; font-size: 11px; font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
 .adm__link { display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 10px 0 12px; border-radius: var(--r-3); font-weight: 550; color: var(--text-2); transition: color var(--dur-1), background-color var(--dur-1); }
@@ -228,6 +255,17 @@ onMounted(() => void nextTick(revealTab))
 .ap-group { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 20px 0 6px; border-bottom: 1px solid var(--hair); font-size: var(--fs-caption); font-weight: 650; color: var(--text-2); }
 .ap-group:first-child { padding-top: 0; }
 .ap-group + .ap-tr { border-top: 0; }
+
+/* Вкладки и виды страницы: строка «чипов», выбранный — светлым */
+.ap-chips { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.ap-chips::-webkit-scrollbar { display: none; }
+.ap-chip { display: inline-flex; flex: none; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 0; border-radius: var(--r-pill); background: none; color: var(--text-2); font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; transition: color var(--dur-1), background-color var(--dur-1); }
+.ap-chip .iconify { font-size: 16px; }
+.ap-chip:hover { background: var(--fill-1); color: var(--text-1); }
+.ap-chip:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.ap-chip.is-active { background: var(--text-1); color: var(--on-light); }
+/* Виды прямо над фильтрами — одной группой, без большого отступа страницы */
+.ap-chips + .ap-filters { margin-top: -28px; }
 
 /* Поле ввода админки */
 .ap-input { height: 36px; min-width: 0; padding: 0 12px; border: 0; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-1); font: inherit; font-size: var(--fs-small); transition: box-shadow var(--dur-1); }

@@ -1,4 +1,4 @@
-import type { AlbumMotion, Track, TrackClip } from '~/api/types'
+import type { AlbumMotion, ClipSync, Track, TrackClip } from '~/api/types'
 
 /** Ссылки подписаны на несколько часов: через час спрашиваем заново */
 const FRESH_MS = 60 * 60 * 1000
@@ -81,6 +81,12 @@ export const useMotionStore = defineStore('motion', () => {
     return shape === 'tall' ? (m.tall ?? m.square) : (m.square ?? m.tall)
   }
 
+  /** Клип целиком, сопоставленный с треком: где в треке начинается видео и его растяжение */
+  function sync(track: Pick<Track, 'id'> | null | undefined): ClipSync | null {
+    const c = track ? entries.get(track.id)?.clip : null
+    return c?.state === 'ready' && c.url ? c.sync ?? null : null
+  }
+
   /** Что за видео у трека: клип, живая обложка альбома, никакого — или ещё неизвестно (`null`) */
   function kind(track: Pick<Track, 'id'> | null | undefined): 'clip' | 'artwork' | 'none' | null {
     const e = track ? entries.get(track.id) : undefined
@@ -110,5 +116,5 @@ export const useMotionStore = defineStore('motion', () => {
     void load(trackId)
   }
 
-  return { allowed, cellular, src, kind, prefetch, remember, hasClip, refresh }
+  return { allowed, cellular, src, sync, kind, prefetch, remember, hasClip, refresh }
 })

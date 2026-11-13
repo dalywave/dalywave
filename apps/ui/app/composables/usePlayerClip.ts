@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import type { Track } from '~/api/types'
 import type { ClipStyle } from '~/stores/prefs'
+import type { ClipFollow } from '~/utils/clip-follow'
 
 export type ClipLayout = Exclude<ClipStyle, 'off'>
 
@@ -47,6 +48,12 @@ export function usePlayerClip(opts: {
   const layout = computed<ClipLayout | null>(() => (player.pending || player.soundLost ? null : known.value))
   const screen = computed(() => layout.value === 'backdrop' || layout.value === 'cinema')
   const src = computed(() => (layout.value ? motion.src(opts.track.value) : null))
+  /** Клип целиком в такт с треком: видео ведётся по позиции трека, а не крутится по кругу */
+  const follow = computed<ClipFollow | null>(() => {
+    const s = layout.value ? motion.sync(opts.track.value) : null
+    if (!s) return null
+    return { offsetMs: s.offsetMs, rate: s.rate, position: () => player.positionMs, playing: () => player.playing }
+  })
   /** Играет вместе с музыкой: пауза — и клип стоит */
   const playing = computed(() => opts.open.value && player.playing)
 
@@ -90,6 +97,7 @@ export function usePlayerClip(opts: {
     layout,
     screen,
     src,
+    follow,
     playing,
     shown,
     ratio,

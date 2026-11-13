@@ -495,8 +495,12 @@
       "groupSystem": "Система",
       "users": "Пользователи",
       "live": "Сейчас",
-      "library": "Библиотека",
-      "groupPeople": "Люди"
+      "groupPeople": "Люди",
+      "clips": "Клипы",
+      "health": "Здоровье",
+      "backups": "Резервные копии",
+      "releases": "Выпуски",
+      "search": "Поиск"
     },
     "failed": "Не загрузилось",
     "retry": "Повторить",

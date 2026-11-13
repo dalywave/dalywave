@@ -79,7 +79,7 @@ watch(() => props.clip.src, () => {
 <template>
   <!-- Квадрат: как живая обложка (MusicMotionCover) — поверх картинки, в той же рамке (.mc) -->
   <div v-if="here === 'square' && clip.src" class="mc pc-square">
-    <MusicLoopVideo :src="clip.src" :active="run" @ready="clip.setShown" />
+    <MusicLoopVideo :src="clip.src" :active="run" :follow="clip.follow" @ready="clip.setShown" />
   </div>
 
   <div v-else-if="here === 'wide'" class="pcw">
@@ -87,14 +87,14 @@ watch(() => props.clip.src, () => {
       <canvas ref="glow" class="pc-glow" width="24" height="14" aria-hidden="true" />
       <div class="pcw__card">
         <img v-if="cover" ref="coverEl" :src="cover" alt="" class="pcw__cover" aria-hidden="true" @load="paint">
-        <MusicLoopVideo ref="loop" :src="clip.src" :active="run" @ready="clip.setShown" @loadedmetadata="onMeta" />
+        <MusicLoopVideo ref="loop" :src="clip.src" :active="run" :follow="clip.follow" @ready="clip.setShown" @loadedmetadata="onMeta" />
       </div>
     </div>
   </div>
 
   <div v-else-if="here" class="pcs" :class="{ 'pcs--contain': contain, 'is-shown': clip.shown }" aria-hidden="true">
     <img v-if="cover" ref="coverEl" :src="cover" alt="" class="pcs__cover" @load="paint">
-    <MusicLoopVideo ref="loop" :src="clip.src" :active="run" :fit="contain ? 'contain' : 'cover'" @ready="clip.setShown" @loadedmetadata="onMeta" />
+    <MusicLoopVideo ref="loop" :src="clip.src" :active="run" :follow="clip.follow" :fit="contain ? 'contain' : 'cover'" @ready="clip.setShown" @loadedmetadata="onMeta" />
     <i class="pcs__shade" />
   </div>
 </template>

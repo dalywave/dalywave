@@ -13,7 +13,7 @@
         {"workerId": "...", "result": <ответ POST /v1/acquire>}
         ← 204; 409 — задание уже не наше (аренда кончилась, его отменили)
     POST {server}/api/fetcher/clips/claim
-        {"workerId": "...", "features": ["clip-modes"]}
+        {"workerId": "...", "features": ["clip-modes", "clip-whole"]}
         ← 200 {"job": ClipJob} (`models.ClipJob`); 204 — клипов нет (сразу, без ожидания);
           404 — сервер клипов не знает: не спрашиваем час
     POST {server}/api/fetcher/clips/{id}/result
@@ -58,7 +58,7 @@ GIVE_BACK_CODE = "network"
 CLIPS_OFF_S = 3600.0
 # Что загрузчик умеет в клипах сверх «найти и нарезать»: режимы задания pinned / search / review
 # (выбор администратора, кандидаты, перепроверка старых клипов). Без этого сервер их не выдаёт.
-CLIP_FEATURES = ["clip-modes"]
+CLIP_FEATURES = ["clip-modes", "clip-whole"]
 
 # Коды выхода `run`.
 EXIT_OK = 0
@@ -426,6 +426,9 @@ class Worker:
                 video_id=job.video_id,
                 current_video_id=job.current_video_id,
                 upload=job.upload,
+                height=job.height,
+                whole=job.whole,
+                sync_audio_url=job.sync_audio_url,
             )
         except Exception as e:  # noqa: BLE001 — сбой одного клипа не роняет цикл загрузчика
             result = {"status": "error", "error": f"unknown: {type(e).__name__}: {e}"[:300]}

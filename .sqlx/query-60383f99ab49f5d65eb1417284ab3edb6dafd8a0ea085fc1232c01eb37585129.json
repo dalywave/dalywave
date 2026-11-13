@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO backup_checks (name, ok, method, entries, tables, error, checked_by)\n         VALUES ($1, $2, 'sql', $3, $4, $5, $6) RETURNING checked_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "checked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "checked_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Int8",
+        "Int8",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "60383f99ab49f5d65eb1417284ab3edb6dafd8a0ea085fc1232c01eb37585129"
+}

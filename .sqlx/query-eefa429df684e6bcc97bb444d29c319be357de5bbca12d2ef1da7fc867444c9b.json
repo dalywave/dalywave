@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT name, ok, method, entries, tables, error, checked_at FROM backup_checks\n         ORDER BY checked_at DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ok",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "ok"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "method",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "method"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "entries",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "entries"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "tables",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "tables"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "error"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "checked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "backup_checks",
+            "name": "checked_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "eefa429df684e6bcc97bb444d29c319be357de5bbca12d2ef1da7fc867444c9b"
+}

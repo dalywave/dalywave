@@ -329,7 +329,7 @@ def test_idle_server_hands_out_a_clip_and_gets_the_report() -> None:
         f"/api/fetcher/clips/{CLIP_JOB['id']}/result",
     ]
     assert seen[0][1]["capabilities"]["kinds"] == ["acquire", "clip"]
-    assert seen[1][1] == {"workerId": "mac", "features": ["clip-modes"]}
+    assert seen[1][1] == {"workerId": "mac", "features": ["clip-modes", "clip-whole"]}
     assert seen[2][1]["result"]["status"] == "ready"
     call = clips.calls[0]
     assert call["hook_start_ms"] == 63_000 and call["exclude_video_ids"] == ["bad"]

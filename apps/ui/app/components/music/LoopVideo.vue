@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import type { ClipFollow } from '~/utils/clip-follow'
+
 // Зацикленное видео без звука поверх обложки: проявляется, когда пошли кадры, и стоит, пока его
 // не видно — вкладка в фоне, элемент за экраном или `active` выключен. Звука у файлов нет вовсе,
-// `muted` — ещё и для автозапуска в браузерах
+// `muted` — ещё и для автозапуска в браузерах. С `follow` (клип целиком, сопоставленный с треком)
+// видео не крутится по кругу, а идёт за позицией трека: перемотка, пауза, растяжение клипа
 const props = withDefaults(defineProps<{
   src: string | null
   active?: boolean
@@ -9,7 +12,9 @@ const props = withDefaults(defineProps<{
   cycle?: number
   /** Как кадр ложится в рамку: обрезается по ней (cover) или целиком (contain) */
   fit?: 'cover' | 'contain'
-}>(), { active: true, cycle: 0, fit: 'cover' })
+  /** Клип целиком в такт с треком: видео ведётся по его позиции */
+  follow?: ClipFollow | null
+}>(), { active: true, cycle: 0, fit: 'cover', follow: null })
 const emit = defineEmits<{ ready: [boolean] }>()
 
 const bridge = useBridge()
@@ -40,6 +45,38 @@ function sync() {
 }
 
 watch(run, sync)
+
+// ---------- В такт с треком ----------
+// Видео отстаёт или убежало дальше допуска — перескакивает; скорость — по растяжению клипа.
+// Трек там, где в клипе кадров нет (вступление трека до начала клипа, хвост) — видео прячется,
+// под ним обложка
+const outside = ref(false)
+function track() {
+  const v = el.value
+  const f = props.follow
+  if (!v || !f) return
+  const at = followTarget(f, v.duration)
+  outside.value = at === null
+  if (at === null) {
+    if (!v.paused) v.pause()
+    return
+  }
+  const rate = 1 / f.rate
+  if (Math.abs(v.playbackRate - rate) > 0.001) v.playbackRate = rate
+  if (Math.abs(v.currentTime - at) > FOLLOW_TOLERANCE_S) v.currentTime = at
+  if (run.value && f.playing() && v.paused) void v.play().catch(() => {})
+  if (!f.playing() && !v.paused) v.pause()
+}
+const follower = useIntervalFn(track, 250, { immediate: false })
+watch([() => !!props.follow, run], ([on, going]) => {
+  if (on && going) {
+    follower.resume()
+    track()
+  }
+  else {
+    follower.pause()
+  }
+}, { immediate: true })
 watch(() => props.cycle, () => {
   if (el.value) el.value.currentTime = 0
 })
@@ -67,11 +104,11 @@ function onError() {
     ref="el"
     :key="url"
     class="lv"
-    :class="{ 'is-shown': shown }"
+    :class="{ 'is-shown': shown && !outside }"
     :style="fit === 'contain' ? { objectFit: 'contain' } : undefined"
     :src="url"
     muted
-    loop
+    :loop="!follow"
     playsinline
     disablepictureinpicture
     disableremoteplayback

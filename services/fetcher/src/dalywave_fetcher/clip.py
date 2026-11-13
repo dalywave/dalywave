@@ -32,7 +32,7 @@ import httpx
 import yt_dlp
 from yt_dlp.utils import YoutubeDLError
 
-from . import tools
+from . import clip_sync, tools
 from .clip_pick import (
     KEEP_CANDIDATES,
     ClipTrack,
@@ -52,13 +52,24 @@ from .download import (
 )
 from .normalize import has_cyrillic
 
-# Поток видео до 480p: H.264, затем VP9. AV1 не берём — ffmpeg приложения его не декодирует.
-# Сначала прямая ссылка (https), затем HLS; DASH по кусочкам ffmpeg не читает.
+# Поток видео до нужной высоты (по умолчанию 480p): H.264, затем VP9. AV1 не берём — ffmpeg
+# приложения его не декодирует. Сначала прямая ссылка (https), затем HLS; DASH по кусочкам ffmpeg
+# не читает.
 _CODECS = ("avc1", "vp09", "vp9")
-VIDEO_FORMAT = "/".join(
-    [f"bv*[height<=480][vcodec^={c}][protocol=https]" for c in _CODECS]
-    + [f"bv*[height<=480][vcodec^={c}][protocol^=m3u8]" for c in _CODECS]
-)
+
+
+def video_format(height: int = 480) -> str:
+    return "/".join(
+        [f"bv*[height<={height}][vcodec^={c}][protocol=https]" for c in _CODECS]
+        + [f"bv*[height<={height}][vcodec^={c}][protocol^=m3u8]" for c in _CODECS]
+    )
+
+
+VIDEO_FORMAT = video_format(480)
+# Звук ролика для сопоставления с треком: любой, лишь бы ffmpeg прочёл по ссылке
+AUDIO_FORMAT = "ba[protocol=https]/ba[protocol^=m3u8]/ba"
+# Клип целиком — не длиннее (полнометражные «фильмы» не режем целиком)
+MAX_WHOLE_S = 600.0
 SEARCH_LIMIT = 8
 # Ролик оказался неподвижной картинкой — пробуем следующий годный, но не больше стольких
 MAX_CUT_TRIES = 2
@@ -313,10 +324,12 @@ def encode(
     length_s: float,
     encoder: str = "libx264",
     smaller: bool = False,
+    height: int = 480,
 ) -> None:
-    """Точная нарезка и сжатие: без звука, до 480p, не больше 30 кадров/с, H.264, faststart."""
+    """Точная нарезка и сжатие: без звука, до `height` (480p), не больше 30 кадров/с, H.264,
+    faststart."""
     info = probe(src)
-    filters = ["scale=-2:'min(480,ih)'"]
+    filters = [f"scale=-2:'min({height},ih)'"]
     if info.get("fps", 0) > 30.5:
         filters.append("fps=30")
     cmd = [
@@ -364,14 +377,21 @@ def encode(
 
 
 def encode_small(
-    src: Path, dst: Path, offset_s: float, length_s: float, encoder: str = "libx264"
+    src: Path,
+    dst: Path,
+    offset_s: float,
+    length_s: float,
+    encoder: str = "libx264",
+    height: int = 480,
 ) -> str:
-    """Сжатие с обычными настройками; больше ~2 МБ — ещё раз, заметнее. Возвращает, с какими
-    настройками сжато: `crf27`, `800k`…"""
-    encode(src, dst, offset_s, length_s, encoder)
-    smaller = dst.stat().st_size > TARGET_BYTES
+    """Сжатие с обычными настройками; больше ~2 МБ на 12 секунд — ещё раз, заметнее. Возвращает,
+    с какими настройками сжато: `crf27`, `800k`…"""
+    encode(src, dst, offset_s, length_s, encoder, height=height)
+    # Предел растёт с длиной и высотой кадра: клип целиком в 720p и не должен влезать в 2 МБ
+    target = TARGET_BYTES * max(1.0, length_s / 12) * max(1.0, (height / 480) ** 2)
+    smaller = dst.stat().st_size > target
     if smaller:
-        encode(src, dst, offset_s, length_s, encoder, smaller=True)
+        encode(src, dst, offset_s, length_s, encoder, smaller=True, height=height)
     if encoder == "libx264":
         return f"crf{CRF + (CRF_STEP if smaller else 0)}"
     return f"{SMALLER_BITRATE_K if smaller else BITRATE_K}k"
@@ -457,15 +477,46 @@ class ClipMaker:
             raise DownloadError(classify_error(text), message, collector.warnings) from e
         return list((info or {}).get("entries") or [])
 
-    def fetch_range(self, video_id: str, start_s: float, end_s: float, out_dir: Path) -> Path:
+    def fetch_range(
+        self, video_id: str, start_s: float, end_s: float, out_dir: Path, height: int = 480
+    ) -> Path:
         """Только кусок видео [start_s, end_s] без звука; при 403 — ещё раз другим клиентом."""
         try:
-            return self._fetch_range(video_id, start_s, end_s, out_dir, None)
+            return self._fetch_range(video_id, start_s, end_s, out_dir, None, height)
         except DownloadError as e:
             fallback = self.downloader.fallback_clients()
             if e.code not in RETRY_WITH_FALLBACK or not fallback:
                 raise
-            return self._fetch_range(video_id, start_s, end_s, out_dir, fallback)
+            return self._fetch_range(video_id, start_s, end_s, out_dir, fallback, height)
+
+    def video_audio(self, video_id: str) -> Any:
+        """Звук ролика (моно, 8 кГц) — для сопоставления клипа с треком."""
+        opts = self.downloader.options(self.work_root, "raw")
+        collector = _Collector()
+        opts.update({"format": AUDIO_FORMAT, "logger": collector, "skip_download": True})
+        with self.downloader.paced():
+            try:
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(
+                        f"https://www.youtube.com/watch?v={video_id}", download=False
+                    )
+                    fmt = ((info or {}).get("requested_formats") or [info or {}])[0]
+                    url = str(fmt.get("url") or "")
+                    cookies = (
+                        "".join(
+                            f"{c.name}={c.value}; path={c.path}; domain={c.domain};\r\n"
+                            for c in ydl.cookiejar.get_cookies_for_url(url)
+                        )
+                        if url
+                        else ""
+                    )
+            except YoutubeDLError as e:
+                message = str(e).removeprefix("ERROR: ")
+                raise DownloadError(classify_error(message), message, collector.warnings) from e
+        if not url:
+            raise DownloadError("format_unavailable", "yt-dlp не дал ссылку на звук ролика")
+        headers = fmt.get("http_headers") or (info or {}).get("http_headers") or {}
+        return clip_sync.decode_audio(url, headers, cookies or None)
 
     def _fetch_range(
         self,
@@ -474,12 +525,13 @@ class ClipMaker:
         end_s: float,
         out_dir: Path,
         clients: tuple[str, ...] | None,
+        height: int = 480,
     ) -> Path:
         """Ссылку на поток даёт yt-dlp, кусок качает ffmpeg сам: так его ошибка (stderr) видна
         в задаче, а 403 потока узнаётся и пробуется другим клиентом."""
         opts = self.downloader.options(out_dir, "raw", clients)
         collector = _Collector()
-        opts.update({"format": VIDEO_FORMAT, "logger": collector, "skip_download": True})
+        opts.update({"format": video_format(height), "logger": collector, "skip_download": True})
         out = out_dir / "raw.mkv"
         env = None
         if proxy := self.downloader.settings.proxy:
@@ -616,6 +668,9 @@ class ClipMaker:
         current_video_id: str | None = None,
         upload: Any = None,
         keep: Path | None = None,
+        height: int = 480,
+        whole: bool = False,
+        sync_audio_url: str | None = None,
     ) -> dict[str, Any]:
         """Клип целиком. Возвращает `ClipResult` сервера: status ready / kept / none / error.
 
@@ -625,9 +680,12 @@ class ClipMaker:
         нашёлся с канала выше рангом — нарезать его, текущий не годится и замены нет — `none`.
 
         `upload` — `UploadSpec` (PUT по подписанной ссылке); `keep` — куда скопировать готовый MP4
-        (живая проверка без сервера)."""
+        (живая проверка без сервера). `height` — высота кадра; `whole` — клип целиком, а не кусок;
+        `sync_audio_url` — звук трека: клип целиком сопоставляется с ним (не сошлось — кусок)."""
         timings: dict[str, int] = {}
-        details: dict[str, Any] = {"timingsMs": timings, "mode": mode}
+        details: dict[str, Any] = {"timingsMs": timings, "mode": mode, "height": height}
+        if whole:
+            details["whole"] = True
         support = self.support()
         details["encoder"] = support.encoder
         if support.encoder is None and mode != "search":
@@ -697,6 +755,9 @@ class ClipMaker:
                 upload,
                 keep,
                 pinned=mode == "pinned",
+                height=height,
+                whole=whole,
+                sync_audio_url=sync_audio_url,
             )
             if result["status"] != "none":
                 break
@@ -715,12 +776,35 @@ class ClipMaker:
         keep: Path | None,
         *,
         pinned: bool,
+        height: int = 480,
+        whole: bool = False,
+        sync_audio_url: str | None = None,
     ) -> dict[str, Any]:
-        """Скачать кусок ролика вокруг припева, сжать и положить. Неподвижная картинка — `none`
-        (кроме выбранного администратором: ему виднее)."""
+        """Скачать кусок ролика вокруг припева (или ролик целиком), сжать и положить. Неподвижная
+        картинка — `none` (кроме выбранного администратором: ему виднее). Целиком со звуком трека:
+        сначала сопоставление, не сошлось — кусок с припевом, как обычно."""
         timings: dict[str, int] = details["timingsMs"]
         video_ms = round(pick.duration_s * 1000)
-        start_ms = clip_start_ms(hook_start_ms, duration_ms, video_ms, length_ms)
+        sync: clip_sync.Alignment | None = None
+        if whole and pick.duration_s > MAX_WHOLE_S:
+            details["wholeSkipped"] = "too_long"
+            whole = False
+        if whole and sync_audio_url:
+            t = time.monotonic()
+            try:
+                track_audio = clip_sync.decode_audio(sync_audio_url)
+                sync = clip_sync.align(track_audio, self.video_audio(pick.video_id))
+            except (DownloadError, RuntimeError, OSError, subprocess.SubprocessError) as e:
+                details["syncError"] = str(e)[:200]
+            timings["sync"] = _ms(t)
+            details["sync"] = sync.to_json() if sync else None
+            if sync is None:
+                # Не сопоставлен — кусок с припевом по кругу
+                whole = False
+        if whole:
+            start_ms, length_ms = 0, video_ms
+        else:
+            start_ms = clip_start_ms(hook_start_ms, duration_ms, video_ms, length_ms)
         details["chosen"] = pick.to_json()
         self.work_root.mkdir(parents=True, exist_ok=True)
         work = Path(tempfile.mkdtemp(prefix="clip-", dir=self.work_root))
@@ -730,7 +814,7 @@ class ClipMaker:
             section_start = max(0.0, start_ms / 1000 - MARGIN_S)
             section_end = (start_ms + length_ms) / 1000 + MARGIN_S
             try:
-                raw = self.fetch_range(pick.video_id, section_start, section_end, work)
+                raw = self.fetch_range(pick.video_id, section_start, section_end, work, height)
             except DownloadError as e:
                 return self._error(e, details, pick.video_id)
             timings["download"] = _ms(t)
@@ -740,7 +824,7 @@ class ClipMaker:
             out = work / "clip.mp4"
             t = time.monotonic()
             try:
-                quality = encode_small(raw, out, offset, length_ms / 1000, encoder)
+                quality = encode_small(raw, out, offset, length_ms / 1000, encoder, height)
             except DownloadError as e:
                 return self._error(e, details, pick.video_id)
             timings["encode"] = _ms(t)
@@ -778,6 +862,8 @@ class ClipMaker:
                 "sizeBytes": size,
                 "width": info.get("width"),
                 "height": info.get("height"),
+                "whole": whole,
+                "sync": sync.to_json() if sync and whole else None,
             }
         finally:
             shutil.rmtree(work, ignore_errors=True)

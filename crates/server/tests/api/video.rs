@@ -334,7 +334,11 @@ async fn old_clips_leave_and_the_store_stays_under_the_limit(db: PgPool) {
         .unwrap();
     // Давний не из любимых уходит по сроку; из оставшихся трёх по пределу в 200 байт уходит
     // самый давний не из любимых
-    let t = clips::trim(&app.state.db, 200).await.unwrap();
+    let settings = dalywave_server::video::clip_settings::Settings {
+        max_bytes: 200,
+        ..Default::default()
+    };
+    let t = clips::trim(&app.state.db, &settings).await.unwrap();
     assert_eq!((t.expired, t.evicted), (1, 1));
     let left: Vec<Uuid> = sqlx::query_scalar("SELECT track_id FROM track_clips ORDER BY track_id")
         .fetch_all(&app.state.db)

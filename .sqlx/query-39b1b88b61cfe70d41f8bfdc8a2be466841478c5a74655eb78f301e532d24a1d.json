@@ -1,0 +1,105 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, target, arch, version, size_bytes, installer_key IS NOT NULL AS \"installer!\",\n                  notes, published_at\n           FROM app_releases ORDER BY published_at DESC LIMIT 200",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "target",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "target"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "arch",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "arch"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "size_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "installer!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "notes",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "notes"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "published_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      true,
+      false
+    ]
+  },
+  "hash": "39b1b88b61cfe70d41f8bfdc8a2be466841478c5a74655eb78f301e532d24a1d"
+}

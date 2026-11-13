@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE server_settings SET\n             clip_height = COALESCE($1, clip_height), clip_whole = COALESCE($2, clip_whole),\n             clip_sync = COALESCE($3, clip_sync), clip_length_s = COALESCE($4, clip_length_s),\n             clip_keep_days = COALESCE($5, clip_keep_days),\n             clip_keep_liked_days = COALESCE($6, clip_keep_liked_days),\n             clip_max_gb = COALESCE($7, clip_max_gb), clip_auto = COALESCE($8, clip_auto),\n             updated_at = now()\n         WHERE id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Bool",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f6f1092dfe54ee38222c6fae2a03ea9fa17e498eda62ecc3cabd2166a09c2fb"
+}

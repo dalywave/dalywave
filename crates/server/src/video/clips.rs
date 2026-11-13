@@ -20,8 +20,8 @@ use dalywave_protocol::{
     fetcher::UploadTarget,
     jobs::kind,
     video::{
-        CLIP_MODES_FEATURE, ClipCandidate, ClipJob, ClipMode, ClipOutcome, ClipResult, ClipView,
-        TrackClip, VideoState,
+        CLIP_MODES_FEATURE, CLIP_WHOLE_FEATURE, ClipCandidate, ClipJob, ClipMode, ClipOutcome,
+        ClipResult, ClipSync, ClipView, TrackClip, VideoState,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -38,17 +38,12 @@ use crate::{
 };
 
 pub const LANE: &str = "clips";
-/// Длина отрывка.
+/// Длина отрывка по умолчанию (в админке — от 6 до 30 секунд).
 pub const LENGTH_MS: i32 = 12_000;
 /// Аренда задания: поиск, скачивание куска и перекодирование укладываются в минуту.
 pub const LEASE: Duration = Duration::from_secs(5 * 60);
 /// Сколько видео просит лента за раз.
 pub const MAX_REQUEST: usize = 20;
-/// Клип не показывали столько дней — уходит (трек в любимых — [`KEEP_LIKED_DAYS`]).
-const KEEP_DAYS: i32 = 7;
-const KEEP_LIKED_DAYS: i32 = 60;
-/// Предел клипов в хранилище; `DALYWAVE_CLIPS_MAX_GB`.
-const DEFAULT_LIMIT_GB: u64 = 3;
 /// Сбои загрузчика кончились попытками — не искать неделю.
 const FAILED_RECHECK_DAYS: i32 = 7;
 /// Сбой не трека, а загрузчика: в его ffmpeg нет видео (нет кодировщика H.264, нет https). Новый
@@ -94,6 +89,7 @@ pub async fn prepare(
 ) -> Result<Vec<TrackClip>, sqlx::Error> {
     let tracks = sqlx::query!(
         r#"SELECT t.id AS "id!", t.album_id, c.state AS "state?", c.storage_key, c.duration_ms AS "clip_ms?",
+                  c.sync_offset_ms, c.sync_rate,
                   (c.checked_at < now() - make_interval(days => $2)) AS "stale?",
                   (p.track_id IS NOT NULL AND p.video_id IS NULL) AS "off!",
                   EXISTS (SELECT 1 FROM clip_hidden h
@@ -138,6 +134,13 @@ pub async fn prepare(
             track_id: *id,
             state,
             duration_ms: url.as_ref().and(t.clip_ms),
+            sync: url
+                .as_ref()
+                .and(t.sync_offset_ms.zip(t.sync_rate))
+                .map(|(offset_ms, rate)| ClipSync {
+                    offset_ms,
+                    rate: f64::from(rate),
+                }),
             url,
             motion: t.album_id.and_then(|a| motions.get(&a).cloned()),
         });
@@ -151,7 +154,8 @@ pub async fn prepare(
         .execute(db)
         .await?;
     }
-    if !wanted.is_empty() {
+    // Автопоиск выключен — клипы только по выбору администратора
+    if !wanted.is_empty() && super::clip_settings::load(db).await?.auto {
         request(db, &wanted).await?;
     }
     Ok(out)
@@ -242,6 +246,8 @@ pub async fn claim(
         lease: Some(LEASE),
     };
     let modes = features.iter().any(|f| f == CLIP_MODES_FEATURE);
+    let can_whole = features.iter().any(|f| f == CLIP_WHOLE_FEATURE);
+    let settings = super::clip_settings::load(db).await?;
     // Задачи удалённых треков закрываются по пути; предел — от зацикливания
     for _ in 0..20 {
         let job = match jobs::claim_with(db, LANE, executor, opts.clone()).await? {
@@ -310,7 +316,7 @@ pub async fn claim(
             .await?;
             continue;
         }
-        let hook = chorus::starts(db, &[p.track_id], i64::from(LENGTH_MS))
+        let hook = chorus::starts(db, &[p.track_id], i64::from(settings.length_ms))
             .await?
             .remove(&p.track_id)
             .map_or(0, |(at, _)| at);
@@ -331,6 +337,13 @@ pub async fn claim(
                 ));
             }
         };
+        // Клип целиком в такт: загрузчику — ссылка на звук трека, с которым он сверит ролик
+        let whole = settings.whole && can_whole && mode != ClipMode::Search;
+        let sync_audio_url = if whole && settings.sync {
+            sync_audio(db, storage, p.track_id).await
+        } else {
+            None
+        };
         let now = Utc::now();
         let title = if t.title_version.is_empty() {
             t.title
@@ -344,7 +357,7 @@ pub async fn claim(
             artists: t.artists,
             duration_ms: t.duration_ms,
             hook_start_ms: i32::try_from(hook).unwrap_or(0),
-            length_ms: LENGTH_MS,
+            length_ms: settings.length_ms,
             isrc: t.isrc,
             exclude_video_ids: t.rejected,
             label: t.label.filter(|l| !l.trim().is_empty()),
@@ -362,9 +375,31 @@ pub async fn claim(
             lease_expires_at: job
                 .lease_expires_at
                 .unwrap_or_else(|| now + chrono::Duration::from_std(LEASE).unwrap_or_default()),
+            height: settings.height,
+            whole,
+            sync_audio_url,
         }));
     }
     Ok(None)
+}
+
+/// Подписанная ссылка на файл записи трека (для сопоставления клипа целиком со звуком).
+async fn sync_audio(db: &PgPool, storage: &Storage, track_id: Uuid) -> Option<String> {
+    let recording = sqlx::query_scalar!("SELECT recording_id FROM tracks WHERE id = $1", track_id)
+        .fetch_optional(db)
+        .await
+        .ok()
+        .flatten()
+        .flatten()?;
+    let file = crate::acquire::primary_file(db, recording)
+        .await
+        .ok()
+        .flatten()?;
+    storage
+        .presign_get(&file.storage_key, crate::storage::AUDIO_GET_TTL)
+        .await
+        .ok()
+        .map(|u| u.to_string())
 }
 
 fn candidates_json(c: &[ClipCandidate]) -> serde_json::Value {
@@ -424,9 +459,10 @@ pub async fn settle(
             let saved = sqlx::query!(
                 "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, duration_ms,
                                           clip_start_ms, video_duration_ms, width, height, video_title, channel,
-                                          source, score, candidates, candidates_at, reviewed_at, checked_at, last_used_at)
+                                          source, score, candidates, candidates_at, reviewed_at, checked_at, last_used_at,
+                                          whole, sync_offset_ms, sync_rate)
                  VALUES ($1, 'ready', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                         CASE WHEN jsonb_array_length($14) > 0 THEN now() END, now(), now(), now())
+                         CASE WHEN jsonb_array_length($14) > 0 THEN now() END, now(), now(), now(), $15, $16, $17)
                  ON CONFLICT (track_id) DO UPDATE SET state = 'ready', video_id = EXCLUDED.video_id,
                      storage_key = EXCLUDED.storage_key, size_bytes = EXCLUDED.size_bytes,
                      duration_ms = EXCLUDED.duration_ms, clip_start_ms = EXCLUDED.clip_start_ms,
@@ -436,7 +472,8 @@ pub async fn settle(
                      candidates = CASE WHEN jsonb_array_length(EXCLUDED.candidates) > 0
                                        THEN EXCLUDED.candidates ELSE track_clips.candidates END,
                      candidates_at = COALESCE(EXCLUDED.candidates_at, track_clips.candidates_at),
-                     reviewed_at = now(), checked_at = now(), last_used_at = now()",
+                     reviewed_at = now(), checked_at = now(), last_used_at = now(),
+                     whole = EXCLUDED.whole, sync_offset_ms = EXCLUDED.sync_offset_ms, sync_rate = EXCLUDED.sync_rate",
                 p.track_id,
                 r.video_id,
                 key,
@@ -451,6 +488,9 @@ pub async fn settle(
                 r.source,
                 score,
                 candidates,
+                r.whole,
+                r.sync.map(|s| s.offset_ms),
+                r.sync.map(|s| s.rate as f32).filter(|r| (0.5..=2.0).contains(r)),
             )
             .execute(&mut *tx)
             .await;
@@ -865,15 +905,6 @@ pub async fn review(db: &PgPool) -> Result<u64, sqlx::Error> {
     Ok(ids.len() as u64)
 }
 
-/// Предел клипов в байтах.
-pub fn limit_bytes() -> i64 {
-    let gb = std::env::var("DALYWAVE_CLIPS_MAX_GB")
-        .ok()
-        .and_then(|v| v.trim().parse::<u64>().ok())
-        .unwrap_or(DEFAULT_LIMIT_GB);
-    (gb.saturating_mul(1024 * 1024 * 1024)).min(i64::MAX as u64) as i64
-}
-
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Trimmed {
     pub expired: u64,
@@ -883,12 +914,16 @@ pub struct Trimmed {
 /// Чистка: давно не показанные клипы и всё сверх предела (сначала не из любимых, по давности
 /// показа). Файлы стирает чистка хранилища ([`crate::renditions::trim`]) по `storage_trash`.
 /// Выбор администратора живёт отдельно (`track_clip_pins`): ушедший клип нарежется из того же ролика.
-pub async fn trim(db: &PgPool, limit: i64) -> Result<Trimmed, sqlx::Error> {
+pub async fn trim(
+    db: &PgPool,
+    settings: &super::clip_settings::Settings,
+) -> Result<Trimmed, sqlx::Error> {
+    let limit = settings.max_bytes;
     let expired = sqlx::query!(
         "DELETE FROM track_clips c WHERE c.state = 'ready' AND c.last_used_at < now() - make_interval(days =>
              CASE WHEN EXISTS (SELECT 1 FROM liked_tracks l WHERE l.track_id = c.track_id) THEN $1::int ELSE $2::int END)",
-        KEEP_LIKED_DAYS,
-        KEEP_DAYS,
+        settings.keep_liked_days,
+        settings.keep_days,
     )
     .execute(db)
     .await?

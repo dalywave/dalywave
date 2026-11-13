@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ViewPreset, ViewState } from '~/components/admin/SavedViews.vue'
 import type { AdminUser, AuditEvent } from '~/api/types'
 
 // Журнал: входы, роли, сессии, очередь, загрузчики, решения по спорным, настройки — с фильтрами
@@ -39,6 +40,18 @@ onMounted(() => {
   void load()
   void bridge.admin.users().then(l => (users.value = l.items)).catch(() => {})
 })
+// Виды журнала: готовые группы событий и свои сохранённые фильтры
+const viewState = computed<ViewState>(() => ({ kind: kind.value, actor: actor.value }))
+const viewPresets = computed<ViewPreset[]>(() => [
+  { key: 'all', label: t('view.all'), state: {} },
+  { key: 'auth', label: t('view.auth'), state: { kind: 'auth.' } },
+  { key: 'user', label: t('view.user'), state: { kind: 'user.' } },
+  { key: 'settings', label: t('view.settings'), state: { kind: 'settings.' } },
+])
+function applyView(s: ViewState) {
+  kind.value = typeof s.kind === 'string' ? s.kind : ''
+  actor.value = typeof s.actor === 'string' ? s.actor : ''
+}
 watch([kind, actor], () => {
   void router.replace({ query: { kind: kind.value || undefined, actor: actor.value || undefined } })
   void load()
@@ -142,6 +155,7 @@ const days = computed(() => {
       <h1 class="ap-title">{{ t('title') }}</h1>
     </header>
 
+    <AdminSavedViews storage-key="log" :presets="viewPresets" :state="viewState" class="lg__views" @apply="applyView" />
     <div class="ap-filters">
       <AdminSelect v-model="kind" :options="kindOptions" :label="t('filterKind')" />
       <AdminSelect v-model="actor" :options="actorOptions" :label="t('filterActor')" />
@@ -188,6 +202,7 @@ const days = computed(() => {
 <i18n lang="json">
 {
   "ru": {
+    "view": { "all": "Все события", "auth": "Входы", "user": "Люди и роли", "settings": "Настройки" },
     "title": "Журнал",
     "filterKind": "Вид событий",
     "filterActor": "Кто",
@@ -240,6 +255,7 @@ const days = computed(() => {
     }
   },
   "en": {
+    "view": { "all": "All events", "auth": "Sign-ins", "user": "People and roles", "settings": "Settings" },
     "title": "Log",
     "filterKind": "Event kind",
     "filterActor": "Who",

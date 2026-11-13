@@ -3,6 +3,7 @@ pub mod acquisitions;
 pub mod admin;
 pub mod admin_catalog;
 pub mod admin_library;
+pub mod admin_system;
 pub mod admin_users;
 pub mod analysis;
 pub mod auth;
@@ -95,6 +96,7 @@ async fn method_not_allowed() -> AppError {
 /// только токен конвейера выпусков (`DALYWAVE_RELEASE_TOKEN`).
 pub fn router(state: AppState) -> Router {
     let admin = admin::routes()
+        .merge(admin_system::routes())
         .merge(accounts::admin_routes())
         .merge(queue::routes())
         .merge(acquisitions::routes())

@@ -90,3 +90,9 @@ class ClipJob(_Model):
     current_video_id: str | None = None
     upload: UploadSpec
     lease_expires_at: datetime | None = None
+    # Высота кадра (360–1080)
+    height: int = Field(default=480, ge=240, le=1080)
+    # Клип целиком, а не кусок с припевом
+    whole: bool = False
+    # Целиком и в такт: звук трека, с которым сверяется звук ролика
+    sync_audio_url: str | None = None

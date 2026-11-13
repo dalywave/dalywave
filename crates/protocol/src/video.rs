@@ -46,7 +46,7 @@ pub struct AlbumMotion {
 }
 
 /// Клип трека для ленты открытий.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackClip {
     pub track_id: Uuid,
@@ -60,6 +60,10 @@ pub struct TrackClip {
     /// Живая обложка альбома трека — запасное видео, когда клипа нет.
     #[schema(required = true)]
     pub motion: Option<AlbumMotion>,
+    /// Клип целиком в такт с треком: плеер ведёт видео по позиции трека, а не по кругу.
+    #[serde(default)]
+    #[schema(required = true)]
+    pub sync: Option<ClipSync>,
 }
 
 /// Подготовить видео ленты: клипы и живые обложки этих треков ставятся в очередь, готовые —
@@ -71,7 +75,7 @@ pub struct ClipsRequest {
     pub track_ids: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipList {
     /// В порядке запроса; неизвестные треки пропущены.
@@ -115,6 +119,28 @@ pub struct ClipJob {
     pub upload: UploadTarget,
     /// Не пришёл отчёт к этому сроку — задание вернётся в очередь.
     pub lease_expires_at: DateTime<Utc>,
+    /// Высота кадра (360–1080). Старый загрузчик её не знает и режет 480p.
+    #[serde(default = "default_clip_height")]
+    pub height: i32,
+    /// Клип целиком, а не кусок `length_ms` с припевом. Только загрузчику с `clip-whole`.
+    #[serde(default)]
+    pub whole: bool,
+    /// Целиком и в такт: подписанная ссылка на звук трека, с которым загрузчик сопоставит звук
+    /// ролика. Не сошлось — режет кусок с припевом.
+    #[serde(default)]
+    pub sync_audio_url: Option<String>,
+}
+
+fn default_clip_height() -> i32 {
+    480
+}
+
+/// Клип целиком в такт с треком: позиция трека = `offset_ms` + позиция видео × `rate`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipSync {
+    pub offset_ms: i32,
+    pub rate: f64,
 }
 
 /// Что сделать с клипом.
@@ -148,6 +174,8 @@ pub struct ClipClaimRequest {
 
 /// Загрузчик умеет режимы клипа сверх `auto`.
 pub const CLIP_MODES_FEATURE: &str = "clip-modes";
+/// Загрузчик режет клип целиком и сопоставляет его звук с треком.
+pub const CLIP_WHOLE_FEATURE: &str = "clip-whole";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -242,6 +270,12 @@ pub struct ClipResult {
     #[serde(default)]
     #[schema(value_type = Object)]
     pub details: Value,
+    /// Нарезан клип целиком.
+    #[serde(default)]
+    pub whole: bool,
+    /// Целиком и сопоставлен со звуком трека.
+    #[serde(default)]
+    pub sync: Option<ClipSync>,
 }
 
 // ───────────── «Клип» у трека: выбор администратора, «Скрыть клип» ─────────────
