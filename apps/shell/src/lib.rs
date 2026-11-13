@@ -187,6 +187,8 @@ pub fn run() {
             window::window_is_maximized,
             // Тема — везде: на iPhone и iPad она задаёт стиль окна и строки состояния
             window::window_set_theme,
+            // «Назад» смахиванием от края — iPhone и iPad; на остальных ничего не делает
+            window::window_set_back_swipe,
             #[cfg(desktop)]
             window::window_set_snap_area,
             auth::auth_login,

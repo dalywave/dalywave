@@ -76,6 +76,7 @@
 		C2800CEC082EC5AB9DFDE72E /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8680BC5BA77A8F5D01DAD70A /* UIKit.framework */; };
 		C33D15A5BD2889BD23B6E03E /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A69F9BFD45F2682F2AB713 /* Credentials.swift */; };
 		C506CA7BDA21DD0F689E9C1D /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2C8A783C57BE78FA072601 /* Store.swift */; };
+		C53CA41D0DD81E9387969779 /* BackSwipeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */; };
 		C66D69EAD3DD94DBCED00FA3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F04A250DEDD01BC9EB862FFB /* AVFoundation.framework */; };
 		C8008CAFBAC257752E260EB5 /* dalywave-share.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D9C094241682F36FAFC622E9 /* dalywave-share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C9C09914F010D0BEAB60BF4C /* DalyWave.icon in Resources */ = {isa = PBXBuildFile; fileRef = CBA685D63A1B696AAA3F0582 /* DalyWave.icon */; };
@@ -233,6 +234,7 @@
 		78F428E4B3B528B3EF4190E7 /* recognize.rs */ = {isa = PBXFileReference; path = recognize.rs; sourceTree = "<group>"; };
 		7D83F5EA2B1684EDBDFED036 /* WatchLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
 		7E940980C4193C05C04F336E /* AppShortcuts.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = AppShortcuts.strings; path = ru.lproj/AppShortcuts.strings; sourceTree = "<group>"; };
+		804B35A7CF0CF2BF26604591 /* trainer.rs */ = {isa = PBXFileReference; path = trainer.rs; sourceTree = "<group>"; };
 		81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		82E855B1FFBF5A66BB26A28E /* auth.rs */ = {isa = PBXFileReference; path = auth.rs; sourceTree = "<group>"; };
 		84263A8382F149B6EDD7B6C2 /* Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snapshot.swift; sourceTree = "<group>"; };
@@ -247,6 +249,7 @@
 		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
+		9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackSwipeTests.swift; sourceTree = "<group>"; };
 		9F6C18721B1459AAA3822C5D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushLink.swift; sourceTree = "<group>"; };
@@ -421,6 +424,7 @@
 				39AE223214B55ED7B90ABF77 /* settings.rs */,
 				5D9A41810C91F9D868EDDF83 /* siri.rs */,
 				3741B8EE0756D0F278CC21C7 /* snap.rs */,
+				804B35A7CF0CF2BF26604591 /* trainer.rs */,
 				15BF5CCB7F35C1D588A8384C /* tray.rs */,
 				73A56A10B0D7E0D2A07AAD02 /* updates.rs */,
 				68F662F72560F87EC259FDE0 /* watch.rs */,
@@ -626,6 +630,7 @@
 		F4A32B8C22E604101EBA527B /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */,
 				A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */,
 				A03ED3BF81A7DD119B85A122 /* ShareExtensionTests.swift */,
 				6FF71152266545FD5E1C1F0E /* SiriShortcutsTests.swift */,
@@ -634,18 +639,18 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_4F8BB731-CB00-4A97-A66E-334FBD0BB33C" /* x86_64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = x86_64;
-			sourceTree = "<group>";
-		};
-		"TEMP_62D56346-1B26-4A8B-8654-B048C7E79C5A" /* arm64 */ = {
+		"TEMP_2E17720A-8DAE-4556-928E-CA26FC7F75BC" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = arm64;
+			sourceTree = "<group>";
+		};
+		"TEMP_D60F3C40-14A8-4C4B-91DE-2CBB6F9B63CC" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1029,6 +1034,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C53CA41D0DD81E9387969779 /* BackSwipeTests.swift in Sources */,
 				A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */,
 				2236D45F40E31DACD49256A1 /* ShareExtensionTests.swift in Sources */,
 				97B0289A53433337BAB14FC2 /* SiriShortcutsTests.swift in Sources */,

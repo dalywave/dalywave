@@ -321,6 +321,83 @@ unsafe fn paint_theme(webview: &AnyObject, theme: ThemeChoice) {
     }
 }
 
+/// `UIRectEdgeLeft` и `UIRectEdgeRight`
+const EDGE_LEFT: usize = 1 << 1;
+const EDGE_RIGHT: usize = 1 << 3;
+
+/// «Назад» смахиванием от левого края, как в приложениях Apple. Жест — штатный WKWebView
+/// (`allowsBackForwardNavigationGestures`): страница едет за пальцем, под ней с параллаксом и
+/// затемнением — снимок предыдущей, скорость и отмена — как у UINavigationController. История —
+/// та же, что у Vue Router (pushState), — по окончании жеста страница получает `popstate`.
+///
+/// Свойство включено всегда: только с ним WebKit снимает каждую уходящую страницу. Где жест
+/// уместен, решает интерфейс (`set_back_swipe`): на корневых вкладках, под листом и полным
+/// плеером он выключен. Смахивание «вперёд» от правого края приложениям Apple не свойственно —
+/// выключено насовсем. Можно звать с любого потока.
+pub fn install_back_swipe(webview: &WebviewWindow) {
+    let result = webview.with_webview(move |wv| {
+        let view = wv.inner() as *mut AnyObject;
+        // SAFETY: Tauri отдаёт живой WKWebView и зовёт замыкание на главном потоке
+        if let Some(view) = unsafe { view.as_ref() } {
+            unsafe {
+                let _: () = msg_send![view, setAllowsBackForwardNavigationGestures: true];
+                let found = toggle_edge_swipes(view, false);
+                log::info!("back swipe: {found} edge gesture recognizers");
+            }
+        }
+    });
+    if let Err(e) = result {
+        log::warn!("could not install the back swipe: {e}");
+    }
+}
+
+/// Включить или выключить «назад» смахиванием (см. `install_back_swipe`).
+pub fn set_back_swipe(webview: &WebviewWindow, enabled: bool) {
+    let result = webview.with_webview(move |wv| {
+        let view = wv.inner() as *mut AnyObject;
+        // SAFETY: как в install_back_swipe
+        if let Some(view) = unsafe { view.as_ref() } {
+            unsafe { toggle_edge_swipes(view, enabled) };
+        }
+    });
+    if let Err(e) = result {
+        log::warn!("could not toggle the back swipe: {e}");
+    }
+}
+
+/// Распознаватели жестов WebKit от края экрана (UIScreenEdgePanGestureRecognizer и его
+/// наследник с параллаксом): левый край — «назад», правый — «вперёд» (для письма слева направо).
+/// SAFETY: `webview` — WKWebView; только главный поток.
+/// Сколько распознавателей нашлось.
+unsafe fn toggle_edge_swipes(webview: &AnyObject, back: bool) -> usize {
+    let Some(edge_pan) = AnyClass::get(c"UIScreenEdgePanGestureRecognizer") else {
+        return 0;
+    };
+    let mut found = 0;
+    unsafe {
+        let recognizers: Option<Retained<AnyObject>> = msg_send![webview, gestureRecognizers];
+        let Some(recognizers) = recognizers else {
+            return 0;
+        };
+        let count: usize = msg_send![&*recognizers, count];
+        for i in 0..count {
+            let recognizer: *mut AnyObject = msg_send![&*recognizers, objectAtIndex: i];
+            let Some(recognizer) = recognizer.as_ref() else {
+                continue;
+            };
+            let is_edge: Bool = msg_send![recognizer, isKindOfClass: edge_pan];
+            if !is_edge.as_bool() {
+                continue;
+            }
+            let edges: usize = msg_send![recognizer, edges];
+            let enabled = edges & EDGE_LEFT != 0 && edges & EDGE_RIGHT == 0 && back;
+            let _: () = msg_send![recognizer, setEnabled: enabled];
+            found += 1;
+        }
+    }
+    found
+}
+
 /// Фон под интерфейсом: тёмный `#08090c` (`--ink-1`), светлый — белый. «Как в системе» —
 /// динамический цвет: UIKit сам перекрашивает его, когда система меняет тему.
 fn theme_color(theme: ThemeChoice) -> Retained<UIColor> {
