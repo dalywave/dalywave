@@ -109,7 +109,7 @@ export class WebAudioEngine implements AudioEngine {
   private eqGains: number[] | null = null
   private sleepFade: GainNode | null = null
   private listeners: { [E in keyof AudioEngineEvents]: Set<Listener<E>> } = {
-    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(), sleep: new Set(),
+    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(), sleep: new Set(), sound: new Set(),
   }
 
   constructor() {

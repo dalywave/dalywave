@@ -146,6 +146,7 @@ pub fn activate_audio_session() -> Result<(f64, f64), String> {
         AVAudioSession, AVAudioSessionCategoryOptions, AVAudioSessionCategoryPlayback,
         AVAudioSessionModeDefault, AVAudioSessionRouteSharingPolicy,
     };
+    tolerate_slow_audio_server();
     unsafe {
         let session = AVAudioSession::sharedInstance();
         let category = AVAudioSessionCategoryPlayback.ok_or("нет категории playback")?;
@@ -163,6 +164,43 @@ pub fn activate_audio_session() -> Result<(f64, f64), String> {
             .map_err(|e| format!("setActive: {}", e.localizedDescription()))?;
         Ok((session.sampleRate(), session.IOBufferDuration()))
     }
+}
+
+/// iOS: не падать, когда аудиосервер системы долго не отвечает.
+///
+/// AudioToolbox ждёт ответа медиасервера на запуск вывода (`AURemoteIO::Start`) 9 секунд, а не
+/// дождавшись, роняет приложение (`_ReportRPCTimeout` → `abort`): так бывает, когда сервер завис
+/// или занят (симулятор при запуске, сброс медиасервисов). Срок AudioToolbox берёт из настройки
+/// `rpc_timeout` домена `com.apple.coreaudio` (секунды; 0 — ждать без срока). На iOS этот домен
+/// лежит в контейнере приложения и на систему не влияет. Ставим 0: запуск ждёт сервер в потоке
+/// устройства (output.rs), движок тем временем сообщает «звук недоступен» и повторяет попытки, а
+/// умерший сервер отвечает ошибкой, а не тишиной. AudioToolbox читает значение один раз — звать
+/// до первого обращения к звуку (запуск приложения; [`activate_audio_session`] зовёт сама).
+#[cfg(target_os = "ios")]
+pub fn tolerate_slow_audio_server() {
+    use objc2_core_foundation::{
+        CFNumber, CFPreferencesAppSynchronize, CFPreferencesGetAppIntegerValue,
+        CFPreferencesSetAppValue, CFString, CFType,
+    };
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let key = CFString::from_static_str("rpc_timeout");
+        let domain = CFString::from_static_str("com.apple.coreaudio");
+        let mut exists = 0u8;
+        // SAFETY: указатель на локальную переменную.
+        let current = unsafe { CFPreferencesGetAppIntegerValue(&key, &domain, &mut exists) };
+        if exists != 0 && current == 0 {
+            return;
+        }
+        let zero = CFNumber::new_i32(0);
+        let value: &CFType = &zero;
+        // SAFETY: число — допустимое значение настройки.
+        unsafe { CFPreferencesSetAppValue(&key, Some(value), &domain) };
+        CFPreferencesAppSynchronize(&domain);
+        log::info!(
+            "audio: AudioToolbox waits for the audio server without a deadline (rpc_timeout 0)"
+        );
+    });
 }
 
 /// iOS: политика маршрута сессии сейчас — для журнала (`long-form` или `default`).

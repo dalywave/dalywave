@@ -343,6 +343,8 @@ export interface ShellEvents {
   'player:level': PlayerLevel
   /** Таймер сна: поставили, сняли, началось затухание, сработал (`finished`) */
   'player:sleep': PlayerSleep
+  /** Системный вывод не отвечает (аудиосервер завис), движок ждёт и повторяет; `true` — снова работает */
+  'player:sound': { available: boolean }
   /** Только окну мини-плеера: другой трек, пауза, конец очереди */
   'player:now': PlayerNow | null
   /** Список устройств вывода или маршрут звука поменялся (AirPlay, наушники, Bluetooth) */

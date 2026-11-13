@@ -206,6 +206,7 @@ const shell = createShell({ invoke, listen })
 | `player:ended` | `null` | очередь движка доиграла |
 | `player:level` | `{ rms, peak, bands: [low, mid, high] }` | ~20 раз в секунду, пока включено `setLevels(true)` |
 | `player:sleep` | `PlayerSleep` | таймер сна поставили, сняли, началось затухание, сработал (`finished`) |
+| `player:sound` | `{ available }` | системный вывод не отвечает (аудиосервер завис) — движок ждёт и повторяет с отступом; `true` — снова работает или пауза |
 | `player:now` | `PlayerNow \| null` | только окну мини-плеера: другой трек, пауза, конец очереди |
 | `audio:outputs` | `AudioOutputs` | появилось или пропало устройство вывода, сменились устройство по умолчанию или маршрут |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |

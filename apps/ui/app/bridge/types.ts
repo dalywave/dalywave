@@ -179,6 +179,9 @@ export interface AudioEngineEvents {
   advance: (uid: string, reason: 'auto' | 'user') => void
   /** Приложение: таймер сна в движке поставили, сняли, началось затухание, сработал */
   sleep: (s: SleepState) => void
+  /** Приложение: системный вывод звука не отвечает (`false`) — движок ждёт и повторяет сам,
+   *  потом играет с того же места; `true` — снова работает */
+  sound: (available: boolean) => void
 }
 
 /** Таймер сна: через `ms` или в конце текущего трека */

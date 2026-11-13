@@ -24,6 +24,8 @@ export class NativeAudioEngine implements AudioEngine {
   private posAt = 0
   private dur = 0
   private isPlaying = false
+  /** Системный вывод не отвечает: движок ждёт его сам */
+  private soundLost = false
   private volume = 0.72
   private muted = false
   private level: AudioLevels | null = null
@@ -37,7 +39,7 @@ export class NativeAudioEngine implements AudioEngine {
   // «играть» должны прийти по порядку
   private chain: Promise<unknown> = Promise.resolve()
   private listeners: { [E in keyof AudioEngineEvents]: Set<Listener<E>> } = {
-    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(), sleep: new Set(),
+    time: new Set(), ended: new Set(), state: new Set(), error: new Set(), advance: new Set(), sleep: new Set(), sound: new Set(),
   }
   readonly eqSupported = true
 
@@ -92,6 +94,13 @@ export class NativeAudioEngine implements AudioEngine {
       this.levelAt = performance.now()
     })
     await sh.on('player:sleep', s => this.emit('sleep', toSleep(s)))
+    // Системный вывод не отвечает: позиция стоит, пока звук не вернётся
+    await sh.on('player:sound', ({ available }) => {
+      if (available === !this.soundLost) return
+      this.anchor()
+      this.soundLost = !available
+      this.emit('sound', available)
+    })
   }
 
   private emit<E extends keyof AudioEngineEvents>(event: E, ...args: Parameters<AudioEngineEvents[E]>) {
@@ -116,7 +125,7 @@ export class NativeAudioEngine implements AudioEngine {
   }
 
   get positionMs(): number {
-    const p = this.isPlaying ? this.pos + (performance.now() - this.posAt) : this.pos
+    const p = this.isPlaying && !this.soundLost ? this.pos + (performance.now() - this.posAt) : this.pos
     return this.dur ? Math.min(p, this.dur) : p
   }
 

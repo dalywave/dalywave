@@ -39,6 +39,8 @@ pub const EVENT_ERROR: &str = "player:error";
 pub const EVENT_ENDED: &str = "player:ended";
 pub const EVENT_LEVEL: &str = "player:level";
 pub const EVENT_SLEEP: &str = "player:sleep";
+/// Системный вывод не отвечает (аудиосервер завис) или снова работает
+pub const EVENT_SOUND: &str = "player:sound";
 /// Мини-плеер: что играет (название, обложка, пауза) — после смены трека и паузы
 pub const EVENT_NOW: &str = "player:now";
 
@@ -417,6 +419,12 @@ struct BufferingPayload {
     buffering: bool,
 }
 
+/// Системный вывод не отвечает: интерфейс показывает «звук недоступен — повторяем»
+#[derive(Clone, Serialize)]
+struct SoundPayload {
+    available: bool,
+}
+
 #[derive(Clone, Serialize)]
 struct ErrorPayload {
     id: Option<String>,
@@ -447,6 +455,13 @@ fn emit_snapshot(app: &AppHandle, engine: &Engine) {
         StatePayload {
             state: state_name(s.state),
             buffering: s.buffering,
+        },
+    );
+    emit(
+        app,
+        EVENT_SOUND,
+        SoundPayload {
+            available: !s.output_stalled,
         },
     );
     if let Some(id) = s.id {
@@ -606,6 +621,19 @@ fn forward_events(app: &AppHandle, events: Receiver<Event>) {
             Event::Sleep(status) => {
                 log::info!("player: sleep timer {status:?}");
                 emit(app, EVENT_SLEEP, SleepPayload::from(*status));
+            }
+            Event::OutputStalled {
+                attempt,
+                retry_in_ms,
+            } => {
+                log::warn!(
+                    "player: the system audio does not respond, attempt {attempt}, next in {retry_in_ms} ms"
+                );
+                emit(app, EVENT_SOUND, SoundPayload { available: false });
+            }
+            Event::OutputRecovered => {
+                log::info!("player: the system audio responds again");
+                emit(app, EVENT_SOUND, SoundPayload { available: true });
             }
         }
         media::on_player_event(app, &ev);

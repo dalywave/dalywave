@@ -62,6 +62,7 @@ const moreItems = computed<MenuEntry[]>(() => {
         <MusicWavePrepNote v-if="player.waveStarting" />
         <MusicConnectChip v-else-if="connect.remote || connect.orphaned" variant="line" />
         <MusicPendingNote v-else-if="player.pending" :pending="player.pending" />
+        <MusicSoundNote v-else-if="player.soundLost" />
         <div v-else-if="entry?.reason" class="bar__reason ellipsis"><Icon name="ph:sparkle-fill" />{{ typographRu(entry.reason) }}</div>
       </div>
       <!-- Сердце — рядом с треком, как в Spotify; «не нравится» — только в волне и радио -->

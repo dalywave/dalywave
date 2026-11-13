@@ -73,6 +73,9 @@ pub const EVENT_SERVER: &str = "server:changed";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // До первого обращения к звуку: зависший медиасервер не должен ронять приложение
+    #[cfg(target_os = "ios")]
+    dalywave_audio::apple::tolerate_slow_audio_server();
     let builder = tauri::Builder::default();
     // Первым: второй запуск передаёт ссылку dalywave:// первому и показывает его окно
     #[cfg(desktop)]
