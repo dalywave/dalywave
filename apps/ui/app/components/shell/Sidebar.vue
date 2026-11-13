@@ -8,8 +8,12 @@ import type { MenuEntry } from '~/types/ui'
 // меню; треки из списков можно бросить на свой плейлист.
 // touch — боковое меню раскрытого складного iPhone, как у приложений Apple на нём: строки под палец
 // (от 44 pt), без сочетаний клавиш и перетаскивания, меню и новый плейлист — листами снизу
+// На компьютере панель сворачивается в рейку и разворачивается обратно (кнопка в шапке, ⌘⌥B)
 const props = withDefaults(defineProps<{ rail?: boolean, touch?: boolean }>(), {})
 const drag = computed(() => !props.rail && !props.touch)
+const ui = useUiStore()
+const collapsible = computed(() => !props.touch && !ui.sideCramped)
+const SIDE_KBD = ['⌘', '⌥', 'B']
 
 const route = useRoute()
 const library = useLibraryStore()
@@ -136,7 +140,17 @@ async function createPlaylist() {
 
 <template>
   <aside class="side" :class="{ 'side--rail': rail, 'side--touch': touch }" :aria-label="t('nav.aside')">
-    <div class="side__brand"><BrandLogo :compact="rail" /></div>
+    <div class="side__brand">
+      <!-- Рейка: знак — он же «развернуть»; при наведении знак сменяется значком панели -->
+      <UiTooltip v-if="rail && collapsible" :text="t('nav.expand')" :kbd="SIDE_KBD" side="right">
+        <button type="button" class="side__expand" :aria-label="t('nav.expand')" aria-expanded="false" @click="ui.toggleSidebar()">
+          <BrandGlyph class="side__glyph" />
+          <Icon name="ph:sidebar-simple" class="side__expand-icon" aria-hidden="true" />
+        </button>
+      </UiTooltip>
+      <BrandLogo v-else :compact="rail" />
+      <UiIconButton v-if="!rail && collapsible" icon="ph:sidebar-simple" :label="t('nav.collapse')" :kbd="SIDE_KBD" size="sm" class="side__toggle" aria-expanded="true" @click="ui.toggleSidebar()" />
+    </div>
 
     <nav class="side__nav" :aria-label="t('nav.main')">
       <UiTooltip v-for="n in NAV" :key="n.to" :text="rail ? t(n.key) : undefined" side="right" :kbd="n.kbd ? [...n.kbd] : undefined">
@@ -150,16 +164,16 @@ async function createPlaylist() {
 
     <div class="side__scroll thin-scrollbar">
       <section class="sec">
-        <header class="sec__head">
+        <header class="sec__head sec__head--pinned">
           <span class="sec__title">{{ t('nav.pinned') }}</span>
-          <span v-if="!rail" class="sec__actions">
-          <UiMenu :items="listMenu" align="start">
+          <span class="sec__actions">
+          <UiMenu v-if="!rail" :items="listMenu" align="start">
             <UiIconButton icon="ph:sliders-horizontal" :label="t('plSort.options')" :size="touch ? 'md' : 'xs'" :tooltip="touch ? false : undefined" />
           </UiMenu>
           <UiIconButton v-if="touch" icon="ph:plus" :label="t('nav.newPlaylist')" size="md" :tooltip="false" @click="createOpen = true" />
           <UiPopover v-else v-model:open="createOpen" :title="t('nav.newPlaylist')" side="right" align="start" :width="300">
             <template #trigger>
-              <UiIconButton icon="ph:plus" :label="t('nav.newPlaylist')" size="xs" />
+              <UiIconButton icon="ph:plus" :label="t('nav.newPlaylist')" :size="rail ? 'sm' : 'xs'" :side="rail ? 'right' : 'top'" />
             </template>
             <form class="newpl" @submit.prevent="createPlaylist">
               <input v-model="newTitle" class="newpl__input" :placeholder="t('nav.newPlaylistName')" :aria-label="t('nav.newPlaylist')" maxlength="120" autofocus>
@@ -280,7 +294,16 @@ async function createPlaylist() {
   background: var(--side-bg);
   border-right: 1px solid var(--side-edge);
 }
-.side__brand { padding: calc(22px - min(var(--titlebar-inset, 0px), 18px)) 20px 18px; }
+.side__brand { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: calc(22px - min(var(--titlebar-inset, 0px), 18px)) 14px 18px 20px; }
+/* Кнопка «свернуть» не раздвигает шапку: строка — по высоте знака */
+.side__toggle { margin: -2px 0; }
+.side__expand { position: relative; display: grid; place-items: center; width: 44px; height: 44px; margin: -8px 0; padding: 0; border: 0; border-radius: var(--r-3); background: transparent; color: var(--text-1); cursor: pointer; transition: background-color var(--dur-1); }
+.side__glyph { width: 28px; height: 28px; transition: opacity var(--dur-1); }
+.side__expand-icon { position: absolute; font-size: 22px; opacity: 0; transition: opacity var(--dur-1); }
+.side__expand:hover, .side__expand:focus-visible { background: var(--side-hover); }
+.side__expand:hover .side__glyph, .side__expand:focus-visible .side__glyph { opacity: 0; }
+.side__expand:hover .side__expand-icon, .side__expand:focus-visible .side__expand-icon { opacity: 1; }
+.side__expand:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .side__nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
 .nav { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 12px; border-radius: var(--r-3); font-weight: 550; color: var(--text-2); transition: color var(--dur-1), background-color var(--dur-1); }
 .nav__icon { flex: none; font-size: 20px; }
@@ -365,6 +388,8 @@ async function createPlaylist() {
 /* Подписи разделов в полосе не помещаются — вместо них волосок */
 .side--rail .sec__head { height: 1px; margin: 0 14px 12px; padding: 0; background: var(--hair); }
 .side--rail .sec__title { display: none; }
+/* У закреплённого — волосок и «+» под ним, как у Spotify в свёрнутой панели */
+.side--rail .sec__head--pinned { justify-content: center; height: auto; margin: 0 14px 6px; padding: 10px 0 0; border-top: 1px solid var(--hair); background: none; }
 .side--rail .item { justify-content: center; padding: 6px 0; }
 .side--rail .item__text { display: none; }
 .side--rail .item__caret { display: none; }

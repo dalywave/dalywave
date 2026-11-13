@@ -35,6 +35,12 @@ onMounted(() => useFriendsStore().init())
 // Окно приложения: во весь экран «светофора» нет, без фокуса заголовок приглушён
 const { win, titlebar, titlebarStyle } = useTitlebar()
 
+// Боковая панель компьютера: своя ширина (перетаскиванием края) — только у развёрнутой. Ширина
+// анимируется — но не при старте (состояние уже восстановлено до первой отрисовки) и не под мышью
+const shellStyle = computed(() => ({ ...titlebarStyle.value, ...(!ui.isRail && ui.sideWidth ? { '--sidebar-w': `${ui.sideWidth}px` } : {}) }))
+const animated = ref(false)
+onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => (animated.value = true))))
+
 // Обновление приложения качается в фоне само и ждёт «Перезапустить» в настройках («О приложении»)
 // и в трее — без всплывающих предложений: ни музыку, ни работу оно не прерывает
 
@@ -91,14 +97,20 @@ const phoneMain = ref<HTMLElement | null>(null)
       'is-side': ui.sidePlayer,
       'is-rail': ui.isRail,
       'is-player': ui.playerOpen,
+      'is-anim': animated && !ui.sideResizing,
       [`is-titlebar-${titlebar}`]: !!titlebar,
     }"
-    :style="titlebarStyle"
+    :style="shellStyle"
   >
     <ShellTitleBar v-if="titlebar" :focused="win.focused" :maximized="win.maximized" />
     <template v-if="!ui.isTouchUi">
-      <ShellSidebar class="app__side" :rail="ui.isRail" />
+      <!-- Колонка панели обрезает её: панель сразу встаёт в новую ширину, а колонка доезжает до неё —
+           при сворачивании и разворачивании содержимое панели не сдвигается -->
+      <div class="app__side">
+        <ShellSidebar class="app__aside" :rail="ui.isRail" />
+      </div>
       <div class="app__center">
+        <ShellSideResizer v-if="!ui.sideCramped" />
         <div class="app__stage">
           <main ref="main" class="app__main thin-scrollbar" @scroll.passive="onScroll">
             <ShellTopBar :scrolled="scrolled" />
@@ -154,8 +166,16 @@ const phoneMain = ref<HTMLElement | null>(null)
 }
 .app.is-rail { --sidebar-w: 76px; }
 .app.is-titlebar-mac-inset { --titlebar-inset: var(--titlebar-size, 48px); }
+/* «Светофор» Mac (x 18–78) — над рейкой, по её середине, а не через край */
+.app.is-rail.is-titlebar-mac-inset { --sidebar-w: 96px; }
 .app.is-titlebar-windows { --titlebar-h: var(--titlebar-size, 32px); }
-.app__side { grid-row: 1; grid-column: 1; }
+.app.is-anim { transition: grid-template-columns var(--dur-2) var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .app.is-anim { transition: none; }
+}
+.app__side { position: relative; grid-row: 1; grid-column: 1; min-width: 0; overflow: hidden; background: var(--side-bg); }
+.app__side::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; z-index: 1; width: 1px; background: var(--side-edge); pointer-events: none; }
+.app__side > .app__aside { width: var(--sidebar-w); border-right: 0; }
 .app__center { position: relative; display: flex; grid-row: 1; grid-column: 2; min-width: 0; min-height: 0; }
 .app__stage { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; }
 .app__main { position: relative; flex: 1; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }

@@ -307,13 +307,16 @@ export class WaveEngine {
     if (w * h * scale * scale > budget) scale = Math.sqrt(budget / (w * h))
     const W = Math.round(w * scale)
     const H = Math.round(h * scale)
-    if (this.canvas.width !== W || this.canvas.height !== H) {
+    const changed = this.canvas.width !== W || this.canvas.height !== H
+    if (changed) {
       this.canvas.width = W
       this.canvas.height = H
     }
     this.lowPower = w < 600
     this.measureBox()
-    if (this.isStatic()) this.draw()
+    // Новый размер очищает холст, а кадр анимации уже прошёл: без отрисовки сразу же каждый шаг
+    // плавного изменения ширины (сворачивание боковой панели) мигал бы чёрным
+    if (changed || this.isStatic()) this.draw()
   }
 
   private measureBox() {
