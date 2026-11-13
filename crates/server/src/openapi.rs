@@ -270,6 +270,11 @@ use crate::routes::{
         video::album_motion,
         video::claim_clip,
         video::report_clip,
+        video::track_clip,
+        video::choose_clip,
+        video::hide_clip,
+        video::unhide_clip,
+        video::clip_reports,
     ),
     components(schemas(
         dalywave_protocol::imports::ImportJobPayload,

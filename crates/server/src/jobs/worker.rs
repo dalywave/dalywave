@@ -622,6 +622,12 @@ impl Worker {
                         Ok(t) => tracing::info!(expired = t.expired, evicted = t.evicted, "clips trimmed"),
                         Err(e) => tracing::warn!(error = %e, "could not trim clips"),
                     }
+                    // Клипы старого отбора — понемногу на перепроверку новым
+                    match crate::video::clips::review(&self.ctx.db).await {
+                        Ok(0) => {}
+                        Ok(n) => tracing::info!(clips = n, "clips queued for review"),
+                        Err(e) => tracing::warn!(error = %e, "could not queue clips for review"),
+                    }
                     match crate::renditions::trim(&self.ctx.db, &self.ctx.storage, crate::renditions::limit_bytes()).await {
                         Ok(t) if t == crate::renditions::Trimmed::default() => {}
                         Ok(t) => tracing::info!(stale = t.stale, evicted = t.evicted, deleted = t.deleted, "renditions trimmed"),

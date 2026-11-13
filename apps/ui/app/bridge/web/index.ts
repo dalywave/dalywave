@@ -441,6 +441,10 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         if (!trackIds.length) return []
         return (await unwrap(api.POST('/api/clips', { body: { trackIds: trackIds.slice(0, 20) } }))).items
       },
+      clip: id => unwrap(api.GET('/api/tracks/{id}/clip', { params: { path: { id } } })),
+      chooseClip: (id, choice) => unwrap(api.PUT('/api/tracks/{id}/clip', { params: { path: { id } }, body: choice })),
+      hideClip: id => done(api.POST('/api/tracks/{id}/clip/hide', { params: { path: { id } } })),
+      unhideClip: id => done(api.DELETE('/api/tracks/{id}/clip/hide', { params: { path: { id } } })),
     },
 
     taste: {
@@ -732,6 +736,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       acquisition: id => unwrap(api.GET('/api/admin/acquisitions/{id}', { params: { path: { id } } })),
       resolve: (id, req) => unwrap(api.POST('/api/admin/acquisitions/{id}/resolve', { params: { path: { id } }, body: req })),
       preview: trackId => unwrap(api.GET('/api/admin/tracks/{id}/preview', { params: { path: { id: trackId } } })),
+      clipReports: () => unwrap(api.GET('/api/admin/clips/reports')),
       sources: () => unwrap(api.GET('/api/admin/sources')),
       checkDownload: trackId => unwrap(api.POST('/api/admin/sources/check', { body: { trackId } })),
       createDownloader: name => unwrap(api.POST('/api/admin/downloaders', { body: { name } })),

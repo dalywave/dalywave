@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.state AS \"state?\", c.video_id, c.storage_key, c.video_title, c.channel, c.source,\n                  COALESCE(c.candidates, '[]') AS \"candidates!\",\n                  p.track_id IS NOT NULL AS \"pinned!\", p.video_id AS pin_video,\n                  EXISTS (SELECT 1 FROM clip_hidden h\n                          WHERE h.user_id = $2 AND h.track_id = t.id AND h.video_id = c.video_id) AS \"hidden!\",\n                  (SELECT count(*) FROM clip_hidden h\n                   WHERE h.track_id = t.id AND h.video_id = c.video_id\n                     AND (p.chosen_at IS NULL OR h.created_at > p.chosen_at)) AS \"reports!\",\n                  (SELECT j.payload->>'mode' FROM jobs j\n                   WHERE j.dedupe_key = 'clip:' || t.id::text AND j.status IN ('queued', 'running')\n                   LIMIT 1) AS job_mode\n           FROM tracks t\n           LEFT JOIN track_clips c ON c.track_id = t.id\n           LEFT JOIN track_clip_pins p ON p.track_id = t.id\n           WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "state?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "video_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "video_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "storage_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "storage_key"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "video_title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "video_title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "channel",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "channel"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "candidates!",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "pinned!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "pin_video",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clip_pins",
+            "name": "video_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "hidden!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "reports!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "job_mode",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c695ff92c12b769169dc3ef23f1ad59139528e7f812c873102dca67f527e64fb"
+}

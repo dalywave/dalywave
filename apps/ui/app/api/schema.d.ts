@@ -79,6 +79,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/clips/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["clip_reports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/downloaders": {
         parameters: {
             query?: never;
@@ -3055,6 +3071,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tracks/{id}/clip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["track_clip"];
+        put: operations["choose_clip"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tracks/{id}/clip/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["hide_clip"];
+        delete: operations["unhide_clip"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/{id}/credits": {
         parameters: {
             query?: never;
@@ -4109,8 +4157,54 @@ export interface components {
             /** @enum {string} */
             type: "connect.signal";
         });
+        /** @description Кандидат в клипы из выдачи YouTube с оценкой загрузчика. */
+        ClipCandidate: {
+            channel?: string;
+            /** Format: double */
+            durationS?: number;
+            /** @description Почему не годится; нет — годится. */
+            rejected: string[] | null;
+            /** Format: double */
+            score?: number;
+            /**
+             * @description Чей канал: `artist` (исполнителя), `official` (проверенный, с пометкой клипа), `vevo`,
+             *     `label` (лейбла альбома); нет — чужой.
+             */
+            source: string | null;
+            title?: string;
+            videoId: string;
+            /** Format: int64 */
+            views?: number;
+        };
+        /** @description Выбор администратора. */
+        ClipChoice: {
+            /** @enum {string} */
+            action: "video";
+            videoId: string;
+        } | {
+            /** @enum {string} */
+            action: "url";
+            url: string;
+        } | {
+            /** @enum {string} */
+            action: "none";
+        } | {
+            /** @enum {string} */
+            action: "auto";
+        } | {
+            /** @enum {string} */
+            action: "keep";
+        } | {
+            /** @enum {string} */
+            action: "search";
+        };
         /** @description Запрос задания клипа: ответ сразу — задание или 204. */
         ClipClaimRequest: {
+            /**
+             * @description Что умеет загрузчик сверх «найти и нарезать»: `clip-modes` — режимы `pinned`, `search`,
+             *     `review`. Без него задания с ними не выдаются.
+             */
+            features?: string[];
             workerId: string;
         };
         ClipClaimResponse: {
@@ -4123,6 +4217,8 @@ export interface components {
         ClipJob: {
             /** @description Исполнители по порядку. */
             artists: string[];
+            /** @description `review`: ролик, из которого нарезан нынешний клип. */
+            currentVideoId: string | null;
             /**
              * Format: int32
              * @description Длина трека, мс: клип сверяется с ней.
@@ -4141,6 +4237,8 @@ export interface components {
              */
             id: string;
             isrc: string | null;
+            /** @description Лейбл альбома (Deezer): его канал тоже официальный. */
+            label: string | null;
             /**
              * Format: date-time
              * @description Не пришёл отчёт к этому сроку — задание вернётся в очередь.
@@ -4151,26 +4249,56 @@ export interface components {
              * @description Сколько вырезать, мс (10–15 секунд).
              */
             lengthMs: number;
+            /** @description Что сделать: найти и нарезать, нарезать выбранный, только кандидаты, перепроверить. */
+            mode: components["schemas"]["ClipMode"];
             title: string;
             /** Format: uuid */
             trackId: string;
             upload: components["schemas"]["UploadTarget"];
+            /** @description `pinned`: ролик, который выбрал администратор. */
+            videoId: string | null;
         };
         ClipList: {
             /** @description В порядке запроса; неизвестные треки пропущены. */
             items: components["schemas"]["TrackClip"][];
         };
         /**
+         * @description Что сделать с клипом.
+         * @enum {string}
+         */
+        ClipMode: "auto" | "pinned" | "search" | "review";
+        /**
          * @description Чем кончилось задание клипа.
          * @enum {string}
          */
-        ClipOutcome: "ready" | "none" | "error";
+        ClipOutcome: "ready" | "none" | "kept" | "error";
         ClipReport: {
             result: components["schemas"]["ClipResult"];
             workerId: string;
         };
+        /** @description Трек, у которого скрыли клип: для «Спорных». */
+        ClipReportItem: {
+            channel: string | null;
+            /** Format: date-time */
+            lastAt: string;
+            /**
+             * Format: int64
+             * @description Сколько человек скрыли.
+             */
+            reports: number;
+            track: components["schemas"]["Track"];
+            videoId: string;
+            videoTitle: string | null;
+        };
+        ClipReportList: {
+            items: components["schemas"]["ClipReportItem"][];
+        };
         /** @description Отчёт загрузчика о клипе. */
         ClipResult: {
+            /** @description До 8 кандидатов поиска, годные первыми. */
+            candidates?: components["schemas"]["ClipCandidate"][];
+            /** @description Канал ролика. */
+            channel?: string | null;
             /**
              * Format: int32
              * @description С какого места ролика вырезано, мс.
@@ -4187,8 +4315,15 @@ export interface components {
             error?: string | null;
             /** Format: int32 */
             height?: number | null;
+            /**
+             * Format: double
+             * @description Оценка отбора.
+             */
+            score?: number | null;
             /** Format: int64 */
             sizeBytes?: number | null;
+            /** @description Чей канал (см. [`ClipCandidate::source`]). */
+            source?: string | null;
             status: components["schemas"]["ClipOutcome"];
             /**
              * Format: int32
@@ -4197,6 +4332,8 @@ export interface components {
             videoDurationMs?: number | null;
             /** @description id ролика YouTube. */
             videoId?: string | null;
+            /** @description Название ролика. */
+            videoTitle?: string | null;
             /** Format: int32 */
             width?: number | null;
         };
@@ -4205,6 +4342,34 @@ export interface components {
          * @enum {string}
          */
         ClipSource: "chorus" | "preview";
+        /** @description Клип трека для листа «Клип». */
+        ClipView: {
+            /** @description Может выбирать клип (администратор). Остальные — только «Скрыть клип». */
+            canChoose: boolean;
+            /** @description Администратору: кандидаты последнего поиска (до 8), годные первыми. */
+            candidates: components["schemas"]["ClipCandidate"][];
+            channel: string | null;
+            /** @description Этот человек скрыл нынешний клип у себя. */
+            hidden: boolean;
+            /** @description Выбор администратора: закреплён ролик или «без клипа». Автопоиск его не меняет. */
+            pinned: boolean;
+            /**
+             * Format: int64
+             * @description Администратору: сколько человек скрыли нынешний клип.
+             */
+            reports: number;
+            /** @description Администратору: ищутся кандидаты. */
+            searching: boolean;
+            /** @description Чей канал (см. [`ClipCandidate::source`]); `pinned` — выбрал администратор. */
+            source: string | null;
+            /** @description `ready` — есть (ссылка в `url`), `pending` — ищется или режется, `none` — нет. */
+            state: components["schemas"]["VideoState"];
+            /** Format: uuid */
+            trackId: string;
+            url: string | null;
+            videoId: string | null;
+            videoTitle: string | null;
+        };
         /**
          * @description Подготовить видео ленты: клипы и живые обложки этих треков ставятся в очередь, готовые —
          *     со ссылками.
@@ -9058,6 +9223,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    clip_reports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Треки, где слушатели скрыли клип, а администратор его ещё не подтвердил и не заменил: больше жалоб — выше */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipReportList"];
                 };
             };
         };
@@ -17046,6 +17231,143 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
+            };
+        };
+    };
+    track_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Клип вместо обложки: что нарезано и откуда, скрыт ли у меня. Администратору — кандидаты и число жалоб */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipView"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    choose_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClipChoice"];
+            };
+        };
+        responses: {
+            /** @description Выбор принят: ролик закреплён и режется впереди очереди (до тех пор `pending`), «без клипа», «заново» или «оставить» */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClipView"];
+                };
+            };
+            /** @description Ссылка не на видео YouTube */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Выбирать клип может только администратор */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    hide_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Клип скрыт у меня; администратор видит жалобу в «Спорных» */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description У трека нет клипа */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unhide_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Клип снова показывается */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

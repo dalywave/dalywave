@@ -582,3 +582,438 @@ async fn albums_without_an_animated_cover_are_rechecked_monthly(db: PgPool) {
         StatusCode::NOT_FOUND
     );
 }
+
+// ───────────── Выбор клипа, «Скрыть клип», перепроверка ─────────────
+
+/// Загрузчик с режимами клипа (`pinned`, `search`, `review`).
+async fn claim_clip_v2(app: &TestApp, token: &str) -> Resp {
+    app.post(
+        "/api/fetcher/clips/claim",
+        json!({ "workerId": "test-mac", "features": ["clip-modes"] }),
+        &Auth::Bearer(token.into()),
+    )
+    .await
+}
+
+async fn choose(app: &TestApp, auth: &Auth, track: &str, body: Value) -> Resp {
+    app.call(
+        axum::http::Method::PUT,
+        &format!("/api/tracks/{track}/clip"),
+        Some(body),
+        auth,
+    )
+    .await
+}
+
+/// Нарезать: положить файл по ссылке задания и отчитаться «готово».
+async fn cut(app: &TestApp, token: &str, job: &Value, video: &str, extra: Value) -> Resp {
+    let key = upload_key(job["upload"]["url"].as_str().unwrap());
+    app.state
+        .storage
+        .put(&key, vec![0u8, 0, 0, 24], "video/mp4", None)
+        .await
+        .unwrap();
+    let mut result = json!({ "status": "ready", "videoId": video, "videoDurationMs": 201_000,
+                             "clipStartMs": 75_000, "durationMs": 12_000, "sizeBytes": 4,
+                             "width": 854, "height": 480 });
+    for (k, v) in extra.as_object().unwrap() {
+        result[k] = v.clone();
+    }
+    report_clip(app, token, job["id"].as_str().unwrap(), result).await
+}
+
+fn candidates() -> Value {
+    json!([
+        { "videoId": "TbWV7gCPiYc", "title": "CG5 - Sleep Well", "channel": "CG5", "durationS": 208.0,
+          "views": 321_169_270, "source": "artist", "score": 5.1, "rejected": null },
+        { "videoId": "rC35_gNfdU0", "title": "\"Sleep Well\" | Animated Minecraft Music Video",
+          "channel": "WilliamaYT", "durationS": 208.0, "views": 1_573_503, "source": null, "score": 1.2,
+          "rejected": ["fan:minecraft", "not_official"] }
+    ])
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn admin_picks_a_clip_and_the_pick_sticks(db: PgPool) {
+    let app = TestApp::new(db).await;
+    no_intervals(&app.state.db).await;
+    let (_, admin) = app.admin("boss").await;
+    let (token, _) = new_downloader(&app, &admin, "Mac").await;
+    let me = app.listener("ann").await;
+    let track = app.resolve_id("track", LIGHT_ME_UP, &me).await;
+
+    // Автопоиск нарезал фанатское видео; кандидаты — в листе «Клип» у администратора
+    clips_of(&app, &me, &[&track]).await;
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "auto");
+    assert!(job["videoId"].is_null() && job["currentVideoId"].is_null());
+    let res = cut(&app, &token, &job, "rC35_gNfdU0",
+        json!({ "videoTitle": "Minecraft Music Video", "channel": "WilliamaYT", "candidates": candidates() })).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+
+    let view = app.get(&format!("/api/tracks/{track}/clip"), &admin).await;
+    assert_eq!(view.status, StatusCode::OK, "{}", view.text);
+    assert_eq!(view.body["state"], "ready");
+    assert_eq!(view.body["videoId"], "rC35_gNfdU0");
+    assert_eq!(view.body["channel"], "WilliamaYT");
+    assert_eq!(view.body["canChoose"], true);
+    assert_eq!(view.body["pinned"], false);
+    assert_eq!(view.body["candidates"].as_array().unwrap().len(), 2);
+    assert_eq!(view.body["candidates"][0]["source"], "artist");
+    // Слушателю — без кандидатов и без выбора
+    let mine = app.get(&format!("/api/tracks/{track}/clip"), &me).await;
+    assert_eq!(mine.body["canChoose"], false);
+    assert!(mine.body["candidates"].as_array().unwrap().is_empty());
+    let res = choose(&app, &me, &track, json!({ "action": "none" })).await;
+    assert_eq!(res.status, StatusCode::FORBIDDEN);
+
+    // Администратор выбирает клип с канала автора: старый уходит сразу, пока режется — обложка
+    let res = choose(
+        &app,
+        &admin,
+        &track,
+        json!({ "action": "video", "videoId": "TbWV7gCPiYc" }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["state"], "pending");
+    assert_eq!(res.body["pinned"], true);
+    assert_eq!(clips_of(&app, &me, &[&track]).await[0]["state"], "pending");
+    // Старый загрузчик выбор не режет: задача ждёт нового, попытка не тратится
+    assert_eq!(
+        claim_clip(&app, &token).await.status,
+        StatusCode::NO_CONTENT
+    );
+    let (attempts, later): (i16, bool) = sqlx::query_as(
+        "SELECT attempts, run_after > now() + interval '50 minutes' FROM jobs
+         WHERE kind = 'clip' AND status = 'queued'",
+    )
+    .fetch_one(&app.state.db)
+    .await
+    .unwrap();
+    assert_eq!((attempts, later), (0, true));
+    sqlx::query("UPDATE jobs SET run_after = now() WHERE kind = 'clip' AND status = 'queued'")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "pinned");
+    assert_eq!(job["videoId"], "TbWV7gCPiYc");
+    let res = cut(
+        &app,
+        &token,
+        &job,
+        "TbWV7gCPiYc",
+        json!({ "channel": "CG5", "source": "artist" }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let view = app.get(&format!("/api/tracks/{track}/clip"), &admin).await;
+    assert_eq!(view.body["state"], "ready");
+    assert_eq!(view.body["videoId"], "TbWV7gCPiYc");
+    assert_eq!(view.body["source"], "pinned");
+    // Кандидаты прошлого поиска остаются
+    assert_eq!(view.body["candidates"].as_array().unwrap().len(), 2);
+
+    // Выбранный клип ушёл по сроку хранения — нарезается снова из того же ролика
+    sqlx::query("DELETE FROM track_clips")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    assert_eq!(clips_of(&app, &me, &[&track]).await[0]["state"], "pending");
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(
+        (job["mode"].clone(), job["videoId"].clone()),
+        (json!("pinned"), json!("TbWV7gCPiYc"))
+    );
+
+    // Нарезка автопоиска, закончившаяся после выбора, не перезаписывает выбор
+    let res = choose(
+        &app,
+        &admin,
+        &track,
+        json!({ "action": "url", "url": "https://youtu.be/28I_6qvI3Dk?si=x" }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let res = cut(&app, &token, &job, "TbWV7gCPiYc", json!({})).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let ready: i64 = sqlx::query_scalar("SELECT count(*) FROM track_clips WHERE state = 'ready'")
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    assert_eq!(ready, 0);
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["videoId"], "28I_6qvI3Dk");
+    let res = choose(
+        &app,
+        &admin,
+        &track,
+        json!({ "action": "url", "url": "https://soundcloud.com/x/y" }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST);
+
+    // «Без клипа»: обложка, и больше не ищется
+    let res = choose(&app, &admin, &track, json!({ "action": "none" })).await;
+    assert_eq!(res.body["state"], "none");
+    assert_eq!(clips_of(&app, &me, &[&track]).await[0]["state"], "none");
+    let queued: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM jobs WHERE kind = 'clip' AND status = 'queued'")
+            .fetch_one(&app.state.db)
+            .await
+            .unwrap();
+    assert_eq!(queued, 0);
+    assert!(app.audit_kinds().await.contains(&"clip.chosen".to_string()));
+    let res = report_clip(
+        &app,
+        &token,
+        job["id"].as_str().unwrap(),
+        json!({ "status": "none" }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+
+    // «Заново»: выбор снят, клип ищется автопоиском впереди очереди
+    let res = choose(&app, &admin, &track, json!({ "action": "auto" })).await;
+    assert_eq!(res.body["pinned"], false);
+    assert_eq!(res.body["state"], "pending");
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "auto");
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn a_listener_hides_a_clip_and_the_admin_sees_it(db: PgPool) {
+    let app = TestApp::new(db).await;
+    let (_, admin) = app.admin("boss").await;
+    let ann = app.listener("ann").await;
+    let bob = app.listener("bob").await;
+    let track = app.resolve_id("track", LIGHT_ME_UP, &ann).await;
+    let hide = format!("/api/tracks/{track}/clip/hide");
+
+    // Клипа нет — скрывать нечего
+    let res = app.post(&hide, json!({}), &ann).await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
+    sqlx::query(
+        "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, video_title, channel)
+         VALUES ($1::uuid, 'ready', 'fanfanfan01', 'video/clips/x/1.mp4', 4, 'Minecraft Music Video', 'Fan')",
+    )
+    .bind(&track)
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+    let res = app.post(&hide, json!({}), &ann).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    // Скрыт только у Ann
+    assert_eq!(clips_of(&app, &ann, &[&track]).await[0]["state"], "none");
+    assert_eq!(clips_of(&app, &bob, &[&track]).await[0]["state"], "ready");
+    assert_eq!(
+        app.get(&format!("/api/tracks/{track}/clip"), &ann)
+            .await
+            .body["hidden"],
+        true
+    );
+
+    // Жалоба — в «Спорных»
+    let res = app.get("/api/admin/clips/reports", &admin).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let items = res.body["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["track"]["id"], track.as_str());
+    assert_eq!(items[0]["videoId"], "fanfanfan01");
+    assert_eq!(items[0]["reports"], 1);
+    assert_eq!(
+        app.get(&format!("/api/tracks/{track}/clip"), &admin)
+            .await
+            .body["reports"],
+        1
+    );
+    assert_eq!(
+        app.get("/api/admin/clips/reports", &ann).await.status,
+        StatusCode::FORBIDDEN
+    );
+
+    // Администратор оставил клип — жалоба разобрана, у Ann он по-прежнему скрыт
+    let res = choose(&app, &admin, &track, json!({ "action": "keep" })).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["pinned"], true);
+    assert!(
+        app.get("/api/admin/clips/reports", &admin).await.body["items"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(clips_of(&app, &ann, &[&track]).await[0]["state"], "none");
+
+    // Вернуть
+    let res = app.delete(&hide, &ann).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT);
+    assert_eq!(clips_of(&app, &ann, &[&track]).await[0]["state"], "ready");
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn old_clips_are_reviewed_by_the_new_pick(db: PgPool) {
+    let app = TestApp::new(db).await;
+    no_intervals(&app.state.db).await;
+    let (_, admin) = app.admin("boss").await;
+    let (token, _) = new_downloader(&app, &admin, "Mac").await;
+    let me = app.listener("ann").await;
+    let tracks = ep_tracks(&app, &me).await;
+    // Три клипа старого отбора и один уже проверенный
+    for (i, track) in tracks.iter().take(4).enumerate() {
+        sqlx::query(
+            "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, reviewed_at)
+             VALUES ($1, 'ready', $2, $3, 4, CASE WHEN $4 THEN now() END)",
+        )
+        .bind(track)
+        .bind(format!("video{i:06}"))
+        .bind(format!("video/clips/{track}/old.mp4"))
+        .bind(i == 3)
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    }
+    assert_eq!(clips::review(&app.state.db).await.unwrap(), 3);
+    // Повтор не ставит вторых задач
+    assert_eq!(clips::review(&app.state.db).await.unwrap(), 0);
+    // Лента впереди перепроверок
+    let other = ep_tracks(&app, &me).await[4].to_string();
+    clips_of(&app, &me, &[&other]).await;
+    let first = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(
+        (first["trackId"].clone(), first["mode"].clone()),
+        (json!(other), json!("auto"))
+    );
+    report_clip(
+        &app,
+        &token,
+        first["id"].as_str().unwrap(),
+        json!({ "status": "none" }),
+    )
+    .await;
+
+    // Тот же клип и есть лучший — остаётся, отмечен проверенным
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "review");
+    let track: Uuid = job["trackId"].as_str().unwrap().parse().unwrap();
+    let current = job["currentVideoId"].as_str().unwrap().to_string();
+    let res = report_clip(
+        &app,
+        &token,
+        job["id"].as_str().unwrap(),
+        json!({ "status": "kept", "videoId": current, "channel": "Artist", "source": "artist",
+                "candidates": candidates() }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let (state, reviewed, channel): (String, bool, Option<String>) = sqlx::query_as(
+        "SELECT state, reviewed_at IS NOT NULL, channel FROM track_clips WHERE track_id = $1",
+    )
+    .bind(track)
+    .fetch_one(&app.state.db)
+    .await
+    .unwrap();
+    assert_eq!(
+        (state.as_str(), reviewed, channel.as_deref()),
+        ("ready", true, Some("Artist"))
+    );
+
+    // Фанатское, а официального нет — клип убран, кандидаты сохранены
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "review");
+    let track: Uuid = job["trackId"].as_str().unwrap().parse().unwrap();
+    let res = report_clip(
+        &app,
+        &token,
+        job["id"].as_str().unwrap(),
+        json!({ "status": "none", "candidates": candidates() }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let (state, n): (String, i32) = sqlx::query_as(
+        "SELECT state, jsonb_array_length(candidates) FROM track_clips WHERE track_id = $1",
+    )
+    .bind(track)
+    .fetch_one(&app.state.db)
+    .await
+    .unwrap();
+    assert_eq!((state.as_str(), n), ("none", 2));
+    assert_eq!(
+        clips_of(&app, &me, &[&track.to_string()]).await[0]["state"],
+        "none"
+    );
+
+    // Нашёлся клип с канала автора — перерезан
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "review");
+    let track: Uuid = job["trackId"].as_str().unwrap().parse().unwrap();
+    let res = cut(
+        &app,
+        &token,
+        &job,
+        "TbWV7gCPiYc",
+        json!({ "source": "artist" }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let (video, source): (String, String) =
+        sqlx::query_as("SELECT video_id, source FROM track_clips WHERE track_id = $1")
+            .bind(track)
+            .fetch_one(&app.state.db)
+            .await
+            .unwrap();
+    assert_eq!((video.as_str(), source.as_str()), ("TbWV7gCPiYc", "artist"));
+    let trashed: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM storage_trash WHERE storage_key LIKE '%/old.mp4'")
+            .fetch_one(&app.state.db)
+            .await
+            .unwrap();
+    assert_eq!(trashed, 2);
+
+    // Старому загрузчику перепроверки не выдаются
+    sqlx::query("UPDATE track_clips SET reviewed_at = NULL")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    clips::review(&app.state.db).await.unwrap();
+    assert_eq!(
+        claim_clip(&app, &token).await.status,
+        StatusCode::NO_CONTENT
+    );
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn search_only_refreshes_candidates(db: PgPool) {
+    let app = TestApp::new(db).await;
+    no_intervals(&app.state.db).await;
+    let (_, admin) = app.admin("boss").await;
+    let (token, _) = new_downloader(&app, &admin, "Mac").await;
+    let me = app.listener("ann").await;
+    let track = app.resolve_id("track", LIGHT_ME_UP, &me).await;
+    sqlx::query(
+        "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, reviewed_at)
+         VALUES ($1::uuid, 'ready', 'TbWV7gCPiYc', 'video/clips/x/2.mp4', 4, now())",
+    )
+    .bind(&track)
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+    let res = choose(&app, &admin, &track, json!({ "action": "search" })).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["searching"], true);
+    // Поиск не убирает нарезанный клип
+    assert_eq!(res.body["state"], "ready");
+    let job = claim_clip_v2(&app, &token).await.body["job"].clone();
+    assert_eq!(job["mode"], "search");
+    let res = report_clip(
+        &app,
+        &token,
+        job["id"].as_str().unwrap(),
+        json!({ "status": "none", "candidates": candidates() }),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let view = app.get(&format!("/api/tracks/{track}/clip"), &admin).await;
+    assert_eq!(view.body["state"], "ready");
+    assert_eq!(view.body["searching"], false);
+    assert_eq!(view.body["candidates"].as_array().unwrap().len(), 2);
+}

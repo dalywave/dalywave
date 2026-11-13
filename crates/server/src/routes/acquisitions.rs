@@ -244,7 +244,7 @@ pub async fn one(
 }
 
 /// id видео YouTube: 11 символов из букв, цифр, `-` и `_`.
-fn valid_video_id(id: &str) -> bool {
+pub(crate) fn valid_video_id(id: &str) -> bool {
     id.len() == 11
         && id
             .chars()

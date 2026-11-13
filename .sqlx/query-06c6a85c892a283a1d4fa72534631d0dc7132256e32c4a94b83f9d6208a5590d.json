@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.track_id FROM track_clips c\n           WHERE c.state = 'ready' AND c.reviewed_at IS NULL\n             AND NOT EXISTS (SELECT 1 FROM track_clip_pins p WHERE p.track_id = c.track_id)\n             AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.dedupe_key = 'clip:' || c.track_id::text\n                                AND j.status IN ('queued', 'running'))\n           ORDER BY c.last_used_at DESC\n           LIMIT GREATEST(0, $1 - (SELECT count(*) FROM jobs\n                                   WHERE lane = $2 AND status IN ('queued', 'running')\n                                     AND payload->>'mode' = 'review'))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_clips",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "06c6a85c892a283a1d4fa72534631d0dc7132256e32c4a94b83f9d6208a5590d"
+}

@@ -81,5 +81,12 @@ class ClipJob(_Model):
     length_ms: int = Field(default=12_000, ge=3_000, le=30_000)
     isrc: str | None = None
     exclude_video_ids: list[str] = Field(default_factory=list)
+    # Лейбл альбома (Deezer): его канал тоже официальный
+    label: str | None = None
+    # auto — найти и нарезать; pinned — нарезать video_id (выбор администратора); search — только
+    # кандидаты; review — перепроверить нарезанный current_video_id новым отбором
+    mode: Literal["auto", "pinned", "search", "review"] = "auto"
+    video_id: str | None = None
+    current_video_id: str | None = None
     upload: UploadSpec
     lease_expires_at: datetime | None = None

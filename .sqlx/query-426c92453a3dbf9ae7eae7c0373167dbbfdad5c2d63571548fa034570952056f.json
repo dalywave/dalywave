@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id AS \"id!\", t.album_id, c.state AS \"state?\", c.storage_key, c.duration_ms AS \"clip_ms?\",\n                  (c.checked_at < now() - make_interval(days => $2)) AS \"stale?\"\n           FROM tracks t LEFT JOIN track_clips c ON c.track_id = t.id\n           WHERE t.id = ANY($1)",
+  "query": "SELECT t.id AS \"id!\", t.album_id, c.state AS \"state?\", c.storage_key, c.duration_ms AS \"clip_ms?\",\n                  (c.checked_at < now() - make_interval(days => $2)) AS \"stale?\",\n                  (p.track_id IS NOT NULL AND p.video_id IS NULL) AS \"off!\",\n                  EXISTS (SELECT 1 FROM clip_hidden h\n                          WHERE h.user_id = $3 AND h.track_id = t.id AND h.video_id = c.video_id) AS \"hidden!\"\n           FROM tracks t\n           LEFT JOIN track_clips c ON c.track_id = t.id\n           LEFT JOIN track_clip_pins p ON p.track_id = t.id\n           WHERE t.id = ANY($1)",
   "describe": {
     "columns": [
       {
@@ -63,22 +63,37 @@
         "name": "stale?",
         "type_info": "Bool",
         "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "off!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "hidden!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
         "UuidArray",
-        "Int4"
+        "Int4",
+        "Uuid"
       ]
     },
     "nullable": [
       true,
       true,
-      false,
       true,
       true,
+      true,
+      null,
+      null,
       null
     ]
   },
-  "hash": "c087d9225ce214054f1788076224c9513e4c558db3d86d5aa926ef2ff118fa87"
+  "hash": "426c92453a3dbf9ae7eae7c0373167dbbfdad5c2d63571548fa034570952056f"
 }

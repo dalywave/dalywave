@@ -24,7 +24,7 @@ import type {
   WhyTrack,
   FriendList, FriendProfile, FriendRequestResult, InviteLink, PeopleList, PersonCard, Privacy, PrivacyPatch, PlaylistInvite,
   DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
-  AlbumMotion, TrackClip,
+  AlbumMotion, TrackClip, ClipView, ClipChoice, ClipReportList,
   AppDownloads,
 } from '~/api/types'
 import type { DownloaderSnapshot, TrainerSnapshot } from './tauri/shell'
@@ -664,6 +664,13 @@ export interface Bridge {
     albumMotion(albumId: string): Promise<AlbumMotion>
     /** Видео карточек ленты, до 20: клип или `pending`, плюс живая обложка альбома */
     clips(trackIds: string[]): Promise<TrackClip[]>
+    /** «Клип» у трека: что нарезано и откуда; администратору — кандидаты и жалобы */
+    clip(trackId: string): Promise<ClipView>
+    /** Выбор администратора: ролик, ссылка, «без клипа», «заново», «оставить», «обновить варианты» */
+    chooseClip(trackId: string, choice: ClipChoice): Promise<ClipView>
+    /** «Скрыть клип» — у себя; администратор видит жалобу */
+    hideClip(trackId: string): Promise<void>
+    unhideClip(trackId: string): Promise<void>
   }
 
   /** «Мой вкус»: грани, статистика и ручки управления рекомендациями */
@@ -942,6 +949,8 @@ export interface Bridge {
     acquisition(id: string): Promise<AdminAcquisition>
     resolve(id: string, req: ResolveRequest): Promise<AdminAcquisition>
     preview(trackId: string): Promise<TrackPreview>
+    /** Треки, где слушатели скрыли клип: для «Спорных» */
+    clipReports(): Promise<ClipReportList>
     sources(): Promise<Sources>
     checkDownload(trackId?: string): Promise<AdminAcquisition>
     createDownloader(name: string): Promise<DownloaderToken>

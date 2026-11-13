@@ -16,6 +16,9 @@ export function useTrackActions() {
   const hookPreview = useHookPreviewStore()
   const why = useWhyTrack()
   const versions = useVersionsStore()
+  const auth = useAuthStore()
+  const motion = useMotionStore()
+  const clipSheet = useClipSheet()
   const t = useNuxtApp().$i18n.t
 
   /** «Не рекомендовать» трек или исполнителя — в список, который ведёт сам человек («Мой вкус»), с отменой */
@@ -31,8 +34,8 @@ export function useTrackActions() {
   }
 
   /** `nowPlaying` — меню играющего трека в плеере: «играть следующим» и «в очередь» там ни к чему.
-   *  `extra` — пункты места, где трек показан («Убрать из плейлиста») */
-  function menuFor(track: Track, opts: { inQueue?: string, nowPlaying?: boolean, extra?: MenuEntry[] } = {}): MenuEntry[] {
+   *  `about` — меню на странице трека. `extra` — пункты места, где трек показан («Убрать из плейлиста») */
+  function menuFor(track: Track, opts: { inQueue?: string, nowPlaying?: boolean, about?: boolean, extra?: MenuEntry[] } = {}): MenuEntry[] {
     const liked = library.isLiked(track)
     const artist = track.artists[0]
     const entries: MenuEntry[] = [
@@ -85,6 +88,12 @@ export function useTrackActions() {
     entries.push({ label: t('story.action'), icon: 'ph:film-strip', onSelect: () => story.show(track) })
     // «Неверная запись» — только у того, что уже на сервере: жалуются на услышанное
     if (opts.nowPlaying || library.statusOf(track) === 'ready') entries.push({ label: t('track.wrongRecording'), icon: 'ph:flag', onSelect: () => report.show(track) })
+    // Клип вместо обложки — в плеере и на странице трека: администратор выбирает его сам,
+    // слушатель может скрыть у себя (это же жалоба в «Спорные»)
+    if (opts.nowPlaying || opts.about) {
+      if (auth.isAdmin) entries.push({ label: t('track.clip'), icon: 'ph:film-slate', onSelect: () => clipSheet.show(track) })
+      else if (motion.hasClip(track.id)) entries.push({ label: t('track.hideClip'), icon: 'ph:eye-slash', onSelect: () => void clipSheet.hide(track) })
+    }
     if (opts.extra?.length) entries.push(...opts.extra)
     entries.push(
       { kind: 'separator' },

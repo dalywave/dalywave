@@ -1,8 +1,9 @@
 """Клип для ленты открытий: официальное видео трека на YouTube, 10–15 секунд вокруг припева,
 480p без звука, H.264 в MP4 (`+faststart`) ~1–2 МБ.
 
-Путь: поиск yt-dlp («артист название official video») → отбор официального клипа (название,
-артист или канал, длительность, без lyric/live/cover…) → место припева в клипе (у клипа бывает
+Путь: поиск yt-dlp («артист название official video») → отбор официального клипа (`clip_pick`:
+в приоритете канал автора; фанатское, текст, лайв и перезаливы отсеиваются; нет официального —
+клипа нет) → место припева в клипе (у клипа бывает
 вступление) → ссылка на поток видео (yt-dlp) и скачивание только нужного куска своим ffmpeg →
 точная нарезка и сжатие ffmpeg → PUT по подписанной ссылке. Настройки YouTube (PO-токены,
 cookies, клиенты плеера) — те же, что у скачивания аудио (`Downloader.options`).
@@ -16,7 +17,6 @@ cookies, клиенты плеера) — те же, что у скачиван�
 from __future__ import annotations
 
 import json
-import math
 import os
 import re
 import shutil
@@ -24,7 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +33,16 @@ import yt_dlp
 from yt_dlp.utils import YoutubeDLError
 
 from . import tools
+from .clip_pick import (
+    KEEP_CANDIDATES,
+    ClipTrack,
+    Pick,
+    assess,
+    better,
+    choose,
+    entry,
+    unknown_channel,
+)
 from .download import (
     RETRY_WITH_FALLBACK,
     Downloader,
@@ -40,16 +50,7 @@ from .download import (
     _Collector,
     classify_error,
 )
-from .normalize import (
-    STRONG_MARKERS,
-    clean_channel,
-    fold,
-    has_cyrillic,
-    name_match,
-    parse_title,
-    split_names,
-    text_similarity,
-)
+from .normalize import has_cyrillic
 
 # Поток видео до 480p: H.264, затем VP9. AV1 не берём — ffmpeg приложения его не декодирует.
 # Сначала прямая ссылка (https), затем HLS; DASH по кусочкам ffmpeg не читает.
@@ -59,9 +60,10 @@ VIDEO_FORMAT = "/".join(
     + [f"bv*[height<=480][vcodec^={c}][protocol^=m3u8]" for c in _CODECS]
 )
 SEARCH_LIMIT = 8
-# Ролик заметно короче трека — нарезка или тизер; длиннее больше чем на 2 минуты — фильм.
-MIN_SHARE = 0.9
-MAX_EXTRA_S = 120.0
+# Ролик оказался неподвижной картинкой — пробуем следующий годный, но не больше стольких
+MAX_CUT_TRIES = 2
+# Столько роликов без канала в выдаче спрашиваем отдельно (YouTube иногда отдаёт выдачу без каналов)
+ENRICH_MAX = 4
 # Вступление клипа до первой ноты: столько лишнего в начале считаем вступлением, а не растяжкой.
 INTRO_MAX_S = 60.0
 SAME_LENGTH_S = 3.0
@@ -80,7 +82,6 @@ SMALLER_BITRATE_K = 550
 TARGET_BYTES = 2 * 1024 * 1024
 # Сколько последних строк stderr ffmpeg попадает в ошибку задачи (её видно в админке)
 STDERR_LINES = 3
-MIN_TITLE_SIMILARITY = 0.82
 # Меньше стольких байт на секунду после сжатия libx264 — в кадре почти ничего не движется: это
 # обложка под звук, а не клип (живой клип 480p — 40–100 КБ/с, неподвижная картинка — 2–5 КБ/с).
 # Аппаратные кодировщики держат битрейт и на неподвижной картинке — для них `is_frozen`.
@@ -122,126 +123,6 @@ def is_frozen(src: Path, offset_s: float, length_s: float) -> bool:
     except (OSError, subprocess.SubprocessError):
         return False
     return proc.returncode == 0 and "freezedetect.freeze_start" in proc.stderr
-
-
-# Слова, которые выдают не клип: текст, звук, концерт, реакция… Мимо, если их нет в названии трека.
-_NOT_A_CLIP = re.compile(
-    r"\b(?:lyrics?|lyric\s+video|letra|official\s+audio|audio|visuali[sz]er|teaser|trailer|"
-    r"snippet|preview|reaction|react|karaoke|cover|live|remix|sped\s*up|slowed|nightcore|"
-    r"amv|gmv|fan\s*made|fanmade|fan\s+video|edit|"
-    r"текст|слова|караоке|кавер|реакция|лайв|тизер|фан|1\s+hour|10\s+hours?)\b"
-)
-_OFFICIAL = re.compile(
-    r"\b(?:official\s+(?:music\s+)?video|music\s+video|official\s+mv|mv|official\s+clip|"
-    r"videoclip|video\s+oficial|клип|премьера\s+клипа|официальный\s+клип)\b"
-)
-
-
-@dataclass
-class Pick:
-    video_id: str
-    title: str
-    channel: str
-    duration_s: float
-    views: int
-    score: float = 0.0
-    reasons: list[str] = field(default_factory=list)
-
-    @property
-    def ok(self) -> bool:
-        return not self.reasons
-
-    def to_json(self) -> dict[str, Any]:
-        return {
-            "videoId": self.video_id,
-            "title": self.title,
-            "channel": self.channel,
-            "durationS": self.duration_s,
-            "views": self.views,
-            "score": round(self.score, 3),
-            "rejected": self.reasons or None,
-        }
-
-
-def _entry(item: dict[str, Any]) -> Pick | None:
-    video_id = item.get("id")
-    if not video_id or item.get("ie_key") not in (None, "Youtube"):
-        return None
-    return Pick(
-        video_id=str(video_id),
-        title=str(item.get("title") or ""),
-        channel=str(item.get("channel") or item.get("uploader") or ""),
-        duration_s=float(item.get("duration") or 0),
-        views=int(item.get("view_count") or 0),
-    )
-
-
-def judge(pick: Pick, title: str, artists: list[str], duration_s: float) -> Pick:
-    """Годится ли ролик в клип трека; причины отказа — в `reasons`, сила — в `score`."""
-    expected = parse_title(title, artists)
-    got = parse_title(pick.title, artists)
-    video_folded = fold(pick.title)
-    track_folded = fold(title)
-    folded_artists = [a for name in artists for a in split_names(name)]
-
-    similarity = text_similarity(expected.base, got.base) if expected.base else 0.0
-    if similarity < MIN_TITLE_SIMILARITY and f" {expected.base} " not in f" {video_folded} ":
-        pick.reasons.append("title")
-
-    channel = pick.channel
-    if channel.casefold().endswith("- topic"):
-        pick.reasons.append("topic_channel")
-    channel_artist = fold(clean_channel(channel))
-    by_channel = any(name_match(channel_artist, a) for a in folded_artists)
-    in_title = any(name_match(p, a) for p in got.prefix_artists for a in folded_artists) or any(
-        len(a) >= 3 and f" {a} " in f" {video_folded} " for a in folded_artists
-    )
-    if not (by_channel or in_title):
-        pick.reasons.append("artist")
-
-    extra = set(got.markers & STRONG_MARKERS) - set(expected.markers)
-    words = {m.group(0) for m in _NOT_A_CLIP.finditer(video_folded)}
-    words -= {m.group(0) for m in _NOT_A_CLIP.finditer(track_folded)}
-    if extra or words:
-        pick.reasons.append("version:" + ",".join(sorted(extra | words)))
-
-    if not pick.duration_s:
-        pick.reasons.append("duration_unknown")
-    elif not (duration_s * MIN_SHARE <= pick.duration_s <= duration_s + MAX_EXTRA_S):
-        pick.reasons.append("duration")
-
-    pick.score = similarity
-    if _OFFICIAL.search(video_folded):
-        pick.score += 0.5
-    if by_channel or "vevo" in channel.casefold():
-        pick.score += 0.3
-    if pick.views:
-        pick.score += min(0.4, math.log10(pick.views + 1) / 25)
-    if pick.duration_s and duration_s:
-        pick.score -= min(0.3, abs(pick.duration_s - duration_s) / 600)
-    return pick
-
-
-def choose(
-    items: list[dict[str, Any]],
-    title: str,
-    artists: list[str],
-    duration_s: float,
-    exclude: set[str] | frozenset[str] = frozenset(),
-) -> tuple[Pick | None, list[Pick]]:
-    """Лучший официальный клип из выдачи поиска и все кандидаты с причинами отказа."""
-    picks: list[Pick] = []
-    for item in items:
-        pick = _entry(item)
-        if pick is None:
-            continue
-        if pick.video_id in exclude:
-            pick.reasons.append("excluded")
-            picks.append(pick)
-            continue
-        picks.append(judge(pick, title, artists, duration_s))
-    good = sorted((p for p in picks if p.ok), key=lambda p: p.score, reverse=True)
-    return (good[0] if good else None), picks
 
 
 def clip_start_ms(hook_ms: int, track_ms: int, video_ms: int, length_ms: int) -> int:
@@ -655,6 +536,71 @@ class ClipMaker:
             )
         return out
 
+    def video_info(self, video_id: str) -> Pick:
+        """Сведения об одном ролике (название, канал, длина) — для закреплённого администратором
+        и для перепроверки уже нарезанного клипа."""
+        opts = self.downloader.options(self.work_root, "search")
+        collector = _Collector()
+        opts.update({"logger": collector, "skip_download": True})
+        try:
+            with self.downloader.paced(), yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(
+                    f"https://www.youtube.com/watch?v={video_id}", download=False, process=False
+                )
+        except YoutubeDLError as e:
+            message = str(e).removeprefix("ERROR: ")
+            text = " ".join([message, *collector.warnings])
+            raise DownloadError(classify_error(text), message, collector.warnings) from e
+        pick = entry({**(info or {}), "id": video_id, "ie_key": None})
+        assert pick is not None
+        return pick
+
+    def candidates(
+        self, track: ClipTrack, exclude: set[str], details: dict[str, Any], *, thorough: bool
+    ) -> tuple[Pick | None, list[Pick]]:
+        """Поиск по обоим запросам; без `thorough` второй — только если клипа с канала автора
+        не нашлось. Кандидаты из обоих запросов — вместе, без повторов."""
+        items: list[dict[str, Any]] = []
+        best: Pick | None = None
+        picks: list[Pick] = []
+        for query in search_queries(track.title, track.artists):
+            found = self.search(query)
+            items.extend(found)
+            best, picks = choose(items, track, exclude)
+            details.setdefault("searches", []).append({"query": query, "found": len(found)})
+            # Выдача бывает без каналов (YouTube отдаёт другую разметку): канал узнаём у ролика
+            if (best is None or best.source != "artist") and self._fill_channels(
+                items, picks, details
+            ):
+                best, picks = choose(items, track, exclude)
+            if best is not None and best.source == "artist" and not thorough:
+                break
+        return best, picks
+
+    def _fill_channels(
+        self, items: list[dict[str, Any]], picks: list[Pick], details: dict[str, Any]
+    ) -> bool:
+        """Сведения о роликах без канала, которые иначе годились бы (не больше `ENRICH_MAX`)."""
+        wanted = [p.video_id for p in picks if unknown_channel(p)][:ENRICH_MAX]
+        filled = False
+        for video_id in wanted:
+            try:
+                info = self.video_info(video_id)
+            except DownloadError:
+                continue
+            for item in items:
+                if item.get("id") == video_id:
+                    item.update(
+                        channel=info.channel,
+                        view_count=info.views or item.get("view_count"),
+                        channel_is_verified=info.verified,
+                        duration=item.get("duration") or info.duration_s,
+                    )
+            filled = filled or bool(info.channel)
+        if wanted:
+            details.setdefault("filledChannels", []).extend(wanted)
+        return filled
+
     def make(
         self,
         *,
@@ -664,18 +610,27 @@ class ClipMaker:
         hook_start_ms: int,
         length_ms: int,
         exclude_video_ids: list[str] | None = None,
+        label: str | None = None,
+        mode: str = "auto",
+        video_id: str | None = None,
+        current_video_id: str | None = None,
         upload: Any = None,
         keep: Path | None = None,
     ) -> dict[str, Any]:
-        """Клип целиком. Возвращает `ClipResult` сервера: status ready / none / error.
+        """Клип целиком. Возвращает `ClipResult` сервера: status ready / kept / none / error.
+
+        `mode`: `auto` — найти лучший официальный клип и нарезать; `pinned` — нарезать ролик
+        `video_id`, выбранный администратором (без отбора); `search` — только кандидаты, без нарезки;
+        `review` — перепроверить нарезанный `current_video_id` новым отбором: тот же лучший — `kept`,
+        нашёлся с канала выше рангом — нарезать его, текущий не годится и замены нет — `none`.
 
         `upload` — `UploadSpec` (PUT по подписанной ссылке); `keep` — куда скопировать готовый MP4
         (живая проверка без сервера)."""
         timings: dict[str, int] = {}
-        details: dict[str, Any] = {"timingsMs": timings}
+        details: dict[str, Any] = {"timingsMs": timings, "mode": mode}
         support = self.support()
         details["encoder"] = support.encoder
-        if support.encoder is None:
+        if support.encoder is None and mode != "search":
             # Не тратим запросы к YouTube: сделать клип всё равно нечем
             return {
                 "status": "error",
@@ -683,37 +638,101 @@ class ClipMaker:
                 "details": details,
             }
         started = time.monotonic()
+        track = ClipTrack(title, artists, duration_ms / 1000, label)
         exclude = set(exclude_video_ids or [])
-        duration_s = duration_ms / 1000
-        best: Pick | None = None
+        picks: list[Pick] = []
+        unsure = False
         try:
-            for query in search_queries(title, artists):
-                items = self.search(query)
-                best, picks = choose(items, title, artists, duration_s, exclude)
-                details.setdefault("searches", []).append(
-                    {"query": query, "candidates": [p.to_json() for p in picks]}
+            if mode == "pinned" and video_id:
+                chosen = [assess(self.video_info(video_id), track)]
+            else:
+                best, picks = self.candidates(
+                    track, exclude, details, thorough=mode in ("search", "review")
                 )
-                if best:
-                    break
+                chosen = [p for p in picks if p.ok][:MAX_CUT_TRIES]
+                if mode == "review" and current_video_id:
+                    current = next((p for p in picks if p.video_id == current_video_id), None)
+                    if current is None:
+                        try:
+                            current = assess(self.video_info(current_video_id), track)
+                        except DownloadError as e:
+                            # Ролик удалён или закрыт — перевыбираем как без него
+                            details["current"] = {"videoId": current_video_id, "error": e.code}
+                    if current is not None:
+                        details["current"] = current.to_json()
+                        unsure = unknown_channel(current)
+                    if best is not None and not better(best, current):
+                        assert current is not None
+                        timings["search"] = _ms(started)
+                        return {
+                            "status": "kept",
+                            **_about(current),
+                            "candidates": _top(picks),
+                            "details": details,
+                        }
         except DownloadError as e:
-            return self._error(e, details)
+            return {**self._error(e, details), "candidates": _top(picks)}
         timings["search"] = _ms(started)
-        if best is None:
-            return {"status": "none", "details": details}
+        if mode != "pinned" and not chosen and (unsure or any(unknown_channel(p) for p in picks)):
+            # Решить «клипа нет» по выдаче без каналов нельзя: так убрался бы и хороший клип.
+            # Сбой — задание повторится позже
+            return {
+                "status": "error",
+                "error": "search_degraded: в выдаче YouTube нет каналов, официальность не проверить",
+                "candidates": _top(picks),
+                "details": details,
+            }
+        if mode == "search" or not chosen:
+            return {"status": "none", "candidates": _top(picks), "details": details}
 
-        video_ms = round(best.duration_s * 1000)
+        result: dict[str, Any] = {"status": "none"}
+        for pick in chosen:
+            result = self._cut(
+                pick,
+                track,
+                duration_ms,
+                hook_start_ms,
+                length_ms,
+                details,
+                upload,
+                keep,
+                pinned=mode == "pinned",
+            )
+            if result["status"] != "none":
+                break
+        timings["total"] = _ms(started)
+        return {**result, "candidates": _top(picks), "details": details}
+
+    def _cut(
+        self,
+        pick: Pick,
+        track: ClipTrack,
+        duration_ms: int,
+        hook_start_ms: int,
+        length_ms: int,
+        details: dict[str, Any],
+        upload: Any,
+        keep: Path | None,
+        *,
+        pinned: bool,
+    ) -> dict[str, Any]:
+        """Скачать кусок ролика вокруг припева, сжать и положить. Неподвижная картинка — `none`
+        (кроме выбранного администратором: ему виднее)."""
+        timings: dict[str, int] = details["timingsMs"]
+        video_ms = round(pick.duration_s * 1000)
         start_ms = clip_start_ms(hook_start_ms, duration_ms, video_ms, length_ms)
-        details["chosen"] = best.to_json()
+        details["chosen"] = pick.to_json()
         self.work_root.mkdir(parents=True, exist_ok=True)
         work = Path(tempfile.mkdtemp(prefix="clip-", dir=self.work_root))
+        encoder = self.support().encoder or "libx264"
         try:
             t = time.monotonic()
             section_start = max(0.0, start_ms / 1000 - MARGIN_S)
             section_end = (start_ms + length_ms) / 1000 + MARGIN_S
             try:
-                raw = self.fetch_range(best.video_id, section_start, section_end, work)
+                raw = self.fetch_range(pick.video_id, section_start, section_end, work)
             except DownloadError as e:
-                return self._error(e, details, best.video_id)
+                return self._error(e, details, pick.video_id)
             timings["download"] = _ms(t)
             # Копированием поток режется по ключевому кадру до начала: лишнее — в начале файла
             got = probe(raw).get("duration") or 0.0
@@ -721,17 +740,21 @@ class ClipMaker:
             out = work / "clip.mp4"
             t = time.monotonic()
             try:
-                quality = encode_small(raw, out, offset, length_ms / 1000, support.encoder)
+                quality = encode_small(raw, out, offset, length_ms / 1000, encoder)
             except DownloadError as e:
-                return self._error(e, details, best.video_id)
+                return self._error(e, details, pick.video_id)
             timings["encode"] = _ms(t)
             info = probe(out)
             size = out.stat().st_size
             details["quality"] = quality
-            if is_still(size, length_ms) or is_frozen(raw, offset, length_ms / 1000):
+            if not pinned and (
+                is_still(size, length_ms) or is_frozen(raw, offset, length_ms / 1000)
+            ):
                 # Неподвижная картинка под звук (обложка на канале артиста) — не клип
-                details["still"] = {"videoId": best.video_id, "sizeBytes": size}
-                return {"status": "none", "details": details}
+                details.setdefault("still", []).append(
+                    {"videoId": pick.video_id, "sizeBytes": size}
+                )
+                return {"status": "none"}
             if keep is not None:
                 keep.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(out, keep)
@@ -743,21 +766,18 @@ class ClipMaker:
                 if not uploaded.get("ok"):
                     return {
                         "status": "error",
-                        "videoId": best.video_id,
+                        "videoId": pick.video_id,
                         "error": f"upload_failed: {uploaded.get('error') or uploaded.get('status')}",
-                        "details": details,
                     }
-            timings["total"] = _ms(started)
             return {
                 "status": "ready",
-                "videoId": best.video_id,
+                **_about(pick),
                 "videoDurationMs": video_ms,
                 "clipStartMs": start_ms,
                 "durationMs": round((info.get("duration") or length_ms / 1000) * 1000),
                 "sizeBytes": size,
                 "width": info.get("width"),
                 "height": info.get("height"),
-                "details": details,
             }
         finally:
             shutil.rmtree(work, ignore_errors=True)
@@ -806,3 +826,18 @@ def error_code(result: dict[str, Any]) -> str | None:
 
 def _ms(started: float) -> int:
     return int((time.monotonic() - started) * 1000)
+
+
+def _about(pick: Pick) -> dict[str, Any]:
+    """Что за ролик выбран: сервер показывает это администратору в «Клип»."""
+    return {
+        "videoId": pick.video_id,
+        "videoTitle": pick.title,
+        "channel": pick.channel,
+        "source": pick.source,
+        "score": round(pick.score, 3),
+    }
+
+
+def _top(picks: list[Pick]) -> list[dict[str, Any]]:
+    return [p.to_json() for p in picks[:KEEP_CANDIDATES]]

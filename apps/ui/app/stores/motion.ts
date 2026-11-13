@@ -86,5 +86,18 @@ export const useMotionStore = defineStore('motion', () => {
     if (!pending(clip)) entries.set(clip.trackId, { clip, at: Date.now(), tries: 0 })
   }
 
-  return { allowed, cellular, src, prefetch, remember }
+  /** У трека показывается клип (не живая обложка) — для пунктов «Клип» и «Скрыть клип» в меню */
+  function hasClip(trackId: string | null | undefined): boolean {
+    const c = trackId ? entries.get(trackId)?.clip : null
+    return c?.state === 'ready' && !!c.url
+  }
+
+  /** Клип трека сменили (выбор администратора, «Скрыть клип»): спросить заново, без старой ссылки */
+  function refresh(trackId: string) {
+    clearTimeout(timers.get(trackId))
+    entries.set(trackId, { clip: null, at: Date.now(), tries: 0 })
+    void load(trackId)
+  }
+
+  return { allowed, cellular, src, prefetch, remember, hasClip, refresh }
 })

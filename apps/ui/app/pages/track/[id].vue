@@ -17,7 +17,7 @@ useHead({ title: () => track.value?.title ?? t('title') })
 const liked = computed(() => (track.value ? library.isLiked(track.value) : false))
 const isCurrent = computed(() => !!track.value && player.current?.track.id === track.value.id)
 const playing = computed(() => isCurrent.value && player.playing)
-const moreItems = computed(() => (track.value ? menuFor(track.value) : []))
+const moreItems = computed(() => (track.value ? menuFor(track.value, { about: true }) : []))
 
 function play() {
   const tr = track.value

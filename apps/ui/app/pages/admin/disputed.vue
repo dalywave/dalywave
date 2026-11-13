@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminAcquisition, ResolveRequest } from '~/api/types'
+import type { AdminAcquisition, ClipReportItem, ResolveRequest } from '~/api/types'
 
 // Спорные: слева очередь записей, справа ожидаемый трек с превью Deezer и кандидаты с плеером
 // и разбором оценки. Выбрать кандидата, вставить ссылку, «нет в источниках», искать заново.
@@ -157,6 +157,24 @@ onBeforeUnmount(() => {
 })
 
 const best = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, c.score ?? 0), 0)
+
+// ---------- Клипы, которые слушатели скрыли у себя ----------
+const clipReports = ref<ClipReportItem[]>([])
+const clipSheet = useClipSheet()
+async function loadClips() {
+  try {
+    clipReports.value = (await bridge.admin.clipReports()).items
+  }
+  catch { /* раздел записей работает и без него */ }
+}
+onMounted(() => void loadClips())
+// Решение в листе «Клип» (оставить, выбрать другой, без клипа) убирает трек из списка
+watch(clipSheet.open, (v) => {
+  if (!v) {
+    void loadClips()
+    void refreshCounts()
+  }
+})
 </script>
 
 <template>
@@ -171,6 +189,20 @@ const best = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, 
         <span><UiKbd :keys="['U']" />{{ t('keys.none') }}</span>
       </div>
     </header>
+
+    <!-- Клипы: слушатели скрыли у себя — открыть «Клип» и решить -->
+    <section v-if="clipReports.length" class="dp__clips" :aria-label="t('clips')">
+      <span class="dp__label">{{ t('clips') }}</span>
+      <button v-for="c in clipReports" :key="c.track.id" type="button" class="dp__clip" @click="clipSheet.show(c.track)">
+        <MusicCoverArt :image="c.track.album?.image" size="small" :alt="c.track.album?.title ?? ''" class="dp__clip-art" />
+        <span class="ap-cell">
+          <b>{{ c.track.title }}</b>
+          <small>{{ artistNames(c.track.artists) }} · {{ c.channel ?? c.videoId }}</small>
+        </span>
+        <span class="dp__clip-count tnum" :title="t('clipReports')">{{ c.reports }}</span>
+        <Icon name="ph:caret-right" class="dp__clip-chev" aria-hidden="true" />
+      </button>
+    </section>
 
     <AdminState :loading="!items && !failed" :error="failed" :empty="!!items && !items.length" empty-icon="ph:check-circle" :empty-title="t('empty')" :empty-text="t('emptyText')" @retry="load">
       <div class="dp__grid">
@@ -292,6 +324,15 @@ const best = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, 
 .dp__link { display: flex; flex: 1 1 360px; gap: 8px; min-width: 0; }
 .dp__link .ap-input { flex: 1; }
 .dp__buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.dp__clips { display: flex; flex-direction: column; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--hair); }
+.dp__clips .dp__label { margin-bottom: 6px; }
+.dp__clip { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 8px; border: 0; border-radius: var(--r-3); background: none; color: var(--text-2); font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; }
+.dp__clip:hover { background: var(--fill-1); color: var(--text-1); }
+.dp__clip:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.dp__clip-art { flex: none; width: 40px; height: 40px; border-radius: var(--r-1); }
+.dp__clip .ap-cell { flex: 1; }
+.dp__clip-count { font-size: var(--fs-caption); font-weight: 700; color: var(--warning); }
+.dp__clip-chev { flex: none; color: var(--text-3); }
 @media (max-width: 1099px) {
   .dp__grid { grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
 }
@@ -311,6 +352,8 @@ const best = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, 
 {
   "ru": {
     "title": "Спорные",
+    "clips": "Клипы, которые скрыли",
+    "clipReports": "Сколько слушателей скрыли клип у себя",
     "queue": "Спорные записи",
     "empty": "Спорных записей нет",
     "emptyText": "Сюда попадает скачанное, что не совпало с превью Deezer",
@@ -342,6 +385,8 @@ const best = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, 
   },
   "en": {
     "title": "Disputed",
+    "clips": "Videos listeners hid",
+    "clipReports": "How many listeners hid the video",
     "queue": "Disputed recordings",
     "empty": "No disputed recordings",
     "emptyText": "Downloads that didn't match the Deezer preview land here",

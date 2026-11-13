@@ -17,7 +17,6 @@ from dalywave_fetcher.clip import (
     VIDEO_FORMAT,
     ClipMaker,
     VideoSupport,
-    choose,
     clip_start_ms,
     encode_small,
     encoder_args,
@@ -36,93 +35,15 @@ from dalywave_fetcher.download import Downloader, classify_error
 from dalywave_fetcher.worker import Control, Worker
 
 
-def item(video_id: str, title: str, channel: str, duration: float, views: int = 0) -> dict:
-    return {
-        "id": video_id,
-        "ie_key": "Youtube",
-        "title": title,
-        "channel": channel,
-        "duration": duration,
-        "view_count": views,
-    }
-
-
-BIRDS = [
-    item(
-        "V9PVRfjEBTI",
-        "Billie Eilish - BIRDS OF A FEATHER (Official Music Video)",
-        "Billie Eilish",
-        231,
-        1_007_778_441,
-    ),
-    item("geKxhmZL8ao", "Billie Eilish - BIRDS OF A FEATHER", "LatinHype", 211, 27_495_451),
-    item(
-        "YH6HJb_F-LE",
-        "Billie Eilish – BIRDS OF A FEATHER (Live Performance from Songline)",
-        "Billie Eilish",
-        243,
-        35_067_454,
-    ),
-    item("lyr", "Billie Eilish - BIRDS OF A FEATHER (Lyrics)", "7clouds", 210, 90_000_000),
-    item("topic", "BIRDS OF A FEATHER", "Billie Eilish - Topic", 210, 500_000_000),
-]
-
-
-def test_official_video_wins_over_lyrics_live_and_topic() -> None:
-    best, picks = choose(BIRDS, "BIRDS OF A FEATHER", ["Billie Eilish"], 210)
-    assert best is not None and best.video_id == "V9PVRfjEBTI"
-    reasons = {p.video_id: p.reasons for p in picks}
-    assert any(r.startswith("version") for r in reasons["YH6HJb_F-LE"])
-    assert any(r.startswith("version") for r in reasons["lyr"])
-    assert "topic_channel" in reasons["topic"]
-
-
-def test_excluded_and_wrong_duration_are_skipped() -> None:
-    best, picks = choose(
-        BIRDS, "BIRDS OF A FEATHER", ["Billie Eilish"], 210, exclude={"V9PVRfjEBTI"}
-    )
-    # Без официального клипа годится только перезалив без меток — он тоже клип трека
-    assert best is not None and best.video_id == "geKxhmZL8ao"
-    assert picks[0].reasons == ["excluded"]
-    short = [item("t", "Billie Eilish - BIRDS OF A FEATHER (Official Video)", "Billie Eilish", 60)]
-    best, picks = choose(short, "BIRDS OF A FEATHER", ["Billie Eilish"], 210)
-    assert best is None and "duration" in picks[0].reasons
-
-
-def test_cyrillic_artist_and_channel() -> None:
-    items = [
-        item("z1", "Zivert - Beverly Hills | Official Video", "Zivert", 205, 80_000_000),
-        item("z2", "Другая песня - Beverly", "Someone", 200, 10),
-    ]
-    best, _ = choose(items, "Beverly Hills", ["Zivert"], 199)
-    assert best is not None and best.video_id == "z1"
-    items = [item("m", "Макс Корж — Мотылёк (клип)", "Макс Корж", 230, 1_000_000)]
-    best, _ = choose(items, "Мотылёк", ["Макс Корж"], 225)
-    assert best is not None
+def test_search_queries_follow_the_language() -> None:
     assert search_queries("Мотылёк", ["Макс Корж"])[1].endswith("клип")
     assert search_queries("Blinding Lights", ["The Weeknd"])[1].endswith("music video")
-
-
-def test_fan_videos_are_not_clips() -> None:
-    # Живой прогон: на «ELA DANCA (Slowed)» нашёлся только AMV — это не официальный клип
-    items = [
-        item("a", "ELA DANCA (Slowed) - Sayfalse, 5opka, MellSher [AMV]", "Edits", 150, 50_000),
-        item("f", "Sayfalse - ELA DANCA (Slowed) fan made video", "Fan", 150, 50_000),
-    ]
-    best, _ = choose(items, "ELA DANCA (Slowed)", ["Sayfalse"], 148)
-    assert best is None
 
 
 def test_a_still_picture_is_not_a_clip() -> None:
     # Живой прогон: «I Want Out» нашёлся роликом-обложкой — 23 КБ на 12 секунд
     assert is_still(23_556, 12_000)
     assert not is_still(629_119, 12_000)
-
-
-def test_a_live_song_title_keeps_live_videos() -> None:
-    items = [item("l", "Oasis - Live Forever (Official Video)", "Oasis", 280, 100)]
-    best, _ = choose(items, "Live Forever", ["Oasis"], 277)
-    assert best is not None
 
 
 def test_clip_start_follows_the_intro() -> None:
@@ -408,10 +329,11 @@ def test_idle_server_hands_out_a_clip_and_gets_the_report() -> None:
         f"/api/fetcher/clips/{CLIP_JOB['id']}/result",
     ]
     assert seen[0][1]["capabilities"]["kinds"] == ["acquire", "clip"]
-    assert seen[1][1] == {"workerId": "mac"}
+    assert seen[1][1] == {"workerId": "mac", "features": ["clip-modes"]}
     assert seen[2][1]["result"]["status"] == "ready"
     call = clips.calls[0]
     assert call["hook_start_ms"] == 63_000 and call["exclude_video_ids"] == ["bad"]
+    assert call["mode"] == "auto" and call["label"] is None
     assert call["upload"].url.startswith("https://acc.r2.cloudflarestorage.com/")
 
 

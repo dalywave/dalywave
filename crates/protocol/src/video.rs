@@ -15,7 +15,7 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::fetcher::UploadTarget;
+use crate::{catalog::Track, fetcher::UploadTarget};
 
 /// Есть ли видео.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -101,17 +101,53 @@ pub struct ClipJob {
     pub isrc: Option<String>,
     /// Видео, которые уже пробовали и отвергли: не предлагать снова.
     pub exclude_video_ids: Vec<String>,
+    /// Лейбл альбома (Deezer): его канал тоже официальный.
+    #[schema(required = true)]
+    pub label: Option<String>,
+    /// Что сделать: найти и нарезать, нарезать выбранный, только кандидаты, перепроверить.
+    pub mode: ClipMode,
+    /// `pinned`: ролик, который выбрал администратор.
+    #[schema(required = true)]
+    pub video_id: Option<String>,
+    /// `review`: ролик, из которого нарезан нынешний клип.
+    #[schema(required = true)]
+    pub current_video_id: Option<String>,
     pub upload: UploadTarget,
     /// Не пришёл отчёт к этому сроку — задание вернётся в очередь.
     pub lease_expires_at: DateTime<Utc>,
 }
+
+/// Что сделать с клипом.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ClipMode {
+    /// Найти лучший официальный клип и нарезать.
+    #[default]
+    Auto,
+    /// Нарезать ролик, который выбрал администратор, без отбора.
+    Pinned,
+    /// Только найти кандидатов (для «Клип» у администратора), без нарезки.
+    Search,
+    /// Перепроверить нарезанный старым отбором клип: тот же лучший — `kept`, есть с канала выше
+    /// рангом — нарезать его, текущий не годится и замены нет — `none`.
+    Review,
+}
+
+names!(ClipMode { Auto => "auto", Pinned => "pinned", Search => "search", Review => "review" });
 
 /// Запрос задания клипа: ответ сразу — задание или 204.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipClaimRequest {
     pub worker_id: String,
+    /// Что умеет загрузчик сверх «найти и нарезать»: `clip-modes` — режимы `pinned`, `search`,
+    /// `review`. Без него задания с ними не выдаются.
+    #[serde(default)]
+    pub features: Vec<String>,
 }
+
+/// Загрузчик умеет режимы клипа сверх `auto`.
+pub const CLIP_MODES_FEATURE: &str = "clip-modes";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -127,11 +163,39 @@ pub enum ClipOutcome {
     Ready,
     /// Официального клипа нет: помнить и не искать до перепроверки.
     None,
+    /// `review`: нынешний клип и есть лучший — оставить как есть.
+    Kept,
     /// Сбой (сеть, YouTube): задание повторится позже.
     Error,
 }
 
-names!(ClipOutcome { Ready => "ready", None => "none", Error => "error" });
+names!(ClipOutcome { Ready => "ready", None => "none", Kept => "kept", Error => "error" });
+
+/// Кандидат в клипы из выдачи YouTube с оценкой загрузчика.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipCandidate {
+    pub video_id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub channel: String,
+    #[serde(default)]
+    pub duration_s: f64,
+    #[serde(default)]
+    pub views: i64,
+    /// Чей канал: `artist` (исполнителя), `official` (проверенный, с пометкой клипа), `vevo`,
+    /// `label` (лейбла альбома); нет — чужой.
+    #[serde(default)]
+    #[schema(required = true)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub score: f64,
+    /// Почему не годится; нет — годится.
+    #[serde(default)]
+    #[schema(required = true)]
+    pub rejected: Option<Vec<String>>,
+}
 
 /// Отчёт загрузчика о клипе.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -156,6 +220,21 @@ pub struct ClipResult {
     pub width: Option<i32>,
     #[serde(default)]
     pub height: Option<i32>,
+    /// Название ролика.
+    #[serde(default)]
+    pub video_title: Option<String>,
+    /// Канал ролика.
+    #[serde(default)]
+    pub channel: Option<String>,
+    /// Чей канал (см. [`ClipCandidate::source`]).
+    #[serde(default)]
+    pub source: Option<String>,
+    /// Оценка отбора.
+    #[serde(default)]
+    pub score: Option<f64>,
+    /// До 8 кандидатов поиска, годные первыми.
+    #[serde(default)]
+    pub candidates: Vec<ClipCandidate>,
     /// Код и текст сбоя для журнала задачи.
     #[serde(default)]
     pub error: Option<String>,
@@ -163,6 +242,80 @@ pub struct ClipResult {
     #[serde(default)]
     #[schema(value_type = Object)]
     pub details: Value,
+}
+
+// ───────────── «Клип» у трека: выбор администратора, «Скрыть клип» ─────────────
+
+/// Клип трека для листа «Клип».
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipView {
+    pub track_id: Uuid,
+    /// `ready` — есть (ссылка в `url`), `pending` — ищется или режется, `none` — нет.
+    pub state: VideoState,
+    #[schema(required = true)]
+    pub url: Option<String>,
+    #[schema(required = true)]
+    pub video_id: Option<String>,
+    #[schema(required = true)]
+    pub video_title: Option<String>,
+    #[schema(required = true)]
+    pub channel: Option<String>,
+    /// Чей канал (см. [`ClipCandidate::source`]); `pinned` — выбрал администратор.
+    #[schema(required = true)]
+    pub source: Option<String>,
+    /// Выбор администратора: закреплён ролик или «без клипа». Автопоиск его не меняет.
+    pub pinned: bool,
+    /// Этот человек скрыл нынешний клип у себя.
+    pub hidden: bool,
+    /// Может выбирать клип (администратор). Остальные — только «Скрыть клип».
+    pub can_choose: bool,
+    /// Администратору: ищутся кандидаты.
+    pub searching: bool,
+    /// Администратору: кандидаты последнего поиска (до 8), годные первыми.
+    pub candidates: Vec<ClipCandidate>,
+    /// Администратору: сколько человек скрыли нынешний клип.
+    pub reports: i64,
+}
+
+/// Выбор администратора.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ClipChoice {
+    /// Закрепить ролик из кандидатов.
+    #[serde(rename_all = "camelCase")]
+    Video { video_id: String },
+    /// Закрепить ролик по ссылке YouTube.
+    Url { url: String },
+    /// Без клипа: показывать обложку и больше не искать.
+    None,
+    /// Снять выбор и найти лучший заново.
+    Auto,
+    /// Оставить нынешний клип (жалобы разобраны).
+    Keep,
+    /// Обновить кандидатов.
+    Search,
+}
+
+/// Трек, у которого скрыли клип: для «Спорных».
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipReportItem {
+    pub track: Track,
+    pub video_id: String,
+    #[schema(required = true)]
+    pub video_title: Option<String>,
+    #[schema(required = true)]
+    pub channel: Option<String>,
+    /// Сколько человек скрыли.
+    pub reports: i64,
+    pub last_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipReportList {
+    pub items: Vec<ClipReportItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

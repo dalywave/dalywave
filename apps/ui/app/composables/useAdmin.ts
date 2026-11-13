@@ -43,8 +43,10 @@ export function useAdminCounts() {
   const counts = useState('admin-counts', () => ({ disputed: 0, waiting: 0 }))
   const bridge = useBridge()
   async function refresh() {
-    const [overview, users] = await Promise.allSettled([bridge.admin.overview(), bridge.admin.users()])
-    if (overview.status === 'fulfilled') counts.value.disputed = overview.value.recordingsByStatus.find(s => s.status === 'disputed')?.count ?? 0
+    const [overview, users, clips] = await Promise.allSettled([bridge.admin.overview(), bridge.admin.users(), bridge.admin.clipReports()])
+    // «Спорные» — записи и клипы, которые слушатели скрыли у себя
+    const clipCount = clips.status === 'fulfilled' ? clips.value.items.length : 0
+    if (overview.status === 'fulfilled') counts.value.disputed = (overview.value.recordingsByStatus.find(s => s.status === 'disputed')?.count ?? 0) + clipCount
     if (users.status === 'fulfilled') counts.value.waiting = users.value.items.filter(u => !u.roles.length && !u.disabled).length
   }
   return { counts, refresh }

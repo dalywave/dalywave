@@ -67,7 +67,7 @@ const KNOWN = new Set([
   'auth.sign_in', 'auth.sign_in_failed', 'auth.sign_in_denied', 'auth.logout', 'auth.app_code_reused', 'user.created', 'user.roles_changed',
   'user.disabled', 'user.enabled', 'session.revoked', 'job.retried', 'job.cancelled', 'lane.changed', 'downloader.created', 'downloader.revoked',
   'acquisition.resolved', 'reco.settings_changed', 'reco.run', 'settings.changed', 'recording.reacquire', 'source.check', 'device.created',
-  'recording.reported',
+  'recording.reported', 'clip.chosen',
 ])
 const kindLabel = (k: string) => (KNOWN.has(k) ? t(`kind.${k.replace('.', '_')}`) : k)
 const BAD = new Set(['auth.sign_in_failed', 'auth.sign_in_denied', 'auth.app_code_reused'])
@@ -222,6 +222,7 @@ const days = computed(() => {
       "settings_changed": "Настройки сервера",
       "recording_reacquire": "Запись скачивается заново",
       "recording_reported": "Жалоба «Неверная запись»",
+      "clip_chosen": "Клип выбран вручную",
       "source_check": "Проверка скачивания",
       "device_created": "Новое устройство"
     },
@@ -273,6 +274,7 @@ const days = computed(() => {
       "settings_changed": "Server settings",
       "recording_reacquire": "Recording re-downloading",
       "recording_reported": "Wrong recording reported",
+      "clip_chosen": "Video chosen by hand",
       "source_check": "Download test",
       "device_created": "New device"
     },

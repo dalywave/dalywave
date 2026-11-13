@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_clip_pins (track_id, video_id, chosen_by, chosen_at) VALUES ($1, $2, $3, now())\n         ON CONFLICT (track_id) DO UPDATE SET video_id = EXCLUDED.video_id, chosen_by = EXCLUDED.chosen_by,\n             chosen_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3d53d44adfaff4dcdda64846efba9f28a80ed0b25606f3b18adb968cbc18b07a"
+}

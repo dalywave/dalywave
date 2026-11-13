@@ -13,7 +13,7 @@
         {"workerId": "...", "result": <ответ POST /v1/acquire>}
         ← 204; 409 — задание уже не наше (аренда кончилась, его отменили)
     POST {server}/api/fetcher/clips/claim
-        {"workerId": "..."}
+        {"workerId": "...", "features": ["clip-modes"]}
         ← 200 {"job": ClipJob} (`models.ClipJob`); 204 — клипов нет (сразу, без ожидания);
           404 — сервер клипов не знает: не спрашиваем час
     POST {server}/api/fetcher/clips/{id}/result
@@ -56,6 +56,9 @@ LEASE_RENEW_S = 60.0
 GIVE_BACK_CODE = "network"
 # Сервер не знает клипов (старая версия) — не спрашиваем столько.
 CLIPS_OFF_S = 3600.0
+# Что загрузчик умеет в клипах сверх «найти и нарезать»: режимы задания pinned / search / review
+# (выбор администратора, кандидаты, перепроверка старых клипов). Без этого сервер их не выдаёт.
+CLIP_FEATURES = ["clip-modes"]
 
 # Коды выхода `run`.
 EXIT_OK = 0
@@ -386,7 +389,9 @@ class Worker:
             return None
         try:
             response = self.http.post(
-                "/api/fetcher/clips/claim", json={"workerId": self.worker_id}, timeout=10.0
+                "/api/fetcher/clips/claim",
+                json={"workerId": self.worker_id, "features": CLIP_FEATURES},
+                timeout=10.0,
             )
         except httpx.HTTPError as e:
             self.log(f"клипы: сервер недоступен ({type(e).__name__})")
@@ -416,6 +421,10 @@ class Worker:
                 hook_start_ms=job.hook_start_ms,
                 length_ms=job.length_ms,
                 exclude_video_ids=job.exclude_video_ids,
+                label=job.label,
+                mode=job.mode,
+                video_id=job.video_id,
+                current_video_id=job.current_video_id,
                 upload=job.upload,
             )
         except Exception as e:  # noqa: BLE001 — сбой одного клипа не роняет цикл загрузчика

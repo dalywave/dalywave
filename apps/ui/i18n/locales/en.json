@@ -381,6 +381,10 @@
   },
   "track": {
     "wrongRecording": "Wrong recording",
+    "clip": "Video",
+    "hideClip": "Hide video",
+    "clipHidden": "Video hidden",
+    "clipFailed": "Didn’t work — try again",
     "why": "Why this track",
     "playNext": "Play next",
     "enqueue": "Add to queue",

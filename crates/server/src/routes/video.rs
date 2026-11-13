@@ -10,25 +10,44 @@ use axum::{
 };
 use dalywave_protocol::{
     ErrorBody,
+    auth::Permission,
     jobs::{JobStatus, kind},
-    video::{AlbumMotion, ClipClaimRequest, ClipClaimResponse, ClipList, ClipReport, ClipsRequest},
+    video::{
+        AlbumMotion, ClipChoice, ClipClaimRequest, ClipClaimResponse, ClipList, ClipReport,
+        ClipReportItem, ClipReportList, ClipView, ClipsRequest,
+    },
 };
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
+    audit,
+    auth::Principal,
+    catalog::views,
     downloaders::{self, DownloaderAuth},
     error::{AppError, AppResult, bad},
     extract::{Json, Path},
     jobs,
+    routes::acquisitions::{Pasted, parse_pasted, valid_video_id},
     state::{AppState, ClientIp},
     video::{self, clips},
 };
 
-/// Воспроизведение: видео ленты и живые обложки.
+/// Воспроизведение: видео ленты, живые обложки, «Клип» у трека.
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/clips", post(prepare_clips))
         .route("/albums/{id}/motion", get(album_motion))
+        .route("/tracks/{id}/clip", get(track_clip).put(choose_clip))
+        .route(
+            "/tracks/{id}/clip/hide",
+            post(hide_clip).delete(unhide_clip),
+        )
+}
+
+/// Админка: жалобы на клипы.
+pub fn admin_routes() -> Router<AppState> {
+    Router::new().route("/clips/reports", get(clip_reports))
 }
 
 /// Домашний загрузчик: задания клипов.
@@ -58,6 +77,7 @@ fn private<T: serde::Serialize>(body: T) -> Response {
 )]
 pub async fn prepare_clips(
     State(st): State<AppState>,
+    principal: Principal,
     Json(req): Json<ClipsRequest>,
 ) -> AppResult<Response> {
     if req.track_ids.len() > clips::MAX_REQUEST {
@@ -67,6 +87,7 @@ pub async fn prepare_clips(
         &st.db,
         &st.storage,
         st.config.info.musickit.is_some(),
+        principal.user.id,
         &req.track_ids,
     )
     .await?;
@@ -135,7 +156,7 @@ pub async fn claim_clip(
         return Err(bad("workerId — от 1 до 100 символов"));
     }
     downloaders::seen(&st.db, downloader.id, ip, None).await?;
-    match clips::claim(&st.db, &st.storage, &downloader.executor()).await? {
+    match clips::claim(&st.db, &st.storage, &downloader.executor(), &req.features).await? {
         Some(job) => {
             tracing::info!(job = %job.id, track = %job.track_id, downloader = %downloader.name, "clip job handed to a downloader");
             Ok(Json(ClipClaimResponse { job }).into_response())
@@ -179,4 +200,169 @@ pub async fn report_clip(
     } else {
         Err(not_yours())
     }
+}
+
+async fn clip_view(st: &AppState, id: Uuid, principal: &Principal) -> AppResult<ClipView> {
+    clips::view(
+        &st.db,
+        &st.storage,
+        id,
+        principal.user.id,
+        principal.can(Permission::Admin),
+    )
+    .await?
+    .ok_or(AppError::NotFound)
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/tracks/{id}/clip",
+    tag = "playback",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id трека")),
+    responses(
+        (status = 200, description = "Клип вместо обложки: что нарезано и откуда, скрыт ли у меня. \
+                                      Администратору — кандидаты и число жалоб", body = ClipView),
+        (status = 404, description = "Нет такого трека", body = ErrorBody),
+    ),
+)]
+pub async fn track_clip(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+) -> AppResult<Response> {
+    Ok(private(clip_view(&st, id, &principal).await?))
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/tracks/{id}/clip",
+    tag = "playback",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id трека")),
+    request_body = ClipChoice,
+    responses(
+        (status = 200, description = "Выбор принят: ролик закреплён и режется впереди очереди (до тех пор \
+                                      `pending`), «без клипа», «заново» или «оставить»", body = ClipView),
+        (status = 400, description = "Ссылка не на видео YouTube", body = ErrorBody),
+        (status = 403, description = "Выбирать клип может только администратор", body = ErrorBody),
+        (status = 404, description = "Нет такого трека", body = ErrorBody),
+    ),
+)]
+pub async fn choose_clip(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+    Json(req): Json<ClipChoice>,
+) -> AppResult<Response> {
+    principal.need(Permission::Admin)?;
+    let choice = match &req {
+        ClipChoice::Video { video_id } if valid_video_id(video_id) => {
+            clips::Choice::Video(video_id.clone())
+        }
+        ClipChoice::Video { .. } => return Err(bad("неверный id видео YouTube")),
+        ClipChoice::Url { url } => match parse_pasted(url)? {
+            Pasted::Video(video) => clips::Choice::Video(video),
+            Pasted::Direct(_) => return Err(bad("нужна ссылка на видео YouTube")),
+        },
+        ClipChoice::None => clips::Choice::Off,
+        ClipChoice::Auto => clips::Choice::Auto,
+        ClipChoice::Keep => clips::Choice::Keep,
+        ClipChoice::Search => clips::Choice::Search,
+    };
+    let exists = sqlx::query_scalar!(
+        "SELECT EXISTS (SELECT 1 FROM tracks WHERE id = $1) AS \"e!\"",
+        id
+    )
+    .fetch_one(&st.db)
+    .await?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    clips::choose(&st.db, id, principal.user.id, &choice).await?;
+    if choice != clips::Choice::Search {
+        audit::record(
+            &st.db,
+            Some(principal.user.id),
+            audit::CLIP_CHOSEN,
+            Some(id.to_string()),
+            json!(req),
+        )
+        .await?;
+    }
+    Ok(private(clip_view(&st, id, &principal).await?))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/tracks/{id}/clip/hide",
+    tag = "playback",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id трека")),
+    responses(
+        (status = 204, description = "Клип скрыт у меня; администратор видит жалобу в «Спорных»"),
+        (status = 404, description = "У трека нет клипа", body = ErrorBody),
+    ),
+)]
+pub async fn hide_clip(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    if !clips::hide(&st.db, id, principal.user.id).await? {
+        return Err(AppError::NotFound);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/tracks/{id}/clip/hide",
+    tag = "playback",
+    security(("session" = []), ("device" = [])),
+    params(("id" = Uuid, Path, description = "id трека")),
+    responses((status = 204, description = "Клип снова показывается")),
+)]
+pub async fn unhide_clip(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<Uuid>,
+) -> AppResult<StatusCode> {
+    clips::unhide(&st.db, id, principal.user.id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/admin/clips/reports",
+    tag = "admin",
+    security(("session" = []), ("device" = [])),
+    responses(
+        (status = 200, description = "Треки, где слушатели скрыли клип, а администратор его ещё не \
+                                      подтвердил и не заменил: больше жалоб — выше", body = ClipReportList),
+    ),
+)]
+pub async fn clip_reports(
+    State(st): State<AppState>,
+    principal: Principal,
+) -> AppResult<Json<ClipReportList>> {
+    let rows = clips::reported(&st.db, 100).await?;
+    let ids: Vec<Uuid> = rows.iter().map(|r| r.track_id).collect();
+    let tracks = views::tracks(&st.db, &ids, principal.user.id).await?;
+    let mut by_id: std::collections::HashMap<Uuid, _> =
+        tracks.into_iter().map(|t| (t.id, t)).collect();
+    let items = rows
+        .into_iter()
+        .filter_map(|r| {
+            Some(ClipReportItem {
+                track: by_id.remove(&r.track_id)?,
+                video_id: r.video_id,
+                video_title: r.video_title,
+                channel: r.channel,
+                reports: r.reports,
+                last_at: r.last_at,
+            })
+        })
+        .collect();
+    Ok(Json(ClipReportList { items }))
 }

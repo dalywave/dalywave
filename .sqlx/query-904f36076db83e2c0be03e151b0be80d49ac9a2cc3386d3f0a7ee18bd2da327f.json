@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE track_clips SET state = 'none', storage_key = NULL, size_bytes = 0, video_id = NULL,\n                video_title = NULL, channel = NULL, source = NULL, score = NULL,\n                checked_at = now() - make_interval(days => $2 + 1)\n         WHERE track_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "904f36076db83e2c0be03e151b0be80d49ac9a2cc3386d3f0a7ee18bd2da327f"
+}

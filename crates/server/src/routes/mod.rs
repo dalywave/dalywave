@@ -94,6 +94,7 @@ pub fn router(state: AppState) -> Router {
         .merge(reco::routes())
         .merge(admin_catalog::routes())
         .merge(rewind::admin_routes())
+        .merge(video::admin_routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
     let catalog = catalog::routes()
         .merge(wave::catalog_routes())

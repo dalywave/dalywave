@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs SET payload = $2, priority = GREATEST(priority, $3), run_after = LEAST(run_after, now()),\n                updated_at = now()\n         WHERE dedupe_key = $1 AND status = 'queued'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5cfc531ed862c287ee18a08d1cb45341743eb651cc0c74e94b51e36912ca1e43"
+}

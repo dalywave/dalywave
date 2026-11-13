@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT video_id FROM track_clip_pins WHERE track_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "video_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_clip_pins",
+            "name": "video_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "9e11b4f1b0b1ea460a1ec896c4206cfda095605d7df0ce45586f3d90c824dffb"
+}
