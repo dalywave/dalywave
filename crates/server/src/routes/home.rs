@@ -254,6 +254,18 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
     .fetch_all(&st.db)
     .await?;
     let forgotten_ids = wave::forgotten(&st.db, user, SHELF_SIZE).await?;
+    // Своя музыка: альбомы, чьи файлы появились в папках последними
+    let added_ids = sqlx::query_scalar!(
+        r#"SELECT t.album_id AS "id!" FROM library_files lf
+           JOIN tracks t ON t.id = lf.track_id
+           WHERE lf.status = 'ok' AND t.album_id IS NOT NULL
+           GROUP BY t.album_id
+           ORDER BY min(lf.created_at) DESC, t.album_id
+           LIMIT $1"#,
+        SHELF_SIZE,
+    )
+    .fetch_all(&st.db)
+    .await?;
 
     let shelves = [
         shelf(
@@ -322,6 +334,16 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
                 .collect(),
         ),
         shelf(
+            "recently-added",
+            "Недавно добавленные",
+            ShelfKind::RecentlyAdded,
+            views::albums(&st.db, &added_ids, user)
+                .await?
+                .into_iter()
+                .map(ShelfItem::Album)
+                .collect(),
+        ),
+        shelf(
             "top-artists",
             "Ваши артисты",
             ShelfKind::TopArtists,
@@ -335,11 +357,10 @@ pub async fn home(State(st): State<AppState>, principal: Principal) -> AppResult
     let settings = Settings::load(&st.db).await?;
     let order = shelf_order(DayPart::of_hour(settings.local_hour(Utc::now())));
     let mut shelves: Vec<Shelf> = shelves.into_iter().flatten().collect();
-    shelves.sort_by_key(|s| {
-        order
-            .iter()
-            .position(|id| *id == s.id)
-            .unwrap_or(order.len())
+    // Своя музыка — сразу после «Продолжить»: на сервере со своей папкой это главное
+    shelves.sort_by_key(|s| match s.id.as_str() {
+        "recently-added" => 1,
+        id => 2 * order.iter().position(|o| *o == id).unwrap_or(order.len()),
     });
     Ok(Json(Home {
         shelves,

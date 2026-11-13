@@ -32,6 +32,7 @@ mod jobs;
 mod library;
 mod lyrics;
 mod mock;
+mod music_folder;
 mod notifications;
 mod offline;
 mod overlay;

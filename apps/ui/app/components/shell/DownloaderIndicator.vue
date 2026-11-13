@@ -11,7 +11,9 @@ const { t } = useI18n({ useScope: 'local' })
 
 const pc = bridge.platform === 'windows'
 const view = computed(() => dl.view.value)
-const shown = computed(() => dl.available && auth.isAdmin && view.value.kind !== 'forbidden')
+// Загрузчик выключен на сервере — показывать нечего
+const server = useServerStore()
+const shown = computed(() => server.downloader && dl.available && auth.isAdmin && view.value.kind !== 'forbidden')
 const job = computed(() => (view.value.kind === 'working' ? view.value.job : null))
 const percent = computed(() => Math.floor((job.value?.progress ?? 0) * 100))
 

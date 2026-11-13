@@ -47,6 +47,10 @@ impl From<CatalogError> for AppError {
     fn from(e: CatalogError) -> Self {
         match e {
             CatalogError::Deezer(DeezerError::NotFound) => AppError::NotFound,
+            CatalogError::Deezer(DeezerError::Disabled) => AppError::Conflict {
+                code: "deezer_disabled",
+                message: "каталог Deezer выключен на этом сервере".into(),
+            },
             CatalogError::Deezer(e) => AppError::Unavailable(format!(
                 "каталог Deezer сейчас недоступен, попробуйте позже ({e})"
             )),

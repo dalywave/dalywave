@@ -216,6 +216,11 @@ function playLiked(list: Track[], i: number) {
           </div>
         </section>
 
+        <!-- Своя музыка: что недавно появилось в папках на сервере -->
+        <MusicShelf v-else-if="s.kind === 'recently_added'" :title="shelfTitle(s)" :cols="6" phone-width="136px">
+          <MusicAlbumCard v-for="a in albums(s)" :key="a.id" :album="a" :meta="a.releaseDate ? `${a.artist.name} · ${a.releaseDate.slice(0, 4)}` : a.artist.name" />
+        </MusicShelf>
+
         <MusicShelf v-else-if="s.kind === 'top_artists'" :title="shelfTitle(s)" :cols="6" phone-width="120px">
           <MusicArtistCard v-for="a in artists(s)" :key="a.id" :artist="a" />
         </MusicShelf>

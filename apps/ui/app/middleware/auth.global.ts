@@ -25,7 +25,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const isDev = import.meta.dev && to.path.startsWith('/dev')
 
   void bridge.ready()
+  // Возможности сервера — вместе с входом: первый экран сразу без выключенного на сервере
+  const server = useServerStore()
+  const features = server.load()
   await auth.load({ quiet: isAuthPage || isDev })
+  if (!server.config) await features
   if (isDev) return
   // Вход приложения в системном браузере: экран входа нужен, даже если на сайте уже вошли
   if (to.path === '/login' && to.query.app !== undefined) return
@@ -46,4 +50,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo(next)
   }
   if (to.path.startsWith('/admin') && !auth.isAdmin && auth.status === 'ready') return navigateTo('/')
+  // Выключенное на сервере: чарты — каталог Deezer, скачивания и «Спорные» — загрузчик
+  if (!server.deezer && to.path.startsWith('/charts')) return navigateTo('/search')
+  if (!server.downloader && DOWNLOADER_ADMIN.some(p => to.path.startsWith(p))) return navigateTo('/admin')
 })
+
+const DOWNLOADER_ADMIN = ['/admin/downloads', '/admin/disputed', '/admin/sources']

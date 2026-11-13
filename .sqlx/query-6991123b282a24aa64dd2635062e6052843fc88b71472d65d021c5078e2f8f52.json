@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (t.album_id) t.album_id AS \"album_id!\", lf.path\n           FROM library_files lf JOIN tracks t ON t.id = lf.track_id\n           JOIN albums al ON al.id = t.album_id\n           WHERE lf.status = 'ok' AND al.source = 'local' AND al.cover_key IS NULL\n           ORDER BY t.album_id, lf.path\n           LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "album_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "6991123b282a24aa64dd2635062e6052843fc88b71472d65d021c5078e2f8f52"
+}

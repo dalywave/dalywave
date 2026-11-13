@@ -177,6 +177,9 @@ function waveStart(s: WaveSession): WaveStart {
   }
 }
 
+/** Сколько раз переспросить, пока сервер готовит копию файла (раз в ~2 с) */
+const PREPARE_TRIES = 30
+
 export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
   const audio = opts.audio?.() ?? new WebAudioEngine()
   const signedOut = new Set<() => void>()
@@ -360,6 +363,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     updates: opts.updates ?? devUpdates() ?? { onAvailable: () => () => {}, state: async () => null, onState: () => () => {}, check: noWindow, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
     desktopApps: () => unwrap(api.GET('/api/downloads')),
+    serverConfig: () => unwrap(api.GET('/api/config')),
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
     trainer: opts.trainer !== undefined ? opts.trainer : devTrainer(),
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
@@ -679,9 +683,17 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         if (mock && mocked('stream')) return mock.source(track)
         if (track.audioStatus === 'unavailable') return { kind: 'unavailable' }
         // Качество выбирает сервер по сети и настройкам слушателя; сайт считается подключённым по Wi-Fi
-        const res = await http.raw('GET', `/api/tracks/${track.id}/stream${network ? `?network=${network}` : ''}`)
-        const body = await res.json().catch(() => null) as StreamResponse | null
-        if (res.status === 404 || !body) return { kind: 'unavailable' }
+        const url = `/api/tracks/${track.id}/stream${network ? `?network=${network}` : ''}`
+        let res = await http.raw('GET', url)
+        let body = await res.json().catch(() => null) as StreamResponse | null
+        // Своя музыка в формате, который плеер не играет: сервер делает копию за пару секунд
+        for (let i = 0; i < PREPARE_TRIES && body?.status === 'preparing'; i++) {
+          const wait = body.retryAfterMs ?? 2000
+          await new Promise(r => setTimeout(r, Math.min(Math.max(wait, 500), 5000)))
+          res = await http.raw('GET', url)
+          body = await res.json().catch(() => null) as StreamResponse | null
+        }
+        if (res.status === 404 || !body || body.status === 'preparing') return { kind: 'unavailable' }
         if (!res.ok) throw toApiError(res.status, body)
         if (body.status === 'ready') {
           return {
@@ -765,6 +777,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       recordings: (q = {}) => unwrap(api.GET('/api/admin/recordings', { params: { query: { status: q.status, source: q.source || undefined, verified: q.verified, q: q.q || undefined, cursor: q.cursor ?? undefined, limit: q.limit } } })),
       reacquire: (id, url) => unwrap(api.POST('/api/admin/recordings/{id}/reacquire', { params: { path: { id } }, body: { url } })),
       storage: () => unwrap(api.GET('/api/admin/storage')),
+      library: () => unwrap(api.GET('/api/admin/library')),
+      rescanLibrary: () => done(api.POST('/api/admin/library/scan')),
       imports: () => unwrap(api.GET('/api/admin/imports')),
       settings: () => unwrap(api.GET('/api/admin/settings')),
       updateSettings: patch => unwrap(api.PATCH('/api/admin/settings', { body: patch })),

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM tracks WHERE recording_id = $1 AND source = 'local'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "29e4ea7afe460a99eb8f1b67b4dac613c40fc43df3de25dac8bb1c92752af4e3"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.album_id AS \"id!\" FROM library_files lf\n           JOIN tracks t ON t.id = lf.track_id\n           WHERE lf.status = 'ok' AND t.album_id IS NOT NULL\n           GROUP BY t.album_id\n           ORDER BY min(lf.created_at) DESC, t.album_id\n           LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "album_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "3f5c83dfb42a8357ab8e43c16a815b500b3338dbeffab7e927328d6e0f63199a"
+}

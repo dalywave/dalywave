@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT f.id, f.storage_key, f.codec, f.container, f.lossless, f.bitrate_kbps, f.duration_ms,\n                  f.loudness_lufs, f.true_peak_db, f.waveform,\n                  f.id = COALESCE(r.primary_file_id,\n                      (SELECT id FROM audio_files WHERE recording_id = r.id ORDER BY created_at DESC LIMIT 1))\n                    AS \"primary!\"\n           FROM recordings r JOIN audio_files f ON f.recording_id = r.id\n           WHERE r.id = $1 AND r.audio_status = 'ready'\n           ORDER BY 11 DESC, f.verified DESC, f.bitrate_kbps DESC NULLS LAST, f.created_at DESC",
+  "query": "SELECT f.id, f.storage_key, f.codec, f.container, f.lossless, f.bitrate_kbps, f.duration_ms,\n                  f.loudness_lufs, f.true_peak_db, f.waveform, f.direct,\n                  f.id = COALESCE(r.primary_file_id,\n                      (SELECT id FROM audio_files WHERE recording_id = r.id ORDER BY created_at DESC LIMIT 1))\n                    AS \"primary!\"\n           FROM recordings r JOIN audio_files f ON f.recording_id = r.id\n           WHERE r.id = $1 AND r.audio_status = 'ready'\n           ORDER BY 12 DESC, f.verified DESC, f.bitrate_kbps DESC NULLS LAST, f.created_at DESC",
   "describe": {
     "columns": [
       {
@@ -115,6 +115,17 @@
       },
       {
         "ordinal": 10,
+        "name": "direct",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "direct"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
         "name": "primary!",
         "type_info": "Bool",
         "origin": "Expression"
@@ -136,8 +147,9 @@
       true,
       true,
       true,
+      false,
       null
     ]
   },
-  "hash": "95b43e388765cab09643ce41cf553576d029673bea5a36681dbaea3e4aabe1a0"
+  "hash": "7028aba4ddcda683e5846d4893e5fc7cab0881f7f70341e815fa506053c30c7c"
 }

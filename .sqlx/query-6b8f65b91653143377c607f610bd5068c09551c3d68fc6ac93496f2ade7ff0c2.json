@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE albums SET release_date = COALESCE(release_date, $2),\n                    genres = CASE WHEN genres = '{}' THEN $3 ELSE genres END,\n                    tracks_count = GREATEST(COALESCE(tracks_count, 0), COALESCE($4, 0))\n             WHERE id = $1 AND (release_date IS NULL OR genres = '{}' OR COALESCE(tracks_count, 0) < COALESCE($4, 0))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "TextArray",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b8f65b91653143377c607f610bd5068c09551c3d68fc6ac93496f2ade7ff0c2"
+}

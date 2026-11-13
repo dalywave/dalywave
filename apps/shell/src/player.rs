@@ -347,16 +347,30 @@ async fn stream_link(
 ) -> Result<Resolved, String> {
     // Качество — по сети устройства и настройкам слушателя: на сотовой с «Экономией» сервер даёт Opus 64
     let network = crate::offline::network_param();
-    let mut req = http.get(format!(
-        "{server}/api/tracks/{track_id}/stream?network={network}"
-    ));
-    if let Some(token) = token {
-        req = req.bearer_auth(token);
-    }
-    let res = req
-        .send()
-        .await
-        .map_err(|e| format!("сервер недоступен: {e}"))?;
+    // 202 «preparing» — сервер делает копию файла своей музыки: она готова за пару секунд
+    let mut tries = 0;
+    let res = loop {
+        let mut req = http.get(format!(
+            "{server}/api/tracks/{track_id}/stream?network={network}"
+        ));
+        if let Some(token) = token {
+            req = req.bearer_auth(token);
+        }
+        let res = req
+            .send()
+            .await
+            .map_err(|e| format!("сервер недоступен: {e}"))?;
+        let preparing = res.status().as_u16() == 202
+            && res
+                .headers()
+                .get(reqwest::header::RETRY_AFTER)
+                .is_some();
+        if !preparing || tries >= 15 {
+            break res;
+        }
+        tries += 1;
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    };
     match res.status().as_u16() {
         200 => {
             let body: StreamReady = res

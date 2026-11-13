@@ -72,6 +72,22 @@ async fn ready(st: &AppState, picked: Picked) -> AppResult<Response> {
         .into_response())
 }
 
+/// Готовый файл или «копию делают, спросить через 2 с» (AVPlayer, своя музыка в формате, который клиенты
+/// не играют).
+async fn respond(st: &AppState, pick: ApplePick) -> AppResult<Response> {
+    match pick {
+        ApplePick::Ready(picked) => ready(st, picked).await,
+        ApplePick::Preparing => Ok((
+            StatusCode::ACCEPTED,
+            [(header::RETRY_AFTER, "2")],
+            Json(TrackStream::Preparing(StreamPreparing {
+                retry_after_ms: 2000,
+            })),
+        )
+            .into_response()),
+    }
+}
+
 /// Почему запись не скачать: она ждёт решения в «Спорных» или её нет в источниках.
 async fn not_playable(st: &AppState, track_id: Uuid) -> AppResult<AppError> {
     let status = sqlx::query_scalar!(
@@ -130,22 +146,16 @@ pub async fn stream(
         && let Some(recording) = recording
         && let Some(pick) = renditions::pick_apple(&st.db, recording, quality).await?
     {
-        return match pick {
-            ApplePick::Ready(picked) => ready(&st, picked).await,
-            ApplePick::Preparing => Ok((
-                StatusCode::ACCEPTED,
-                [(header::RETRY_AFTER, "2")],
-                Json(TrackStream::Preparing(StreamPreparing {
-                    retry_after_ms: 2000,
-                })),
-            )
-                .into_response()),
-        };
+        return respond(&st, pick).await;
     }
     if let Some(recording) = recording
-        && let Some(picked) = renditions::pick(&st.db, recording, quality).await?
+        && let Some(pick) = renditions::pick(&st.db, recording, quality).await?
     {
-        return ready(&st, picked).await;
+        return respond(&st, pick).await;
+    }
+    // Скачивать некому: загрузчик выключен на этом сервере
+    if !st.config.features.downloader {
+        return Err(not_playable(&st, id).await?);
     }
     let req = Request::new(id, AcquireReason::Play, lanes::NOW)
         .by(principal.user.id)
@@ -162,7 +172,7 @@ pub async fn stream(
                     .await?;
             return match recording {
                 Some(r) => match renditions::pick(&st.db, r, quality).await? {
-                    Some(picked) => ready(&st, picked).await,
+                    Some(pick) => respond(&st, pick).await,
                     None => Err(AppError::Unavailable("файл записи недоступен".into())),
                 },
                 None => Err(AppError::NotFound),

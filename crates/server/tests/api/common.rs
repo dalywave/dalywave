@@ -7,7 +7,10 @@ use axum::{
 };
 use dalywave_server::{
     AppState, Config,
-    config::{DeezerConfig, FetcherConfig, InfoConfig, LrclibConfig, MlConfig, YandexMusicConfig},
+    config::{
+        DeezerConfig, Features, FetcherConfig, InfoConfig, LibraryConfig, LrclibConfig, MlConfig,
+        StorageConfig, YandexMusicConfig,
+    },
     deezer::Deezer,
     jobs::{
         handlers,
@@ -41,6 +44,13 @@ pub fn config() -> Config {
         admin_emails: Vec::new(),
         admin_password: None,
         s3: None,
+        storage: StorageConfig::default(),
+        library: LibraryConfig::default(),
+        // Тесты написаны для wave.daly.rest: Deezer и загрузчик включены
+        features: Features {
+            deezer: true,
+            downloader: true,
+        },
         deezer: DeezerConfig::default(),
         // Long-poll загрузчика в тестах — доли секунды, а не 25 с
         fetcher: FetcherConfig {
@@ -140,7 +150,7 @@ impl TestApp {
         tweak(&mut config);
         let mut state = AppState::new(db, config).unwrap();
         // Квота и повторы в тестах — без пятисекундных пауз
-        state.deezer = Arc::new(fast_deezer(&deezer.base));
+        state.deezer = Arc::new(fast_deezer(&deezer.base).enabled(state.config.features.deezer));
         // MusicBrainz в тестах — без секундной паузы между запросами
         state.info = Arc::new(dalywave_server::info::Sources::fast(&state.config.info).unwrap());
         Self {
@@ -156,7 +166,7 @@ impl TestApp {
         let ctx = Context::new(
             self.state.db.clone(),
             self.state.config.clone(),
-            Arc::new(fast_deezer(&self.deezer.base)),
+            Arc::new(fast_deezer(&self.deezer.base).enabled(self.state.config.features.deezer)),
             self.state.storage.clone(),
         )
         .unwrap();
@@ -172,7 +182,7 @@ impl TestApp {
         let ctx = Context::with_ml(
             self.state.db.clone(),
             self.state.config.clone(),
-            Arc::new(fast_deezer(&self.deezer.base)),
+            Arc::new(fast_deezer(&self.deezer.base).enabled(self.state.config.features.deezer)),
             self.state.storage.clone(),
             Arc::new(ml),
         )

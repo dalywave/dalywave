@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE recordings SET audio_status = 'none', primary_file_id = NULL, status_changed_at = now()\n                 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4f605735418a93a51897edba0ae1032fe80676dcd76d90fcfb746c4d2de71b8c"
+}

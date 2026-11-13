@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, path, size_bytes AS size, mtime, fingerprint, status, track_id, audio_file_id\n         FROM library_files\n         WHERE EXISTS (SELECT 1 FROM unnest($1::text[]) p WHERE path = p OR starts_with(path, p || '/'))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "path"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "mtime",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "mtime"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "fingerprint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "fingerprint"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "track_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "audio_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "audio_file_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "a23706731a22c21c2c1ad0ab4916f034b438a0b75e06212aa125b1cccfffdb96"
+}

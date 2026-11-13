@@ -2,6 +2,7 @@ pub mod accounts;
 pub mod acquisitions;
 pub mod admin;
 pub mod admin_catalog;
+pub mod admin_library;
 pub mod analysis;
 pub mod auth;
 pub mod catalog;
@@ -13,6 +14,7 @@ pub mod embed;
 pub mod events;
 pub mod export;
 pub mod fetcher;
+pub mod files;
 pub mod friends;
 pub mod home;
 pub mod images;
@@ -56,7 +58,10 @@ use axum::{
 };
 use dalywave_protocol::auth::Permission;
 use tower_http::{
-    compression::CompressionLayer,
+    compression::{
+        CompressionLayer,
+        predicate::{DefaultPredicate, NotForContentType, Predicate},
+    },
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     set_header::SetResponseHeaderLayer,
     trace::{DefaultOnResponse, TraceLayer},
@@ -95,6 +100,7 @@ pub fn router(state: AppState) -> Router {
         .merge(sources::routes())
         .merge(reco::routes())
         .merge(admin_catalog::routes())
+        .merge(admin_library::routes())
         .merge(rewind::admin_routes())
         .merge(video::admin_routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Admin)));
@@ -143,6 +149,8 @@ pub fn router(state: AppState) -> Router {
         .merge(system::routes())
         .merge(updates::routes())
         .merge(images::routes())
+        // Файлы по подписанным ссылкам (диск, своя музыка): подпись вместо входа
+        .merge(files::routes())
         // Оверлей для стрима: по секретной ссылке `dwo_…`, без входа
         .merge(overlay::public_routes())
         // Отрывки встраиваемого плеера — без входа, как картинки
@@ -177,7 +185,13 @@ pub fn router(state: AppState) -> Router {
         None => app.fallback(not_found),
     };
 
-    app.layer(CompressionLayer::new())
+    // Звук, видео и файлы по ссылкам (`/api/files`) — как есть: они уже сжаты, а Content-Length и Range
+    // должны сходиться с телом
+    let compress = DefaultPredicate::new()
+        .and(NotForContentType::const_new("audio/"))
+        .and(NotForContentType::const_new("video/"))
+        .and(NotForContentType::const_new("application/octet-stream"));
+    app.layer(CompressionLayer::new().compress_when(compress))
         .layer(SetResponseHeaderLayer::if_not_present(
             header::X_CONTENT_TYPE_OPTIONS,
             HeaderValue::from_static("nosniff"),

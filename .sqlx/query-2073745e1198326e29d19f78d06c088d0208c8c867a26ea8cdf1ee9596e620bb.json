@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO audio_files (recording_id, storage_key, codec, container, lossless, bitrate_kbps, sample_rate,\n                                  channels, bit_depth, duration_ms, size_bytes, sha256, source, source_title,\n                                  loudness_lufs, true_peak_db, verified, acquired_by, direct)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'local', $13, $14, $15, true, 'library', $16)\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Int2",
+        "Int2",
+        "Int4",
+        "Int8",
+        "Text",
+        "Text",
+        "Float4",
+        "Float4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2073745e1198326e29d19f78d06c088d0208c8c867a26ea8cdf1ee9596e620bb"
+}

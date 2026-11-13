@@ -56,6 +56,10 @@ pub mod kind {
     pub const ALBUM_MOTION: &str = "album_motion";
     /// Клип трека для ленты открытий: ищет и нарезает загрузчик на Mac (полоса «Клипы»).
     pub const CLIP: &str = "clip";
+    /// Своя музыка: проход по папкам — новые, изменённые, переехавшие и пропавшие файлы (полоса «Своя музыка: папки»).
+    pub const LIBRARY_SCAN: &str = "library_scan";
+    /// Своя музыка: громкость и огибающая файла, затем полный анализ звука (полоса «Своя музыка: громкость»).
+    pub const LIBRARY_ANALYZE: &str = "library_analyze";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -287,12 +291,30 @@ pub struct LyricsPayload {
     pub track_id: Uuid,
 }
 
+/// Пройти папки своей музыки.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryScanPayload {
+    /// Только эти пути (файлы или папки), которые изменились; пусто — все папки целиком.
+    #[serde(default)]
+    pub paths: Vec<String>,
+}
+
+/// Громкость, огибающая и анализ файла своей музыки.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryAnalyzePayload {
+    /// `library_files.id`.
+    pub file_id: Uuid,
+}
+
 /// Сделать облегчённую копию файла записи.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscodePayload {
     pub file_id: Uuid,
-    /// Вид копии: `opus64` («Экономия», по умолчанию) или `aac256` (AVPlayer на Apple TV).
+    /// Вид копии: `opus64` («Экономия», по умолчанию), `aac256` (AVPlayer на Apple TV) или `play` (файл своей
+    /// музыки, который клиенты не играют как есть).
     #[serde(default)]
     pub kind: Option<String>,
 }

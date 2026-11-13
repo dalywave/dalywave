@@ -31,6 +31,8 @@ pub enum ShelfKind {
     /// «Радар новинок»: свежие (30 дней) релизы подписок и артистов, которых часто слушаешь, — по альбому
     /// на релиз (сингл, EP или альбом).
     ReleaseRadar,
+    /// «Недавно добавленные»: альбомы, файлы которых недавно появились в папках своей музыки.
+    RecentlyAdded,
 }
 
 names!(ShelfKind {
@@ -42,6 +44,7 @@ names!(ShelfKind {
     DiscoverWeekly => "discover_weekly",
     ForgottenFavorites => "forgotten_favorites",
     ReleaseRadar => "release_radar",
+    RecentlyAdded => "recently_added",
 });
 
 /// Элемент полки: поле `type` говорит, что внутри.
@@ -58,7 +61,7 @@ pub enum ShelfItem {
 #[serde(rename_all = "camelCase")]
 pub struct Shelf {
     /// Постоянный id полки: `continue`, `daily-mixes`, `new-releases`, `discover-weekly`, `recent-likes`,
-    /// `forgotten-favorites`, `top-artists`, `release-radar`.
+    /// `forgotten-favorites`, `top-artists`, `release-radar`, `recently-added`.
     pub id: String,
     /// Заголовок по-русски; английский интерфейс берёт свой по `id`.
     pub title: String,

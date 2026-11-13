@@ -1,0 +1,170 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, kind, status, files_total, files_done, added, updated, moved, removed, failed, message,\n                started_at, finished_at\n         FROM library_scans ORDER BY (status = 'running') DESC, started_at DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "files_total",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "files_total"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "files_done",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "files_done"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "added",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "added"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "updated"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "moved",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "moved"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "removed",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "removed"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "failed",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "failed"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "message",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "message"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "library_scans",
+            "name": "finished_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "991923328b3c114b4d9ca5bd22a645afd44402d2c3528573d748a784d2a93d13"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM audio_files WHERE id = $1 RETURNING recording_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "recording_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8390491ca76f0e25fb3eb06c9ea4d5699457a5832b2a6c26fee83c85b92a0728"
+}

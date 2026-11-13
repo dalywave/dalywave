@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO albums (title, artist_id, record_type, release_date, genres, tracks_count, source, fetched_at)\n         VALUES ($1, $2, $3, $4, $5, $6, 'local', now())\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Date",
+        "TextArray",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "253ef7f053fcbc547a16c96adac318457cd24e199d48d67037d6e8b7c005bd8d"
+}

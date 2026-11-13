@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE artists a SET picture_key = $2, picture_bytes = 0, updated_at = now()\n         FROM albums al\n         WHERE al.id = $1 AND a.id = al.artist_id AND a.source = 'local' AND a.picture_key IS NULL\n           AND a.name <> $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fa2defef50b770590afacd2ed8be3bbc5293a0892b9989522dcb4cd634949503"
+}

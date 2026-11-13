@@ -444,6 +444,7 @@
       "daily-mixes": "Made for you",
       "discover-weekly": "Discover weekly",
       "release-radar": "Release radar",
+      "recently-added": "Recently added",
       "forgotten-favorites": "Forgotten favorites"
     }
   },
@@ -468,6 +469,7 @@
       "downloads": "Downloads",
       "disputed": "Disputed",
       "sources": "Sources",
+      "library": "Library",
       "catalog": "Catalog",
       "storage": "Storage",
       "reco": "Recommendations",

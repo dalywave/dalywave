@@ -726,7 +726,14 @@ pub async fn run_clip(ctx: Arc<Context>, job: JobRow) -> JobResult {
             .await?
             .flatten();
     let picked = match recording {
-        Some(r) => renditions::pick(&ctx.db, r, StreamQuality::Normal).await?,
+        Some(r) => match renditions::pick(&ctx.db, r, StreamQuality::Normal).await? {
+            Some(renditions::ApplePick::Ready(file)) => Some(file),
+            // Копию для своей музыки делают — отрывок подождёт её
+            Some(renditions::ApplePick::Preparing) => {
+                return Err(JobError::retry("копия файла ещё готовится"));
+            }
+            None => None,
+        },
         None => None,
     };
     let Some(picked) = picked else {

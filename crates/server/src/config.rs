@@ -30,6 +30,8 @@ pub const APNS_PRODUCTION_URL: &str = "https://api.push.apple.com";
 pub const APNS_SANDBOX_URL: &str = "https://api.sandbox.push.apple.com";
 /// Bundle ID приложения на iPhone и iPad — топик APNs.
 pub const DEFAULT_APNS_TOPIC: &str = "rest.daly.wave";
+/// Папка хранилища `fs` по умолчанию (том docker).
+pub const DEFAULT_STORAGE_PATH: &str = "/data";
 
 #[derive(Clone)]
 pub struct Config {
@@ -50,8 +52,14 @@ pub struct Config {
     pub admin_emails: Vec<String>,
     /// Пароль аварийного входа. `None` — вход паролем выключен.
     pub admin_password: Option<String>,
-    /// Хранилище S3. `None` — файлы живут в памяти процесса (только для разработки и тестов).
+    /// Хранилище S3. `None` — файлы живут на диске (`storage.kind = fs`) или в памяти процесса.
     pub s3: Option<S3Config>,
+    /// Где хранятся файлы сервера: S3, свой диск или память процесса (разработка и тесты).
+    pub storage: StorageConfig,
+    /// Своя музыка из папок на сервере (только чтение).
+    pub library: LibraryConfig,
+    /// Что включено на этом сервере: каталог Deezer, загрузчик с YouTube.
+    pub features: Features,
     pub deezer: DeezerConfig,
     pub fetcher: FetcherConfig,
     pub ml: MlConfig,
@@ -66,6 +74,53 @@ pub struct Config {
     pub release_token: Option<String>,
     /// Каналы push. Без настроек канал выключен, уведомления остаются в центре уведомлений и в окне приложения.
     pub push: PushConfig,
+}
+
+/// Где хранятся файлы сервера (обложки, аудио, копии, клипы).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StorageKind {
+    /// S3-совместимое хранилище (`DALYWAVE_S3_*`): Cloudflare R2, SeaweedFS, MinIO.
+    S3,
+    /// Своя папка на диске (`DALYWAVE_STORAGE_PATH`): файлы отдаёт сам API по подписанным ссылкам.
+    Fs,
+    /// В памяти процесса — только разработка и тесты: всё пропадает при перезапуске.
+    Memory,
+}
+
+#[derive(Clone, Debug)]
+pub struct StorageConfig {
+    pub kind: StorageKind,
+    /// Папка хранилища `fs`.
+    pub path: PathBuf,
+    /// Адрес API для ссылок сервису анализа, если он видит API иначе, чем клиенты (`http://api:8400`
+    /// в docker). Без него — `DALYWAVE_PUBLIC_URL`.
+    pub ml_url: Option<String>,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            kind: StorageKind::Memory,
+            path: PathBuf::from(DEFAULT_STORAGE_PATH),
+            ml_url: None,
+        }
+    }
+}
+
+/// Папки со своей музыкой: сервер только читает их, файлы не копируются и не меняются.
+#[derive(Clone, Debug, Default)]
+pub struct LibraryConfig {
+    pub dirs: Vec<PathBuf>,
+}
+
+/// Возможности сервера, которые включаются отдельно. У новых установок обе выключены: музыка — своя папка.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Features {
+    /// Каталог Deezer: поиск по каталогу, страницы артистов и альбомов, чарты, похожие, разведчик.
+    pub deezer: bool,
+    /// Загрузчик: скачивание записей с YouTube (загрузчик на Mac, серверный fetcher), «Спорные», подписки
+    /// с докачкой.
+    pub downloader: bool,
 }
 
 /// Каналы push: APNs (iPhone, iPad) и Web Push (сайт). Android (FCM) добавится сюда же.
@@ -595,6 +650,52 @@ impl Config {
             ),
         };
 
+        let storage_kind = match var("STORAGE").map(|v| v.to_ascii_lowercase()).as_deref() {
+            Some("s3") if s3.is_none() => {
+                bail!("DALYWAVE_STORAGE=s3 needs DALYWAVE_S3_ENDPOINT and both S3 keys")
+            }
+            Some("s3") => StorageKind::S3,
+            Some("fs") => StorageKind::Fs,
+            Some("memory") => StorageKind::Memory,
+            Some(other) => bail!("DALYWAVE_STORAGE: unknown storage `{other}` (s3, fs)"),
+            None if s3.is_some() => StorageKind::S3,
+            None if var("STORAGE_PATH").is_some() => StorageKind::Fs,
+            None => StorageKind::Memory,
+        };
+        let storage_ml_url = var("STORAGE_ML_URL");
+        if let Some(url) = &storage_ml_url {
+            url::Url::parse(url).context("DALYWAVE_STORAGE_ML_URL is not a valid URL")?;
+        }
+        let storage = StorageConfig {
+            kind: storage_kind,
+            path: PathBuf::from(var("STORAGE_PATH").unwrap_or_else(|| DEFAULT_STORAGE_PATH.into())),
+            ml_url: storage_ml_url.map(|u| u.trim_end_matches('/').to_string()),
+        };
+        if storage.kind == StorageKind::Fs && !storage.path.is_absolute() {
+            bail!("DALYWAVE_STORAGE_PATH must be an absolute path, e.g. /data");
+        }
+        let library = LibraryConfig {
+            dirs: match var("MUSIC_DIRS") {
+                Some(v) => {
+                    let dirs: Vec<PathBuf> = env::split_paths(&v)
+                        .filter(|p| !p.as_os_str().is_empty())
+                        .collect();
+                    if let Some(bad) = dirs.iter().find(|d| !d.is_absolute()) {
+                        bail!(
+                            "DALYWAVE_MUSIC_DIRS: {} is not an absolute path",
+                            bad.display()
+                        );
+                    }
+                    dirs
+                }
+                None => Vec::new(),
+            },
+        };
+        let features = Features {
+            deezer: flag("DEEZER", var("DEEZER"), false)?,
+            downloader: flag("DOWNLOADER", var("DOWNLOADER"), false)?,
+        };
+
         let rate = |name: &str, default: u32| -> anyhow::Result<u32> {
             match var(name) {
                 None => Ok(default),
@@ -619,7 +720,8 @@ impl Config {
         url::Url::parse(&fetcher_url).context("DALYWAVE_FETCHER_URL is not a valid URL")?;
         let fetcher = FetcherConfig {
             url: fetcher_url.trim_end_matches('/').to_string(),
-            server: parse_fetcher_mode(var("FETCHER_MODE").as_deref())?,
+            // Серверный fetcher качает только при включённом загрузчике
+            server: parse_fetcher_mode(var("FETCHER_MODE").as_deref())? && features.downloader,
             ..Default::default()
         };
         let ml_url = var("ML_URL").unwrap_or_else(|| DEFAULT_ML_URL.into());
@@ -694,6 +796,9 @@ impl Config {
                 .collect(),
             admin_password,
             s3,
+            storage,
+            library,
+            features,
             deezer,
             fetcher,
             ml,
@@ -1009,6 +1114,54 @@ mod tests {
     }
 
     #[test]
+    fn storage_kinds_and_features() {
+        let c = parse(&[]).unwrap();
+        assert_eq!(c.storage.kind, StorageKind::Memory);
+        assert!(c.library.dirs.is_empty());
+        assert_eq!(
+            c.features,
+            Features::default(),
+            "новая установка — без Deezer и загрузчика"
+        );
+        let s3 = [
+            ("S3_ENDPOINT", "http://localhost:8401"),
+            ("S3_ACCESS_KEY_ID", "k"),
+            ("S3_SECRET_ACCESS_KEY", "s"),
+        ];
+        assert_eq!(parse(&s3).unwrap().storage.kind, StorageKind::S3);
+        assert!(parse(&[("STORAGE", "s3")]).is_err());
+        let c = parse(&[
+            ("STORAGE", "fs"),
+            ("STORAGE_PATH", "/srv/dalywave"),
+            ("MUSIC_DIRS", "/music:/mnt/Музыка"),
+            ("DEEZER", "true"),
+            ("DOWNLOADER", "0"),
+            ("STORAGE_ML_URL", "http://api:8400/"),
+        ])
+        .unwrap();
+        assert_eq!(c.storage.kind, StorageKind::Fs);
+        assert_eq!(c.storage.path, PathBuf::from("/srv/dalywave"));
+        assert_eq!(c.storage.ml_url.as_deref(), Some("http://api:8400"));
+        assert_eq!(
+            c.library.dirs,
+            vec![PathBuf::from("/music"), PathBuf::from("/mnt/Музыка")]
+        );
+        assert!(c.features.deezer && !c.features.downloader);
+        assert_eq!(
+            parse(&[("STORAGE", "fs")]).unwrap().storage.path,
+            PathBuf::from("/data")
+        );
+        assert_eq!(
+            parse(&[("STORAGE_PATH", "/data")]).unwrap().storage.kind,
+            StorageKind::Fs
+        );
+        assert!(parse(&[("STORAGE", "fs"), ("STORAGE_PATH", "data")]).is_err());
+        assert!(parse(&[("MUSIC_DIRS", "music")]).is_err());
+        assert!(parse(&[("DEEZER", "maybe")]).is_err());
+        assert!(parse(&[("STORAGE", "ftp")]).is_err());
+    }
+
+    #[test]
     fn fetcher_mode() {
         let c = parse(&[]).unwrap();
         assert!(!c.fetcher.server, "по умолчанию качает загрузчик на Mac");
@@ -1017,11 +1170,19 @@ mod tests {
         let c = parse(&[
             ("FETCHER_MODE", "remote,server"),
             ("FETCHER_URL", "http://fetcher:8402/"),
+            ("DOWNLOADER", "true"),
         ])
         .unwrap();
         assert!(c.fetcher.server);
         assert_eq!(c.fetcher.url, "http://fetcher:8402");
-        assert!(parse(&[("FETCHER_MODE", "server")]).unwrap().fetcher.server);
+        assert!(
+            parse(&[("FETCHER_MODE", "server"), ("DOWNLOADER", "true")])
+                .unwrap()
+                .fetcher
+                .server
+        );
+        // Без загрузчика серверный fetcher не качает
+        assert!(!parse(&[("FETCHER_MODE", "server")]).unwrap().fetcher.server);
         assert!(!parse(&[("FETCHER_MODE", "remote")]).unwrap().fetcher.server);
         assert!(parse(&[("FETCHER_MODE", "cloud")]).is_err());
         assert!(parse(&[("FETCHER_URL", "not a url")]).is_err());

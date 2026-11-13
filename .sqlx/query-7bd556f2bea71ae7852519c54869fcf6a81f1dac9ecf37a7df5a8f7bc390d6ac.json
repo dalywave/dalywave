@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT lf.path, lf.audio_file_id AS \"audio_file_id!\", f.recording_id,\n                  f.id = r.primary_file_id AS \"primary!\"\n           FROM library_files lf\n           JOIN audio_files f ON f.id = lf.audio_file_id\n           JOIN recordings r ON r.id = f.recording_id\n           WHERE lf.id = $1 AND lf.status = 'ok'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "path"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "audio_file_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "library_files",
+            "name": "audio_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "primary!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "7bd556f2bea71ae7852519c54869fcf6a81f1dac9ecf37a7df5a8f7bc390d6ac"
+}

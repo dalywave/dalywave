@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_files SET path = $2, root = $3, mtime = $4, size_bytes = $5, seen_at = now(),\n                updated_at = now()\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3543a615dde9a4b61f1c52048cd6ee4a62a2da16a37231cd09e4db7880d4acbc"
+}

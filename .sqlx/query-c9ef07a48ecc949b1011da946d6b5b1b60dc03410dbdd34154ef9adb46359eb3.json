@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT f.storage_key, f.duration_ms FROM audio_files f WHERE f.id = $1",
+  "query": "SELECT f.storage_key, f.duration_ms, f.lossless FROM audio_files f WHERE f.id = $1",
   "describe": {
     "columns": [
       {
@@ -24,6 +24,17 @@
             "name": "duration_ms"
           }
         }
+      },
+      {
+        "ordinal": 2,
+        "name": "lossless",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "lossless"
+          }
+        }
       }
     ],
     "parameters": {
@@ -33,8 +44,9 @@
     },
     "nullable": [
       false,
+      false,
       false
     ]
   },
-  "hash": "effaf67d224ed8634dc96d6757f2ba231e7f075dda20502072e0eb354d5bdc60"
+  "hash": "c9ef07a48ecc949b1011da946d6b5b1b60dc03410dbdd34154ef9adb46359eb3"
 }

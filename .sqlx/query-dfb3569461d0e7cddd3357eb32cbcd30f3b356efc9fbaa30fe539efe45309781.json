@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_scans SET files_total = $2, files_done = $3, added = $4, updated = $5, moved = $6,\n                    removed = $7, failed = $8\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dfb3569461d0e7cddd3357eb32cbcd30f3b356efc9fbaa30fe539efe45309781"
+}

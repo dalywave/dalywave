@@ -444,6 +444,7 @@
       "daily-mixes": "Собрано для вас",
       "discover-weekly": "Открытия недели",
       "release-radar": "Радар новинок",
+      "recently-added": "Недавно добавленные",
       "forgotten-favorites": "Забытые любимые"
     }
   },
@@ -468,6 +469,7 @@
       "downloads": "Загрузки",
       "disputed": "Спорные",
       "sources": "Источники",
+      "library": "Библиотека",
       "catalog": "Каталог",
       "storage": "Хранилище",
       "reco": "Рекомендации",

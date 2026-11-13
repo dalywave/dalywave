@@ -7,6 +7,8 @@ export type SearchType = 'all' | 'tracks' | 'artists' | 'albums' | 'playlists' |
 const type = defineModel<SearchType>('type', { required: true })
 const library = defineModel<boolean>('library', { required: true })
 const { t } = useI18n({ useScope: 'local' })
+// Без каталога Deezer искать «везде» и «в медиатеке» — одно и то же: переключателя нет
+const server = useServerStore()
 const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
 
 // Выбранный фильтр не прячется за краем узкого экрана и под затуханием у края
@@ -33,11 +35,11 @@ watch(type, () => void nextTick(() => reveal()))
 
 <template>
   <div ref="row" v-edge-fade class="filters no-scrollbar" role="toolbar" :aria-label="t('label')">
-    <button type="button" class="fchip fchip--scope" :class="{ 'is-on': library }" :aria-pressed="library" @click="library = !library">
+    <button v-if="server.deezer" type="button" class="fchip fchip--scope" :class="{ 'is-on': library }" :aria-pressed="library" @click="library = !library">
       <Icon :name="library ? 'ph:check-bold' : 'ph:books'" class="fchip__icon" />
       {{ t('library') }}
     </button>
-    <span class="filters__sep" aria-hidden="true" />
+    <span v-if="server.deezer" class="filters__sep" aria-hidden="true" />
     <button
       v-for="x in TYPES"
       :key="x"

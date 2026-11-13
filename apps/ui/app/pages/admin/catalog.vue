@@ -9,6 +9,7 @@ definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
 const toast = useToast()
+const server = useServerStore()
 const lang = useLang()
 const L = useAdminLabels()
 const { t } = useI18n({ useScope: 'local' })
@@ -65,7 +66,7 @@ async function loadMore() {
 }
 
 const STATUSES: AudioStatus[] = ['ready', 'queued', 'acquiring', 'disputed', 'unavailable', 'failed', 'none']
-const SOURCES = ['youtube_music', 'youtube', 'soundcloud', 'bandcamp', 'upload', 'other']
+const SOURCES = ['local', 'youtube_music', 'youtube', 'soundcloud', 'bandcamp', 'upload', 'other']
 const sourceLabel = (s: string) => t(`source.${s}`)
 const statusOptions = computed(() => [{ value: '' as const, label: t('anyStatus') }, ...STATUSES.map(s => ({ value: s, label: L.audio(s) }))])
 const sourceOptions = computed(() => [{ value: '', label: t('anySource') }, ...SOURCES.map(s => ({ value: s, label: sourceLabel(s) }))])
@@ -117,8 +118,13 @@ function menu(r: AdminRecording): MenuEntry[] {
   const link = sourceLink(r)
   return [
     { kind: 'heading', label: r.track?.title ?? t('noTrack'), hint: r.isrc ?? undefined },
-    { label: t('replace'), icon: 'ph:link', onSelect: () => (replacing.value = r.id) },
-    { label: t('reacquire'), icon: 'ph:arrow-clockwise', onSelect: () => reacquire(r) },
+    // Скачать заново и заменить по ссылке — работа загрузчика
+    ...(server.downloader
+      ? [
+          { label: t('replace'), icon: 'ph:link', onSelect: () => (replacing.value = r.id) },
+          { label: t('reacquire'), icon: 'ph:arrow-clockwise', onSelect: () => reacquire(r) },
+        ]
+      : []),
     ...(link ? [{ label: t('openSource'), icon: 'ph:arrow-square-out', onSelect: () => void window.open(link, '_blank', 'noopener') }] : []),
     ...(r.track?.album ? [{ label: t('openAlbum'), icon: 'ph:vinyl-record', onSelect: () => navigateTo(`/album/${r.track!.album!.id}`) }] : []),
   ]
@@ -250,7 +256,7 @@ function menu(r: AdminRecording): MenuEntry[] {
     "replaceQueued": "«{title}» скачается по ссылке и заменит файл",
     "reacquireQueued": "«{title}» поищется заново; файл заменится, если найдётся лучше",
     "col": { "track": "Запись", "status": "Состояние", "format": "Формат", "loudness": "Громкость", "source": "Источник", "match": "Совпадение", "size": "Размер" },
-    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Загружен", "other": "Другое" }
+    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Загружен", "local": "Своя папка", "other": "Другое" }
   },
   "en": {
     "title": "Catalog",
@@ -285,7 +291,7 @@ function menu(r: AdminRecording): MenuEntry[] {
     "replaceQueued": "“{title}” will download from the link and replace the file",
     "reacquireQueued": "“{title}” will be searched again; the file is replaced if a better one turns up",
     "col": { "track": "Recording", "status": "State", "format": "Format", "loudness": "Loudness", "source": "Source", "match": "Match", "size": "Size" },
-    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Uploaded", "other": "Other" }
+    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Uploaded", "local": "Music folder", "other": "Other" }
   }
 }
 </i18n>

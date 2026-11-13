@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT source AS key, count(*) AS \"files!\", COALESCE(sum(size_bytes), 0)::bigint AS \"bytes!\"\n           FROM audio_files GROUP BY source ORDER BY 3 DESC",
+  "query": "SELECT codec AS key, count(*) AS \"files!\", COALESCE(sum(size_bytes), 0)::bigint AS \"bytes!\"\n           FROM audio_files WHERE source <> 'local' GROUP BY codec ORDER BY 3 DESC",
   "describe": {
     "columns": [
       {
@@ -10,7 +10,7 @@
         "origin": {
           "Table": {
             "table": "audio_files",
-            "name": "source"
+            "name": "codec"
           }
         }
       },
@@ -36,5 +36,5 @@
       null
     ]
   },
-  "hash": "149a0db04ce8e7dfec7e2b69209df8ddba7b12766311fb12154affc8a33fb2c9"
+  "hash": "d41e5794ede1fbf1e6168f28a269a35ed660a82763770f1ae1e4e24b2a8381a8"
 }

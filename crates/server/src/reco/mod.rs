@@ -578,18 +578,20 @@ pub async fn candidates(
 pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     let settings = Settings::load(db).await?;
     let mut conn = db.acquire().await?;
-    let scout = jobs::enqueue(
-        &mut conn,
-        NewJob::new(
-            dalywave_protocol::jobs::kind::SCOUT,
-            lanes::SCOUT,
-            serde_json::json!({}),
+    // Разведчик ищет новое в каталоге Deezer: без него индекс волны — своя музыка и скачанное
+    let scout = crate::features::deezer()
+        && jobs::enqueue(
+            &mut conn,
+            NewJob::new(
+                dalywave_protocol::jobs::kind::SCOUT,
+                lanes::SCOUT,
+                serde_json::json!({}),
+            )
+            .dedupe("scout")
+            .priority(scout::PLAN_PRIORITY),
         )
-        .dedupe("scout")
-        .priority(scout::PLAN_PRIORITY),
-    )
-    .await?
-    .created;
+        .await?
+        .created;
     let pools = jobs::enqueue(
         &mut conn,
         NewJob::new(

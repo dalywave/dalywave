@@ -181,6 +181,10 @@ pub enum Enqueue {
 /// Одна запись — одно активное скачивание: повторная просьба возвращает идущее, а если оно стоит
 /// в менее важной полосе (дискографии), а трек хотят сейчас, — переносит его задачу.
 pub async fn enqueue(db: &PgPool, req: Request) -> Result<Enqueue, sqlx::Error> {
+    // Загрузчик выключен на этом сервере (`DALYWAVE_DOWNLOADER`): ставить на скачивание нечего
+    if !crate::features::downloader() {
+        return Ok(Enqueue::Skipped("downloader_off"));
+    }
     let mut tx = db.begin().await?;
     let track = sqlx::query!(
         r#"SELECT t.deezer_id, t.recording_id, r.audio_status AS "audio_status?"
@@ -554,6 +558,31 @@ pub async fn playable_file(
             waveform: r.waveform,
         })
     }))
+}
+
+/// Основной файл готовой записи, в каком бы он ни был формате (анализ звука читает и то, что клиенты не
+/// играют как есть: ffmpeg справится).
+#[derive(Debug, Clone)]
+pub struct PrimaryFile {
+    pub id: Uuid,
+    pub storage_key: String,
+}
+
+pub async fn primary_file(
+    db: &PgPool,
+    recording_id: Uuid,
+) -> Result<Option<PrimaryFile>, sqlx::Error> {
+    sqlx::query_as!(
+        PrimaryFile,
+        "SELECT f.id, f.storage_key
+         FROM recordings r
+         JOIN audio_files f ON f.id = COALESCE(r.primary_file_id,
+             (SELECT id FROM audio_files WHERE recording_id = r.id ORDER BY created_at DESC LIMIT 1))
+         WHERE r.id = $1 AND r.audio_status = 'ready'",
+        recording_id,
+    )
+    .fetch_optional(db)
+    .await
 }
 
 /// Начало попытки: исполнитель взял задачу.

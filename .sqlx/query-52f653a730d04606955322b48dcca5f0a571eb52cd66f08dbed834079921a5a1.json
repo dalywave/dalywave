@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO audio_renditions (source_file_id, kind, storage_key, codec, container, bitrate_kbps,\n                                       duration_ms, size_bytes)\n         VALUES ($1, $2, $3, $4, 'mp4', $5, $6, $7)\n         ON CONFLICT (source_file_id, kind) DO NOTHING\n         RETURNING id",
+  "query": "INSERT INTO audio_renditions (source_file_id, kind, storage_key, codec, container, bitrate_kbps,\n                                       duration_ms, size_bytes)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n         ON CONFLICT (source_file_id, kind) DO NOTHING\n         RETURNING id",
   "describe": {
     "columns": [
       {
@@ -21,6 +21,7 @@
         "Text",
         "Text",
         "Text",
+        "Text",
         "Int4",
         "Int4",
         "Int8"
@@ -30,5 +31,5 @@
       false
     ]
   },
-  "hash": "ad98bd1b288ed512aaf24915cf5193304d2e9d889afb940d570b1ac7cc9ffb2e"
+  "hash": "52f653a730d04606955322b48dcca5f0a571eb52cd66f08dbed834079921a5a1"
 }

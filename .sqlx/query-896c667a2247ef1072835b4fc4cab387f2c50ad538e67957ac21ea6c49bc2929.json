@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE acquisitions SET status = 'cancelled', error = 'есть в своей музыке', updated_at = now(),\n                  finished_at = now()\n           WHERE recording_id = $1 AND status = 'queued'\n           RETURNING job_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "job_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "acquisitions",
+            "name": "job_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "896c667a2247ef1072835b4fc4cab387f2c50ad538e67957ac21ea6c49bc2929"
+}

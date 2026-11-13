@@ -8,15 +8,16 @@ const { counts, refresh } = useAdminCounts()
 // Кнопки окна приложения — как в основной оболочке: «светофор» над колонкой разделов, на Windows — полоса
 const { win, titlebar, titlebarStyle } = useTitlebar()
 
-interface NavItem { to: string, key: string, icon: string, count?: 'disputed' | 'waiting' }
-const GROUPS: { key: string | null, items: NavItem[] }[] = [
+interface NavItem { to: string, key: string, icon: string, count?: 'disputed' | 'waiting', needs?: 'downloader' }
+const ALL_GROUPS: { key: string | null, items: NavItem[] }[] = [
   { key: null, items: [{ to: '/admin', key: 'overview', icon: 'ph:gauge' }] },
   { key: 'groupWork', items: [
-    { to: '/admin/downloads', key: 'downloads', icon: 'ph:download-simple' },
-    { to: '/admin/disputed', key: 'disputed', icon: 'ph:scales', count: 'disputed' },
-    { to: '/admin/sources', key: 'sources', icon: 'ph:plugs-connected' },
+    { to: '/admin/downloads', key: 'downloads', icon: 'ph:download-simple', needs: 'downloader' },
+    { to: '/admin/disputed', key: 'disputed', icon: 'ph:scales', count: 'disputed', needs: 'downloader' },
+    { to: '/admin/sources', key: 'sources', icon: 'ph:plugs-connected', needs: 'downloader' },
   ] },
   { key: 'groupMusic', items: [
+    { to: '/admin/library', key: 'library', icon: 'ph:folder-open' },
     { to: '/admin/catalog', key: 'catalog', icon: 'ph:vinyl-record' },
     { to: '/admin/storage', key: 'storage', icon: 'ph:hard-drives' },
     { to: '/admin/reco', key: 'reco', icon: 'ph:sparkle' },
@@ -28,11 +29,16 @@ const GROUPS: { key: string | null, items: NavItem[] }[] = [
     { to: '/admin/log', key: 'log', icon: 'ph:scroll' },
   ] },
 ]
-const ITEMS = GROUPS.flatMap(g => g.items)
+// Разделы загрузчика — только если он включён на сервере; пустая группа не показывается
+const server = useServerStore()
+const GROUPS = computed(() => ALL_GROUPS
+  .map(g => ({ ...g, items: g.items.filter(i => i.needs !== 'downloader' || server.downloader) }))
+  .filter(g => g.items.length))
+const ITEMS = computed(() => GROUPS.value.flatMap(g => g.items))
 
 const current = computed(() => {
   const path = route.path.replace(/\/+$/, '') || '/admin'
-  return ITEMS.find(i => i.to === path)?.to ?? '/admin'
+  return ITEMS.value.find(i => i.to === path)?.to ?? '/admin'
 })
 const countOf = (i: NavItem) => (i.count ? counts.value[i.count] : 0)
 

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE recordings SET primary_file_id = $2 WHERE id = $1 AND primary_file_id IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "34a096552bbccf29631deb9847936071842e53d04d9c3c72c60d09de0defdd29"
+}

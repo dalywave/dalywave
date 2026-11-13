@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, recording_id AS \"recording_id!\" FROM tracks\n           WHERE source = 'local' AND album_id = $1 AND disc_number = $2\n             AND track_position IS NOT DISTINCT FROM $3 AND lower(title) = lower($4)\n             AND recording_id IS NOT NULL\n           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int2",
+        "Int2",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "6d2ed6af576be0841f3590bbad4038575091076eda22d768dea4c36b66f7a898"
+}

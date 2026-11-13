@@ -469,3 +469,101 @@ pub struct ServerSettingsPatch {
     #[serde(default)]
     pub utc_offset_min: Option<i16>,
 }
+
+// ───────────── Своя музыка ─────────────
+
+/// Папка своей музыки на сервере.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryDir {
+    pub path: String,
+    /// Папка есть и читается.
+    pub available: bool,
+    /// Файлов из неё в медиатеке.
+    pub files: i64,
+    pub size_bytes: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LibraryScanKind {
+    /// Все папки целиком.
+    Full,
+    /// Только изменившееся (наблюдение за папками).
+    Changes,
+}
+
+names!(LibraryScanKind { Full => "full", Changes => "changes" });
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LibraryScanStatus {
+    Running,
+    Done,
+    Failed,
+}
+
+names!(LibraryScanStatus { Running => "running", Done => "done", Failed => "failed" });
+
+/// Проход сканера.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryScan {
+    pub id: Uuid,
+    pub kind: LibraryScanKind,
+    pub status: LibraryScanStatus,
+    pub files_total: i32,
+    pub files_done: i32,
+    pub added: i32,
+    pub updated: i32,
+    pub moved: i32,
+    pub removed: i32,
+    pub failed: i32,
+    #[schema(required = true)]
+    pub message: Option<String>,
+    pub started_at: DateTime<Utc>,
+    #[schema(required = true)]
+    pub finished_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LibraryFileProblem {
+    /// Файл не прочитался (повреждён, нет прав).
+    Error,
+    /// Формат не поддерживается.
+    Unsupported,
+}
+
+names!(LibraryFileProblem { Error => "error", Unsupported => "unsupported" });
+
+/// Файл, который не попал в медиатеку.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryProblem {
+    pub path: String,
+    pub problem: LibraryFileProblem,
+    #[schema(required = true)]
+    pub message: Option<String>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Раздел админки «Библиотека»: папки, сканирование, файлы с ошибками.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryStatus {
+    pub dirs: Vec<LibraryDir>,
+    /// Идущий или последний проход.
+    #[schema(required = true)]
+    pub scan: Option<LibraryScan>,
+    /// Треков из своих папок в медиатеке.
+    pub tracks: i64,
+    /// Файлов, которые ещё ждут громкости и анализа.
+    pub analyzing: i64,
+    /// Файлов, которые играются через копию: их формат клиенты не играют.
+    pub transcoded: i64,
+    pub errors: i64,
+    pub unsupported: i64,
+    /// Первые файлы с ошибками и неподдерживаемые — для списка.
+    pub problems: Vec<LibraryProblem>,
+}

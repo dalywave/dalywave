@@ -4,11 +4,13 @@
 withDefaults(defineProps<{ size?: 'sm' | 'md' }>(), { size: 'md' })
 
 const rec = useRecognizeStore()
+// Узнанная песня ищется в каталоге Deezer: без него кнопки нет
+const server = useServerStore()
 const { t } = useI18n({ useScope: 'local' })
 </script>
 
 <template>
-  <UiIconButton v-if="rec.available" icon="ph:microphone" :label="t('label')" :size="size" side="bottom" class="rbtn" @click="rec.start()" />
+  <UiIconButton v-if="rec.available && server.deezer" icon="ph:microphone" :label="t('label')" :size="size" side="bottom" class="rbtn" @click="rec.start()" />
 </template>
 
 <i18n lang="json">

@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT f.codec, f.lossless, f.bitrate_kbps FROM recordings r JOIN audio_files f ON f.id = r.primary_file_id\n         WHERE r.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "codec",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "lossless",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "lossless"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "bitrate_kbps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "bitrate_kbps"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "71502bb920fefa30a42fa74f8e00431e4f65aca79a08bb28809a4f9c08e04e3a"
+}

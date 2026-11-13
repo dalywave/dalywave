@@ -28,17 +28,16 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("run migrations")?;
 
-    let storage = match &config.s3 {
-        Some(s3) => Storage::from_config(s3)?,
-        None => {
-            tracing::warn!("S3 is not configured: files are kept in memory and lost on restart");
-            Storage::memory()
-        }
-    };
-    if let Err(e) = storage.ensure_bucket().await {
-        tracing::warn!(error = %e, "S3 bucket check failed");
+    dalywave_server::features::set(config.features);
+    let storage = Storage::new(&config)?;
+    if storage.is_memory() {
+        tracing::warn!("storage is not configured: files are kept in memory and lost on restart");
     }
-    let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_worker)?;
+    if let Err(e) = storage.ensure_bucket().await {
+        tracing::warn!(error = %e, "storage check failed");
+    }
+    let deezer =
+        Deezer::new(&config.deezer.url, config.deezer.rate_worker)?.enabled(config.features.deezer);
     let registry = handlers::registry(&config.fetcher);
     tracing::info!(
         server_fetcher = config.fetcher.server,
@@ -52,6 +51,13 @@ async fn main() -> anyhow::Result<()> {
         web_push = ctx.push.webpush.is_some(),
         "push channels"
     );
-    let worker = Worker::new(Arc::new(ctx), registry, Settings::default());
-    worker.run(boot::shutdown_signal()).await
+    let ctx = Arc::new(ctx);
+    // Своя музыка: наблюдение за папками и полный проход по расписанию
+    let watcher = dalywave_server::library::watch::spawn(ctx.clone());
+    let worker = Worker::new(ctx, registry, Settings::default());
+    let res = worker.run(boot::shutdown_signal()).await;
+    if let Some(w) = watcher {
+        w.abort();
+    }
+    res
 }

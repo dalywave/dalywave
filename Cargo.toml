@@ -29,9 +29,14 @@ futures-util = "0.3"
 getrandom = "0.4"
 hex = "0.4"
 hkdf = "0.13"
+hmac = "0.13"
 http-body-util = "0.1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 ipnet = "2"
+# Теги своей музыки: ID3, Vorbis comments, MP4, APE, RIFF INFO; встроенные обложки и длительность
+lofty = "0.25"
+# Наблюдение за папками своей музыки
+notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }
 object_store = { version = "0.14", default-features = false, features = ["aws"] }
 # Сеть вкуса на сервере: onnxruntime статически (готовые сборки pyke, в том числе linux aarch64),
 # загрузка при сборке — по rustls, без OpenSSL в образе сборки

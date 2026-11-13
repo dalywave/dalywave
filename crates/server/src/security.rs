@@ -84,6 +84,10 @@ fn raw_upload(path: &str) -> bool {
     {
         return !id.is_empty() && !id.contains('/');
     }
+    // Загрузка по подписанной ссылке хранилища на диске (загрузчик, выпуски)
+    if path.starts_with("/files/") {
+        return true;
+    }
     let Some(rest) = path.strip_prefix("/imports/") else {
         return false;
     };
@@ -186,6 +190,9 @@ mod tests {
             admin_emails: Vec::new(),
             admin_password: None,
             s3: None,
+            storage: Default::default(),
+            library: Default::default(),
+            features: Default::default(),
             deezer: Default::default(),
             fetcher: Default::default(),
             ml: Default::default(),

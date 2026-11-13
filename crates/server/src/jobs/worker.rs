@@ -655,6 +655,10 @@ impl Worker {
 
 /// Ставит сверку дискографии подписанным артистам, которых не сверяли больше суток.
 pub async fn schedule_discography(db: &PgPool) -> Result<usize, sqlx::Error> {
+    // Сверка подписок — это релизы Deezer и докачка: без них сверять нечего
+    if !crate::features::deezer() || !crate::features::downloader() {
+        return Ok(0);
+    }
     let artists = sqlx::query_scalar!(
         "SELECT DISTINCT a.id FROM followed_artists f JOIN artists a ON a.id = f.artist_id
          WHERE a.discography_synced_at IS NULL OR a.discography_synced_at < now() - interval '24 hours'",

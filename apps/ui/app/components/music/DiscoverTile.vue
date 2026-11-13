@@ -2,10 +2,12 @@
 // Вход в «Открытия» (лента клипов): строка-плитка на главной и в поиске. Ровная заливка, знак ленты
 // слева, подпись и стрелка — как остальные строки-ссылки
 const { t } = useI18n({ useScope: 'local' })
+// Лента ищет новое в каталоге Deezer: без него входа в неё нет
+const server = useServerStore()
 </script>
 
 <template>
-  <NuxtLink to="/discover" class="dt">
+  <NuxtLink v-if="server.deezer" to="/discover" class="dt">
     <span class="dt__art" aria-hidden="true">
       <i class="dt__card dt__card--back" />
       <i class="dt__card"><Icon name="ph:play-fill" /></i>

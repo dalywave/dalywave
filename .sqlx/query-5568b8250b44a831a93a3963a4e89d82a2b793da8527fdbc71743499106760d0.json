@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_scans SET status = 'done', finished_at = now(), message = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5568b8250b44a831a93a3963a4e89d82a2b793da8527fdbc71743499106760d0"
+}

@@ -43,6 +43,9 @@ pub enum DeezerError {
     Network(#[source] reqwest::Error),
     #[error("Deezer прислал непонятный ответ: {0}")]
     Decode(String),
+    /// Каталог Deezer выключен на этом сервере (`DALYWAVE_DEEZER=false`): запросов нет совсем.
+    #[error("каталог Deezer выключен на этом сервере")]
+    Disabled,
 }
 
 impl DeezerError {
@@ -93,6 +96,8 @@ pub struct Deezer {
     retry_backoff: Duration,
     /// Ответы поиска для [`Self::search`]: путь запроса → когда получен и что пришло
     searches: SyncMutex<HashMap<String, (Instant, Value)>>,
+    /// `false` — каталог выключен: любой запрос сразу [`DeezerError::Disabled`], в сеть ничего не уходит
+    enabled: bool,
 }
 
 impl Deezer {
@@ -113,7 +118,18 @@ impl Deezer {
             quota_backoff: WINDOW,
             retry_backoff: Duration::from_millis(500),
             searches: SyncMutex::new(HashMap::new()),
+            enabled: true,
         })
+    }
+
+    /// Включён ли каталог (`DALYWAVE_DEEZER`). Выключенный клиент не ходит в сеть.
+    pub fn enabled(mut self, on: bool) -> Self {
+        self.enabled = on;
+        self
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
     }
 
     /// Короткие паузы между повторами — для тестов с заглушкой.
@@ -125,6 +141,9 @@ impl Deezer {
 
     /// GET с повторами. `path` — путь с параметрами, например `/artist/1/top?limit=10`.
     async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, DeezerError> {
+        if !self.enabled {
+            return Err(DeezerError::Disabled);
+        }
         let url = format!("{}{}", self.base, path);
         let mut attempt = 0;
         loop {

@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO tracks (isrc, recording_id, title, album_id, disc_number, track_position, duration_ms,\n                             source, fetched_at)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, 'local', now())\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Int2",
+        "Int2",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "034aeb7e908bb1f5fe960bf470fbf3169ef5c522e60ae0d972fc59862ecb6ab1"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_scans SET status = 'failed', message = 'проход прервался', finished_at = now()\n         WHERE status = 'running'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "1da9acaafe42d6f8404de7ae85782c58c9ed304afbfb4eb591742e897b70bc5b"
+}

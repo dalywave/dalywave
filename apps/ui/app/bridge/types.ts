@@ -7,7 +7,7 @@ import type {
   PasswordChange, ResetInfo, ResetPassword, SignInResult,
   AddPlaylistItems, AddedPlaylistItems, AdminAcquisition, AdminAcquisitionPage, AdminImportList, AdminOverview, AdminRecordingPage,
   AcquisitionStatus, AudioStatus, DownloaderToken, RecoOverview, RecoRunResult, RecoSettings,
-  RecoSettingsPatch, RecoTask, ResolveRequest, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
+  RecoSettingsPatch, RecoTask, ResolveRequest, ServerConfig, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, LibraryStatus, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
   ClientMessage, DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, PresaveResult, SavedAlbumPage, SearchResults, UpcomingList, SearchScope, ServerEvent, ServerEventType,
@@ -112,6 +112,11 @@ export type StreamResponse =
     status: 'acquiring' | 'waiting_for_downloader'
     acquisitionId: string | null
     queuePosition: number | null
+  }
+  | {
+    /** Копию файла делают (AVPlayer, своя музыка в формате, который плеер не играет): спросить снова */
+    status: 'preparing'
+    retryAfterMs?: number
   }
 
 /** Чем закончился запрос звука для трека */
@@ -564,6 +569,9 @@ export interface Bridge {
   /** Установщики приложений для компьютера (меню аккаунта на сайте): последние версии по платформам */
   desktopApps(): Promise<AppDownloads>
 
+  /** Что включено на сервере (без входа): каталог Deezer, загрузчик, своя музыка */
+  serverConfig(): Promise<ServerConfig>
+
   /** Загрузчик на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
   readonly downloader: Downloader | null
 
@@ -983,6 +991,10 @@ export interface Bridge {
     recordings(query?: { status?: AudioStatus, source?: string, verified?: boolean, q?: string, cursor?: string | null, limit?: number }): Promise<AdminRecordingPage>
     reacquire(recordingId: string, url?: string): Promise<AdminAcquisition>
     storage(): Promise<StorageOverview>
+    /** «Библиотека»: папки своей музыки, сканирование, файлы с ошибками */
+    library(): Promise<LibraryStatus>
+    /** Пересканировать папки своей музыки целиком */
+    rescanLibrary(): Promise<void>
     imports(): Promise<AdminImportList>
     settings(): Promise<ServerSettings>
     updateSettings(patch: ServerSettingsPatch): Promise<ServerSettings>

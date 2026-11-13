@@ -3,7 +3,7 @@
 use std::{sync::LazyLock, time::Duration};
 
 use axum::{Router, extract::State, http::StatusCode, routing::get};
-use dalywave_protocol::system::{Health, HealthStatus};
+use dalywave_protocol::system::{Health, HealthStatus, ServerConfig, StorageKind};
 use utoipa::OpenApi;
 
 use crate::{extract::Json, openapi::ApiDoc, state::AppState};
@@ -14,6 +14,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/healthz", get(healthz))
         .route("/openapi.json", get(openapi))
+        .route("/config", get(config))
 }
 
 #[utoipa::path(
@@ -43,6 +44,27 @@ pub async fn healthz(State(st): State<AppState>) -> (StatusCode, Json<Health>) {
         uptime_s: st.started.elapsed().as_secs(),
     };
     (code, Json(health))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/config",
+    tag = "system",
+    responses((status = 200, description = "Что включено на этом сервере: каталог Deezer, загрузчик, своя музыка", body = ServerConfig)),
+)]
+pub async fn config(State(st): State<AppState>) -> Json<ServerConfig> {
+    let f = st.config.features;
+    Json(ServerConfig {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        deezer: f.deezer,
+        downloader: f.downloader,
+        library: !st.storage.music_dirs().is_empty(),
+        storage: match st.storage.kind() {
+            crate::config::StorageKind::S3 => StorageKind::S3,
+            crate::config::StorageKind::Fs => StorageKind::Fs,
+            crate::config::StorageKind::Memory => StorageKind::Memory,
+        },
+    })
 }
 
 #[utoipa::path(

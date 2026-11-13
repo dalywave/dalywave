@@ -20,11 +20,13 @@ const sources = ref<Sources | null>(null)
 const reco = ref<RecoOverview | null>(null)
 const { failed, attempt } = useAttempts()
 
+// Загрузчик выключен на сервере: ни источников, ни «качать некому»
+const server = useServerStore()
 const loadOverview = () => attempt('overview', () => bridge.admin.overview(), v => (overview.value = v))
 function loadAll() {
   void attempt('health', () => bridge.admin.health(), v => (health.value = v))
   void loadOverview()
-  void attempt('sources', () => bridge.admin.sources(), v => (sources.value = v))
+  if (server.downloader) void attempt('sources', () => bridge.admin.sources(), v => (sources.value = v))
   void attempt('reco', () => bridge.admin.reco(), v => (reco.value = v))
   void refreshCounts()
 }
@@ -63,7 +65,7 @@ const problems = computed<Problem[]>(() => {
   }
   if (sources.value?.server.enabled && sources.value.server.reachable === false) out.push({ key: 'fetcher', icon: 'ph:cloud-warning', tone: 'bad', text: t('problem.fetcher'), action: t('problem.sources'), to: '/admin/sources' })
   const failedJobs = overview.value?.lanes.reduce((s, l) => s + l.failed, 0) ?? 0
-  if (failedJobs) out.push({ key: 'jobs', icon: 'ph:warning-circle', tone: 'bad', text: t('problem.jobs', { n: failedJobs }), action: t('problem.open'), to: '/admin/downloads?status=failed' })
+  if (failedJobs) out.push({ key: 'jobs', icon: 'ph:warning-circle', tone: 'bad', text: t('problem.jobs', { n: failedJobs }), action: t('problem.open'), to: server.downloader ? '/admin/downloads?status=failed' : '/admin/settings' })
   for (const l of overview.value?.lanes ?? []) {
     if (l.paused && l.queued) out.push({ key: `lane-${l.lane}`, icon: 'ph:pause-circle', tone: 'warn', text: t('problem.paused', { title: l.title, n: formatNumber(l.queued, lang.value) }), action: t('problem.resume'), run: () => resume(l) })
   }
@@ -179,7 +181,7 @@ const fetcherVersion = computed(() => {
       </AdminSection>
       <AdminSection :title="t('sys.title')">
         <dl class="ap-kv">
-          <div>
+          <div v-if="server.downloader">
             <dt>{{ t('sys.downloaders') }}</dt>
             <dd>
               <template v-if="sources">{{ online ? t('sys.online', { n: online }) : t('sys.offline') }}<span v-if="fetcherVersion" class="ap-muted"> · yt-dlp {{ fetcherVersion }}</span></template>

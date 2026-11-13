@@ -7,11 +7,11 @@ use utoipa::{
 };
 
 use crate::routes::{
-    accounts, acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect,
-    describe, downloads, embed, events, export, fetcher, friends, home, images, imports, info, jam,
-    library, lyrics, notifications, offline, overlay, playlist_folders, playlist_set, playlists,
-    presaves, queue, reco, recognize, rewind, settings, share, sources, story, stream, sync,
-    system, taste, tv, updates, versions, video, wave, wave_presets, ws,
+    accounts, acquisitions, admin, admin_catalog, admin_library, analysis, auth, catalog, collab,
+    connect, describe, downloads, embed, events, export, fetcher, friends, home, images, imports,
+    info, jam, library, lyrics, notifications, offline, overlay, playlist_folders, playlist_set,
+    playlists, presaves, queue, reco, recognize, rewind, settings, share, sources, story, stream,
+    sync, system, taste, tv, updates, versions, video, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -20,6 +20,7 @@ use crate::routes::{
     paths(
         system::healthz,
         system::openapi,
+        system::config,
         updates::check,
         updates::upload,
         updates::register,
@@ -77,6 +78,8 @@ use crate::routes::{
         admin_catalog::imports,
         admin_catalog::settings,
         admin_catalog::update_settings,
+        admin_library::status,
+        admin_library::rescan,
         reco::reco_overview,
         reco::update_reco_settings,
         reco::run_reco,

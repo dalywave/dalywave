@@ -7,6 +7,8 @@ definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
 const toast = useToast()
+// Докачка по подпискам — релизы Deezer и загрузчик: без них настройки нет
+const server = useServerStore()
 const lang = useLang()
 const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
@@ -104,7 +106,7 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
     </header>
 
     <AdminState :loading="!settings && !failed.settings" :error="failed.settings && !settings" :rows="6" @retry="loadSettings">
-      <SettingsGroup v-if="settings" :title="t('follow.title')" :footnote="t('follow.note')">
+      <SettingsGroup v-if="settings && server.deezer && server.downloader" :title="t('follow.title')" :footnote="t('follow.note')">
         <SettingsRow v-for="k in POLICY" :key="k" :title="t(`follow.${k}`)">
           <UiSwitch :model-value="settings.followPolicy[k]" :label="t(`follow.${k}`)" hide-label @update:model-value="v => setPolicy(k, v)" />
         </SettingsRow>

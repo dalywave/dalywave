@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS \"id!\" FROM track_artists ta\n               JOIN tracks t ON t.id = ta.track_id\n               JOIN recordings r ON r.id = t.recording_id AND r.audio_status = 'ready'\n               LEFT JOIN albums al ON al.id = t.album_id\n               WHERE ta.artist_id = $1 AND ta.role = 'main'\n               ORDER BY (SELECT count(*) FROM play_events p WHERE p.track_id = t.id\n                         AND p.started_at > now() - interval '180 days') DESC,\n                        al.release_date DESC NULLS LAST, t.disc_number, t.track_position NULLS LAST\n               LIMIT 10",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d87c7545d9110217d53042be767505bb0ec2c25be152d7da103b49cac21b5074"
+}

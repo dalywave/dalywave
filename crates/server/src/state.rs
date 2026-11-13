@@ -48,12 +48,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// Хранилище — из `S3_*`; без настроек — в памяти процесса.
+    /// Хранилище — S3, своя папка или память процесса (`DALYWAVE_STORAGE`), своя музыка — `DALYWAVE_MUSIC_DIRS`.
     pub fn new(db: PgPool, config: Config) -> anyhow::Result<Self> {
-        let storage = match &config.s3 {
-            Some(s3) => Storage::from_config(s3)?,
-            None => Storage::memory(),
-        };
+        let storage = Storage::new(&config)?;
         Self::with_storage(db, config, storage)
     }
 
@@ -71,7 +68,8 @@ impl AppState {
                 .map(|c| Arc::new(Oidc::new(c.clone(), http.clone())))
                 .collect(),
         );
-        let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_api)?;
+        let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_api)?
+            .enabled(config.features.deezer);
         let ml = Ml::new(&config.ml.url)?;
         let lrclib = Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?;
         Ok(Self {

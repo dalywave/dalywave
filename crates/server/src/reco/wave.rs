@@ -70,7 +70,9 @@ impl<'a> Env<'a> {
         deezer: &'a Deezer,
         server_fetcher: bool,
     ) -> Result<Self, sqlx::Error> {
-        let can_acquire = server_fetcher || downloaders::online(db).await? > 0;
+        // Без загрузчика на этом сервере качать некому: волна — из того, что уже есть
+        let can_acquire =
+            crate::features::downloader() && (server_fetcher || downloaders::online(db).await? > 0);
         Ok(Self {
             db,
             deezer,
@@ -471,6 +473,8 @@ type Raw = (Uuid, Origin, f32);
 
 /// Сколько подходящих под границы искать у граней вкуса (делится по их весу).
 const FIT_BUDGET: f32 = 300.0;
+/// Меньше кандидатов — волна добирает остальное из всего, что есть на сервере.
+const SMALL_POOL: usize = 60;
 
 fn push_neighbours(out: &mut Vec<Raw>, near: Vec<Neighbour>, origin: &Origin) {
     out.extend(
@@ -652,6 +656,28 @@ async fn pool(
         .fetch_all(db)
         .await?;
         raw.extend(top.into_iter().map(|id| (id, Origin::Favorite, 0.5)));
+    }
+    if raw.len() < SMALL_POOL {
+        // Маленькая медиатека или новый человек (своя папка без Deezer): вкуса и соседей ещё мало —
+        // добираем тем, что есть на сервере, в своём для сессии порядке. Подпись — «Новое для тебя»
+        let salt = format!("{}:{}", session.id, session.state.step / 20);
+        let local = sqlx::query_scalar!(
+            r#"SELECT t.id AS "id!" FROM tracks t
+               WHERE EXISTS (SELECT 1 FROM audio_files f WHERE f.recording_id = t.recording_id)
+               ORDER BY md5(t.id::text || $1) LIMIT 200"#,
+            salt,
+        )
+        .fetch_all(db)
+        .await?;
+        raw.extend(local.into_iter().map(|id| {
+            (
+                id,
+                Origin::Facet {
+                    artists: Vec::new(),
+                },
+                0.3,
+            )
+        }));
     }
     Ok(raw)
 }

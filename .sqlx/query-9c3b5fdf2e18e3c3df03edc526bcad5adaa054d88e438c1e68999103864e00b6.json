@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id AS \"id!\" FROM tracks t\n               WHERE EXISTS (SELECT 1 FROM audio_files f WHERE f.recording_id = t.recording_id)\n               ORDER BY md5(t.id::text || $1) LIMIT 200",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9c3b5fdf2e18e3c3df03edc526bcad5adaa054d88e438c1e68999103864e00b6"
+}

@@ -42,7 +42,8 @@ const state = computed(() => {
 })
 
 /** Вне приложения раздел — подсказка администратору с компьютера; остальным и на телефоне он лишний */
-const shown = computed(() => dl.available || (auth.isAdmin && !ui.isPhone))
+const server = useServerStore()
+const shown = computed(() => server.downloader && (dl.available || (auth.isAdmin && !ui.isPhone)))
 
 /** Пауза имеет смысл, пока загрузчик работает или вот-вот начнёт */
 const canPause = computed(() => enabled.value && ['working', 'idle', 'paused', 'offline', 'resting', 'starting', 'restarting'].includes(view.value.kind))

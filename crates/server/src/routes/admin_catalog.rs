@@ -334,24 +334,25 @@ pub async fn preview(
     ),
 )]
 pub async fn storage(State(st): State<AppState>) -> AppResult<Json<StorageOverview>> {
+    // Своя музыка лежит в своих папках, а не в хранилище: её файлы здесь не считаются
     let k = sqlx::query!(
         r#"SELECT
-              (SELECT count(*) FROM audio_files) AS "audio_files!",
-              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files)::bigint AS "audio_bytes!",
+              (SELECT count(*) FROM audio_files WHERE source <> 'local') AS "audio_files!",
+              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files WHERE source <> 'local')::bigint AS "audio_bytes!",
               (SELECT count(*) FROM albums WHERE cover_key IS NOT NULL) AS "covers!",
               (SELECT COALESCE(sum(cover_bytes), 0) FROM albums)::bigint AS "cover_bytes!",
               (SELECT count(*) FROM artists WHERE picture_key IS NOT NULL) AS "photos!",
               (SELECT COALESCE(sum(picture_bytes), 0) FROM artists)::bigint AS "photo_bytes!",
-              (SELECT count(*) FROM audio_files f WHERE NOT EXISTS
+              (SELECT count(*) FROM audio_files f WHERE f.source <> 'local' AND NOT EXISTS
                  (SELECT 1 FROM recordings r WHERE r.primary_file_id = f.id)) AS "replaced!",
-              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files f WHERE NOT EXISTS
+              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files f WHERE f.source <> 'local' AND NOT EXISTS
                  (SELECT 1 FROM recordings r WHERE r.primary_file_id = f.id))::bigint AS "replaced_bytes!""#
     )
     .fetch_one(&st.db)
     .await?;
     let codecs = sqlx::query!(
         r#"SELECT codec AS key, count(*) AS "files!", COALESCE(sum(size_bytes), 0)::bigint AS "bytes!"
-           FROM audio_files GROUP BY codec ORDER BY 3 DESC"#
+           FROM audio_files WHERE source <> 'local' GROUP BY codec ORDER BY 3 DESC"#
     )
     .fetch_all(&st.db)
     .await?
@@ -364,7 +365,7 @@ pub async fn storage(State(st): State<AppState>) -> AppResult<Json<StorageOvervi
     .collect();
     let sources = sqlx::query!(
         r#"SELECT source AS key, count(*) AS "files!", COALESCE(sum(size_bytes), 0)::bigint AS "bytes!"
-           FROM audio_files GROUP BY source ORDER BY 3 DESC"#
+           FROM audio_files WHERE source <> 'local' GROUP BY source ORDER BY 3 DESC"#
     )
     .fetch_all(&st.db)
     .await?
@@ -380,13 +381,14 @@ pub async fn storage(State(st): State<AppState>) -> AppResult<Json<StorageOvervi
         r#"WITH rec_artist AS (
               SELECT DISTINCT ON (t.recording_id) t.recording_id, ta.artist_id
               FROM tracks t JOIN track_artists ta ON ta.track_id = t.id AND ta.role = 'main'
-              WHERE t.recording_id IN (SELECT DISTINCT recording_id FROM audio_files)
+              WHERE t.recording_id IN (SELECT DISTINCT recording_id FROM audio_files WHERE source <> 'local')
               ORDER BY t.recording_id, (t.album_id IS NULL), ta.position, t.id
            )
            SELECT a.id, a.name, count(f.id) AS "files!", COALESCE(sum(f.size_bytes), 0)::bigint AS "bytes!"
            FROM audio_files f
            JOIN rec_artist ra ON ra.recording_id = f.recording_id
            JOIN artists a ON a.id = ra.artist_id
+           WHERE f.source <> 'local'
            GROUP BY a.id, a.name
            ORDER BY 4 DESC, a.name
            LIMIT 12"#
@@ -408,7 +410,7 @@ pub async fn storage(State(st): State<AppState>) -> AppResult<Json<StorageOvervi
                   COALESCE(sum(f.size_bytes), 0)::bigint AS "bytes!"
            FROM generate_series((now() AT TIME ZONE 'UTC')::date - 29, (now() AT TIME ZONE 'UTC')::date,
                                 interval '1 day') AS d(day)
-           LEFT JOIN audio_files f ON (f.created_at AT TIME ZONE 'UTC')::date = d.day::date
+           LEFT JOIN audio_files f ON (f.created_at AT TIME ZONE 'UTC')::date = d.day::date AND f.source <> 'local'
            GROUP BY d.day ORDER BY d.day"#
     )
     .fetch_all(&st.db)

@@ -293,6 +293,10 @@ pub async fn match_track(
     key: &str,
     waiting: &mut AlbumWaiting,
 ) -> Result<Outcome, JobError> {
+    // Без Deezer — только то, что уже есть на сервере: своя музыка и скачанное
+    if !deezer.is_enabled() {
+        return Ok(on_server_track(db, w).await?);
+    }
     if let Some(album) = &w.album {
         let k = (normalize(&w.artist), normalize(album));
         if let Some(n) = waiting.get_mut(&k) {
@@ -395,6 +399,101 @@ pub async fn match_track(
     }
 }
 
+/// Трек среди того, что есть на сервере (своя музыка, скачанное): ISRC, затем название, артист и длительность.
+async fn on_server_track(db: &PgPool, w: &Wanted) -> Result<Outcome, sqlx::Error> {
+    if let Some(isrc) = &w.isrc {
+        let hit = sqlx::query_scalar!(
+            "SELECT t.id FROM tracks t JOIN recordings r ON r.id = t.recording_id
+             WHERE t.isrc = upper($1) AND r.audio_status = 'ready' LIMIT 1",
+            isrc
+        )
+        .fetch_optional(db)
+        .await?;
+        if hit.is_some() {
+            return Ok(Outcome {
+                track_id: hit,
+                confidence: Some(1.0),
+                resolved_by: "library",
+                ..Outcome::default()
+            });
+        }
+    }
+    let rows = sqlx::query!(
+        r#"SELECT t.id, t.title, t.title_version, t.duration_ms, t.isrc, al.title AS "album?",
+                  ARRAY(SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
+                        WHERE ta.track_id = t.id ORDER BY ta.position, a.name) AS "artists!"
+           FROM tracks t JOIN recordings r ON r.id = t.recording_id
+           LEFT JOIN albums al ON al.id = t.album_id
+           WHERE search_norm(t.title) = search_norm($1) AND r.audio_status = 'ready'
+           LIMIT 30"#,
+        matching::base_title(&w.title),
+    )
+    .fetch_all(db)
+    .await?;
+    let best = rows
+        .into_iter()
+        .map(|r| {
+            let c = Cand {
+                deezer_id: 0,
+                title: r.title,
+                version: r.title_version,
+                artists: r.artists,
+                album: r.album,
+                duration_ms: Some(r.duration_ms),
+                isrc: r.isrc,
+                rank: 0,
+            };
+            (r.id, matching::score_track(w, &c))
+        })
+        .max_by(|a, b| a.1.total_cmp(&b.1));
+    Ok(match best {
+        Some((id, score)) if score >= ACCEPT => Outcome {
+            track_id: Some(id),
+            confidence: Some(score),
+            resolved_by: "library",
+            ..Outcome::default()
+        },
+        other => Outcome {
+            confidence: other.map(|(_, s)| s),
+            resolved_by: "library",
+            ..Outcome::default()
+        },
+    })
+}
+
+/// Альбом среди того, что есть на сервере.
+async fn on_server_album(db: &PgPool, item: &Pending) -> Result<Outcome, sqlx::Error> {
+    let best = sqlx::query!(
+        "SELECT al.id, al.title, a.name FROM albums al JOIN artists a ON a.id = al.artist_id
+         WHERE search_norm(al.title) = search_norm($1)
+           AND EXISTS (SELECT 1 FROM tracks t JOIN recordings r ON r.id = t.recording_id
+                       WHERE t.album_id = al.id AND r.audio_status = 'ready')
+         LIMIT 20",
+        matching::base_title(&item.title),
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(|r| {
+        let s = matching::score_album(&item.artist, &item.title, &r.title, Some(&r.name));
+        (r.id, s)
+    })
+    .max_by(|a, b| a.1.total_cmp(&b.1));
+    Ok(match best {
+        Some((id, s)) if s >= ACCEPT => Outcome {
+            album_id: Some(id),
+            confidence: Some(s),
+            resolved_by: "library",
+            ..Outcome::default()
+        },
+        other => Outcome {
+            confidence: other.map(|(_, s)| s),
+            resolved_by: "library",
+            ..Outcome::default()
+        },
+    })
+}
+
 /// Лучший трек своего каталога с тем же названием.
 async fn local_track(db: &PgPool, w: &Wanted) -> Result<Option<(Uuid, i64, f32)>, sqlx::Error> {
     if let Some(isrc) = &w.isrc {
@@ -449,6 +548,9 @@ async fn match_album(
     item: &Pending,
     key: &str,
 ) -> Result<Outcome, JobError> {
+    if !deezer.is_enabled() {
+        return Ok(on_server_album(db, item).await?);
+    }
     let (deezer_id, score) = match cached(db, key).await? {
         Some(Cached {
             deezer_id: Some(id),
@@ -518,6 +620,25 @@ async fn match_artist(
     item: &Pending,
     key: &str,
 ) -> Result<Outcome, JobError> {
+    if !deezer.is_enabled() {
+        let id = sqlx::query_scalar!(
+            "SELECT a.id FROM artists a
+             WHERE search_norm(a.name) = search_norm($1)
+               AND EXISTS (SELECT 1 FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                           JOIN recordings r ON r.id = t.recording_id
+                           WHERE ta.artist_id = a.id AND r.audio_status = 'ready')
+             LIMIT 1",
+            item.artist.trim(),
+        )
+        .fetch_optional(db)
+        .await?;
+        return Ok(Outcome {
+            artist_id: id,
+            confidence: id.map(|_| 1.0),
+            resolved_by: "library",
+            ..Outcome::default()
+        });
+    }
     let cached_id = cached(db, key).await?.and_then(|c| c.deezer_id);
     let deezer_id = match cached_id {
         Some(id) => Some(id),

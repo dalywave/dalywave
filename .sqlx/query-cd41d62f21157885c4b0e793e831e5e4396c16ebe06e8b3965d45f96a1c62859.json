@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id FROM tracks t JOIN recordings r ON r.id = t.recording_id\n             WHERE t.isrc = upper($1) AND r.audio_status = 'ready' LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cd41d62f21157885c4b0e793e831e5e4396c16ebe06e8b3965d45f96a1c62859"
+}

@@ -318,7 +318,7 @@ fn summary(source: Source, row: &AnalysisRow, a: &Analysis) -> Value {
 /// Задача `analyze_full`: файл записи по подписанной ссылке → полный анализ.
 pub async fn analyze_full(ctx: Arc<Context>, job: JobRow) -> JobResult {
     let p: AnalyzeFullPayload = job.payload()?;
-    let Some(file) = acquire::playable_file(&ctx.db, p.recording_id).await? else {
+    let Some(file) = acquire::primary_file(&ctx.db, p.recording_id).await? else {
         return Err(JobError::permanent("у записи нет готового файла"));
     };
     let done = sqlx::query_scalar!(

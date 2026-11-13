@@ -86,6 +86,10 @@ pub async fn search(
     let scope = q.scope.unwrap_or_default();
     let user = principal.user.id;
     let found = match scope {
+        // Без Deezer каталог сервера — то, что на нём есть: своя музыка и уже скачанное
+        SearchScope::Catalog if !st.deezer.is_enabled() => {
+            find::library(&st.db, user, text, types, limit).await?
+        }
         SearchScope::Catalog => {
             find::catalog(&st.db, &st.deezer, text, types, limit as u32).await?
         }
@@ -123,12 +127,29 @@ pub async fn artist(
     let artist = views::artist(&st.db, id, user)
         .await?
         .ok_or(AppError::NotFound)?;
-    let top_ids = sqlx::query_scalar!(
+    let mut top_ids = sqlx::query_scalar!(
         "SELECT track_id FROM artist_top_tracks WHERE artist_id = $1 ORDER BY position",
         id
     )
     .fetch_all(&st.db)
     .await?;
+    // Артист своей музыки: популярное — что чаще слушают на этом сервере, затем по альбомам
+    if top_ids.is_empty() && artist.deezer_id.is_none() {
+        top_ids = sqlx::query_scalar!(
+            r#"SELECT t.id AS "id!" FROM track_artists ta
+               JOIN tracks t ON t.id = ta.track_id
+               JOIN recordings r ON r.id = t.recording_id AND r.audio_status = 'ready'
+               LEFT JOIN albums al ON al.id = t.album_id
+               WHERE ta.artist_id = $1 AND ta.role = 'main'
+               ORDER BY (SELECT count(*) FROM play_events p WHERE p.track_id = t.id
+                         AND p.started_at > now() - interval '180 days') DESC,
+                        al.release_date DESC NULLS LAST, t.disc_number, t.track_position NULLS LAST
+               LIMIT 10"#,
+            id
+        )
+        .fetch_all(&st.db)
+        .await?;
+    }
     // Анонсы (дата выхода у слушателя ещё не наступила) — отдельно, в «Скоро»
     let mut conn = st.db.acquire().await?;
     let today = crate::presave::user_today(&mut conn, user, chrono::Utc::now()).await?;

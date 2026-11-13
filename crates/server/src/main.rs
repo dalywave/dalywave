@@ -30,6 +30,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("run migrations")?;
 
+    dalywave_server::features::set(config.features);
     let state = AppState::new(db, config)?;
     tracing::info!(
         public_url = %state.config.public_url,
@@ -40,6 +41,9 @@ async fn main() -> anyhow::Result<()> {
         password = state.config.admin_password.is_some(),
         static_dir = ?state.config.static_dir,
         storage = ?state.storage,
+        deezer = state.config.features.deezer,
+        downloader = state.config.features.downloader,
+        music_dirs = ?state.config.library.dirs,
         "configured"
     );
     if state.oidc.is_empty() && !state.config.local_auth && state.config.admin_password.is_none() {
@@ -48,9 +52,9 @@ async fn main() -> anyhow::Result<()> {
         );
     }
     if state.storage.is_memory() {
-        tracing::warn!("S3 is not configured: files are kept in memory and lost on restart");
+        tracing::warn!("storage is not configured: files are kept in memory and lost on restart");
     } else if let Err(e) = state.storage.ensure_bucket().await {
-        tracing::warn!(error = %e, "S3 bucket check failed");
+        tracing::warn!(error = %e, "storage check failed");
     }
     let listener_task = realtime::spawn_listener(state.db.clone(), Arc::clone(&state.hub));
 

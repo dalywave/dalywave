@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, codec, lossless, bitrate_kbps FROM audio_files WHERE recording_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "codec",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "codec"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "lossless",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "lossless"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "bitrate_kbps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "audio_files",
+            "name": "bitrate_kbps"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "743bd4e52ae06fe4a4edaf4f98d4ed86d9260bd901f9d8df811f01cf6315a63f"
+}

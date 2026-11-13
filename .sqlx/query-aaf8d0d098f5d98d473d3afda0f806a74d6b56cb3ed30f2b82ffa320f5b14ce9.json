@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_files SET analyzed_at = now() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aaf8d0d098f5d98d473d3afda0f806a74d6b56cb3ed30f2b82ffa320f5b14ce9"
+}

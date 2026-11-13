@@ -52,6 +52,8 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::NOTIFY_SEND, crate::notify::run_send)
         .register(kind::NOTIFY_PUSH, crate::notify::run_push)
         .register(kind::ALBUM_MOTION, crate::video::motion::run)
+        .register(kind::LIBRARY_SCAN, crate::library::scan::run)
+        .register(kind::LIBRARY_ANALYZE, crate::library::run_analyze)
         // Клипы ищет и нарезает загрузчик на Mac: YouTube не отдаёт видео адресу дата-центра
         .elsewhere(kind::CLIP);
     if fetcher.server {

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n              (SELECT count(*) FROM audio_files) AS \"audio_files!\",\n              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files)::bigint AS \"audio_bytes!\",\n              (SELECT count(*) FROM albums WHERE cover_key IS NOT NULL) AS \"covers!\",\n              (SELECT COALESCE(sum(cover_bytes), 0) FROM albums)::bigint AS \"cover_bytes!\",\n              (SELECT count(*) FROM artists WHERE picture_key IS NOT NULL) AS \"photos!\",\n              (SELECT COALESCE(sum(picture_bytes), 0) FROM artists)::bigint AS \"photo_bytes!\",\n              (SELECT count(*) FROM audio_files f WHERE NOT EXISTS\n                 (SELECT 1 FROM recordings r WHERE r.primary_file_id = f.id)) AS \"replaced!\",\n              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files f WHERE NOT EXISTS\n                 (SELECT 1 FROM recordings r WHERE r.primary_file_id = f.id))::bigint AS \"replaced_bytes!\"",
+  "query": "SELECT\n              (SELECT count(*) FROM audio_files WHERE source <> 'local') AS \"audio_files!\",\n              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files WHERE source <> 'local')::bigint AS \"audio_bytes!\",\n              (SELECT count(*) FROM albums WHERE cover_key IS NOT NULL) AS \"covers!\",\n              (SELECT COALESCE(sum(cover_bytes), 0) FROM albums)::bigint AS \"cover_bytes!\",\n              (SELECT count(*) FROM artists WHERE picture_key IS NOT NULL) AS \"photos!\",\n              (SELECT COALESCE(sum(picture_bytes), 0) FROM artists)::bigint AS \"photo_bytes!\",\n              (SELECT count(*) FROM audio_files f WHERE f.source <> 'local' AND NOT EXISTS\n                 (SELECT 1 FROM recordings r WHERE r.primary_file_id = f.id)) AS \"replaced!\",\n              (SELECT COALESCE(sum(size_bytes), 0) FROM audio_files f WHERE f.source <> 'local' AND NOT EXISTS\n                 (SELECT 1 FROM recordings r WHERE r.primary_file_id = f.id))::bigint AS \"replaced_bytes!\"",
   "describe": {
     "columns": [
       {
@@ -66,5 +66,5 @@
       null
     ]
   },
-  "hash": "4c1b856a238fb12559f81b3ba5b8bf073d2f5f2ef3ac9167ca55fecf53133fa3"
+  "hash": "dc6b91d1779e517a3f046a6ab68d473a907bce325b74e5adffe739a5171b5d22"
 }

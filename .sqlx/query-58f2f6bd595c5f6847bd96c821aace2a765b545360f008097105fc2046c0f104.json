@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE audio_files SET storage_key = $2, source_title = COALESCE($3, source_title) WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "58f2f6bd595c5f6847bd96c821aace2a765b545360f008097105fc2046c0f104"
+}

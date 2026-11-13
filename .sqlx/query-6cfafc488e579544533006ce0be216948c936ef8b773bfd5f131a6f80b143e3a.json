@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artists a WHERE a.source = 'local'\n           AND NOT EXISTS (SELECT 1 FROM track_artists WHERE artist_id = a.id)\n           AND NOT EXISTS (SELECT 1 FROM albums WHERE artist_id = a.id)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6cfafc488e579544533006ce0be216948c936ef8b773bfd5f131a6f80b143e3a"
+}
