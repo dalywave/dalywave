@@ -328,3 +328,94 @@ async fn downloads_for_people_with_a_role(db: PgPool) {
         assert_eq!(res.status, StatusCode::NOT_FOUND, "{path}");
     }
 }
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn stream_deck_plugin_is_a_release_without_signature(db: PgPool) {
+    let app = app(db).await;
+    let auth = Auth::Bearer(TOKEN.into());
+    let me = app.listener("fan").await;
+    let file = "DalyWave_0.2.0.streamDeckPlugin";
+
+    // Пары не смешиваются: плагин — только streamdeck/universal
+    for (target, arch) in [
+        ("streamdeck", "x86_64"),
+        ("darwin", "universal"),
+        ("streamdeck", "aarch64"),
+    ] {
+        let res = app
+            .post(
+                "/api/releases/uploads",
+                json!({ "target": target, "arch": arch, "version": "0.2.0", "fileName": file }),
+                &auth,
+            )
+            .await;
+        assert_eq!(res.status, StatusCode::BAD_REQUEST, "{target}/{arch}");
+    }
+
+    upload_file(&app, "streamdeck", "universal", "0.2.0", file).await;
+    // Установщик плагина — тот же файл, и только .streamDeckPlugin
+    let plugin = |installer: Option<&str>| {
+        json!({
+            "target": "streamdeck", "arch": "universal", "version": "0.2.0",
+            "fileName": file, "installerFileName": installer,
+        })
+    };
+    let res = app.post("/api/releases", plugin(None), &auth).await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST, "{}", res.text);
+    upload_file(&app, "streamdeck", "universal", "0.2.0", "DalyWave.dmg").await;
+    let res = app
+        .post("/api/releases", plugin(Some("DalyWave.dmg")), &auth)
+        .await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST, "{}", res.text);
+    // Приложениям подпись по-прежнему нужна
+    upload_file(&app, "darwin", "aarch64", "0.2.0", "DalyWave.app.tar.gz").await;
+    let mut unsigned = release("0.2.0", "DalyWave.app.tar.gz");
+    unsigned["signature"] = json!("");
+    let res = app.post("/api/releases", unsigned, &auth).await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST, "{}", res.text);
+
+    // Без подписи — можно
+    let res = app.post("/api/releases", plugin(Some(file)), &auth).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["target"], "streamdeck");
+    assert_eq!(res.body["installerSizeBytes"], 128);
+
+    // Плагин может спросить о новой версии
+    let res = app
+        .get("/api/updates/streamdeck/universal/0.1.0", &Auth::None)
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["version"], "0.2.0");
+    let res = app
+        .get("/api/updates/streamdeck/universal/0.2.0", &Auth::None)
+        .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT);
+
+    // На сайте — после Mac
+    publish_mac(&app, "0.2.0").await;
+    let res = app.get("/api/downloads", &me).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let apps = res.body["apps"].as_array().unwrap();
+    let slugs: Vec<_> = apps
+        .iter()
+        .map(|a| a["platform"].as_str().unwrap())
+        .collect();
+    assert_eq!(slugs, ["mac", "streamdeck"]);
+    let deck = &apps[1];
+    assert_eq!(deck["os"], "streamdeck");
+    assert_eq!(deck["arch"], "universal");
+    assert_eq!(deck["fileName"], "DalyWave-0.2.0.streamDeckPlugin");
+    assert_eq!(deck["minOsVersion"], "7.6");
+    assert_eq!(deck["url"], "/api/downloads/streamdeck/latest");
+    let res = app.get("/api/downloads/streamdeck/latest", &me).await;
+    assert_eq!(res.status, StatusCode::FOUND, "{}", res.text);
+    let url = res.location();
+    assert!(
+        url.contains("/releases/streamdeck/universal/0.2.0/DalyWave_0.2.0.streamDeckPlugin?"),
+        "{url}"
+    );
+    assert!(
+        url.contains("filename%3D%22DalyWave-0.2.0.streamDeckPlugin%22"),
+        "{url}"
+    );
+}

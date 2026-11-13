@@ -1,0 +1,29 @@
+{
+  "name": "dalywave-streamdeck",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "watch": "bun scripts/build.ts --watch",
+    "pack": "bun scripts/pack.ts",
+    "glyphs": "bun scripts/glyphs.ts",
+    "preview": "bun scripts/preview.ts",
+    "typecheck": "tsc -p .",
+    "test": "bun test",
+    "link": "bun scripts/build.ts && streamdeck link rest.daly.wave.sdPlugin && streamdeck restart rest.daly.wave"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "3.0.4",
+    "ws": "8"
+  },
+  "devDependencies": {
+    "@elgato/cli": "1.10.4",
+    "@iconify-json/ph": "1.2.2",
+    "@types/bun": "^1.4.4",
+    "@types/node": "22",
+    "@types/ws": "^8.18.2",
+    "playwright-core": "1.65.0",
+    "typescript": "5"
+  }
+}

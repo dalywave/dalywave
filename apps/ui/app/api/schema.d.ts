@@ -3752,15 +3752,15 @@ export interface components {
          */
         ApnsEnvironment: "sandbox" | "production";
         AppDownload: {
-            /** @description `aarch64` или `x86_64` */
+            /** @description `aarch64`, `x86_64` или `universal` (плагин) */
             arch: string;
             /** @description Под каким именем файл сохранится, например `DalyWave-0.2.0.dmg` */
             fileName: string;
-            /** @description Минимальная версия системы: `13` — macOS 13, `10` — Windows 10 */
+            /** @description Минимальная версия системы: `13` — macOS 13, `10` — Windows 10, у плагина — Stream Deck `7.6` */
             minOsVersion: string;
-            /** @description `macos` или `windows` */
+            /** @description `macos`, `windows` или `streamdeck` */
             os: string;
-            /** @description `mac` (Apple silicon), `mac-intel`, `windows` */
+            /** @description `mac` (Apple silicon), `mac-intel`, `windows`, `streamdeck` (плагин Stream Deck) */
             platform: string;
             /** Format: date-time */
             publishedAt: string;
@@ -4683,7 +4683,7 @@ export interface components {
             token: string;
         };
         Downloads: {
-            /** @description Платформы, для которых есть установщик; порядок — Mac, Mac Intel, Windows */
+            /** @description Платформы, для которых есть установщик; порядок — Mac, Mac Intel, Windows, Stream Deck */
             apps: components["schemas"]["AppDownload"][];
         };
         /** @description Копия плейлиста или микса — обычный плейлист человека. */
@@ -6214,7 +6214,7 @@ export interface components {
             id?: string | null;
         };
         /** @enum {string} */
-        Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android" | "watchos" | "tvos";
+        Platform: "web" | "macos" | "windows" | "linux" | "ios" | "ipados" | "android" | "watchos" | "tvos" | "streamdeck";
         /** @description Что играет: альбом, плейлист, волна… */
         PlayContext: {
             id?: string | null;
@@ -6741,11 +6741,11 @@ export interface components {
             url: string;
         };
         ReleaseUploadRequest: {
-            /** @description `aarch64`, `x86_64`, `i686`, `armv7` */
+            /** @description `aarch64`, `x86_64`, `i686`, `armv7`; у `streamdeck` — только `universal` */
             arch: string;
             /** @description Имя файла обновления, например `DalyWave.app.tar.gz` или `DalyWave_0.2.0_x64-setup.exe` */
             fileName: string;
-            /** @description `darwin`, `windows`, `linux` */
+            /** @description `darwin`, `windows`, `linux`; `streamdeck` — плагин Stream Deck */
             target: string;
             /** @description SemVer, например `0.2.0` */
             version: string;
@@ -11280,7 +11280,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description `mac`, `mac-intel` или `windows` */
+                /** @description `mac`, `mac-intel`, `windows` или `streamdeck` */
                 platform: string;
             };
             cookie?: never;

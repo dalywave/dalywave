@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "rest.daly.wave.volume",
+  "items": [
+    { "key": "pulse", "type": "pixmap", "rect": [0, 0, 200, 100], "value": "imgs/layout/pulse.svg", "opacity": 0, "zOrder": 0 },
+    { "key": "icon", "type": "pixmap", "rect": [12, 14, 30, 30], "zOrder": 1 },
+    { "key": "level", "type": "text", "rect": [50, 14, 142, 30], "alignment": "left", "color": "#f3f5f9", "font": { "size": 22, "weight": 700 }, "text-overflow": "ellipsis", "zOrder": 1 },
+    { "key": "bar", "type": "bar", "rect": [12, 54, 176, 6], "subtype": 0, "border_w": 0, "bar_bg_c": "#2a2e36", "bar_fill_c": "#f3f5f9", "range": { "min": 0, "max": 100 }, "value": 0, "zOrder": 1 },
+    { "key": "track", "type": "text", "rect": [12, 70, 176, 20], "alignment": "left", "color": "#a5a9b1", "font": { "size": 13, "weight": 400 }, "text-overflow": "ellipsis", "zOrder": 1 }
+  ]
+}

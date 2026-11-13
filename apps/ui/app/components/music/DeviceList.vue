@@ -27,6 +27,8 @@ const ICON: Record<PlaybackDevice['kind'], string> = {
   watch: 'ph:watch',
   tv: 'ph:television-simple',
 }
+/** Stream Deck представляется компьютером (`desktop`), но значок — свой */
+const iconOf = (d: PlaybackDevice) => (d.platform === 'streamdeck' ? 'ph:squares-four' : ICON[d.kind])
 
 // Звук играет не здесь — активное устройство первым, отдельным разделом
 const playingElsewhere = computed(() => props.devices.find(d => d.active && !d.current) ?? null)
@@ -80,7 +82,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
     <section v-if="playingElsewhere" class="dsec">
       <h3 class="dsec__title">{{ t('connect.nowSection') }}</h3>
       <button type="button" class="drow is-current" :class="{ 'is-offline': !playingElsewhere.online }" aria-current="true" @click="emit('select', playingElsewhere)">
-        <Icon :name="ICON[playingElsewhere.kind]" class="drow__icon" />
+        <Icon :name="iconOf(playingElsewhere)" class="drow__icon" />
         <span class="drow__text">
           <span class="drow__name ellipsis">{{ playingElsewhere.name }}</span>
           <span class="drow__meta">
@@ -96,7 +98,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
     <section v-if="here.length" class="dsec">
       <h3 class="dsec__title">{{ t('devices.thisDevice') }}</h3>
       <button v-for="d in here" :key="d.id" type="button" class="drow" :class="{ 'is-current': isOn(d), 'is-cta': !isOn(d) }" :aria-current="isOn(d) || undefined" @click="emit('select', d)">
-        <Icon :name="ICON[d.kind]" class="drow__icon" />
+        <Icon :name="iconOf(d)" class="drow__icon" />
         <span class="drow__text">
           <span class="drow__name ellipsis">{{ d.name }}</span>
           <span class="drow__meta">
@@ -112,7 +114,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
     <section v-if="others.length" class="dsec">
       <h3 class="dsec__title">{{ t('devices.otherApps') }}</h3>
       <button v-for="d in others" :key="d.id" type="button" class="drow" :class="{ 'is-offline': !d.online, 'is-remote': d.remote }" :disabled="d.remote" @click="emit('select', d)">
-        <Icon :name="ICON[d.kind]" class="drow__icon" />
+        <Icon :name="iconOf(d)" class="drow__icon" />
         <span class="drow__text">
           <span class="drow__name ellipsis">{{ d.name }}</span>
           <span class="drow__meta ellipsis">{{ meta(d) }}</span>
@@ -188,7 +190,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
       :disabled="d.remote && !d.current"
       @click="emit('select', d)"
     >
-      <span class="dev__icon"><Icon :name="ICON[d.kind]" /></span>
+      <span class="dev__icon"><Icon :name="iconOf(d)" /></span>
       <span class="dev__text">
         <span class="dev__name ellipsis">{{ d.name }}</span>
         <span class="dev__meta">

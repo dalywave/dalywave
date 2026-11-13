@@ -134,8 +134,10 @@ export interface PlaybackDevice {
   active?: boolean
   /** Громкость меняется с пульта */
   volume?: boolean
-  /** Только пульт (часы): звук там не играет, перенести туда нельзя */
+  /** Только пульт (часы, Stream Deck): звук там не играет, перенести туда нельзя */
   remote?: boolean
+  /** Платформа: у Stream Deck вид `desktop`, а значок свой */
+  platform?: string
 }
 
 /** Куда идёт звук этого устройства: динамики, наушники, Bluetooth, AirPlay */

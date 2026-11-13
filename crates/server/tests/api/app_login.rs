@@ -236,3 +236,65 @@ async fn app_errors_go_back_to_the_app(db: PgPool) {
         format!("{PUBLIC_URL}/login?error=cancelled")
     );
 }
+
+/// Плагин Stream Deck входит как приложение: браузер, daly.rest, код на свой порт (loopback) и обмен
+/// с PKCE. Дальше он — пульт в «Где играть» с платформой streamdeck.
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn stream_deck_signs_in_through_the_browser(db: PgPool) {
+    let app = TestApp::new(db).await;
+    // Слушатель с ролью: пульту нужен доступ к «Где играть»
+    app.listener("ann").await;
+    let redirect = "http://127.0.0.1:53682/callback";
+    let start = format!(
+        "/api/auth/app/start?redirect_uri={}&code_challenge={}&code_challenge_method=S256&state=deck-1\
+         &device_name=Stream%20Deck%20%C2%B7%20MacBook&platform=streamdeck",
+        url::form_urlencoded::byte_serialize(redirect.as_bytes()).collect::<String>(),
+        challenge(VERIFIER),
+    );
+    let (authorize, cookie) = app.start(&start).await;
+    let (code, state) = app.provider.approve(&authorize, &Person::new("ann"));
+    let back = app.callback(&code, &state, Some(&cookie)).await.location();
+    assert!(back.starts_with(&format!("{redirect}?code=")), "{back}");
+    let q = query(&back);
+    assert_eq!(q["state"], "deck-1");
+
+    let res = exchange(&app, &q["code"], VERIFIER).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["device"]["platform"], "streamdeck");
+    assert_eq!(res.body["device"]["name"], "Stream Deck · MacBook");
+    let deck = Auth::Bearer(res.body["token"].as_str().unwrap().to_string());
+
+    // Пульт: в «Где играть» — с платформой streamdeck, только как пульт, имя — из входа
+    let res = app
+        .post(
+            "/api/devices/remote",
+            json!({
+                "deviceId": "streamdeck-1",
+                "name": "Stream Deck",
+                "kind": "desktop",
+                "platform": "streamdeck",
+                "capabilities": { "remote": true },
+            }),
+            &deck,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let row = res.body["devices"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["id"] == "streamdeck-1")
+        .expect("Stream Deck в списке")
+        .clone();
+    assert_eq!(row["platform"], "streamdeck");
+    assert_eq!(row["name"], "Stream Deck · MacBook");
+    assert_eq!(row["capabilities"]["remote"], true);
+
+    // «Отключить» в плагине закрывает его сессию
+    let out = app.post("/api/auth/logout", json!({}), &deck).await;
+    assert!(out.status.is_success(), "{}", out.text);
+    assert_eq!(
+        app.get("/api/devices", &deck).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+}

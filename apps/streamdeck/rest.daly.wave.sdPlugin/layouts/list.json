@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "rest.daly.wave.list",
+  "items": [
+    { "key": "cover", "type": "pixmap", "rect": [10, 18, 64, 64], "zOrder": 1 },
+    { "key": "title", "type": "text", "rect": [84, 18, 112, 22], "alignment": "left", "color": "#f3f5f9", "font": { "size": 15, "weight": 600 }, "text-overflow": "ellipsis", "zOrder": 1 },
+    { "key": "subtitle", "type": "text", "rect": [84, 41, 112, 19], "alignment": "left", "color": "#a5a9b1", "font": { "size": 13, "weight": 400 }, "text-overflow": "ellipsis", "zOrder": 1 },
+    { "key": "counter", "type": "text", "rect": [84, 64, 112, 18], "alignment": "left", "color": "#6f737b", "font": { "size": 12, "weight": 500 }, "text-overflow": "ellipsis", "zOrder": 1 }
+  ]
+}

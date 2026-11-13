@@ -12,6 +12,10 @@
 //! Вместе с файлом обновления выпуск может принести установщик для людей (`installerFileName`):
 //! macOS — `.dmg`, Windows — тот же `-setup.exe` NSIS, что и обновление. Его раздаёт
 //! `/api/downloads` ([`super::downloads`]).
+//!
+//! Плагин Stream Deck — такой же выпуск с платформой `streamdeck` и архитектурой `universal`: один
+//! `.streamDeckPlugin` для Mac и Windows, он же установщик. Подписи у него нет — плагин Tauri его не
+//! ставит; `GET /api/updates/streamdeck/universal/{версия}` только сообщает о новой версии.
 
 use std::time::Duration;
 
@@ -44,12 +48,17 @@ pub const UPLOAD_TTL: Duration = Duration::from_secs(60 * 60);
 
 const TARGETS: [&str; 3] = ["darwin", "windows", "linux"];
 const ARCHES: [&str; 4] = ["aarch64", "x86_64", "i686", "armv7"];
+/// Плагин Stream Deck: своя «платформа» с единственной архитектурой.
+pub const STREAMDECK: &str = "streamdeck";
+pub const UNIVERSAL: &str = "universal";
 const MAX_FILE_NAME: usize = 200;
 /// Подпись minisign в base64 — около 400 символов
 const MAX_SIGNATURE: usize = 4096;
 const MAX_NOTES: usize = 20_000;
 /// Установщики, которые сайт отдаёт людям: образ диска macOS, установщики NSIS и MSI
 pub const INSTALLER_EXTENSIONS: [&str; 3] = ["dmg", "exe", "msi"];
+/// Установщик плагина Stream Deck (сравнение без учёта регистра)
+pub const PLUGIN_EXTENSION: &str = "streamdeckplugin";
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -76,9 +85,9 @@ pub struct UpdateManifest {
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReleaseUploadRequest {
-    /// `darwin`, `windows`, `linux`
+    /// `darwin`, `windows`, `linux`; `streamdeck` — плагин Stream Deck
     pub target: String,
-    /// `aarch64`, `x86_64`, `i686`, `armv7`
+    /// `aarch64`, `x86_64`, `i686`, `armv7`; у `streamdeck` — только `universal`
     pub arch: String,
     /// SemVer, например `0.2.0`
     pub version: String,
@@ -104,12 +113,13 @@ pub struct ReleaseRequest {
     pub version: String,
     /// Тот же файл, что в `POST /api/releases/uploads`; он уже должен лежать в хранилище
     pub file_name: String,
-    /// Содержимое `.sig` из сборки
+    /// Содержимое `.sig` из сборки; у `streamdeck` не нужно
+    #[serde(default)]
     pub signature: String,
     pub notes: Option<String>,
-    /// Установщик для скачивания с сайта (`.dmg`, `.exe`, `.msi`), загруженный так же, как файл
-    /// обновления; на Windows это может быть тот же файл. Без него выпуск только обновляет
-    /// установленные приложения.
+    /// Установщик для скачивания с сайта (`.dmg`, `.exe`, `.msi`, у плагина — `.streamDeckPlugin`),
+    /// загруженный так же, как файл обновления; на Windows и у плагина это может быть тот же файл.
+    /// Без него выпуск только обновляет установленные приложения.
     #[serde(default)]
     pub installer_file_name: Option<String>,
 }
@@ -151,8 +161,16 @@ fn parse_version(value: &str) -> AppResult<Version> {
         .map_err(|_| bad(format!("версия «{value}» — не SemVer, нужно вроде 0.2.0")))
 }
 
-/// Платформа и архитектура — как их называет плагин Tauri (`{{target}}`, `{{arch}}`).
+/// Платформа и архитектура — как их называет плагин Tauri (`{{target}}`, `{{arch}}`), или плагин
+/// Stream Deck (`streamdeck`/`universal`); смешивать нельзя.
 fn platform(target: &str, arch: &str) -> AppResult<()> {
+    if target == STREAMDECK || arch == UNIVERSAL {
+        return if target == STREAMDECK && arch == UNIVERSAL {
+            Ok(())
+        } else {
+            Err(bad("плагин Stream Deck — только streamdeck/universal"))
+        };
+    }
     if !TARGETS.contains(&target) {
         return Err(bad(format!(
             "платформа «{target}» неизвестна: {}",
@@ -185,14 +203,19 @@ fn file_name(name: &str) -> AppResult<&str> {
     }
 }
 
-/// Установщик — по расширению: файл обновления `.app.tar.gz` людям не нужен.
-fn installer_name(name: &str) -> AppResult<&str> {
+/// Установщик — по расширению: файл обновления `.app.tar.gz` людям не нужен. У плагина Stream Deck —
+/// только `.streamDeckPlugin`, у приложений — `.dmg`, `.exe`, `.msi`.
+fn installer_name<'a>(target: &str, name: &'a str) -> AppResult<&'a str> {
     let name = file_name(name)?;
-    let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase());
-    if ext.is_some_and(|e| INSTALLER_EXTENSIONS.contains(&e.as_str())) {
-        Ok(name)
-    } else {
-        Err(bad("установщик — файл .dmg, .exe или .msi"))
+    let ext = name
+        .rsplit_once('.')
+        .map(|(_, e)| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    match (target == STREAMDECK, ext.as_str()) {
+        (true, PLUGIN_EXTENSION) => Ok(name),
+        (true, _) => Err(bad("установщик плагина — файл .streamDeckPlugin")),
+        (false, e) if INSTALLER_EXTENSIONS.contains(&e) => Ok(name),
+        (false, _) => Err(bad("установщик — файл .dmg, .exe или .msi")),
     }
 }
 
@@ -310,11 +333,16 @@ pub async fn register(
     let version = parse_version(&req.version)?;
     let key = release_key(&req.target, &req.arch, &version, file_name(&req.file_name)?);
     let signature = req.signature.trim();
-    let signature_ok = !signature.is_empty()
-        && signature.len() <= MAX_SIGNATURE
-        && signature
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '/' | '='));
+    // Плагин Stream Deck ставит сам Stream Deck: подписи minisign у него нет
+    let plugin = req.target == STREAMDECK;
+    let signature_ok = if signature.is_empty() {
+        plugin
+    } else {
+        signature.len() <= MAX_SIGNATURE
+            && signature
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '/' | '='))
+    };
     if !signature_ok {
         return Err(bad("подпись — содержимое файла .sig из сборки (base64)"));
     }
@@ -329,8 +357,16 @@ pub async fn register(
     let installer_key = req
         .installer_file_name
         .as_deref()
-        .map(|name| installer_name(name).map(|n| release_key(&req.target, &req.arch, &version, n)))
+        .map(|name| {
+            installer_name(&req.target, name)
+                .map(|n| release_key(&req.target, &req.arch, &version, n))
+        })
         .transpose()?;
+    if plugin && installer_key.as_deref() != Some(key.as_str()) {
+        return Err(bad(
+            "у плагина Stream Deck установщик — тот же файл .streamDeckPlugin, что и обновление",
+        ));
+    }
     let size = uploaded_size(&st, &key, "файл обновления").await?;
     let installer_size = match &installer_key {
         Some(k) if *k == key => Some(size),
@@ -406,13 +442,20 @@ mod tests {
         for bad in ["", "../x", "a/b", ".hidden", "a b.exe", "ы.exe"] {
             assert!(file_name(bad).is_err(), "{bad}");
         }
-        assert!(installer_name("DalyWave_0.2.0_aarch64.dmg").is_ok());
-        assert!(installer_name("DalyWave_0.2.0_x64-setup.EXE").is_ok());
-        assert!(installer_name("DalyWave_0.2.0_x64_ru-RU.msi").is_ok());
-        assert!(installer_name("DalyWave.app.tar.gz").is_err());
-        assert!(installer_name("../x.dmg").is_err());
+        assert!(installer_name("darwin", "DalyWave_0.2.0_aarch64.dmg").is_ok());
+        assert!(installer_name("windows", "DalyWave_0.2.0_x64-setup.EXE").is_ok());
+        assert!(installer_name("windows", "DalyWave_0.2.0_x64_ru-RU.msi").is_ok());
+        assert!(installer_name("darwin", "DalyWave.app.tar.gz").is_err());
+        assert!(installer_name("darwin", "../x.dmg").is_err());
+        assert!(installer_name("darwin", "DalyWave_0.2.0.streamDeckPlugin").is_err());
+        assert!(installer_name("streamdeck", "DalyWave_0.2.0.streamDeckPlugin").is_ok());
+        assert!(installer_name("streamdeck", "DalyWave_0.2.0.STREAMDECKPLUGIN").is_ok());
+        assert!(installer_name("streamdeck", "DalyWave_0.2.0.dmg").is_err());
         assert!(platform("darwin", "aarch64").is_ok());
         assert!(platform("ios", "aarch64").is_err());
         assert!(platform("windows", "arm64").is_err());
+        assert!(platform("streamdeck", "universal").is_ok());
+        assert!(platform("streamdeck", "x86_64").is_err());
+        assert!(platform("darwin", "universal").is_err());
     }
 }

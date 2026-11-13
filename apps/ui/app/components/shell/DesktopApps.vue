@@ -3,7 +3,8 @@ import type { AppDownload } from '~/api/types'
 
 // «Приложения для компьютера» с сайта: меню аккаунта и «Настройки → О приложении». Mac и Windows
 // рядом, система этого компьютера — первой и с основной кнопкой. Ссылка ведёт на сервер, он
-// отвечает редиректом на файл в хранилище под именем DalyWave-<версия>.dmg. На телефоне — лист снизу
+// отвечает редиректом на файл в хранилище под именем DalyWave-<версия>.dmg. Ниже — плагин Stream Deck
+// (один файл для Mac и Windows): после скачивания — подсказка, как подключить. На телефоне — лист снизу
 const open = defineModel<boolean>('open', { default: false })
 const bridge = useBridge()
 const ui = useUiStore()
@@ -46,6 +47,10 @@ const cards = computed(() => {
   return current === 'windows' ? list.reverse() : list
 })
 
+const deck = computed(() => apps.value?.find(a => a.platform === 'streamdeck') ?? null)
+/** Плагин скачан: подсказать, что дальше */
+const deckTaken = ref(false)
+
 const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, locale.value === 'en' ? 'en' : 'ru')}`
 </script>
 
@@ -77,12 +82,39 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
           <p v-else class="da__soon">{{ failed ? t('failed') : t('soon') }}</p>
         </div>
       </section>
+      <section class="da__deck">
+        <Icon name="ph:squares-four" class="da__logo" aria-hidden="true" />
+        <div class="da__text">
+          <h3 class="da__name">Stream Deck</h3>
+          <p class="da__req">{{ t('deckWhat') }}</p>
+          <p class="da__req">{{ t('deckReq', { v: deck?.minOsVersion ?? '7.6' }) }}</p>
+        </div>
+        <div class="da__get">
+          <template v-if="deck">
+            <UiButton
+              :href="deck.url"
+              variant="secondary"
+              :size="ui.isPhone ? 'lg' : 'md'"
+              icon="ph:download-simple"
+              block
+              :aria-label="`${t('download')} Stream Deck`"
+              @click="deckTaken = true"
+            >
+              {{ t('download') }}
+            </UiButton>
+            <p class="da__meta tnum">{{ meta(deck) }}</p>
+          </template>
+          <UiButton v-else-if="!apps && !failed" :size="ui.isPhone ? 'lg' : 'md'" block loading />
+          <p v-else class="da__soon">{{ failed ? t('failed') : t('soon') }}</p>
+        </div>
+        <p v-if="deckTaken" class="da__next" role="status">{{ t('deckNext') }}</p>
+      </section>
     </div>
   </UiModal>
 </template>
 
 <style scoped>
-/* Две колонки через волосок; на телефоне — одна под другой */
+/* Две колонки через волосок, плагин Stream Deck — строкой под ними; на телефоне — одно под другим */
 /* Поля — как у заголовка окна: 20px */
 .da { display: grid; grid-template-columns: 1fr 1fr; padding: 8px 20px 20px; }
 .da__app { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 4px 24px 0 0; }
@@ -97,6 +129,10 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
 .da__soon { display: grid; place-items: center; height: 40px; border-radius: var(--r-pill); background: var(--fill-1); font-size: var(--fs-small); color: var(--text-3); }
 .da__alt { align-self: center; font-size: var(--fs-caption); color: var(--text-2); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
 .da__alt:hover { color: var(--text-1); }
+.da__deck { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr 168px; align-items: center; gap: 4px 16px; margin-top: 22px; padding-top: 18px; box-shadow: inset 0 1px 0 var(--hair); }
+.da__deck .da__logo { font-size: 26px; }
+.da__deck .da__meta { margin-top: -2px; }
+.da__next { grid-column: 2 / -1; margin: 8px 0 0; font-size: var(--fs-small); color: var(--text-2); text-wrap: pretty; }
 
 .da--phone { grid-template-columns: 1fr; padding: 0 20px 8px; }
 .da--phone .da__app, .da--phone .da__app + .da__app { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; padding: 16px 0; }
@@ -104,6 +140,9 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
 .da--phone .da__logo { font-size: 28px; }
 .da--phone .da__get { grid-column: 1 / -1; margin-top: 12px; }
 .da--phone .da__soon { height: 50px; }
+.da--phone .da__deck { grid-template-columns: auto 1fr; gap: 4px 14px; margin-top: 0; padding: 16px 0; }
+.da--phone .da__deck .da__logo { font-size: 28px; }
+.da--phone .da__next { grid-column: 1 / -1; margin-top: 4px; }
 </style>
 
 <i18n lang="json">
@@ -114,7 +153,10 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
     "download": "Скачать",
     "intel": "Для Mac с Intel",
     "soon": "Скоро",
-    "failed": "Не получилось загрузить"
+    "failed": "Не получилось загрузить",
+    "deckWhat": "Плагин для Stream Deck и Stream Deck +",
+    "deckReq": "Для Mac и Windows, Stream Deck {v} и новее",
+    "deckNext": "Откройте файл — Stream Deck установит плагин и профиль «DalyWave». Нажмите любую кнопку DalyWave и войдите в открывшемся окне"
   },
   "en": {
     "macReq": "Apple silicon, macOS {v} or later",
@@ -122,7 +164,10 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
     "download": "Download",
     "intel": "For Intel-based Macs",
     "soon": "Coming soon",
-    "failed": "Couldn't load"
+    "failed": "Couldn't load",
+    "deckWhat": "Plugin for Stream Deck and Stream Deck +",
+    "deckReq": "For Mac and Windows, Stream Deck {v} or later",
+    "deckNext": "Open the file and Stream Deck will install the plugin and the DalyWave profile. Press any DalyWave key and sign in in the window that opens"
   }
 }
 </i18n>

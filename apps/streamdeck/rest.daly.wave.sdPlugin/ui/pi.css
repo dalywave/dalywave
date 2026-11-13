@@ -1,0 +1,47 @@
+/* Инспектор DalyWave: поля — как у Stream Deck (sdpi-components), блок аккаунта — сдержанно, без
+   лишних плашек. Цвета — нейтральные, акцент только у главной кнопки. */
+.dw-account {
+  margin: 4px 12px 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 9pt;
+  color: #d8d8d8;
+}
+.dw-muted { margin: 2px 0 8px; color: #9a9a9a; line-height: 1.4; }
+.dw-row { display: flex; align-items: center; gap: 8px; }
+.dw-who { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dw-dot { width: 7px; height: 7px; border-radius: 50%; background: #6a6a6a; flex: none; }
+.dw-dot--online { background: #5fd38d; }
+.dw-dot--offline { background: #ff8080; }
+.dw-btn {
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  background: #3d3d3d;
+  color: #e6e6e6;
+  font: inherit;
+  cursor: pointer;
+}
+.dw-btn:hover { background: #4a4a4a; }
+.dw-btn--primary { background: #f3f5f9; color: #111318; font-weight: 600; }
+.dw-btn--primary:hover { background: #ffffff; }
+.dw-advanced { margin-top: 10px; color: #8a8a8a; }
+.dw-advanced summary { cursor: pointer; user-select: none; }
+.dw-advanced .dw-row { margin-top: 6px; }
+.dw-label { width: 60px; flex: none; }
+.dw-input {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 3px;
+  background: #3d3d3d;
+  color: #d8d8d8;
+  font: inherit;
+}
+.dw-help { margin: 6px 12px 0 108px; color: #8a8a8a; font-size: 8.5pt; line-height: 1.4; }
+.dw-hidden { display: none !important; }
+/* Пока не подключено, настройки кнопки ни к чему — только блок входа */
+body.dw-unpaired .dw-fields { opacity: 0.45; pointer-events: none; }

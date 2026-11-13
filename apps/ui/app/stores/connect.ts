@@ -97,6 +97,7 @@ export const useConnectStore = defineStore('connect', () => {
       active: d.id === activeId.value,
       volume: d.capabilities.volume,
       remote: !!d.capabilities.remote,
+      platform: d.platform,
     }))
     // Связи с сервером ещё нет — само устройство в списке всё равно есть
     if (!own) rows.unshift({ id: deviceId.value, name: deviceName(), kind: kindOf(bridge.platform, app), current: true, online: true, lastSeenAt: null, active: isActive.value })

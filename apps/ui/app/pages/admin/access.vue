@@ -142,7 +142,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
           </div>
           <div v-for="s in shownSessions" :key="s.id" class="ap-tr">
             <span class="ap-cell"><b class="ac__name">{{ s.userName }}<span v-if="s.current" class="ac__tag">{{ t('sessions.current') }}</span></b><small v-if="s.ip">{{ s.ip }}</small></span>
-            <span class="ac__where"><Icon :name="s.device?.platform === 'watchos' ? 'ph:watch' : s.device?.platform === 'tvos' ? 'ph:television-simple' : s.kind === 'device' ? 'ph:laptop' : 'ph:browser'" />{{ agent(s) }}</span>
+            <span class="ac__where"><Icon :name="s.device?.platform === 'watchos' ? 'ph:watch' : s.device?.platform === 'tvos' ? 'ph:television-simple' : s.device?.platform === 'streamdeck' ? 'ph:squares-four' : s.kind === 'device' ? 'ph:laptop' : 'ph:browser'" />{{ agent(s) }}</span>
             <span class="ap-muted ap-hide-phone">{{ via(s) }}</span>
             <span class="ap-num ap-muted ap-hide-phone">{{ formatRelative(s.lastSeenAt, lang) }}</span>
             <span class="ap-end">

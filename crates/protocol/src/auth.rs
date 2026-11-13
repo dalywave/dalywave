@@ -73,6 +73,8 @@ pub enum Platform {
     Watchos,
     /// Apple TV: вход кодом с экрана, подтверждение на телефоне или сайте (`/api/auth/tv/*`).
     Tvos,
+    /// Плагин Stream Deck: пульт, вход — как у приложений (`/api/auth/app/*`, код на свой порт).
+    Streamdeck,
 }
 
 names!(Platform {
@@ -85,6 +87,7 @@ names!(Platform {
     Android => "android",
     Watchos => "watchos",
     Tvos => "tvos",
+    Streamdeck => "streamdeck",
 });
 
 impl Platform {

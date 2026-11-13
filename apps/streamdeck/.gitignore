@@ -1,0 +1,15 @@
+node_modules/
+dist/
+# Собирается scripts/build.ts (манифест, переводы, картинки действий, инспекторы, профиль, код):
+# версия выпуска попадает в манифест, и дерево после `make release` остаётся чистым
+rest.daly.wave.sdPlugin/bin/
+rest.daly.wave.sdPlugin/logs/
+rest.daly.wave.sdPlugin/manifest.json
+rest.daly.wave.sdPlugin/ru.json
+rest.daly.wave.sdPlugin/en.json
+rest.daly.wave.sdPlugin/profiles/
+rest.daly.wave.sdPlugin/imgs/actions/
+rest.daly.wave.sdPlugin/imgs/layout/
+rest.daly.wave.sdPlugin/imgs/plugin/category.svg
+rest.daly.wave.sdPlugin/imgs/plugin/icon-source.svg
+rest.daly.wave.sdPlugin/ui/*.html

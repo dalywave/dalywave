@@ -79,7 +79,7 @@ app: sidecar ## приложение macOS с загрузчиком и заст
 bump-version: ## новая версия приложения: make bump-version [VERSION=0.2.0], без VERSION — +1 к последней цифре
 	@bash apps/shell/scripts/bump-version.sh "$(VERSION)"
 
-release: ## выпуск везде: версия +1, сайт, TestFlight, Mac, Windows (CI): make release [NOTES="…"]
+release: ## выпуск везде: версия +1, сайт, TestFlight, Mac, Windows (CI), Stream Deck: make release [NOTES="…"]
 	@NOTES="$(NOTES)" bash apps/shell/scripts/release-all.sh
 
 release-mac: ## собрать и выпустить приложение macOS на сервер обновлений: make release-mac [NOTES="…"]
@@ -89,6 +89,16 @@ release-mac: ## собрать и выпустить приложение macOS 
 	@$(MAKE) --no-print-directory app
 	@DALYWAVE_RELEASE_TOKEN="$${DALYWAVE_RELEASE_TOKEN:-$$(security find-generic-password -s dalywave-release-token -a "$$USER" -w)}" \
 	  RELEASE_NOTES="$(NOTES)" bun apps/shell/scripts/release.ts --server "$(SERVER)"
+
+# Плагин Stream Deck — та же версия, что у приложения: pack кладёт её в manifest.json и собирает
+# apps/streamdeck/dist/rest.daly.wave.streamDeckPlugin, release.ts выпускает его как streamdeck/universal
+release-streamdeck: ## собрать и выпустить плагин Stream Deck (скачивание на сайте): make release-streamdeck [NOTES="…"]
+	@[ -n "$${DALYWAVE_RELEASE_TOKEN:-}" ] || security find-generic-password -s dalywave-release-token -a "$$USER" >/dev/null 2>&1 || \
+	  { echo "Нет токена выпусков: DALYWAVE_RELEASE_TOKEN или запись dalywave-release-token в связке ключей"; exit 1; }
+	@cd apps/streamdeck && bun install --frozen-lockfile && \
+	  VERSION="$$(sed -n '/^\[package\]/,/^\[/s/^version = "\(.*\)"/\1/p' ../shell/Cargo.toml | head -n1)" bun run pack
+	@DALYWAVE_RELEASE_TOKEN="$${DALYWAVE_RELEASE_TOKEN:-$$(security find-generic-password -s dalywave-release-token -a "$$USER" -w)}" \
+	  RELEASE_NOTES="$(NOTES)" bun apps/shell/scripts/release.ts --streamdeck --server "$(SERVER)"
 
 # iPhone и iPad: Xcode-проект apps/shell/gen/apple (xcodegen), Rust собирает его фаза «Build Rust Code».
 # Установка на телефон — Run в Xcode (apps/shell/IOS.md). Проверка звука без входа и без звука:
@@ -159,4 +169,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release release-mac ios ios-build testflight testflight-tv ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release release-mac release-streamdeck ios ios-build testflight testflight-tv ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt

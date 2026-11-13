@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Выпуск везде одной командой (make release [NOTES="…"]): новая версия → коммит и push → сайт →
 # Windows в CI (с публикацией) → TestFlight → Mac на сервер обновлений и в /Applications этого Mac →
-# дождаться Windows. Рабочее дерево должно быть чистым: в коммит версии уходит только смена номера.
+# плагин Stream Deck → дождаться Windows. Рабочее дерево должно быть чистым: в коммит версии уходит только смена номера.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 unset CARGO_TARGET_DIR # иначе make app соберёт не туда, откуда берёт бандл
@@ -33,10 +33,12 @@ codesign --verify --deep /Applications/DalyWave.app
 open /Applications/DalyWave.app
 echo "Mac: в /Applications стоит $(defaults read /Applications/DalyWave.app/Contents/Info CFBundleShortVersionString)"
 
+make --no-print-directory release-streamdeck NOTES="$notes"
+
 if gh run watch "$run" --exit-status --interval 60 >/dev/null 2>&1; then
   echo "Windows: $version выпущена"
 else
   echo "Windows: сборка $run не прошла — gh run view $run --log-failed"
   exit 1
 fi
-echo "Выпуск $version готов: сайт, TestFlight, Mac, Windows"
+echo "Выпуск $version готов: сайт, TestFlight, Mac, Windows, Stream Deck"

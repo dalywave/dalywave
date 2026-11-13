@@ -364,7 +364,7 @@ const language = computed({
     "motionDesc": "Кусок клипа без звука в плеере и в «Открытиях»",
     "motionWifi": "Только по Wi-Fi",
     "about": "О приложении",
-    "desktopAppsDesc": "Mac и Windows",
+    "desktopAppsDesc": "Mac, Windows и Stream Deck",
     "server": "Сервер",
     "serverDown": "Не отвечает",
     "version": "Версия"
@@ -413,7 +413,7 @@ const language = computed({
     "motionDesc": "A silent loop from the music video in the player and in Discover",
     "motionWifi": "Wi-Fi only",
     "about": "About",
-    "desktopAppsDesc": "Mac and Windows",
+    "desktopAppsDesc": "Mac, Windows and Stream Deck",
     "server": "Server",
     "serverDown": "Not responding",
     "version": "Version"

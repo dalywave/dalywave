@@ -4,7 +4,8 @@
 //! `installerFileName`). Скачивать могут только свои — любой человек с ролью (слой
 //! `require_access`), как и весь каталог. `GET /api/downloads/{platform}/latest` отвечает
 //! редиректом на подписанную ссылку хранилища: файл в сотни мегабайт идёт мимо сервера, а имя
-//! файла у человека — `DalyWave-0.2.0.dmg`, а не ключ из хранилища.
+//! файла у человека — `DalyWave-0.2.0.dmg`, а не ключ из хранилища. Плагин Stream Deck — такая же
+//! «платформа» (`streamdeck`): один `.streamDeckPlugin` для Mac и Windows.
 
 use std::{collections::HashMap, time::Duration};
 
@@ -44,11 +45,13 @@ struct Platform {
     min_os: &'static str,
     /// Добавка к имени файла: Intel-сборку не спутать с Apple silicon
     suffix: &'static str,
+    /// Расширение файла как есть (регистр важен для Stream Deck); нет — берётся из ключа
+    ext: Option<&'static str>,
 }
 
 const MAC_MIN_OS: &str = "13";
 
-const PLATFORMS: [Platform; 3] = [
+const PLATFORMS: [Platform; 4] = [
     Platform {
         slug: "mac",
         target: "darwin",
@@ -56,6 +59,7 @@ const PLATFORMS: [Platform; 3] = [
         os: "macos",
         min_os: MAC_MIN_OS,
         suffix: "",
+        ext: None,
     },
     Platform {
         slug: "mac-intel",
@@ -64,6 +68,7 @@ const PLATFORMS: [Platform; 3] = [
         os: "macos",
         min_os: MAC_MIN_OS,
         suffix: "-Intel",
+        ext: None,
     },
     Platform {
         slug: "windows",
@@ -72,6 +77,18 @@ const PLATFORMS: [Platform; 3] = [
         os: "windows",
         min_os: "10",
         suffix: "",
+        ext: None,
+    },
+    // Плагин Stream Deck: SDK 3 (Node.js 24) и экран Neo — Stream Deck 7.6 (Software.MinimumVersion в
+    // apps/streamdeck/scripts/assets.ts)
+    Platform {
+        slug: "streamdeck",
+        target: super::updates::STREAMDECK,
+        arch: super::updates::UNIVERSAL,
+        os: "streamdeck",
+        min_os: "7.6",
+        suffix: "",
+        ext: Some("streamDeckPlugin"),
     },
 ];
 
@@ -84,11 +101,11 @@ pub fn routes() -> Router<AppState> {
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AppDownload {
-    /// `mac` (Apple silicon), `mac-intel`, `windows`
+    /// `mac` (Apple silicon), `mac-intel`, `windows`, `streamdeck` (плагин Stream Deck)
     pub platform: String,
-    /// `macos` или `windows`
+    /// `macos`, `windows` или `streamdeck`
     pub os: String,
-    /// `aarch64` или `x86_64`
+    /// `aarch64`, `x86_64` или `universal` (плагин)
     pub arch: String,
     pub version: String,
     pub published_at: DateTime<Utc>,
@@ -96,7 +113,7 @@ pub struct AppDownload {
     pub size_bytes: i64,
     /// Под каким именем файл сохранится, например `DalyWave-0.2.0.dmg`
     pub file_name: String,
-    /// Минимальная версия системы: `13` — macOS 13, `10` — Windows 10
+    /// Минимальная версия системы: `13` — macOS 13, `10` — Windows 10, у плагина — Stream Deck `7.6`
     pub min_os_version: String,
     /// Скачать: редирект на файл
     pub url: String,
@@ -104,7 +121,7 @@ pub struct AppDownload {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct Downloads {
-    /// Платформы, для которых есть установщик; порядок — Mac, Mac Intel, Windows
+    /// Платформы, для которых есть установщик; порядок — Mac, Mac Intel, Windows, Stream Deck
     pub apps: Vec<AppDownload>,
 }
 
@@ -146,12 +163,16 @@ async fn installers(st: &AppState) -> AppResult<HashMap<(String, String), Instal
     Ok(out)
 }
 
-/// Имя файла у человека: `DalyWave-0.2.0.dmg`, `DalyWave-0.2.0-Intel.dmg`, `DalyWave-0.2.0-Setup.exe`.
+/// Имя файла у человека: `DalyWave-0.2.0.dmg`, `DalyWave-0.2.0-Intel.dmg`, `DalyWave-0.2.0-Setup.exe`,
+/// `DalyWave-0.2.0.streamDeckPlugin`.
 fn download_name(p: &Platform, version: &Version, key: &str) -> String {
-    let ext = key
-        .rsplit_once('.')
-        .map(|(_, e)| e.to_ascii_lowercase())
-        .unwrap_or_default();
+    let ext = match p.ext {
+        Some(ext) => ext.to_string(),
+        None => key
+            .rsplit_once('.')
+            .map(|(_, e)| e.to_ascii_lowercase())
+            .unwrap_or_default(),
+    };
     let setup = if ext == "exe" { "-Setup" } else { "" };
     format!("DalyWave-{version}{}{setup}.{ext}", p.suffix)
 }
@@ -192,7 +213,7 @@ pub async fn desktop_apps(State(st): State<AppState>) -> AppResult<Json<Download
     get,
     path = "/api/downloads/{platform}/latest",
     tag = "system",
-    params(("platform" = String, Path, description = "`mac`, `mac-intel` или `windows`")),
+    params(("platform" = String, Path, description = "`mac`, `mac-intel`, `windows` или `streamdeck`")),
     responses(
         (status = 302, description = "Редирект на установщик в хранилище: ссылка живёт 15 минут, файл сохранится как `DalyWave-<версия>.dmg`"),
         (status = 401, description = "Нужен вход", body = ErrorBody),
@@ -236,13 +257,18 @@ mod tests {
     #[test]
     fn names() {
         let v = Version::parse("0.2.0").unwrap();
-        let [mac, intel, win] = &PLATFORMS;
+        let [mac, intel, win, deck] = &PLATFORMS;
         let key = "releases/darwin/aarch64/0.2.0/DalyWave_0.2.0_aarch64.dmg";
         assert_eq!(download_name(mac, &v, key), "DalyWave-0.2.0.dmg");
         assert_eq!(download_name(intel, &v, key), "DalyWave-0.2.0-Intel.dmg");
         let key = "releases/windows/x86_64/0.2.0/DalyWave_0.2.0_x64-setup.exe";
         assert_eq!(download_name(win, &v, key), "DalyWave-0.2.0-Setup.exe");
         assert_eq!(download_name(win, &v, "a/b.MSI"), "DalyWave-0.2.0.msi");
+        let key = "releases/streamdeck/universal/0.2.0/DalyWave_0.2.0.streamdeckplugin";
+        assert_eq!(
+            download_name(deck, &v, key),
+            "DalyWave-0.2.0.streamDeckPlugin"
+        );
     }
 
     /// Минимальная macOS на сайте — та же, что в сборке

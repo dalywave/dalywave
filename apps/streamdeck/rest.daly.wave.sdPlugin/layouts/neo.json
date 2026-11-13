@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "rest.daly.wave.neo",
+  "controller": "Neo",
+  "items": [
+    { "key": "cover", "type": "pixmap", "rect": [4, 4, 42, 42], "zOrder": 1 },
+    { "key": "title", "type": "text", "rect": [54, 5, 174, 22], "alignment": "left", "color": "#f3f5f9", "font": { "size": 15, "weight": 600 }, "text-overflow": "ellipsis", "zOrder": 1 },
+    { "key": "subtitle", "type": "text", "rect": [54, 27, 174, 18], "alignment": "left", "color": "#a5a9b1", "font": { "size": 12, "weight": 400 }, "text-overflow": "ellipsis", "zOrder": 1 }
+  ]
+}
