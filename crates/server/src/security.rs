@@ -183,6 +183,7 @@ mod tests {
             ml: Default::default(),
             lrclib: Default::default(),
             yandex_music: Default::default(),
+            info: Default::default(),
             release_token: None,
             push: Default::default(),
         }

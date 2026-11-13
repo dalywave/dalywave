@@ -12,6 +12,7 @@ export function useTrackActions() {
   const pui = usePlaylistUi()
   const share = useShare()
   const report = useReportRecording()
+  const hookPreview = useHookPreviewStore()
   const why = useWhyTrack()
   const versions = useVersionsStore()
   const t = useNuxtApp().$i18n.t
@@ -43,6 +44,8 @@ export function useTrackActions() {
           ]),
       { label: t('pl.add'), icon: 'ph:plus-circle', onSelect: () => pui.pick([track]) },
       { label: t('track.radio'), icon: 'ph:waveform', onSelect: () => void player.startWave(undefined, { seed: { type: 'track', id: track.id }, title: track.title }) },
+      // Отрывок с припева перед включением — не тому, что уже играет
+      ...(opts.nowPlaying || player.current?.track.id === track.id ? [] : [{ label: t('hook.listen'), icon: 'ph:ear', onSelect: () => void hookPreview.start(track) }]),
       { label: liked ? t('player.unlike') : t('player.like'), icon: liked ? 'ph:heart-break' : 'ph:heart', kbd: ['L'], onSelect: () => player.toggleLike(track) },
     ]
     // Играющий трек: другие версии той же песни — «Оригинал», «Slowed», «Sped up»
@@ -66,6 +69,8 @@ export function useTrackActions() {
     // Переходы: плеер на телефоне сначала сворачивается, иначе страница откроется под ним
     if (artist) entries.push({ label: t('track.goArtist'), icon: 'ph:user', onSelect: () => void ui.navigate(`/artist/${artist.id}`) })
     if (track.album) entries.push({ label: t('track.goAlbum'), icon: 'ph:disc', onSelect: () => void ui.navigate(`/album/${track.album!.id}`) })
+    // «О треке»: кто сделал трек — авторы, продюсеры, лейбл, год
+    entries.push({ label: t('track.about'), icon: 'ph:info', onSelect: () => void ui.navigate(`/track/${track.id}`) })
     // «Почему этот трек» — только у того, что подобрала волна (у записи очереди есть подпись)
     const entry = opts.nowPlaying ? player.current : opts.inQueue ? player.upcoming.find(e => e.uid === opts.inQueue) : null
     if (entry?.source === 'wave' && entry.reason && entry.track.id === track.id) {

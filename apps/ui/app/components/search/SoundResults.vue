@@ -94,7 +94,7 @@ function startWave() {
     <template v-else-if="data">
       <section v-if="data.catalog.length" class="snd__block" :aria-label="t('catalog')">
         <h3 class="snd__sub">{{ t('catalog') }}</h3>
-        <MusicTrackList :tracks="data.catalog" variant="wide" plain :context="ctx" :label="t('catalog')" />
+        <MusicTrackList :tracks="data.catalog" variant="wide" plain hook :context="ctx" :label="t('catalog')" />
       </section>
       <section v-if="data.library.length" class="snd__block" :aria-label="t('library')">
         <h3 class="snd__sub">{{ t('library') }}</h3>

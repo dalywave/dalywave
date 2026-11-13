@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, track_ids, fetched_at FROM charts",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "charts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "track_ids",
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "charts",
+            "name": "track_ids"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "charts",
+            "name": "fetched_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "a8cad0e1ea578850c596ee48cd5ec3984b2c6f7d45b92194c8fe0313ce049881"
+}

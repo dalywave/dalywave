@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT about, fetched_at FROM artist_about WHERE artist_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "about",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "artist_about",
+            "name": "about"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "artist_about",
+            "name": "fetched_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "1032414378033f6b0a46b9cdbd2e07da781935407d15e6219dc1b3c01154030c"
+}

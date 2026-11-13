@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO recording_credits (isrc, found, people, fetched_at) VALUES ($1, $2, $3, now())\n         ON CONFLICT (isrc) DO UPDATE SET found = $2, people = $3, fetched_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a3ac857199f101015d37daf3028c20999831c9dd6bd321e24b61440caefef80b"
+}

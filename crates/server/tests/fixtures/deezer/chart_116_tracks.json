@@ -1,0 +1,170 @@
+{
+ "data": [
+  {
+   "id": 3262675101,
+   "title": "Anxiety",
+   "title_short": "Anxiety",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3262675101",
+   "duration": 249,
+   "rank": 923326,
+   "explicit_lyrics": true,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/a/8/6/0/a863e118760c4d2d286fd986daeb6a28.mp3?hdnea=exp=1794521820~acl=/api/1/1/a/8/6/0/a863e118760c4d2d286fd986daeb6a28.mp3*~data=user_id=0,application_id=42~hmac=24784a5e98504affa1a65263a4e1f3a3fe2b92a2e9f6594df0f252dd2be83279",
+   "md5_image": "a86cc99df85173d25b3b8a5e52b10a1f",
+   "type": "track",
+   "artist": {
+    "id": 51965252,
+    "name": "Doechii",
+    "picture_small": "https://cdn-images.dzcdn.net/images/artist/b2ee54b63e3a3485b6aed609fd320521/56x56-000000-80-0-0.jpg",
+    "picture_medium": "https://cdn-images.dzcdn.net/images/artist/b2ee54b63e3a3485b6aed609fd320521/250x250-000000-80-0-0.jpg",
+    "picture_big": "https://cdn-images.dzcdn.net/images/artist/b2ee54b63e3a3485b6aed609fd320521/500x500-000000-80-0-0.jpg",
+    "picture_xl": "https://cdn-images.dzcdn.net/images/artist/b2ee54b63e3a3485b6aed609fd320521/1000x1000-000000-80-0-0.jpg",
+    "type": "artist"
+   },
+   "album": {
+    "id": 722247851,
+    "title": "Anxiety",
+    "cover": "https://api.deezer.com/album/722247851/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/a86cc99df85173d25b3b8a5e52b10a1f/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/a86cc99df85173d25b3b8a5e52b10a1f/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/a86cc99df85173d25b3b8a5e52b10a1f/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/a86cc99df85173d25b3b8a5e52b10a1f/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "a86cc99df85173d25b3b8a5e52b10a1f",
+    "type": "album"
+   }
+  },
+  {
+   "id": 4015341011,
+   "title": "Dai Dai",
+   "title_short": "Dai Dai",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/4015341011",
+   "duration": 223,
+   "rank": 990618,
+   "explicit_lyrics": false,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/3/6/e/0/36e9c5c8807733ef0c975986dcb4a106.mp3?hdnea=exp=1794521820~acl=/api/1/1/3/6/e/0/36e9c5c8807733ef0c975986dcb4a106.mp3*~data=user_id=0,application_id=42~hmac=eb8902c1d1e7cea7cd5a3593df53f7e5d47cad2937dda11d1ddad3e14130de18",
+   "md5_image": "a7f9bae0243c512059298a68d09f45a1",
+   "type": "track",
+   "artist": {
+    "id": 160,
+    "name": "Shakira",
+    "picture_small": "https://cdn-images.dzcdn.net/images/artist/69c569506a8ff6ab0edfecbd1adf94b0/56x56-000000-80-0-0.jpg",
+    "picture_medium": "https://cdn-images.dzcdn.net/images/artist/69c569506a8ff6ab0edfecbd1adf94b0/250x250-000000-80-0-0.jpg",
+    "picture_big": "https://cdn-images.dzcdn.net/images/artist/69c569506a8ff6ab0edfecbd1adf94b0/500x500-000000-80-0-0.jpg",
+    "picture_xl": "https://cdn-images.dzcdn.net/images/artist/69c569506a8ff6ab0edfecbd1adf94b0/1000x1000-000000-80-0-0.jpg",
+    "type": "artist"
+   },
+   "album": {
+    "id": 980745831,
+    "title": "Dai Dai",
+    "cover": "https://api.deezer.com/album/980745831/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/a7f9bae0243c512059298a68d09f45a1/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/a7f9bae0243c512059298a68d09f45a1/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/a7f9bae0243c512059298a68d09f45a1/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/a7f9bae0243c512059298a68d09f45a1/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "a7f9bae0243c512059298a68d09f45a1",
+    "type": "album"
+   }
+  },
+  {
+   "id": 4022917771,
+   "title": "Janice STFU",
+   "title_short": "Janice STFU",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/4022917771",
+   "duration": 237,
+   "rank": 918429,
+   "explicit_lyrics": true,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/7/3/2/0/7324c7d1edf2e198c43ec4f5c80670fc.mp3?hdnea=exp=1794521820~acl=/api/1/1/7/3/2/0/7324c7d1edf2e198c43ec4f5c80670fc.mp3*~data=user_id=0,application_id=42~hmac=b672feefa11a76761cc9f82eadfd005aaed446fba0eea5a2ad8de0135b160a2a",
+   "md5_image": "cccf5e9af10b6aae96f5cdd5a27c2aff",
+   "type": "track",
+   "artist": {
+    "id": 246791,
+    "name": "Drake",
+    "picture_small": "https://cdn-images.dzcdn.net/images/artist/eb0ed5b21d1ea5af021fc074ded0e91f/56x56-000000-80-0-0.jpg",
+    "picture_medium": "https://cdn-images.dzcdn.net/images/artist/eb0ed5b21d1ea5af021fc074ded0e91f/250x250-000000-80-0-0.jpg",
+    "picture_big": "https://cdn-images.dzcdn.net/images/artist/eb0ed5b21d1ea5af021fc074ded0e91f/500x500-000000-80-0-0.jpg",
+    "picture_xl": "https://cdn-images.dzcdn.net/images/artist/eb0ed5b21d1ea5af021fc074ded0e91f/1000x1000-000000-80-0-0.jpg",
+    "type": "artist"
+   },
+   "album": {
+    "id": 983236081,
+    "title": "ICEMAN",
+    "cover": "https://api.deezer.com/album/983236081/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/cccf5e9af10b6aae96f5cdd5a27c2aff/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/cccf5e9af10b6aae96f5cdd5a27c2aff/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/cccf5e9af10b6aae96f5cdd5a27c2aff/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/cccf5e9af10b6aae96f5cdd5a27c2aff/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "cccf5e9af10b6aae96f5cdd5a27c2aff",
+    "type": "album"
+   }
+  },
+  {
+   "id": 4231654522,
+   "title": "ISSA",
+   "title_short": "ISSA",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/4231654522",
+   "duration": 145,
+   "rank": 748894,
+   "explicit_lyrics": true,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/1/0/f/0/10ff3439e7922ed85b56cccf3d4a1920.mp3?hdnea=exp=1794521820~acl=/api/1/1/1/0/f/0/10ff3439e7922ed85b56cccf3d4a1920.mp3*~data=user_id=0,application_id=42~hmac=14183e963443f2e2d0595b7f44779619f6e8313b61476abde34821036a63e057",
+   "md5_image": "318fe0882f23f7f15a26d4e14923da94",
+   "type": "track",
+   "artist": {
+    "id": 12039,
+    "name": "Sido",
+    "picture_small": "https://cdn-images.dzcdn.net/images/artist/188e9515443759381aeb7d47f13921e6/56x56-000000-80-0-0.jpg",
+    "picture_medium": "https://cdn-images.dzcdn.net/images/artist/188e9515443759381aeb7d47f13921e6/250x250-000000-80-0-0.jpg",
+    "picture_big": "https://cdn-images.dzcdn.net/images/artist/188e9515443759381aeb7d47f13921e6/500x500-000000-80-0-0.jpg",
+    "picture_xl": "https://cdn-images.dzcdn.net/images/artist/188e9515443759381aeb7d47f13921e6/1000x1000-000000-80-0-0.jpg",
+    "type": "artist"
+   },
+   "album": {
+    "id": 1057388602,
+    "title": "ISSA",
+    "cover": "https://api.deezer.com/album/1057388602/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/318fe0882f23f7f15a26d4e14923da94/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/318fe0882f23f7f15a26d4e14923da94/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/318fe0882f23f7f15a26d4e14923da94/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/318fe0882f23f7f15a26d4e14923da94/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "318fe0882f23f7f15a26d4e14923da94",
+    "type": "album"
+   }
+  },
+  {
+   "id": 3812245442,
+   "title": "E85",
+   "title_short": "E85",
+   "title_version": "",
+   "link": "https://www.deezer.com/track/3812245442",
+   "duration": 153,
+   "rank": 816901,
+   "explicit_lyrics": true,
+   "preview": "https://cdnt-preview.dzcdn.net/api/1/1/c/c/1/0/cc1156e419778897464d9ece273ddf8c.mp3?hdnea=exp=1794521820~acl=/api/1/1/c/c/1/0/cc1156e419778897464d9ece273ddf8c.mp3*~data=user_id=0,application_id=42~hmac=06f2dd7f12134702f25fe982803652d01f5e8a68a477b1cc747d3cb576bced28",
+   "md5_image": "123eb0268dfea84370a28c4a2114dc28",
+   "type": "track",
+   "artist": {
+    "id": 13631667,
+    "name": "Don Toliver",
+    "picture_small": "https://cdn-images.dzcdn.net/images/artist/2670219ffd5035c27aab2295dca242dd/56x56-000000-80-0-0.jpg",
+    "picture_medium": "https://cdn-images.dzcdn.net/images/artist/2670219ffd5035c27aab2295dca242dd/250x250-000000-80-0-0.jpg",
+    "picture_big": "https://cdn-images.dzcdn.net/images/artist/2670219ffd5035c27aab2295dca242dd/500x500-000000-80-0-0.jpg",
+    "picture_xl": "https://cdn-images.dzcdn.net/images/artist/2670219ffd5035c27aab2295dca242dd/1000x1000-000000-80-0-0.jpg",
+    "type": "artist"
+   },
+   "album": {
+    "id": 908068642,
+    "title": "OCTANE",
+    "cover": "https://api.deezer.com/album/908068642/image",
+    "cover_small": "https://cdn-images.dzcdn.net/images/cover/123eb0268dfea84370a28c4a2114dc28/56x56-000000-80-0-0.jpg",
+    "cover_medium": "https://cdn-images.dzcdn.net/images/cover/123eb0268dfea84370a28c4a2114dc28/250x250-000000-80-0-0.jpg",
+    "cover_big": "https://cdn-images.dzcdn.net/images/cover/123eb0268dfea84370a28c4a2114dc28/500x500-000000-80-0-0.jpg",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/123eb0268dfea84370a28c4a2114dc28/1000x1000-000000-80-0-0.jpg",
+    "md5_image": "123eb0268dfea84370a28c4a2114dc28",
+    "type": "album"
+   }
+  }
+ ],
+ "total": 5
+}

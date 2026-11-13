@@ -23,6 +23,8 @@ const props = withDefaults(defineProps<{
   extraMenu?: (track: Track, index: number) => MenuEntry[]
   /** Убрать выбранные строки (свой плейлист) */
   removeMany?: (indices: number[]) => void
+  /** «Послушать припев» по удержанию (каталог, чарты, альбомы, артисты, миксы) */
+  hook?: boolean
   /** Совместный плейлист: кто добавил строку (по порядку строк) — маленький аватар */
   addedBy?: (PersonRef | null)[]
 }>(), { variant: 'default', start: 1, virtualFrom: 120 })
@@ -224,6 +226,8 @@ function onContext(target: EventTarget | null) {
           :selected="selected.has(i)"
           :by="addedBy ? (addedBy[i] ?? null) : undefined"
           :extra="extraMenu ? () => extraMenu!(track, i) : undefined"
+          :hook="hook"
+          :origin="hook ? () => ({ tracks, index: i, context }) : undefined"
           @play="play(i)"
         />
       </div>

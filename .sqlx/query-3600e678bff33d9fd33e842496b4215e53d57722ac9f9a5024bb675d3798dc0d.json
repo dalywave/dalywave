@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.isrc, t.duration_ms, al.label AS \"label?\", al.release_date AS \"release_date?\"\n           FROM tracks t LEFT JOIN albums al ON al.id = t.album_id WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "label?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "label"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "release_date?",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "release_date"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "3600e678bff33d9fd33e842496b4215e53d57722ac9f9a5024bb675d3798dc0d"
+}

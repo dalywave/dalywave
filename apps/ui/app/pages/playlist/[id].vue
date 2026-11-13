@@ -253,6 +253,7 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
         v-if="tracks.length"
         :tracks="tracks"
         variant="wide"
+        :hook="pl.kind === 'mix'"
         :context="{ type: 'playlist', id: pl.id, title: pl.title }"
         :label="pl.title"
         :extra-menu="mine ? extraMenu : undefined"

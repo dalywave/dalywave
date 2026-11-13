@@ -56,6 +56,8 @@ pub struct Config {
     pub lrclib: LrclibConfig,
     /// Перенос из «Яндекс Музыки»
     pub yandex_music: YandexMusicConfig,
+    /// Сведения о музыке: чарт России, MusicBrainz, Wikidata, Википедия
+    pub info: InfoConfig,
     /// Токен конвейера выпусков (`make release-mac`, CI): загрузка сборки и регистрация выпуска
     /// приложения. `None` — выпускать нельзя.
     pub release_token: Option<String>,
@@ -162,6 +164,30 @@ impl Default for LrclibConfig {
     fn default() -> Self {
         Self {
             url: DEFAULT_LRCLIB_URL.into(),
+        }
+    }
+}
+
+/// Открытые источники сведений о музыке (ключи не нужны). Адреса меняются только в тестах.
+#[derive(Clone, Debug)]
+pub struct InfoConfig {
+    /// Открытый чарт Apple Music (Россия): `https://rss.marketingtools.apple.com`.
+    pub apple_charts_url: String,
+    /// `https://musicbrainz.org/ws/2`.
+    pub musicbrainz_url: String,
+    /// `https://www.wikidata.org`.
+    pub wikidata_url: String,
+    /// Шаблон адреса Википедии с `{lang}`: `https://{lang}.wikipedia.org`.
+    pub wikipedia_url: String,
+}
+
+impl Default for InfoConfig {
+    fn default() -> Self {
+        Self {
+            apple_charts_url: "https://rss.marketingtools.apple.com".into(),
+            musicbrainz_url: "https://musicbrainz.org/ws/2".into(),
+            wikidata_url: "https://www.wikidata.org".into(),
+            wikipedia_url: "https://{lang}.wikipedia.org".into(),
         }
     }
 }
@@ -481,6 +507,7 @@ impl Config {
             ml,
             lrclib,
             yandex_music,
+            info: InfoConfig::default(),
             release_token,
             push,
         })

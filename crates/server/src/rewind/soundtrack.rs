@@ -18,22 +18,18 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{Data, FIRST_YEAR, LISTEN_MS, MOODS, cached, local_year, range};
+pub use crate::chorus::Shape;
 use crate::{
     acquire::{self, Enqueue, Request},
     catalog::views,
+    chorus,
     deezer::Deezer,
     jobs::lanes,
     reco::Settings,
 };
 
-/// Окно, в котором ищется припев, секунд.
-const WINDOW_S: usize = 20;
-/// Без анализа — с этой доли трека.
-const FALLBACK_SHARE: f64 = 0.3;
 /// После начала слайду нужно столько звука.
 const TAIL_MS: i64 = 25_000;
-/// Окно припева должно быть заметно громче самого тихого окна, иначе «припев» — случайность.
-const MIN_CONTRAST: i64 = 60;
 /// Приоритет скачивания в полосе «сейчас»: ниже запуска трека (10) и срочной волны (6).
 const PREFETCH_PRIORITY: i16 = 5;
 
@@ -55,74 +51,14 @@ pub const SLIDES: [&str; 12] = [
 
 // ───────────── Место в треке ─────────────
 
-/// Что известно о форме трека из полного анализа.
-#[derive(Debug, Clone, Default)]
-pub struct Shape {
-    /// Энергия по секунде, 0..1000.
-    pub curve: Vec<i16>,
-    pub downbeats_ms: Vec<i32>,
-    pub intro_end_ms: Option<i32>,
-    pub outro_start_ms: Option<i32>,
-}
-
 /// Без анализа: 30 % трека, но так, чтобы слайду хватило звука.
 pub fn fallback_start(duration_ms: i64) -> i64 {
-    let at = (duration_ms as f64 * FALLBACK_SHARE) as i64;
-    at.min(duration_ms - TAIL_MS).max(0)
+    chorus::fallback_start(duration_ms, TAIL_MS)
 }
 
-/// Начало припева: самое энергичное окно в середине трека (из почти равных — первое: первый припев
-/// узнаётся лучше последнего), уточнённое по подъёму энергии и сдвинутое на ближайшую сильную долю.
-/// `None` — кривая не годится (только превью или трек ровный).
+/// Начало припева так, чтобы слайду хватило звука (см. [`chorus::chorus_start`]).
 pub fn chorus_start(duration_ms: i64, shape: &Shape) -> Option<i64> {
-    let curve = &shape.curve;
-    let n = curve.len();
-    let dur_s = usize::try_from(duration_ms / 1000).ok()?;
-    // Кривая 30-секундного превью о полном треке ничего не говорит
-    if n < 60 || dur_s == 0 || n * 10 < dur_s * 8 {
-        return None;
-    }
-    let secs = |ms: Option<i32>| ms.map(|m| usize::try_from(m.max(0) / 1000).unwrap_or(0));
-    let lo = secs(shape.intro_end_ms)
-        .unwrap_or(0)
-        .max(n * 12 / 100)
-        .max(8);
-    let end = secs(shape.outro_start_ms)
-        .filter(|&o| o > lo)
-        .unwrap_or(n)
-        .min(n * 88 / 100);
-    if end < lo + WINDOW_S {
-        return None;
-    }
-    let mut pre = vec![0i64; n + 1];
-    for (i, v) in curve.iter().enumerate() {
-        pre[i + 1] = pre[i] + i64::from((*v).clamp(0, 1000));
-    }
-    let sum = |s: usize| pre[s + WINDOW_S] - pre[s];
-    let starts = lo..=end - WINDOW_S;
-    let best = starts.clone().map(sum).max()?;
-    let worst = starts.clone().map(sum).min()?;
-    if best - worst < MIN_CONTRAST * WINDOW_S as i64 {
-        return None;
-    }
-    let s = starts.clone().find(|&s| sum(s) * 100 >= best * 92)?;
-    // Окно могло захватить конец куплета: начало — там, где энергия поднимается сильнее всего
-    let mean = |a: usize, b: usize| (pre[b] - pre[a]) / (b - a) as i64;
-    let rise = (s.max(4)..=(s + WINDOW_S / 2).min(n - 4))
-        .map(|i| (mean(i, i + 4) - mean(i - 4, i), i))
-        .max_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)))
-        .filter(|(d, _)| *d > 0)
-        .map_or(s, |(_, i)| i);
-    let at = rise as i64 * 1000;
-    // Кривая — по секунде, доли точнее: ближайшая сильная доля, лучше чуть раньше, чем позже
-    let snapped = shape
-        .downbeats_ms
-        .iter()
-        .map(|&d| i64::from(d))
-        .filter(|&d| d >= at - 2000 && d <= at + 1000)
-        .min_by_key(|&d| if d <= at { (at - d) * 2 } else { (d - at) * 3 })
-        .unwrap_or(at);
-    Some(snapped.min(duration_ms - TAIL_MS).max(0))
+    chorus::chorus_start(duration_ms, shape, TAIL_MS)
 }
 
 // ───────────── Какой трек на каком слайде ─────────────
@@ -338,39 +274,6 @@ async fn stats(
         .collect())
 }
 
-/// Место начала для каждого трека: по полному анализу или 30 % трека.
-async fn starts(db: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, (i64, bool)>, sqlx::Error> {
-    let rows = sqlx::query!(
-        r#"SELECT t.id AS "id!", COALESCE(t.duration_ms, 0) AS "duration_ms!", a.source AS "source?",
-                  a.energy_curve AS "curve?", a.downbeats_ms AS "downbeats?",
-                  a.intro_end_ms AS "intro_end_ms?", a.outro_start_ms AS "outro_start_ms?"
-           FROM tracks t LEFT JOIN track_analysis a ON a.recording_id = t.recording_id
-           WHERE t.id = ANY($1)"#,
-        ids,
-    )
-    .fetch_all(db)
-    .await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| {
-            let dur = i64::from(r.duration_ms);
-            let analysed = (r.source.as_deref() == Some("full"))
-                .then(|| Shape {
-                    curve: r.curve.unwrap_or_default(),
-                    downbeats_ms: r.downbeats.unwrap_or_default(),
-                    intro_end_ms: r.intro_end_ms,
-                    outro_start_ms: r.outro_start_ms,
-                })
-                .and_then(|shape| chorus_start(dur, &shape));
-            let start = match analysed {
-                Some(at) => (at, true),
-                None => (fallback_start(dur), false),
-            };
-            (r.id, start)
-        })
-        .collect())
-}
-
 /// Музыка историй года. `None` — год ещё не наступил или раньше [`FIRST_YEAR`].
 pub async fn get(
     db: &PgPool,
@@ -393,7 +296,7 @@ pub async fn get(
         .into_iter()
         .map(|t| (t.id, t))
         .collect();
-    let starts = starts(db, &ids).await?;
+    let starts = chorus::starts(db, &ids, TAIL_MS).await?;
     let cues = picks
         .into_iter()
         .filter_map(|(slide, id)| {
@@ -482,86 +385,17 @@ pub async fn prefetch(
 mod tests {
     use super::*;
 
-    /// Куплет 300, припев 800 (50–70 с), куплет, второй припев 820 (110–130 с), бридж, тихий финал.
-    fn song() -> Vec<i16> {
-        let mut c = vec![300i16; 200];
-        c[50..70].fill(800);
-        c[110..130].fill(820);
-        c[130..160].fill(400);
-        c[160..].fill(200);
-        c
-    }
-
     #[test]
-    fn first_chorus_wins_over_a_slightly_louder_last_one() {
-        let shape = Shape {
-            curve: song(),
-            downbeats_ms: (0..100).map(|i| i * 2000).collect(),
-            ..Default::default()
-        };
-        assert_eq!(chorus_start(200_000, &shape), Some(50_000));
-    }
-
-    #[test]
-    fn start_snaps_to_the_nearest_downbeat_preferring_earlier() {
-        // Доли сдвинуты на 0,4 с: 48,4 и 50,4 — ближе и не позже чем на секунду — 50,4
-        let shape = Shape {
-            curve: song(),
-            downbeats_ms: (0..100).map(|i| 400 + i * 2000).collect(),
-            ..Default::default()
-        };
-        assert_eq!(chorus_start(200_000, &shape), Some(50_400));
-        // Без сетки долей — по секунде кривой
-        let shape = Shape {
-            curve: song(),
-            ..Default::default()
-        };
-        assert_eq!(chorus_start(200_000, &shape), Some(50_000));
-    }
-
-    #[test]
-    fn loud_intro_and_outro_are_skipped() {
-        let mut curve = song();
-        curve[..20].fill(1000);
-        curve[175..].fill(1000);
-        let shape = Shape {
-            curve,
-            intro_end_ms: Some(20_000),
-            outro_start_ms: Some(175_000),
-            ..Default::default()
-        };
-        assert_eq!(chorus_start(200_000, &shape), Some(50_000));
-    }
-
-    #[test]
-    fn preview_or_flat_curves_fall_back() {
-        let preview = Shape {
-            curve: vec![500; 30],
-            ..Default::default()
-        };
-        assert_eq!(chorus_start(200_000, &preview), None);
-        let flat = Shape {
-            curve: vec![500; 200],
-            ..Default::default()
-        };
-        assert_eq!(chorus_start(200_000, &flat), None);
-        assert_eq!(fallback_start(200_000), 60_000);
-        // Короткий трек: слайду нужно 25 секунд звука
-        assert_eq!(fallback_start(30_000), 5_000);
-        assert_eq!(fallback_start(10_000), 0);
-    }
-
-    #[test]
-    fn chorus_leaves_enough_sound_for_the_slide() {
+    fn slides_get_25_seconds_of_sound() {
         let mut curve = vec![200i16; 100];
         curve[70..90].fill(900);
         let shape = Shape {
             curve,
             ..Default::default()
         };
-        // Припев на 70-й секунде из 100, но слайду нужно 25 секунд — не позже 75
         assert_eq!(chorus_start(100_000, &shape), Some(70_000));
-        assert!(chorus_start(100_000, &shape).unwrap() <= 75_000);
+        assert_eq!(fallback_start(200_000), 60_000);
+        assert_eq!(fallback_start(30_000), 5_000);
     }
 
     fn id(n: u128) -> Uuid {

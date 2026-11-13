@@ -92,7 +92,7 @@ const moreItems = computed<MenuEntry[]>(() => {
 
       <section v-for="[disc, tracks] in discs" :key="disc" class="album__disc">
         <h2 v-if="multiDisc" class="album__disc-title"><Icon name="ph:disc" />{{ t('disc', { n: disc }) }}</h2>
-        <MusicTrackList :tracks="tracks" variant="album" :context="{ type: 'album', id: album.id, title: album.title }" :label="album.title" />
+        <MusicTrackList :tracks="tracks" variant="album" hook :context="{ type: 'album', id: album.id, title: album.title }" :label="album.title" />
       </section>
       <p v-if="!data.tracks.length" class="album__empty">{{ t('noTracks') }}</p>
 

@@ -296,6 +296,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       <template v-else>
         <SearchRecent :limit="ui.isPhone ? 4 : 6" />
         <RecognizeHistory :limit="ui.isPhone ? 4 : 6" />
+        <SearchCharts />
         <SearchBrowse />
         <MusicShelf v-if="followed.length" :title="t('yourArtists')" :cols="8" phone-width="88px" class="search__artists">
           <SearchAvatar v-for="a in followed" :key="a.id" :artist="a" />
@@ -358,7 +359,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
               <h2 class="block__title">{{ t('tracks') }}</h2>
               <NuxtLink v-if="results.tracks.length > 6" :to="filterLink('tracks')" class="block__all">{{ tg('common.all') }}</NuxtLink>
             </header>
-            <MusicTrackList :tracks="phoneTracks" variant="compact" plain :context="ctx" :label="t('tracks')" />
+            <MusicTrackList :tracks="phoneTracks" variant="compact" plain :hook="scope === 'catalog'" :context="ctx" :label="t('tracks')" />
           </section>
         </template>
         <div v-else class="lead">
@@ -378,7 +379,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
               <h2 class="block__title">{{ t('tracks') }}</h2>
               <UiButton v-if="results.tracks.length > 5" :to="filterLink('tracks')" variant="ghost" size="sm">{{ tg('common.all') }}</UiButton>
             </header>
-            <MusicTrackList :tracks="results.tracks.slice(0, 5)" variant="compact" plain :context="ctx" :label="t('tracks')" />
+            <MusicTrackList :tracks="results.tracks.slice(0, 5)" variant="compact" plain :hook="scope === 'catalog'" :context="ctx" :label="t('tracks')" />
           </section>
         </div>
 
@@ -405,7 +406,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       <!-- Треки -->
       <template v-else-if="type === 'tracks'">
         <div v-if="results.tracks.length" class="results__list">
-          <MusicTrackList :tracks="results.tracks" variant="wide" plain :context="ctx" :label="t('tracks')" />
+          <MusicTrackList :tracks="results.tracks" variant="wide" plain :hook="scope === 'catalog'" :context="ctx" :label="t('tracks')" />
         </div>
         <UiEmptyState v-else compact icon="ph:music-notes-simple" :title="t('noneOf.tracks')" />
       </template>

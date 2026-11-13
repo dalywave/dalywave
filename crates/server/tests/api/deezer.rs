@@ -101,6 +101,11 @@ impl DeezerMock {
         self.inner.lock().unwrap().quota_errors = n;
     }
 
+    /// Свой ответ поиску с этой строкой (`q` без регистра) вместо записанного.
+    pub fn set_search(&self, kind: &str, q: &str, body: Value) {
+        self.set(&format!("/search/{kind}?q={}", q.to_lowercase()), body);
+    }
+
     /// Свой ответ на путь вместо записанного.
     pub fn set(&self, path: &str, body: Value) {
         self.inner
@@ -130,6 +135,8 @@ fn fixture_name(path: &str, query: &str) -> Option<String> {
         ["track", id] => Some(format!("track_{id}")),
         ["search", kind] => Some(format!("search_{kind}_{}", q?)),
         ["chart", "0"] => Some("chart_0".into()),
+        ["chart", id, "tracks"] => Some(format!("chart_{id}_tracks")),
+        ["playlist", id, "tracks"] => Some(format!("playlist_{id}_tracks")),
         _ => None,
     }
 }
@@ -144,7 +151,14 @@ async fn serve(State(mock): State<DeezerMock>, uri: Uri) -> Response {
         if quota {
             inner.quota_errors -= 1;
         }
-        (quota, inner.overrides.get(&path).cloned())
+        let q = url::form_urlencoded::parse(query.as_bytes())
+            .find(|(k, _)| k == "q")
+            .map(|(_, v)| v.to_lowercase());
+        let by_query = q.and_then(|q| inner.overrides.get(&format!("{path}?q={q}")).cloned());
+        (
+            quota,
+            by_query.or_else(|| inner.overrides.get(&path).cloned()),
+        )
     };
     if quota {
         let body = json!({ "error": { "type": "Exception", "message": "Quota limit exceeded", "code": 4 } });

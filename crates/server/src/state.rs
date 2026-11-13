@@ -39,6 +39,8 @@ pub struct AppState {
     pub ml: Arc<Ml>,
     /// Тексты песен (LRCLIB)
     pub lrclib: Arc<Lrclib>,
+    /// Сведения о музыке: MusicBrainz, Wikidata и Википедия, чарт Apple Music
+    pub info: Arc<crate::info::Sources>,
     /// Страницы и oEmbed чужих сервисов для «Поделиться → DalyWave» (в тестах — заглушка)
     pub links: Arc<crate::links::Links>,
 }
@@ -68,6 +70,7 @@ impl AppState {
         let ml = Ml::new(&config.ml.url)?;
         let lrclib = Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?;
         Ok(Self {
+            info: Arc::new(crate::info::Sources::new(&config.info)?),
             links: Arc::new(crate::links::Links::new()?),
             lrclib: Arc::new(lrclib),
             deezer: Arc::new(deezer),

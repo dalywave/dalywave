@@ -1,0 +1,814 @@
+{
+ "created": "2026-11-12T21:42:04.296Z",
+ "count": 3,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "694da04d-1ffc-435c-8b4b-59cc23ac8003",
+   "score": 100,
+   "title": "bad guy",
+   "length": 194000,
+   "artist-credit": [
+    {
+     "name": "Billie Eilish",
+     "artist": {
+      "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+      "name": "Billie Eilish",
+      "sort-name": "Eilish, Billie",
+      "aliases": [
+       {
+        "sort-name": "O’Connell, Billie Eilish Pirate Baird",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Billie Eilish Pirate Baird O’Connell",
+        "locale": "en",
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "O’Konel, Bili Ailiš Pirat Beird",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bili Ailiš Pirat Beird O’Konel",
+        "locale": "lt",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Ailiš, Bili",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bili Ailiš",
+        "locale": "lt",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Billija Ailiša",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billija Ailiša",
+        "locale": "lv",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "빌리 아일리시",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "빌리 아일리시",
+        "locale": "ko",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ប៊ីលលី អៃលីស",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ប៊ីលលី អៃលីស",
+        "locale": "km",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Билли Айлиш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Билли Айлиш",
+        "locale": "kk",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ბილი აილიში",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ბილი აილიში",
+        "locale": "ka",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Բիլլի Այլիշ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Բիլլի Այլիշ",
+        "locale": "hy",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "बिली एलीश",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "बिली एलीश",
+        "locale": "hi",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "בילי אייליש",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "בילי אייליש",
+        "locale": "he",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیلي آیليش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیلي آیليش",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیلی آیلیش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیلی آیلیش",
+        "locale": "fa",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Μπίλλι Άιλις",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Μπίλλι Άιλις",
+        "locale": "el",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیڵی_ئایڵش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیڵی_ئایڵش",
+        "locale": "ckb",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "বিলি আইলিশ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "বিলি আইলিশ",
+        "locale": "bn",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Били Ейлиш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Били Ейлиш",
+        "locale": "bg",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Білі Айліш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Білі Айліш",
+        "locale": "be",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Billi Ayliş",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billi Ayliş",
+        "locale": "az",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بيلي إيليش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بيلي إيليش",
+        "locale": "ar",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "比莉艾莉什",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "比莉艾莉什",
+        "locale": "zh",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ビリー・アイリッシュ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ビリー・アイリッシュ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "O’Connell, Billie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billie O’Connell",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Eilish O’Connell, Billie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billie Eilish O’Connell",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Bil Cutie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bil Cutie",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "2019-09-27",
+        "end-date": "2019-09-27"
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2019-03-29"
+  },
+  {
+   "id": "28c07f52-4dd2-4991-ab6f-435b1b313a0b",
+   "score": 100,
+   "title": "Bad Guy",
+   "length": 194087,
+   "artist-credit": [
+    {
+     "name": "Billie Eilish",
+     "artist": {
+      "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+      "name": "Billie Eilish",
+      "sort-name": "Eilish, Billie",
+      "aliases": [
+       {
+        "sort-name": "O’Connell, Billie Eilish Pirate Baird",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Billie Eilish Pirate Baird O’Connell",
+        "locale": "en",
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "O’Konel, Bili Ailiš Pirat Beird",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bili Ailiš Pirat Beird O’Konel",
+        "locale": "lt",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Ailiš, Bili",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bili Ailiš",
+        "locale": "lt",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Billija Ailiša",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billija Ailiša",
+        "locale": "lv",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "빌리 아일리시",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "빌리 아일리시",
+        "locale": "ko",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ប៊ីលលី អៃលីស",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ប៊ីលលី អៃលីស",
+        "locale": "km",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Билли Айлиш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Билли Айлиш",
+        "locale": "kk",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ბილი აილიში",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ბილი აილიში",
+        "locale": "ka",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Բիլլի Այլիշ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Բիլլի Այլիշ",
+        "locale": "hy",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "बिली एलीश",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "बिली एलीश",
+        "locale": "hi",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "בילי אייליש",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "בילי אייליש",
+        "locale": "he",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیلي آیليش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیلي آیليش",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیلی آیلیش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیلی آیلیش",
+        "locale": "fa",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Μπίλλι Άιλις",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Μπίλλι Άιλις",
+        "locale": "el",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیڵی_ئایڵش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیڵی_ئایڵش",
+        "locale": "ckb",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "বিলি আইলিশ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "বিলি আইলিশ",
+        "locale": "bn",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Били Ейлиш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Били Ейлиш",
+        "locale": "bg",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Білі Айліш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Білі Айліш",
+        "locale": "be",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Billi Ayliş",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billi Ayliş",
+        "locale": "az",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بيلي إيليش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بيلي إيليش",
+        "locale": "ar",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "比莉艾莉什",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "比莉艾莉什",
+        "locale": "zh",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ビリー・アイリッシュ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ビリー・アイリッシュ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "O’Connell, Billie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billie O’Connell",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Eilish O’Connell, Billie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billie Eilish O’Connell",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Bil Cutie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bil Cutie",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "2019-09-27",
+        "end-date": "2019-09-27"
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2021-08-13"
+  },
+  {
+   "id": "f8c8ea7a-1598-4c21-8814-6bc326549e6b",
+   "score": 100,
+   "title": "bad guy",
+   "length": 175000,
+   "artist-credit": [
+    {
+     "name": "Billie Eilish",
+     "artist": {
+      "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+      "name": "Billie Eilish",
+      "sort-name": "Eilish, Billie",
+      "aliases": [
+       {
+        "sort-name": "O’Connell, Billie Eilish Pirate Baird",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Billie Eilish Pirate Baird O’Connell",
+        "locale": "en",
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "O’Konel, Bili Ailiš Pirat Beird",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bili Ailiš Pirat Beird O’Konel",
+        "locale": "lt",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Ailiš, Bili",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bili Ailiš",
+        "locale": "lt",
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Billija Ailiša",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billija Ailiša",
+        "locale": "lv",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "빌리 아일리시",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "빌리 아일리시",
+        "locale": "ko",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ប៊ីលលី អៃលីស",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ប៊ីលលី អៃលីស",
+        "locale": "km",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Билли Айлиш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Билли Айлиш",
+        "locale": "kk",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ბილი აილიში",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ბილი აილიში",
+        "locale": "ka",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Բիլլի Այլիշ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Բիլլի Այլիշ",
+        "locale": "hy",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "बिली एलीश",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "बिली एलीश",
+        "locale": "hi",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "בילי אייליש",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "בילי אייליש",
+        "locale": "he",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیلي آیليش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیلي آیليش",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیلی آیلیش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیلی آیلیش",
+        "locale": "fa",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Μπίλλι Άιλις",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Μπίλλι Άιλις",
+        "locale": "el",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بیڵی_ئایڵش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بیڵی_ئایڵش",
+        "locale": "ckb",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "বিলি আইলিশ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "বিলি আইলিশ",
+        "locale": "bn",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Били Ейлиш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Били Ейлиш",
+        "locale": "bg",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Білі Айліш",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Білі Айліш",
+        "locale": "be",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Billi Ayliş",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billi Ayliş",
+        "locale": "az",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "بيلي إيليش",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "بيلي إيليش",
+        "locale": "ar",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "比莉艾莉什",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "比莉艾莉什",
+        "locale": "zh",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "ビリー・アイリッシュ",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "ビリー・アイリッシュ",
+        "locale": "ja",
+        "type": "Artist name",
+        "primary": true,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "O’Connell, Billie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billie O’Connell",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Eilish O’Connell, Billie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Billie Eilish O’Connell",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Bil Cutie",
+        "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+        "name": "Bil Cutie",
+        "locale": null,
+        "type": "Artist name",
+        "primary": null,
+        "begin-date": "2019-09-27",
+        "end-date": "2019-09-27"
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2019-06-14"
+  }
+ ]
+}

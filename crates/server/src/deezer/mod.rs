@@ -289,6 +289,14 @@ impl Deezer {
         Ok(page.data)
     }
 
+    /// Треки плейлиста по порядку (редакционные чарты: «Top Worldwide»), с ISRC.
+    pub async fn playlist_tracks(&self, id: i64, limit: u32) -> Result<Vec<Track>, DeezerError> {
+        let page: Page<Track> = self
+            .get(&format!("/playlist/{id}/tracks?limit={limit}"))
+            .await?;
+        Ok(page.data)
+    }
+
     /// Новые релизы жанра от редакции Deezer.
     pub async fn editorial_releases(
         &self,

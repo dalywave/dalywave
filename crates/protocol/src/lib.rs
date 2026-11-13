@@ -46,6 +46,7 @@ pub mod events;
 pub mod fetcher;
 pub mod home;
 pub mod imports;
+pub mod info;
 pub mod jam;
 pub mod jobs;
 pub mod library;

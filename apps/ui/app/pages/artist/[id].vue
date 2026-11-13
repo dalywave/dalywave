@@ -91,12 +91,14 @@ const moreItems = computed<MenuEntry[]>(() => {
           <h2 class="artist__h2">{{ t('popular') }}</h2>
           <UiButton v-if="data.topTracks.length > 5" variant="ghost" size="sm" @click="showAllTop = !showAllTop">{{ showAllTop ? t('less') : t('more') }}</UiButton>
         </header>
-        <MusicTrackList :tracks="top" :context="{ type: 'artist', id: artist.id, title: artist.name }" :label="t('popular')" />
+        <MusicTrackList :tracks="top" hook :context="{ type: 'artist', id: artist.id, title: artist.name }" :label="t('popular')" />
       </section>
 
       <MusicShelf v-for="s in shelves" :key="s.key" :title="s.title" :cols="5">
         <MusicAlbumCard v-for="a in s.items" :key="a.id" :album="a" :meta="releaseMeta(a)" />
       </MusicShelf>
+
+      <MusicArtistAbout :artist-id="artist.id" />
 
       <MusicShelf v-if="data.related.length" :title="t('related')" :cols="6" phone-width="120px">
         <MusicArtistCard v-for="a in data.related" :key="a.id" :artist="a" />

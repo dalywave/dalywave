@@ -1,0 +1,223 @@
+{
+ "id": "694da04d-1ffc-435c-8b4b-59cc23ac8003",
+ "length": 194000,
+ "video": false,
+ "disambiguation": "",
+ "title": "bad guy",
+ "relations": [
+  {
+   "attributes": [],
+   "type-id": "fc9b963a-29fa-4949-b22a-3bffd2440024",
+   "attribute-ids": {},
+   "target-credit": "",
+   "type": "field recordist",
+   "attribute-values": {},
+   "target-type": "artist",
+   "direction": "backward",
+   "begin": null,
+   "artist": {
+    "disambiguation": "",
+    "sort-name": "Eilish, Billie",
+    "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+    "name": "Billie Eilish",
+    "type": "Person",
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "end": null,
+   "ended": false,
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "ended": false,
+   "end": null,
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": null,
+    "type": "Person",
+    "name": "Casey Cuayo",
+    "id": "1e6e7ecd-f616-4625-8362-1d34b7e12467",
+    "sort-name": "Cuayo, Casey",
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "type-id": "3e3102e1-1896-4f50-b5b2-dd9824e46efe",
+   "attribute-ids": {
+    "assistant": "8c4196b1-7053-4b16-921a-f22b2898ed44"
+   },
+   "attributes": [
+    "assistant"
+   ],
+   "begin": null,
+   "direction": "backward",
+   "target-type": "artist",
+   "attribute-values": {},
+   "type": "mix"
+  },
+  {
+   "type": "mix",
+   "attribute-values": {},
+   "target-type": "artist",
+   "direction": "backward",
+   "begin": null,
+   "attributes": [],
+   "type-id": "3e3102e1-1896-4f50-b5b2-dd9824e46efe",
+   "attribute-ids": {},
+   "target-credit": "",
+   "artist": {
+    "disambiguation": "",
+    "sort-name": "Kinelski, Rob",
+    "id": "f57bfcdc-6928-4cc5-8db2-6211f38c88d5",
+    "type": "Person",
+    "name": "Rob Kinelski",
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "end": null,
+   "ended": false,
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "ended": false,
+   "end": null,
+   "artist": {
+    "disambiguation": "",
+    "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+    "sort-name": "Eilish, Billie",
+    "type": "Person",
+    "name": "Billie Eilish",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US"
+   },
+   "target-credit": "",
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "attribute-ids": {
+    "additional": "0a5341f8-3b1d-4f99-a0c6-26b7f4e42c7f"
+   },
+   "attributes": [
+    "additional"
+   ],
+   "begin": null,
+   "direction": "backward",
+   "target-type": "artist",
+   "attribute-values": {},
+   "type": "producer"
+  },
+  {
+   "artist": {
+    "type": "Person",
+    "name": "FINNEAS",
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "disambiguation": "",
+    "sort-name": "FINNEAS",
+    "id": "151cd917-1ee2-4702-859f-90899ad897f8"
+   },
+   "end": null,
+   "ended": false,
+   "source-credit": "",
+   "attributes": [],
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "attribute-ids": {},
+   "target-credit": "",
+   "type": "producer",
+   "attribute-values": {},
+   "target-type": "artist",
+   "begin": null,
+   "direction": "backward"
+  },
+  {
+   "attributes": [],
+   "work": {
+    "title": "bad guy",
+    "disambiguation": "",
+    "language": "eng",
+    "iswcs": [],
+    "id": "06c9031d-476f-4d08-be46-72fc581cbe6a",
+    "languages": [
+     "eng"
+    ],
+    "type": "Song",
+    "relations": [
+     {
+      "direction": "backward",
+      "begin": null,
+      "target-type": "artist",
+      "attribute-values": {},
+      "type": "writer",
+      "target-credit": "Billie Eilish O’Connell",
+      "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+      "attribute-ids": {},
+      "attributes": [],
+      "source-credit": "",
+      "ended": false,
+      "end": null,
+      "artist": {
+       "type": "Person",
+       "name": "Billie Eilish",
+       "country": "US",
+       "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+       "disambiguation": "",
+       "sort-name": "Eilish, Billie",
+       "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533"
+      }
+     },
+     {
+      "direction": "backward",
+      "begin": null,
+      "target-type": "artist",
+      "attribute-values": {},
+      "type": "writer",
+      "target-credit": "Finneas O’Connell",
+      "attribute-ids": {},
+      "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+      "attributes": [],
+      "source-credit": "",
+      "ended": false,
+      "end": null,
+      "artist": {
+       "id": "151cd917-1ee2-4702-859f-90899ad897f8",
+       "sort-name": "FINNEAS",
+       "disambiguation": "",
+       "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+       "country": "US",
+       "name": "FINNEAS",
+       "type": "Person"
+      }
+     }
+    ],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "attributes": []
+   },
+   "target-credit": "",
+   "attribute-ids": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "begin": null,
+   "direction": "forward",
+   "target-type": "work",
+   "end": null,
+   "source-credit": "",
+   "ended": false
+  }
+ ],
+ "artist-credit": [
+  {
+   "name": "Billie Eilish",
+   "artist": {
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "name": "Billie Eilish",
+    "sort-name": "Eilish, Billie",
+    "id": "f4abc0b5-3f7a-4eff-8f78-ac078dbce533",
+    "disambiguation": ""
+   },
+   "joinphrase": ""
+  }
+ ],
+ "first-release-date": "2019-03-29"
+}

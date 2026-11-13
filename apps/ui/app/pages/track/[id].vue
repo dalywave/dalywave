@@ -81,6 +81,8 @@ function radio() {
         </span>
         <Icon name="ph:caret-right" class="trk__chev" aria-hidden="true" />
       </NuxtLink>
+
+      <MusicTrackCredits :track-id="track.id" />
     </template>
   </div>
 </template>

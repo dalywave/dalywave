@@ -1,0 +1,193 @@
+{
+ "entities": {
+  "Q29564107": {
+   "type": "item",
+   "id": "Q29564107",
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "ad7d38a03cdd40cdc373de0dc4e7b7fcbccb31d9",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 5,
+         "id": "Q5"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q29564107$34C2F83B-47CA-4FD1-BB4E-AD6490789D99",
+      "rank": "normal"
+     }
+    ],
+    "P569": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P569",
+       "hash": "f1f2decf808dd323a3d5bb2a6b11b4b0e6bdf0dd",
+       "datavalue": {
+        "value": {
+         "time": "+2001-12-18T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 11,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q29564107$95328a95-4a10-2322-5211-529da526ba48",
+      "rank": "normal"
+     }
+    ],
+    "P27": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P27",
+       "hash": "52d0408c7915122e0519a22577f0cbdcb28f749b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 30,
+         "id": "Q30"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q29564107$de5ffee1-4bf4-4a42-de20-bb553f860341",
+      "rank": "normal"
+     }
+    ],
+    "P19": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P19",
+       "hash": "615d26e8551f02a673f56e53bfc8c34bf2d32189",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 65,
+         "id": "Q65"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q29564107$8E0DB4E7-BC8F-4814-96C1-07643342D590",
+      "rank": "normal"
+     }
+    ],
+    "P136": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "4c8fdc305bb77aa4dc5eaffcfa93fac2df459051",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 188450,
+         "id": "Q188450"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q29564107$44D32AB8-9F13-42B0-AC33-5D1D637FE392",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "2d116b2f20cf174b4af348dec2cf6733084d7311",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 842324,
+         "id": "Q842324"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q29564107$da044332-4be4-ef15-fc92-796625e6b682",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "8778be9cede68af21d881372b61e74dfa004a554",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 95469495,
+         "id": "Q95469495"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q29564107$aeedbb80-46d0-f9e3-42ce-7eb390c0b1c9",
+      "rank": "normal"
+     }
+    ],
+    "P2031": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2031",
+       "hash": "ece244acca5f2038d703503a6d37de408f88677f",
+       "datavalue": {
+        "value": {
+         "time": "+2015-00-00T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 9,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q29564107$ED525639-A646-4596-AD6E-9C51F2D326E3",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Billie Eilish",
+     "badges": []
+    },
+    "ruwiki": {
+     "site": "ruwiki",
+     "title": "Айлиш, Билли",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

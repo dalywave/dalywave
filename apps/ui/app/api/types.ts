@@ -38,6 +38,19 @@ export type TrackLyrics = Schemas['TrackLyrics']
 export type LyricsHit = Schemas['LyricsHit']
 export type LyricsSearchResults = Schemas['LyricsSearchResults']
 
+// Сведения о музыке: чарты, отрывок с припева, кто сделал трек, об артисте
+export type ChartKind = Schemas['ChartKind']
+export type ChartSummary = Schemas['ChartSummary']
+export type ChartList = Schemas['ChartList']
+export type ChartDetail = Schemas['ChartDetail']
+export type HookFrom = Schemas['HookFrom']
+export type TrackHook = Schemas['TrackHook']
+export type CreditRole = Schemas['CreditRole']
+export type CreditPerson = Schemas['CreditPerson']
+export type TrackCredits = Schemas['TrackCredits']
+export type ArtistAbout = Schemas['ArtistAbout']
+export type ArtistInfo = Schemas['ArtistInfo']
+
 // Версии песни: оригинал, slowed, super slowed, sped up
 export type VersionKind = Schemas['VersionKind']
 export type TrackVersion = Schemas['TrackVersion']

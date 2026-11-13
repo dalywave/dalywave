@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO music_people (mbid, name) VALUES ($1, $2)\n             ON CONFLICT (mbid) DO UPDATE SET name = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "71722d15c70ff38f914cb040746a3463f99ca71b1a23c1302b31822b2041aae9"
+}

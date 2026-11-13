@@ -8,7 +8,7 @@ use utoipa::{
 
 use crate::routes::{
     acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe, events,
-    fetcher, friends, home, images, imports, jam, library, lyrics, notifications, offline,
+    fetcher, friends, home, images, imports, info, jam, library, lyrics, notifications, offline,
     playlist_folders, playlist_set, playlists, queue, reco, recognize, rewind, settings, share,
     sources, stream, sync, system, taste, updates, versions, wave, wave_presets, ws,
 };
@@ -70,6 +70,11 @@ use crate::routes::{
         share::resolve_link,
         lyrics::track_lyrics,
         lyrics::search_lyrics,
+        info::list_charts,
+        info::chart,
+        info::hook,
+        info::track_credits,
+        info::artist_about,
         wave::similar,
         wave::suggest,
         wave::sound_search,

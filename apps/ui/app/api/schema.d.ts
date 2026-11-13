@@ -495,6 +495,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/artists/{id}/about": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["artist_about"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/app/pair": {
         parameters: {
             query?: never;
@@ -647,6 +663,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["resolve_deezer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/charts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_charts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/charts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["chart"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2655,6 +2703,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tracks/{id}/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["track_credits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tracks/{id}/hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["hook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/{id}/lyrics": {
         parameters: {
             query?: never;
@@ -3060,6 +3140,13 @@ export interface components {
             /** Format: uuid */
             trackId: string;
         };
+        /** @description Годы на сцене. `to: null` — по сей день. */
+        ActiveYears: {
+            /** Format: int32 */
+            from: number;
+            /** Format: int32 */
+            to: number | null;
+        };
         /** @description Откуда играет: альбом, плейлист, артист — нажатие открывает его. */
         ActivityContext: {
             id: string;
@@ -3292,6 +3379,22 @@ export interface components {
             code: string;
             codeVerifier: string;
         };
+        /** @description Коротко об артисте из Википедии. */
+        ArtistAbout: {
+            active: components["schemas"]["ActiveYears"] | null;
+            /** @description До трёх жанров. */
+            genres: string[];
+            /** @description Группа, а не человек. */
+            group: boolean;
+            /** @description Язык статьи: `ru` или `en`. */
+            lang: string;
+            /** @description Город рождения или основания. */
+            origin: string | null;
+            /** @description Начало статьи: несколько предложений, без ударений. */
+            summary: string;
+            /** @description Статья целиком — «Читать дальше». */
+            url: string;
+        };
         /** @description Страница артиста. */
         ArtistDetail: {
             artist: components["schemas"]["ArtistSummary"];
@@ -3306,6 +3409,12 @@ export interface components {
             tracksOnServer: number;
             /** Format: int64 */
             tracksTotal: number;
+        };
+        /** @description Ответ `GET /api/artists/{id}/about`. `about: null` — статьи нет, блока нет. */
+        ArtistInfo: {
+            about: components["schemas"]["ArtistAbout"] | null;
+            /** Format: uuid */
+            artistId: string;
         };
         ArtistRef: {
             /** Format: uuid */
@@ -3503,6 +3612,37 @@ export interface components {
          * @enum {string}
          */
         CellularQuality: "normal" | "saver";
+        /** @description Чарт целиком: треки по местам, альбомы и артисты — по трекам чарта. */
+        ChartDetail: {
+            /** @description Альбомы и EP, чьи треки стоят выше всего. */
+            albums: components["schemas"]["AlbumSummary"][];
+            /** @description Артисты, чьи треки стоят выше всего. */
+            artists: components["schemas"]["ArtistSummary"][];
+            chart: components["schemas"]["ChartSummary"];
+            /** @description По местам: первый — №1. */
+            tracks: components["schemas"]["Track"][];
+            /** @description Чарт собирается прямо сейчас: стоит спросить ещё раз через несколько секунд. */
+            updating: boolean;
+        };
+        /** @enum {string} */
+        ChartKind: "country" | "world" | "genre";
+        ChartList: {
+            items: components["schemas"]["ChartSummary"][];
+        };
+        /** @description Чарт в списке. */
+        ChartSummary: {
+            /** @description `ru`, `world`, `genre-116`. */
+            id: string;
+            image: components["schemas"]["ImageSet"] | null;
+            kind: components["schemas"]["ChartKind"];
+            /** @description По-русски; интерфейс переводит по `id`. */
+            title: string;
+            /**
+             * Format: date-time
+             * @description Когда чарт собран. `null` — ещё ни разу.
+             */
+            updatedAt: string | null;
+        };
         /**
          * @description Запрос задания. Пока заданий нет, сервер держит запрос до ~25 секунд, затем отвечает 204
          *     с `Retry-After` — через сколько секунд спросить снова.
@@ -3654,6 +3794,27 @@ export interface components {
          * @enum {string}
          */
         ContextType: "album" | "playlist" | "artist" | "wave" | "radio" | "mix" | "search" | "library" | "queue" | "remote";
+        /** @description Человек и что он делал. Один человек — одна строка, роли по порядку важности. */
+        CreditPerson: {
+            /**
+             * Format: uuid
+             * @description Артист каталога, если MusicBrainz знает его страницу в Deezer: нажатие ведёт к его трекам.
+             *     `null` — просто имя.
+             */
+            artistId: string | null;
+            /**
+             * Format: uuid
+             * @description id в MusicBrainz.
+             */
+            id: string;
+            name: string;
+            roles: components["schemas"]["CreditRole"][];
+        };
+        /**
+         * @description Роль в работе над треком (отношения MusicBrainz).
+         * @enum {string}
+         */
+        CreditRole: "writer" | "composer" | "lyricist" | "arranger" | "producer" | "engineer" | "recording" | "mix" | "mastering" | "programming";
         DayPartShare: {
             /** @description `morning` (5–12), `day` (12–17), `evening` (17–23), `night`. */
             part: string;
@@ -4282,6 +4443,11 @@ export interface components {
             generatedAt: string;
             shelves: components["schemas"]["Shelf"][];
         };
+        /**
+         * @description Откуда место отрывка.
+         * @enum {string}
+         */
+        HookFrom: "analysis" | "estimate" | "preview";
         /** @enum {string} */
         ImageOwner: "album" | "artist";
         /** @description Картинка в трёх размерах. */
@@ -7392,6 +7558,43 @@ export interface components {
             name: string;
             role: components["schemas"]["ArtistRole"];
         };
+        /** @description Ответ `GET /api/tracks/{id}/credits`. */
+        TrackCredits: {
+            label: string | null;
+            /** @description Продюсеры и звукорежиссёры. */
+            production: components["schemas"]["CreditPerson"][];
+            /** @description Страницы людей ещё ищутся: через несколько секунд у части имён появятся ссылки. */
+            resolving: boolean;
+            /** Format: uuid */
+            trackId: string;
+            /** @description Авторы музыки и слов. */
+            writing: components["schemas"]["CreditPerson"][];
+            /** Format: int32 */
+            year: number | null;
+        };
+        /** @description Ответ `GET /api/tracks/{id}/hook`: что играть ~15 секунд перед включением, не трогая очередь. */
+        TrackHook: {
+            from: components["schemas"]["HookFrom"];
+            /**
+             * Format: int64
+             * @description Сколько звучит отрывок, мс.
+             */
+            lengthMs: number;
+            /**
+             * @description Звука на сервере нет — подписанная ссылка на MP3-превью Deezer (живёт недолго, не хранить).
+             *     `null` вместе с `ready: false` — послушать нечего.
+             */
+            previewUrl: string | null;
+            /** @description Звук трека на сервере: отрывок — из него, с `startMs` (ссылку плеер берёт как обычно). */
+            ready: boolean;
+            /**
+             * Format: int64
+             * @description Начало отрывка от начала звука, мс. У превью — 0: Deezer сам режет его с припева.
+             */
+            startMs: number;
+            /** Format: uuid */
+            trackId: string;
+        };
         TrackList: {
             items: components["schemas"]["Track"][];
         };
@@ -9083,6 +9286,47 @@ export interface operations {
             };
         };
     };
+    artist_about: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id артиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Начало статьи Википедии и факты: годы на сцене, откуда, жанры. `about: null` — статьи нет */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtistInfo"];
+                };
+            };
+            /** @description Нет такого артиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Википедия не ответила */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     app_pair: {
         parameters: {
             query?: never;
@@ -9439,6 +9683,67 @@ export interface operations {
                 };
             };
             /** @description Deezer не ответил */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_charts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Чарты: Россия, мир, жанры — с обложкой первого места */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChartList"];
+                };
+            };
+        };
+    };
+    chart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `ru`, `world` или `genre-…` из списка чартов */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Треки по местам, альбомы и артисты по трекам чарта. `updating` — чарт собирается, стоит спросить ещё раз через несколько секунд */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChartDetail"];
+                };
+            };
+            /** @description Нет такого чарта */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Deezer не ответил, а собранного чарта ещё нет */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -14955,6 +15260,79 @@ export interface operations {
             };
             /** @description Нет такого трека (`not_found`) или полного анализа его записи ещё нет (`analysis_missing`: файл не скачан или не разобран) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    track_credits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Авторы музыки и слов, продюсеры и звукорежиссёры (MusicBrainz по ISRC), лейбл и год. Пустые списки — MusicBrainz трека не знает или не ответил. `resolving` — ссылки на страницы людей ещё ищутся */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackCredits"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    hook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Отрывок ~15 с с припева: из звука на сервере (место — по анализу или 30 % трека) или превью Deezer. Трек не ставится на скачивание */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackHook"];
+                };
+            };
+            /** @description Нет такого трека */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Deezer не ответил */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.isrc AS \"isrc!\" FROM track_artists ta\n           JOIN tracks t ON t.id = ta.track_id\n           WHERE ta.artist_id = $1 AND ta.role = 'main' AND t.isrc IS NOT NULL\n           ORDER BY t.rank DESC NULLS LAST\n           LIMIT 2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "isrc!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "4b527302ac3bcde7e1b1859a4512461680a224644f73183a185868727f6be0f3"
+}

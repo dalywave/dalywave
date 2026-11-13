@@ -1,0 +1,206 @@
+{
+ "name": "FINNEAS",
+ "isnis": [
+  "0000000475661292"
+ ],
+ "end-area": null,
+ "life-span": {
+  "begin": "1997-07-30",
+  "ended": false,
+  "end": null
+ },
+ "country": "US",
+ "relations": [
+  {
+   "attribute-ids": {},
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "target-credit": "",
+   "attributes": [],
+   "target-type": "url",
+   "begin": null,
+   "direction": "forward",
+   "type": "free streaming",
+   "attribute-values": {},
+   "url": {
+    "resource": "https://open.spotify.com/artist/37M5pPGs6V1fchFJSgCguX",
+    "id": "0193f3ef-1f9b-446d-b933-3afa1360be1a"
+   },
+   "ended": false,
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "url": {
+    "id": "6cfa9fd4-bef5-4a4a-a6cb-979e9dd2c74d",
+    "resource": "https://open.spotify.com/artist/7hCuNVmOMT7ntattMgmL96"
+   },
+   "end": null,
+   "source-credit": "Finneas O’Connell",
+   "ended": false,
+   "attributes": [],
+   "target-credit": "",
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "type": "free streaming",
+   "begin": null,
+   "direction": "forward",
+   "target-type": "url"
+  },
+  {
+   "target-credit": "",
+   "attribute-ids": {},
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "attributes": [],
+   "direction": "forward",
+   "begin": null,
+   "target-type": "url",
+   "attribute-values": {},
+   "type": "free streaming",
+   "url": {
+    "resource": "https://www.deezer.com/artist/10797684",
+    "id": "04cf705c-e342-4522-9f4c-5466b706e0bc"
+   },
+   "source-credit": "",
+   "ended": false,
+   "end": null
+  },
+  {
+   "attributes": [],
+   "target-credit": "",
+   "attribute-ids": {},
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "attribute-values": {},
+   "type": "free streaming",
+   "direction": "forward",
+   "begin": null,
+   "target-type": "url",
+   "url": {
+    "id": "34e0cea7-2202-4bab-9722-acfa831cbe63",
+    "resource": "https://www.deezer.com/artist/7889120"
+   },
+   "end": null,
+   "source-credit": "Finneas O’Connell",
+   "ended": false
+  },
+  {
+   "source-credit": "",
+   "ended": false,
+   "end": null,
+   "url": {
+    "id": "8b4f4ead-3e5d-44cb-9f97-cd5156d2b64b",
+    "resource": "https://music.apple.com/gb/artist/1138790033"
+   },
+   "begin": null,
+   "direction": "forward",
+   "target-type": "url",
+   "attribute-values": {},
+   "type": "streaming",
+   "target-credit": "",
+   "attribute-ids": {},
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "attributes": []
+  },
+  {
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "url": {
+    "resource": "https://music.apple.com/us/artist/1138790033",
+    "id": "a08a9fb3-e9e7-4972-8897-e5d98920ea93"
+   },
+   "target-type": "url",
+   "begin": null,
+   "direction": "forward",
+   "type": "streaming",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "target-credit": "",
+   "attributes": []
+  },
+  {
+   "url": {
+    "id": "735d563f-aef7-4603-b868-016b50bb33b9",
+    "resource": "https://tidal.com/artist/8031714"
+   },
+   "ended": false,
+   "source-credit": "",
+   "end": null,
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "attribute-ids": {},
+   "target-credit": "",
+   "attributes": [],
+   "target-type": "url",
+   "begin": null,
+   "direction": "forward",
+   "type": "streaming",
+   "attribute-values": {}
+  },
+  {
+   "attribute-ids": {},
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "target-credit": "",
+   "attributes": [],
+   "target-type": "url",
+   "begin": null,
+   "direction": "forward",
+   "type": "streaming",
+   "attribute-values": {},
+   "url": {
+    "id": "424238d6-eccc-45a4-b9f8-4235370f5a01",
+    "resource": "https://tidal.com/artist/84616568"
+   },
+   "ended": false,
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "target-credit": "",
+   "attribute-ids": {},
+   "type-id": "689870a4-a1e4-4912-b17f-7b2664215698",
+   "attributes": [],
+   "direction": "forward",
+   "begin": null,
+   "target-type": "url",
+   "attribute-values": {},
+   "type": "wikidata",
+   "url": {
+    "id": "4cb0782f-6c13-4364-9a38-c77f5d120f4d",
+    "resource": "https://www.wikidata.org/wiki/Q20029978"
+   },
+   "source-credit": "",
+   "ended": false,
+   "end": null
+  }
+ ],
+ "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+ "disambiguation": "",
+ "gender-id": "36d3d30a-839d-3eda-8cb3-29be4384e4a9",
+ "gender": "Male",
+ "sort-name": "FINNEAS",
+ "type": "Person",
+ "begin-area": {
+  "name": "Los Angeles",
+  "disambiguation": "",
+  "type": null,
+  "sort-name": "Los Angeles",
+  "id": "1f40c6e1-47ba-4e35-996f-fe6ee5840e62",
+  "type-id": null
+ },
+ "ipis": [
+  "00678268786"
+ ],
+ "id": "151cd917-1ee2-4702-859f-90899ad897f8",
+ "area": {
+  "type-id": null,
+  "name": "United States",
+  "type": null,
+  "iso-3166-1-codes": [
+   "US"
+  ],
+  "sort-name": "United States",
+  "id": "489ce91b-6658-3307-9877-795b68554c98",
+  "disambiguation": ""
+ }
+}

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PersonRef, Track } from '~/api/types'
+import type { HookOrigin } from '~/stores/hookPreview'
 import type { MenuEntry } from '~/types/ui'
 
 // Строка трека — одна для подборок, очереди, альбомов и поиска.
@@ -19,6 +20,10 @@ const props = withDefaults(defineProps<{
   selected?: boolean
   /** Пункты меню места, где показан трек («Убрать из плейлиста») */
   extra?: () => MenuEntry[]
+  /** «Послушать припев»: долгое нажатие пальцем или удержание ▶ — отрывок с припева */
+  hook?: boolean
+  /** Откуда отрывок — «Слушать» в нём включает весь список */
+  origin?: () => HookOrigin
   /** Совместный плейлист: кто добавил трек; `null` — неизвестно (место под аватар остаётся) */
   by?: PersonRef | null
 }>(), { variant: 'default', by: undefined })
@@ -53,6 +58,14 @@ const dlLabel = computed(() => (dl.value ? t(`offline.track.${dl.value.state}`, 
 const menuOpen = ref(false)
 const items = computed(() => (menuOpen.value ? menuFor(props.track, { inQueue: props.queueUid, extra: props.extra?.() }) : []))
 
+// «Послушать припев» — по удержанию; обычное нажатие просто играет
+const press = useHookPress(() => props.track, () => props.origin?.() ?? null)
+const hookStore = useHookPreviewStore()
+const hooked = computed(() => hookStore.track?.id === props.track.id)
+function onDown(e: PointerEvent, mouse = false) {
+  if (props.hook && !unavailable.value) press.down(e, mouse)
+}
+
 function onRowClick(e: MouseEvent) {
   if ((e.target as HTMLElement).closest('button, a')) return
   if (!unavailable.value) emit('play')
@@ -66,21 +79,28 @@ function onKey(e: KeyboardEvent) {
 <template>
   <div
     class="tr"
-    :class="[`tr--${variant}`, { 'is-current': isCurrent, 'is-remote': remote, 'is-unavailable': unavailable, 'is-filtered': filtered, 'is-hover': forceHover, 'is-menu': menuOpen, 'is-selected': selected }]"
+    :class="[`tr--${variant}`, { 'is-current': isCurrent, 'is-remote': remote, 'is-unavailable': unavailable, 'is-filtered': filtered, 'is-hover': forceHover, 'is-menu': menuOpen, 'is-selected': selected, 'is-hookable': hook, 'is-hooked': hooked }]"
     role="row"
     tabindex="0"
     :aria-current="isCurrent ? 'true' : undefined"
+    @click.capture="press.click"
     @click="onRowClick"
     @keydown="onKey"
+    @pointerdown="onDown"
+    @pointermove="press.move"
+    @pointerup="press.up"
+    @pointercancel="press.up"
+    @pointerleave="press.up"
+    @contextmenu="press.context"
   >
     <div v-if="variant !== 'compact' && variant !== 'queue'" class="tr__lead" role="cell">
       <span class="tr__idx tnum">{{ index ?? '' }}</span>
       <span class="tr__eq" :class="{ 'is-paused': !isPlaying }" aria-hidden="true"><i /><i /><i /></span>
-      <button type="button" class="tr__play" :aria-label="`${t('common.play')}: ${track.title}`" :disabled="unavailable" @click="emit('play')">
+      <button type="button" class="tr__play" :aria-label="`${t('common.play')}: ${track.title}`" :disabled="unavailable" @pointerdown="onDown($event, true)" @click="emit('play')">
         <Icon :name="isPlaying ? 'ph:pause-fill' : 'ph:play-fill'" />
       </button>
     </div>
-    <div v-if="variant !== 'album'" class="tr__art" role="cell">
+    <div v-if="variant !== 'album'" class="tr__art" role="cell" @pointerdown="variant === 'compact' && onDown($event, true)">
       <MusicCoverArt :image="track.album?.image" size="small" :alt="track.album?.title ?? ''" radius="6px" />
       <span v-if="variant === 'queue' || variant === 'compact'" class="tr__art-eq" :class="{ 'is-on': isCurrent, 'is-paused': !isPlaying }" aria-hidden="true"><i /><i /><i /></span>
     </div>
@@ -213,6 +233,8 @@ function onKey(e: KeyboardEvent) {
 .tr.is-remote :deep(.art) { filter: saturate(0.45) brightness(0.82); }
 .tr.is-remote:not(.is-current) .tr__title { color: var(--text-2); }
 .tr.is-unavailable { opacity: 0.45; }
+/* Звучит отрывок с припева этого трека */
+.tr.is-hooked { background: var(--fill-1); }
 .tr.is-filtered { opacity: 0.4; }
 
 /* Очередь и узкие колонки: без сердца; «ещё» заменяет длительность при наведении */
@@ -250,6 +272,12 @@ function onKey(e: KeyboardEvent) {
   .tr :deep(.tr__more .ib__icon) { font-size: 22px; }
   .tr--queue :deep(.tr__more) { display: inline-grid; }
   .tr--queue .tr__dur { display: none; }
+}
+
+/* Пальцем долгое нажатие — отрывок: без выноски ссылки и выделения текста */
+@media (pointer: coarse) {
+  .tr.is-hookable { -webkit-touch-callout: none; user-select: none; }
+  .tr.is-hookable a { -webkit-touch-callout: none; }
 }
 
 @media (max-width: 699px) {

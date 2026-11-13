@@ -399,7 +399,8 @@
       "disputed": "Waiting for review",
       "unavailable": "Not found in sources",
       "failed": "Download failed"
-    }
+    },
+    "about": "About the track"
   },
   "record": {
     "album": "Album",
@@ -693,5 +694,45 @@
     "listenTogether": "Listen together",
     "add": "Add friend",
     "empty": "No friends yet"
+  },
+  "hook": {
+    "listen": "Preview the chorus",
+    "title": "Chorus",
+    "play": "Play",
+    "close": "Close the preview",
+    "unavailable": "No preview for this track",
+    "failed": "Could not play the preview"
+  },
+  "charts": {
+    "title": "Charts",
+    "top": "Top 100",
+    "genres": "Genres",
+    "failed": "Could not load the charts",
+    "kicker": "Chart",
+    "kickerGenre": "Genre chart",
+    "tracks": "Tracks",
+    "albums": "Albums",
+    "artists": "Artists",
+    "empty": "The chart is empty for now",
+    "more": "All {n}",
+    "less": "Show less",
+    "name": {
+      "ru": "Russia",
+      "world": "World",
+      "genre-132": "Pop",
+      "genre-116": "Hip-hop",
+      "genre-152": "Rock",
+      "genre-113": "Dance",
+      "genre-106": "Electronic",
+      "genre-165": "R&B",
+      "genre-85": "Alternative",
+      "genre-464": "Metal",
+      "genre-129": "Jazz",
+      "genre-98": "Classical"
+    },
+    "heading": {
+      "ru": "Top Russia",
+      "world": "Top Global"
+    }
   }
 }

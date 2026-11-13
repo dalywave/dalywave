@@ -1,0 +1,47 @@
+{
+ "feed": {
+  "title": "Топ-песни",
+  "id": "https://rss.marketingtools.apple.com/api/v2/ru/music/most-played/100/songs.json",
+  "author": {
+   "name": "Apple",
+   "url": "https://www.apple.com/"
+  },
+  "copyright": "Copyright © 2026 Apple Inc. All rights reserved.",
+  "country": "ru",
+  "icon": "https://www.apple.com/favicon.ico",
+  "updated": "Thu, 12 Nov 2026 21:39:11 +0000",
+  "results": [
+   {
+    "artistName": "Lowborn",
+    "id": "1500000001",
+    "name": "Devil",
+    "kind": "songs",
+    "artistId": "1",
+    "genres": [
+     {
+      "name": "Альтернатива"
+     }
+    ],
+    "url": "https://music.apple.com/ru/album/devil/1?i=1500000001"
+   },
+   {
+    "artistName": "Lowborn & Friend",
+    "id": "1500000002",
+    "name": "Crazy (feat. Someone)",
+    "kind": "songs",
+    "artistId": "1",
+    "genres": [],
+    "url": "https://music.apple.com/ru/album/crazy/2?i=1500000002"
+   },
+   {
+    "artistName": "Неизвестный",
+    "id": "1500000003",
+    "name": "Nobody Knows",
+    "kind": "songs",
+    "artistId": "3",
+    "genres": [],
+    "url": "https://music.apple.com/ru/album/x/3?i=1500000003"
+   }
+  ]
+ }
+}

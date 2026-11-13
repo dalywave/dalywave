@@ -13,6 +13,7 @@ import type {
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
   LyricsSearchResults, TrackLyrics, TrackVersions, VersionChoice, VersionKind,
+  ArtistInfo, ChartDetail, ChartList, TrackCredits, TrackHook,
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
@@ -593,6 +594,16 @@ export interface Bridge {
     /** «Поделиться → DalyWave»: ссылка Deezer, Spotify, Apple Music, YouTube, SoundCloud, Bandcamp → трек,
      *  альбом или артист каталога. Ошибки: `unsupported_link` (422), `not_found` (404) */
     resolveLink(url: string): Promise<ResolvedLink>
+    /** Чарты: Россия, мир, жанры — с обложкой первого места */
+    charts(): Promise<ChartList>
+    /** Чарт: треки по местам, альбомы и артисты; `updating` — собирается, спросить ещё раз позже */
+    chart(id: string): Promise<ChartDetail>
+    /** Отрывок ~15 с с припева перед включением: место в звуке на сервере или превью Deezer */
+    hook(trackId: string): Promise<TrackHook>
+    /** Кто сделал трек: авторы, продюсеры, звукорежиссёры, лейбл, год */
+    credits(trackId: string): Promise<TrackCredits>
+    /** Об артисте: начало статьи Википедии и факты; `about: null` — статьи нет */
+    about(artistId: string): Promise<ArtistInfo>
   }
 
   home(): Promise<Home>

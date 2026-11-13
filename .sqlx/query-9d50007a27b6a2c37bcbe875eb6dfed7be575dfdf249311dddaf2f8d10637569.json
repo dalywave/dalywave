@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT mbid, artist_id, checked_at IS NOT NULL AS \"checked!\" FROM music_people WHERE mbid = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mbid",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "music_people",
+            "name": "mbid"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "artist_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "music_people",
+            "name": "artist_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "checked!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "9d50007a27b6a2c37bcbe875eb6dfed7be575dfdf249311dddaf2f8d10637569"
+}

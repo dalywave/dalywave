@@ -13,6 +13,7 @@ pub mod friends;
 pub mod home;
 pub mod images;
 pub mod imports;
+pub mod info;
 pub mod jam;
 pub mod library;
 pub mod lyrics;
@@ -90,6 +91,7 @@ pub fn router(state: AppState) -> Router {
         .merge(wave::catalog_routes())
         .merge(lyrics::routes())
         .merge(share::routes())
+        .merge(info::routes())
         .route_layer(from_fn_with_state(state.clone(), require_access));
     let library = library::routes()
         .merge(playlists::routes())
@@ -115,6 +117,7 @@ pub fn router(state: AppState) -> Router {
         .merge(connect::routes())
         .merge(offline::routes())
         .merge(jam::host_routes())
+        .merge(info::play_routes())
         .merge(versions::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()

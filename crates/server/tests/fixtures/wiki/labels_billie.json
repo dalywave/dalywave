@@ -1,0 +1,61 @@
+{
+ "entities": {
+  "Q65": {
+   "type": "item",
+   "id": "Q65",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Los Angeles"
+    },
+    "ru": {
+     "language": "ru",
+     "value": "Лос-Анджелес"
+    }
+   }
+  },
+  "Q188450": {
+   "type": "item",
+   "id": "Q188450",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "electropop"
+    },
+    "ru": {
+     "language": "ru",
+     "value": "электропоп"
+    }
+   }
+  },
+  "Q842324": {
+   "type": "item",
+   "id": "Q842324",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "indie pop"
+    },
+    "ru": {
+     "language": "ru",
+     "value": "инди-поп"
+    }
+   }
+  },
+  "Q95469495": {
+   "type": "item",
+   "id": "Q95469495",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "alternative pop"
+    },
+    "ru": {
+     "language": "ru",
+     "value": "альт-поп"
+    }
+   }
+  }
+ },
+ "success": 1
+}

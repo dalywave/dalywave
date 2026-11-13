@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT found, people, fetched_at FROM recording_credits WHERE isrc = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "found",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "recording_credits",
+            "name": "found"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "people",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "recording_credits",
+            "name": "people"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "fetched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "recording_credits",
+            "name": "fetched_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3016dbde031b1a2f5ab56379157306250bd96dd124871029b29cf122d6a4fef8"
+}

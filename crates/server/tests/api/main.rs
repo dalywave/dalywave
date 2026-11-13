@@ -23,6 +23,7 @@ mod home;
 mod images;
 mod import_sources;
 mod imports;
+mod info;
 mod jam;
 mod jobs;
 mod library;

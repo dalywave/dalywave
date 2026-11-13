@@ -370,6 +370,11 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       similar: (id, limit = 20) => unwrap(api.GET('/api/tracks/{id}/similar', { params: { path: { id }, query: { limit } } })),
       suggest: (trackIds, exclude = [], limit = 20) => unwrap(api.POST('/api/tracks/suggest', { body: { trackIds: trackIds.slice(0, 500), exclude: exclude.slice(0, 500), limit } })),
       resolveLink: url => unwrap(api.POST('/api/resolve-link', { body: { url } })),
+      charts: () => unwrap(api.GET('/api/charts')),
+      chart: id => unwrap(api.GET('/api/charts/{id}', { params: { path: { id } } })),
+      hook: id => unwrap(api.GET('/api/tracks/{id}/hook', { params: { path: { id } } })),
+      credits: id => unwrap(api.GET('/api/tracks/{id}/credits', { params: { path: { id } } })),
+      about: id => unwrap(api.GET('/api/artists/{id}/about', { params: { path: { id } } })),
     },
 
     home: () => unwrap(api.GET('/api/home')),

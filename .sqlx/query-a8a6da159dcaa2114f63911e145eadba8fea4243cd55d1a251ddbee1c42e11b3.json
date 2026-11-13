@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE music_people SET artist_id = $2, checked_at = now() WHERE mbid = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a8a6da159dcaa2114f63911e145eadba8fea4243cd55d1a251ddbee1c42e11b3"
+}

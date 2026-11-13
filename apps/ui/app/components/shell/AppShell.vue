@@ -122,6 +122,8 @@ const phoneMain = ref<HTMLElement | null>(null)
     </template>
     <!-- «Распознать»: экран прослушивания и лист результата (приложение для iPhone и Mac) -->
     <RecognizeLayer />
+    <!-- «Послушать припев»: карточка звучащего отрывка -->
+    <MusicHookPreview />
   </div>
 </template>
 

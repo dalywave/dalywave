@@ -185,7 +185,7 @@ function playLiked(list: Track[], i: number) {
           <template #actions>
             <UiButton variant="ghost" size="sm" icon="ph:play-fill" @click="playShelf(s, 0)">{{ t('playAll') }}</UiButton>
           </template>
-          <MusicTrackCard v-for="(tr, i) in tracks(s)" :key="tr.id" :track="tr" @play="playShelf(s, i)" />
+          <MusicTrackCard v-for="(tr, i) in tracks(s)" :key="tr.id" :track="tr" hook :origin="() => ({ tracks: tracks(s), index: i, context: { type: 'mix', id: s.id, title: shelfTitle(s) } })" @play="playShelf(s, i)" />
         </MusicShelf>
 
         <!-- Радар: по карточке на релиз — обложка, название, артист и вид релиза -->

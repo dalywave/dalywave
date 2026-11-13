@@ -7,7 +7,7 @@ use axum::{
 };
 use dalywave_server::{
     AppState, Config,
-    config::{DeezerConfig, FetcherConfig, LrclibConfig, MlConfig, YandexMusicConfig},
+    config::{DeezerConfig, FetcherConfig, InfoConfig, LrclibConfig, MlConfig, YandexMusicConfig},
     deezer::Deezer,
     jobs::{
         handlers,
@@ -56,6 +56,13 @@ pub fn config() -> Config {
         // «Яндекс Музыка» — тоже без сети: тесты переноса ставят свою заглушку
         yandex_music: YandexMusicConfig {
             url: "http://127.0.0.1:9".into(),
+        },
+        // Сведения о музыке — тоже без сети: тесты чартов, авторов и «Об артисте» ставят свою заглушку
+        info: InfoConfig {
+            apple_charts_url: "http://127.0.0.1:9".into(),
+            musicbrainz_url: "http://127.0.0.1:9".into(),
+            wikidata_url: "http://127.0.0.1:9".into(),
+            wikipedia_url: "http://127.0.0.1:9/{lang}".into(),
         },
         release_token: None,
         // push — без каналов: тесты уведомлений ставят свои поддельные APNs и службу Web Push
@@ -131,6 +138,8 @@ impl TestApp {
         let mut state = AppState::new(db, config).unwrap();
         // Квота и повторы в тестах — без пятисекундных пауз
         state.deezer = Arc::new(fast_deezer(&deezer.base));
+        // MusicBrainz в тестах — без секундной паузы между запросами
+        state.info = Arc::new(dalywave_server::info::Sources::fast(&state.config.info).unwrap());
         Self {
             router: dalywave_server::app(state.clone()),
             state,
