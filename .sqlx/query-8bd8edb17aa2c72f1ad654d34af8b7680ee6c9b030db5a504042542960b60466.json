@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE taste_train_tasks SET finished_at = now() WHERE id = $1 AND finished_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8bd8edb17aa2c72f1ad654d34af8b7680ee6c9b030db5a504042542960b60466"
+}

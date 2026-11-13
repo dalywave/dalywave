@@ -27,7 +27,9 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
   <aside class="panel" :class="{ 'is-open': ui.panelOpen }" :aria-hidden="!ui.panelOpen" :inert="!ui.panelOpen || undefined" :aria-label="t('player.panel')">
     <div class="panel__inner">
       <header class="panel__head">
-        <UiTabs v-model="tab" :items="tabs" :label="t('player.panel')" class="panel__tabs" />
+        <!-- Друзья — своя панель (кнопка в верхней строке), без вкладок плеера -->
+        <h2 v-if="ui.panelTab === 'friends'" class="panel__title">{{ t('friends.panel') }}</h2>
+        <UiTabs v-else v-model="tab" :items="tabs" :label="t('player.panel')" class="panel__tabs" />
         <UiIconButton icon="ph:x" :label="t('common.close')" size="sm" side="left" @click="ui.panelOpen = false" />
       </header>
       <div class="panel__body no-scrollbar" :class="{ 'is-lyrics': ui.panelTab === 'lyrics' }">
@@ -37,6 +39,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
           <MusicDeviceList :devices="player.devices" :playing="player.playing" @select="player.selectDevice" />
         </div>
         <MusicJamPanel v-else-if="ui.panelTab === 'jam'" back @back="ui.panelTab = 'devices'" />
+        <FriendsPanel v-else-if="ui.panelTab === 'friends'" />
         <MusicAboutTrack v-else :track="player.current?.track ?? null" />
       </div>
     </div>
@@ -59,6 +62,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
 .panel__inner { display: flex; flex-direction: column; width: var(--panel-w); height: 100%; min-height: 0; padding-top: var(--titlebar-inset-panel, 0px); }
 .panel__head { display: flex; align-items: center; gap: 8px; flex: none; padding: 6px 12px 0 20px; }
 .panel__tabs { flex: 1; min-width: 0; }
+.panel__title { flex: 1; min-width: 0; height: 50px; margin: 0; font-size: var(--fs-body); font-weight: 700; line-height: 50px; }
 .panel__tabs :deep(.tabs__list) { gap: 18px; border-bottom: 0; }
 .panel__tabs :deep(.tabs__item) { height: 50px; }
 .panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 24px; border-top: 1px solid var(--hair); }

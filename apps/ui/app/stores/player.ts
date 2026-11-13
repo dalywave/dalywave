@@ -251,7 +251,7 @@ export const usePlayerStore = defineStore('player', () => {
     }))
   }
 
-  async function startEntry(entry: QueueEntry, opts: { startMs?: number, autoplay?: boolean, crossfade?: boolean } = {}) {
+  async function startEntry(entry: QueueEntry, opts: { startMs?: number, autoplay?: boolean, crossfade?: boolean, fadeMs?: number } = {}) {
     current.value = entry
     pending.value = null
     const startMs = opts.startMs ?? 0
@@ -300,7 +300,7 @@ export const usePlayerStore = defineStore('player', () => {
     const src = withGain(result.source)
     source.value = src
     durationMs.value = src?.durationMs ?? entry.track.durationMs
-    if (opts.crossfade) engine.crossfade(src, { durationMs: durationMs.value, fadeMs: fadeMs.value })
+    if (opts.crossfade) engine.crossfade(src, { durationMs: durationMs.value, fadeMs: opts.fadeMs ?? fadeMs.value, startMs })
     else engine.load(src, { durationMs: durationMs.value, startMs, track: engineTrack(entry, result.source) })
     syncUpcoming()
     beginListen(entry, startMs)
@@ -423,6 +423,40 @@ export const usePlayerStore = defineStore('player', () => {
     smartRun++
     await startEntry(entries[start]!, { autoplay: true })
     void mixInSuggestions()
+  }
+
+  // ---------- Версии песни: оригинал, slowed, sped up ----------
+
+  /** Наложение при смене версии: короче перехода между треками — это та же песня */
+  const VERSION_FADE_MS = 1200
+
+  /**
+   * Заменить играющий трек другой версией той же песни: с той же доли песни (у slowed она длиннее),
+   * наложением, если играет. Очередь и история не меняются, прослушивание прежней закрывается
+   */
+  async function swapCurrent(track: Track) {
+    const cur = current.value
+    if (!cur || cur.track.id === track.id || mirrored.value || previewing.value) return
+    const share = durationMs.value ? Math.min(1, positionMs.value / durationMs.value) : 0
+    const wasPlaying = playing.value
+    finishListen('stopped')
+    const entry: QueueEntry = { ...cur, uid: crypto.randomUUID(), track }
+    const startMs = Math.max(0, Math.round(share * track.durationMs))
+    await startEntry(entry, wasPlaying && !native
+      ? { startMs, crossfade: true, fadeMs: VERSION_FADE_MS }
+      : { startMs, autoplay: wasPlaying })
+  }
+
+  /** Трек в очереди (ещё не играл) заменить другой версией: выбранная у исполнителя версия */
+  function replaceQueued(uid: string, track: Track) {
+    for (const list of [manual, upcoming]) {
+      const i = list.value.findIndex(e => e.uid === uid)
+      if (i < 0) continue
+      list.value.splice(i, 1, { ...list.value[i]!, uid: crypto.randomUUID(), track })
+      if (prefetched?.uid === uid) prefetched = null
+      prefetchNext()
+      return
+    }
   }
 
   // ---------- Подготовка волны ----------
@@ -1428,7 +1462,7 @@ export const usePlayerStore = defineStore('player', () => {
     current, manual, upcoming, history, context, playing, buffering, positionMs, durationMs, source, pending, volume, muted,
     transition, expressiveness, normalize, wave, waveSessionId, waveLoading, wavePrep, waveStarting, waveActive, effectiveMode, fadeMs,
     transitionAtMs, progress, nextEntry, peaks, devices,
-    play, pause, toggle, next, prev, seek, playTracks, startWave, cancelWavePrep, playNext, enqueue, enqueueMany, remove, clearManual, moveManual,
+    play, pause, toggle, next, prev, seek, playTracks, swapCurrent, replaceQueued, startWave, cancelWavePrep, playNext, enqueue, enqueueMany, remove, clearManual, moveManual,
     jumpTo, dislike, notNow, moreLikeThis, toggleLike, setWave, applyPreset, setVolume, toggleMute, loadDevices, selectDevice,
     previewing, previewGain, startPreview, pausePreview, resumePreview, stopPreview,
     mirrored, setConnectRoute, connectSnapshot, connectYield, connectMirror, connectTakeOver, connectLeave,

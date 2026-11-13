@@ -200,6 +200,12 @@ export function withOffline(bridge: Bridge, offline: OfflineBridge): Bridge {
       updateFolder: synced(pl.updateFolder),
       removeFolder: synced(pl.removeFolder),
       moveFolder: synced(pl.moveFolder),
+      // Совместные: участники и вход по ссылке меняют медиатеку на всех устройствах
+      setCollaborative: synced(pl.setCollaborative),
+      setVisibility: synced(pl.setVisibility),
+      addMembers: synced(pl.addMembers),
+      removeMember: synced(pl.removeMember),
+      join: synced(pl.join),
     },
     wave: {
       ...wave,

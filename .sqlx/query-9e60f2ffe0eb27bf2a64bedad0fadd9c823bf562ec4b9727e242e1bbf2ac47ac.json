@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"plays!\",\n                  count(*) FILTER (WHERE p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms) AS \"completed!\",\n                  max(p.started_at) AS last_played\n           FROM play_events p WHERE p.user_id = $1 AND p.track_id = $2 AND p.started_at < $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plays!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "completed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_played",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "9e60f2ffe0eb27bf2a64bedad0fadd9c823bf562ec4b9727e242e1bbf2ac47ac"
+}

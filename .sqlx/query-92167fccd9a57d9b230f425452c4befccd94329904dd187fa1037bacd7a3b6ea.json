@@ -1,0 +1,110 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, d.name AS device_name, u.name AS \"user_name?\", t.status, t.rows, t.result,\n                  t.leased_at, t.finished_at\n           FROM taste_train_tasks t\n           JOIN devices d ON d.id = t.device_id\n           LEFT JOIN users u ON u.id = t.user_id\n           ORDER BY t.leased_at DESC, t.id DESC LIMIT 10",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "device_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "devices",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "user_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rows",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "rows"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "result",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "result"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "leased_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "leased_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "finished_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "92167fccd9a57d9b230f425452c4befccd94329904dd187fa1037bacd7a3b6ea"
+}

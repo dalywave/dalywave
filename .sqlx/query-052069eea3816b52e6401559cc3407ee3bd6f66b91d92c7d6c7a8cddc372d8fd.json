@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.title, p.started_at, (1 - (a.sound <=> $2::real[]::halfvec(1280)))::real AS \"sim!\"\n               FROM play_events p\n               JOIN tracks t ON t.id = p.track_id\n               JOIN track_analysis a ON a.recording_id = t.recording_id AND a.sound IS NOT NULL\n               WHERE p.user_id = $1 AND p.track_id <> $3\n                 AND p.started_at > $4::timestamptz - interval '4 days' AND p.started_at < $4::timestamptz - interval '1 hour'\n                 AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)\n               ORDER BY a.sound <=> $2::real[]::halfvec(1280) LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "sim!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float4Array",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "052069eea3816b52e6401559cc3407ee3bd6f66b91d92c7d6c7a8cddc372d8fd"
+}

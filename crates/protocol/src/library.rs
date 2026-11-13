@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::catalog::{AlbumSummary, ArtistSummary, ImageSet, Track};
+use crate::{
+    catalog::{AlbumSummary, ArtistSummary, ImageSet, Track},
+    social::{PersonRef, PlaylistAccess},
+};
 
 /// Что докачивать на сервер по подписке на артиста.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -175,6 +178,22 @@ pub struct PlaylistSummary {
     /// Кто собрал плейлист вида `mix`: `daily_mix`, `discover_weekly`, `on_repeat`, `repeat_rewind`, `rewind`…
     #[serde(default)]
     pub generator: Option<String>,
+    /// Кем плейлист приходится смотрящему: свой, участник совместного, плейлист друга.
+    #[serde(default)]
+    pub access: PlaylistAccess,
+    /// Совместный: участники добавляют и переставляют треки.
+    #[serde(default)]
+    pub collaborative: bool,
+    /// Чей плейлист, если не свой.
+    #[serde(default)]
+    #[schema(required = true)]
+    pub owner: Option<PersonRef>,
+    /// Участники совместного (без владельца).
+    #[serde(default)]
+    pub members: Vec<PersonRef>,
+    /// Друзья видят плейлист на странице владельца.
+    #[serde(default)]
+    pub friends_can_see: bool,
 }
 
 /// Папка плейлистов в медиатеке и боковой панели. Вложенных папок нет.
@@ -249,6 +268,10 @@ pub struct PlaylistItem {
     pub position: f64,
     pub added_at: DateTime<Utc>,
     pub track: Track,
+    /// Кто добавил трек (видно в совместном плейлисте).
+    #[serde(default)]
+    #[schema(required = true)]
+    pub added_by: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]

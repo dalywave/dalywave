@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT i.reason, i.score, i.model_version, i.shown_at, i.wave_session_id, i.surface\n           FROM recommendation_impressions i\n           WHERE i.user_id = $1 AND i.track_id = $2 AND ($3::uuid IS NULL OR i.wave_session_id = $3)\n           ORDER BY i.shown_at DESC, i.id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "reason",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "score",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "model_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "model_version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "shown_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "shown_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "wave_session_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "wave_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "surface",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recommendation_impressions",
+            "name": "surface"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "11a2be33113b6e27fdff63a2e6f44af1ab4adf343315c66fd4aac75024bee19a"
+}

@@ -55,6 +55,8 @@ pub fn gather(kind: NotificationKind) -> Duration {
         NotificationKind::Release => Duration::from_secs(120),
         // Спорные копятся пачкой, пока качается импорт или дискография
         NotificationKind::Review => Duration::from_secs(15 * 60),
+        // Друг собирает совместный плейлист: треки за десять минут — одно уведомление
+        NotificationKind::SharedPlaylist => Duration::from_secs(10 * 60),
         _ => Duration::ZERO,
     }
 }
@@ -74,6 +76,10 @@ pub struct Draft {
     pub group: Option<String>,
     /// Однократность: событие с этой меткой у человека уже было — второго уведомления нет.
     pub mark: Option<String>,
+    /// Сколько событий в этом (три трека разом — три); копится в `count` группы.
+    pub weight: i32,
+    /// Ещё события для списка группы (кроме `item`).
+    pub more: Vec<NotificationItem>,
 }
 
 impl Draft {
@@ -87,7 +93,17 @@ impl Draft {
             item: None,
             group: None,
             mark: None,
+            weight: 1,
+            more: Vec::new(),
         }
+    }
+
+    /// Несколько событий разом: заголовок может содержать `{n}` — туда встанет «трек» или «3 трека»
+    /// по числу событий всей группы.
+    pub fn many(mut self, items: Vec<NotificationItem>) -> Self {
+        self.weight = items.len().max(1) as i32;
+        self.more = items;
+        self
     }
 
     pub fn link(mut self, link: impl Into<String>) -> Self {
@@ -238,7 +254,12 @@ pub async fn emit_in(
         return Ok(None);
     }
     let kind = draft.kind.as_str();
-    let items: Vec<NotificationItem> = draft.item.clone().into_iter().collect();
+    let items: Vec<NotificationItem> = draft
+        .item
+        .clone()
+        .into_iter()
+        .chain(draft.more.iter().cloned())
+        .collect();
     let open = match &draft.group {
         Some(group) => {
             sqlx::query!(
@@ -260,7 +281,7 @@ pub async fn emit_in(
                 serde_json::from_value(row.items).unwrap_or_default();
             all.extend(items);
             all.truncate(MAX_ITEMS);
-            let count = row.count + 1;
+            let count = row.count + draft.weight.max(1);
             let (title, body, link, image) = regroup(&draft, &all, count);
             sqlx::query!(
                 "UPDATE notifications SET title = $2, body = $3, link = $4, image = $5, items = $6,
@@ -279,17 +300,20 @@ pub async fn emit_in(
             row.id
         }
         None => {
+            let mut items = items;
+            items.truncate(MAX_ITEMS);
             sqlx::query_scalar!(
-            "INSERT INTO notifications (user_id, kind, group_key, title, body, link, image, items)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+            "INSERT INTO notifications (user_id, kind, group_key, title, body, link, image, items, count)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
             user,
             kind,
             draft.group,
-            draft.title,
+            counted(&draft.title, draft.weight.max(1)),
             draft.body,
             draft.link,
             draft.image,
             json!(items),
+            draft.weight.max(1),
         )
             .fetch_one(&mut *tx)
             .await?
@@ -340,12 +364,25 @@ fn regroup(
             (title, body, Some("/notifications".into()), image)
         }
         _ => (
-            draft.title.clone(),
+            counted(&draft.title, count),
             draft.body.clone(),
             draft.link.clone(),
             draft.image.clone(),
         ),
     }
+}
+
+/// `{n}` в заголовке — «трек» или «3 трека».
+fn counted(title: &str, count: i32) -> String {
+    if !title.contains("{n}") {
+        return title.to_string();
+    }
+    let n = if count == 1 {
+        "трек".to_string()
+    } else {
+        format!("{count} {}", plural(count, ["трек", "трека", "треков"]))
+    };
+    title.replace("{n}", &n)
 }
 
 /// «1 релиз», «2 релиза», «5 релизов».

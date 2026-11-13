@@ -276,12 +276,14 @@ fn apply_rows(
     for r in &page.playlists {
         let n = tx.execute(
             "INSERT INTO playlists (id, rev, title, description, kind, pinned, created_at, updated_at, search,
-                                   folder_id, position)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                                   folder_id, position, collaborative, owner, members, friends_can_see)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
              ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, title = excluded.title,
                description = excluded.description, kind = excluded.kind, pinned = excluded.pinned,
                created_at = excluded.created_at, updated_at = excluded.updated_at, search = excluded.search,
-               folder_id = excluded.folder_id, position = excluded.position
+               folder_id = excluded.folder_id, position = excluded.position,
+               collaborative = excluded.collaborative, owner = excluded.owner, members = excluded.members,
+               friends_can_see = excluded.friends_can_see
              WHERE excluded.rev >= playlists.rev",
             params![
                 r.id.to_string(),
@@ -294,7 +296,11 @@ fn apply_rows(
                 r.updated_at.to_rfc3339(),
                 normalize(&r.title),
                 r.folder_id.map(|f| f.to_string()),
-                r.position
+                r.position,
+                r.collaborative,
+                r.owner.as_ref().map(json).transpose()?,
+                json(&r.members)?,
+                r.friends_can_see
             ],
         )?;
         a.library |= n > 0;
@@ -331,10 +337,11 @@ fn apply_rows(
     }
     for r in &page.playlist_items {
         let n = tx.execute(
-            "INSERT INTO playlist_items (id, rev, playlist_id, track_id, position, added_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "INSERT INTO playlist_items (id, rev, playlist_id, track_id, position, added_at, added_by)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
              ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, playlist_id = excluded.playlist_id,
-               track_id = excluded.track_id, position = excluded.position, added_at = excluded.added_at
+               track_id = excluded.track_id, position = excluded.position, added_at = excluded.added_at,
+               added_by = excluded.added_by
              WHERE excluded.rev >= playlist_items.rev",
             params![
                 r.id.to_string(),
@@ -342,7 +349,8 @@ fn apply_rows(
                 r.playlist_id.to_string(),
                 r.track_id.to_string(),
                 r.position,
-                r.added_at.to_rfc3339()
+                r.added_at.to_rfc3339(),
+                r.added_by.map(|u| u.to_string())
             ],
         )?;
         a.library |= n > 0;

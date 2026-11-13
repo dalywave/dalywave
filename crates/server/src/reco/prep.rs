@@ -209,7 +209,7 @@ pub async fn start(env: &Env<'_>, session: &mut Session, platform: Option<&str>)
 
 async fn statuses(db: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, AudioStatus>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"SELECT t.id, r.audio_status AS "audio_status?" FROM tracks t
+        r#"SELECT t.id AS "id!", r.audio_status AS "audio_status?" FROM tracks t
            LEFT JOIN recordings r ON r.id = t.recording_id WHERE t.id = ANY($1)"#,
         ids,
     )

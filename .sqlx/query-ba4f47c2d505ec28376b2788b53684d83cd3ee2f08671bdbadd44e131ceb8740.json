@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM play_events p JOIN tracks t ON t.id = p.track_id\n           JOIN track_analysis a ON a.recording_id = t.recording_id AND a.sound IS NOT NULL\n           WHERE p.end_reason NOT IN ('error', 'interrupted', 'transferred')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ba4f47c2d505ec28376b2788b53684d83cd3ee2f08671bdbadd44e131ceb8740"
+}

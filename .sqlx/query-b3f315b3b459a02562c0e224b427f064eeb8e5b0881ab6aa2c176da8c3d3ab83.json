@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (a.recording_id) a.sound::real[] AS \"sound!\"\n           FROM track_artists ta JOIN tracks t ON t.id = ta.track_id\n           JOIN track_analysis a ON a.recording_id = t.recording_id\n           WHERE ta.artist_id = ANY($1) AND ta.role = 'main' AND a.sound IS NOT NULL\n           LIMIT 80",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sound!",
+        "type_info": "Float4Array",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b3f315b3b459a02562c0e224b427f064eeb8e5b0881ab6aa2c176da8c3d3ab83"
+}

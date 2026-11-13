@@ -26,6 +26,10 @@ pub enum NotificationKind {
     Sources,
     /// Пробное уведомление из настроек.
     Test,
+    /// Запрос в друзья и «принял запрос».
+    Friends,
+    /// Совместный плейлист: пригласили, добавили треки.
+    SharedPlaylist,
 }
 
 names!(NotificationKind {
@@ -35,6 +39,8 @@ names!(NotificationKind {
     Review => "review",
     Sources => "sources",
     Test => "test",
+    Friends => "friends",
+    SharedPlaylist => "shared_playlist",
 });
 
 impl NotificationKind {

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE((SELECT share_listening FROM social_settings WHERE user_id = $1), true) AS \"share!\",\n                  (SELECT max(ended_at) FROM private_sessions\n                   WHERE user_id = $1 AND started_at <= now() AND ended_at > now()) AS \"until?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "share!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "until?",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "c7d1f905bbf8de5ed808bc4e496675e749b1f41870e84de7934bc2a86651a4d7"
+}

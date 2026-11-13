@@ -240,7 +240,9 @@ pub async fn add_download(
                 .await?
             }
             DownloadKind::Playlist => sqlx::query_scalar!(
-                r#"SELECT EXISTS (SELECT 1 FROM playlists WHERE id = $1 AND user_id = $2) AS "e!""#,
+                r#"SELECT EXISTS (SELECT 1 FROM playlists p WHERE p.id = $1
+                                  AND (p.user_id = $2 OR EXISTS (SELECT 1 FROM playlist_members m
+                                                                 WHERE m.playlist_id = p.id AND m.user_id = $2))) AS "e!""#,
                 r,
                 user
             )

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT i.id FROM playlist_items i\n           JOIN play_events p ON p.track_id = i.track_id AND p.user_id = $2 AND p.started_at >= i.added_at\n           WHERE i.playlist_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlist_items",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "73133e29bb87153747bd8189c55b16e4b6652d6c9e5954c93a4c150c5d348a08"
+}

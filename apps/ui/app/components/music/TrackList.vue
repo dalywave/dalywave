@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Track } from '~/api/types'
+import type { PersonRef, Track } from '~/api/types'
 import type { PlayContext } from '~/stores/player'
 import type { MenuEntry } from '~/types/ui'
 
@@ -23,6 +23,8 @@ const props = withDefaults(defineProps<{
   extraMenu?: (track: Track, index: number) => MenuEntry[]
   /** Убрать выбранные строки (свой плейлист) */
   removeMany?: (indices: number[]) => void
+  /** Совместный плейлист: кто добавил строку (по порядку строк) — маленький аватар */
+  addedBy?: (PersonRef | null)[]
 }>(), { variant: 'default', start: 1, virtualFrom: 120 })
 
 const player = usePlayerStore()
@@ -220,6 +222,7 @@ function onContext(target: EventTarget | null) {
           :reason="reasons?.[track.id]"
           :plain="plain"
           :selected="selected.has(i)"
+          :by="addedBy ? (addedBy[i] ?? null) : undefined"
           :extra="extraMenu ? () => extraMenu!(track, i) : undefined"
           @play="play(i)"
         />

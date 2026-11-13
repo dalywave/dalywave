@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.title, (SELECT ar.name FROM track_artists ta JOIN artists ar ON ar.id = ta.artist_id\n                                WHERE ta.track_id = t.id ORDER BY ta.position LIMIT 1) AS artist,\n                      a.sound::real[] AS \"sound!\"\n               FROM recommendation_impressions i\n               JOIN tracks t ON t.id = i.track_id\n               JOIN track_analysis a ON a.recording_id = t.recording_id AND a.sound IS NOT NULL\n               WHERE i.wave_session_id = $1 AND i.outcome IN ('completed', 'like', 'more_like_this')\n                 AND i.outcome_at < $2 AND i.track_id <> $3\n               ORDER BY i.outcome_at DESC LIMIT 20",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "artist",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "sound!",
+        "type_info": "Float4Array",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "21645874a9feba6309c4508530a8a626b2f021f1334b27098ea25419ea248642"
+}

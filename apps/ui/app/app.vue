@@ -28,6 +28,7 @@ onMounted(() => {
     <UiToaster />
     <MusicPlaylistPicker />
     <MusicPlaylistSet />
+    <MusicPlaylistPeople />
     <MusicReportRecording />
     <MusicWhyTrack />
     <MusicSharedLink />

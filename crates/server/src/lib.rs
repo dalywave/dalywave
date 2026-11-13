@@ -35,10 +35,12 @@ pub mod routes;
 pub mod security;
 pub mod session;
 pub mod share;
+pub mod social;
 pub mod spa;
 pub mod state;
 pub mod storage;
 pub mod users;
+pub mod versions;
 
 pub use config::Config;
 pub use state::AppState;

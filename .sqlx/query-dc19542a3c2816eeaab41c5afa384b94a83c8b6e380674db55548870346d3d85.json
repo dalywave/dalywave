@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.user_id, t.device_id, t.requested_by, t.holdout_cut, t.spec, t.status, t.leased_at,\n                  t.finished_at, d.name AS device_name\n           FROM taste_train_tasks t JOIN devices d ON d.id = t.device_id WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "device_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "device_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "requested_by",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "requested_by"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "holdout_cut",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "holdout_cut"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "spec",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "spec"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "leased_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "leased_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "taste_train_tasks",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "device_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "devices",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "dc19542a3c2816eeaab41c5afa384b94a83c8b6e380674db55548870346d3d85"
+}

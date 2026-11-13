@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE taste_train_tasks SET status = 'expired', finished_at = now()\n         WHERE status = 'leased' AND leased_at < now() - make_interval(hours => $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3699cbe89f675b14adb22d60b3dc9e5517a749054c9f150ce8b0009a77c2924e"
+}

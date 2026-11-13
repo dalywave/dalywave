@@ -364,6 +364,9 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       soundSearch: (text, limit = 12) => unwrap(api.POST('/api/search/sound', { body: { text, limit } })),
       lyrics: trackId => unwrap(api.GET('/api/tracks/{id}/lyrics', { params: { path: { id: trackId } } })),
       searchLyrics: (q, limit = 20) => unwrap(api.GET('/api/lyrics/search', { params: { query: { q, limit } } })),
+      versions: trackId => unwrap(api.GET('/api/tracks/{id}/versions', { params: { path: { id: trackId } } })),
+      chooseVersion: (trackId, kind) => done(api.PUT('/api/tracks/{id}/versions/choice', { params: { path: { id: trackId } }, body: { kind } })),
+      versionChoices: async () => (await unwrap(api.GET('/api/versions/choices'))).items,
       similar: (id, limit = 20) => unwrap(api.GET('/api/tracks/{id}/similar', { params: { path: { id }, query: { limit } } })),
       suggest: (trackIds, exclude = [], limit = 20) => unwrap(api.POST('/api/tracks/suggest', { body: { trackIds: trackIds.slice(0, 500), exclude: exclude.slice(0, 500), limit } })),
       resolveLink: url => unwrap(api.POST('/api/resolve-link', { body: { url } })),
@@ -376,6 +379,23 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       less: facetId => unwrap(api.POST('/api/taste/facets/{id}/less', { params: { path: { id: facetId } } })),
       undoLess: damperId => done(api.DELETE('/api/taste/dampers/{id}', { params: { path: { id: damperId } } })),
       reset: () => done(api.POST('/api/taste/reset', { body: { confirm: true } })),
+    },
+
+    describe: {
+      preview: (text, exclude = []) => unwrap(api.POST('/api/describe', { body: { text, exclude: exclude.slice(0, 500) } })),
+      more: (brief, exclude, afterTrackId, count = 10) => unwrap(api.POST('/api/describe/more', { body: { brief, exclude: exclude.slice(0, 500), afterTrackId, count } })),
+      save: body => unwrap(api.POST('/api/describe/save', { body })),
+      get: async (id) => {
+        try {
+          return await unwrap(api.GET('/api/playlists/{id}/describe', { params: { path: { id } } }))
+        }
+        catch (e) {
+          if ((e as { status?: number }).status === 404) return null
+          throw e
+        }
+      },
+      setWeekly: (id, weekly) => unwrap(api.PATCH('/api/playlists/{id}/describe', { params: { path: { id } }, body: { weekly } })),
+      extend: async (id, count = 10) => (await unwrap(api.POST('/api/playlists/{id}/describe/more', { params: { path: { id } }, body: { count } }))).trackIds,
     },
 
     rewind: {
@@ -476,6 +496,33 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       pin: (id, pinned) => (pinned
         ? done(api.PUT('/api/playlists/{id}/pin', { params: { path: { id } } }))
         : done(api.DELETE('/api/playlists/{id}/pin', { params: { path: { id } } }))),
+      setCollaborative: (id, on) => (on
+        ? unwrap(api.PUT('/api/playlists/{id}/collaborative', { params: { path: { id } } }))
+        : unwrap(api.DELETE('/api/playlists/{id}/collaborative', { params: { path: { id } } }))),
+      setVisibility: (id, friendsCanSee) => unwrap(api.PUT('/api/playlists/{id}/visibility', { params: { path: { id } }, body: { friendsCanSee } })),
+      invite: (id, reset) => (reset
+        ? unwrap(api.POST('/api/playlists/{id}/invite', { params: { path: { id } } }))
+        : unwrap(api.GET('/api/playlists/{id}/invite', { params: { path: { id } } }))),
+      addMembers: (id, userIds) => unwrap(api.POST('/api/playlists/{id}/members', { params: { path: { id } }, body: { userIds } })),
+      removeMember: (id, userId) => done(api.DELETE('/api/playlists/{id}/members/{userId}', { params: { path: { id, userId } } })),
+      joinPreview: code => unwrap(api.GET('/api/playlists/join/{code}', { params: { path: { code } } })),
+      join: code => unwrap(api.POST('/api/playlists/join/{code}', { params: { path: { code } } })),
+    },
+
+    friends: {
+      list: () => unwrap(api.GET('/api/friends')),
+      people: q => unwrap(api.GET('/api/friends/people', { params: { query: { q: q || undefined } } })),
+      request: userId => unwrap(api.POST('/api/friends/requests', { body: { userId } })),
+      cancel: userId => done(api.DELETE('/api/friends/requests/{userId}', { params: { path: { userId } } })),
+      accept: userId => unwrap(api.POST('/api/friends/requests/{userId}/accept', { params: { path: { userId } } })),
+      decline: userId => done(api.POST('/api/friends/requests/{userId}/decline', { params: { path: { userId } } })),
+      remove: userId => done(api.DELETE('/api/friends/{userId}', { params: { path: { userId } } })),
+      profile: userId => unwrap(api.GET('/api/friends/{userId}', { params: { path: { userId } } })),
+      invite: reset => (reset ? unwrap(api.POST('/api/friends/invite')) : unwrap(api.GET('/api/friends/invite'))),
+      invitePreview: code => unwrap(api.GET('/api/friends/invite/{code}', { params: { path: { code } } })),
+      useInvite: code => unwrap(api.POST('/api/friends/invite/{code}', { params: { path: { code } } })),
+      privacy: () => unwrap(api.GET('/api/friends/privacy')),
+      updatePrivacy: patch => unwrap(api.PATCH('/api/friends/privacy', { body: patch })),
     },
 
     wave: {

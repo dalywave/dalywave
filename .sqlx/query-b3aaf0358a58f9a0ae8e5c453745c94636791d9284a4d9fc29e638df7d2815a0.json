@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.from_user, r.to_user, r.created_at, u.id, u.name, u.avatar_url\n           FROM friend_requests r\n           JOIN users u ON u.id = CASE WHEN r.from_user = $1 THEN r.to_user ELSE r.from_user END\n           WHERE (r.from_user = $1 OR (r.to_user = $1 AND r.declined_at IS NULL)) AND NOT u.disabled\n           ORDER BY r.created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "from_user",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "friend_requests",
+            "name": "from_user"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "to_user",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "friend_requests",
+            "name": "to_user"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "friend_requests",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "avatar_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "avatar_url"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "b3aaf0358a58f9a0ae8e5c453745c94636791d9284a4d9fc29e638df7d2815a0"
+}

@@ -168,6 +168,9 @@ function playLiked(list: Track[], i: number) {
     <!-- Итоги года — плиткой, пока событие открыто и истории уже посмотрены -->
     <RewindCard home />
 
+    <!-- Телефон и iPad: что слушают друзья (на компьютере — правая панель) -->
+    <FriendsShelf v-if="ui.isTouchUi" />
+
     <template v-if="home">
       <template v-for="s in home.shelves" :key="s.id">
         <MusicShelf v-if="s.kind === 'continue' && !ui.isTouch" :title="shelfTitle(s)" :cols="3" :rows="s.items.length > 3 ? 2 : 1" phone-width="82%">

@@ -1,0 +1,362 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH fam AS (\n               SELECT DISTINCT ta.artist_id FROM track_artists ta\n               WHERE ta.track_id IN (SELECT track_id FROM liked_tracks WHERE user_id = $2\n                                     UNION SELECT track_id FROM play_events WHERE user_id = $2)\n           )\n           SELECT t.id, t.recording_id, t.deezer_id, t.title, t.rank, al.release_date AS \"release_date?\",\n                  r.audio_status AS \"audio_status?\",\n                  ARRAY(SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = t.id\n                        ORDER BY ta.position, ta.artist_id) AS \"artist_ids!\",\n                  ARRAY(SELECT ar.name FROM track_artists ta JOIN artists ar ON ar.id = ta.artist_id\n                        WHERE ta.track_id = t.id ORDER BY ta.position, ta.artist_id) AS \"artist_names!\",\n                  a.recording_id IS NOT NULL AS \"analyzed!\",\n                  a.energy AS \"energy?\", a.valence AS \"valence?\", a.danceability AS \"danceability?\",\n                  a.bpm AS \"bpm?\", a.bpm_confidence AS \"bpm_confidence?\", a.key_camelot AS \"key_camelot?\",\n                  a.key_confidence AS \"key_confidence?\", a.voice AS \"voice?\", a.language AS \"language?\",\n                  a.approachability AS \"approachability?\",\n                  (a.moods ->> 'relaxed')::real AS relaxed, (a.moods ->> 'party')::real AS party,\n                  EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $2 AND l.track_id = t.id) AS \"liked!\",\n                  (SELECT count(*) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id\n                     AND p.started_at > now() - interval '30 days') AS \"plays_30d!\",\n                  (SELECT count(*) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id\n                     AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)) AS \"completed!\",\n                  (SELECT count(*) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id\n                     AND p.played_ms < 0.5 * p.duration_ms AND p.end_reason <> 'completed'\n                     AND (p.end_reason IN ('skipped', 'previous') OR (p.source = 'import' AND p.end_reason = 'stopped')))\n                     AS \"skips!\",\n                  (SELECT max(p.started_at) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id) AS last_played,\n                  (EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $2 AND b.kind = 'track' AND b.ref_id = t.id)\n                   OR EXISTS (SELECT 1 FROM blocked_items b JOIN track_artists ta ON ta.artist_id = b.ref_id\n                              WHERE b.user_id = $2 AND b.kind = 'artist' AND ta.track_id = t.id)\n                   OR COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f\n                                WHERE f.user_id = $2 AND f.track_id = t.id AND f.kind IN ('dislike', 'undislike')\n                                ORDER BY f.at DESC LIMIT 1), false)\n                   OR EXISTS (SELECT 1 FROM track_artists ta\n                              WHERE ta.track_id = t.id\n                                AND COALESCE((SELECT f.kind = 'dislike' FROM feedback_events f\n                                              WHERE f.user_id = $2 AND f.artist_id = ta.artist_id AND f.track_id IS NULL\n                                                AND f.kind IN ('dislike', 'undislike')\n                                              ORDER BY f.at DESC LIMIT 1), false))\n                   -- «Без нецензурного»: explicit без чистой версии не играет\n                   OR (t.explicit AND $5)\n                  ) AS \"excluded!\",\n                  EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.role = 'main'\n                            AND ta.artist_id IN (SELECT artist_id FROM fam)) AS \"artist_familiar!\",\n                  CASE WHEN $3::real[] IS NULL OR a.sound IS NULL THEN NULL\n                       ELSE (1 - (a.sound <=> $3::real[]::halfvec(1280)))::real END AS hit_sim,\n                  CASE WHEN $4::real[] IS NULL OR a.sound IS NULL THEN NULL\n                       ELSE (1 - (a.sound <=> $4::real[]::halfvec(1280)))::real END AS miss_sim,\n                  (SELECT max(1 - (a.sound <=> f.centroid)) FROM taste_facets f WHERE f.user_id = $2)::real\n                      AS taste_sim,\n                  al.title AS \"album_title?\", COALESCE(al.genres, '{}') AS \"album_genres!\",\n                  COALESCE((SELECT sum((s ->> 'p')::real) FROM jsonb_array_elements(\n                                CASE WHEN jsonb_typeof(a.styles) = 'array' THEN a.styles ELSE '[]' END) s\n                            WHERE s ->> 'name' LIKE 'Stage & Screen%'), 0)::real AS \"screen!\",\n                  CASE WHEN a.sound IS NULL THEN 0 ELSE taste_damp($2, a.sound, 0.72, 0.86) END::real AS \"damped!\"\n           FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)\n           JOIN tracks t ON t.id = ids.id\n           LEFT JOIN recordings r ON r.id = t.recording_id\n           LEFT JOIN track_analysis a ON a.recording_id = t.recording_id\n           LEFT JOIN albums al ON al.id = t.album_id\n           ORDER BY ids.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rank",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "rank"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "release_date?",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "release_date"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "audio_status?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "artist_ids!",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "artist_names!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "analyzed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "energy?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "energy"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "valence?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "valence"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "danceability?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "danceability"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "bpm?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "bpm"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "bpm_confidence?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "bpm_confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "key_camelot?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "key_camelot"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "key_confidence?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "key_confidence"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "voice?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "voice"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "language?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "language"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "approachability?",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "approachability"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "relaxed",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "party",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "liked!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 23,
+        "name": "plays_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 24,
+        "name": "completed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 25,
+        "name": "skips!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 26,
+        "name": "last_played",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 27,
+        "name": "excluded!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 28,
+        "name": "artist_familiar!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 29,
+        "name": "hit_sim",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 30,
+        "name": "miss_sim",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 31,
+        "name": "taste_sim",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 32,
+        "name": "album_title?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "album_genres!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 34,
+        "name": "screen!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 35,
+        "name": "damped!",
+        "type_info": "Float4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid",
+        "Float4Array",
+        "Float4Array",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "42b3a5c97c79361c60e74ec7b455a72eeeaeb2675084e1d62a9bcf2206859dd9"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE playlist_items SET position = position WHERE playlist_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c547008c3574f6a64c726548fe8c25ee245352d5777bf332c80486429fb5ad47"
+}

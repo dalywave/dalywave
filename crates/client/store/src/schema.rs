@@ -128,7 +128,18 @@ CREATE TABLE user_settings (
 DELETE FROM meta WHERE key = 'sync.cursor';
 ";
 
-const MIGRATIONS: &[&str] = &[V1, V2, V3];
+/// Совместные плейлисты: владелец (если плейлист не свой), участники и кто добавил трек. Курсор
+/// сбрасывается: совместные и новые поля придут полной синхронизацией.
+const V4: &str = "
+ALTER TABLE playlists ADD COLUMN collaborative INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE playlists ADD COLUMN owner TEXT;
+ALTER TABLE playlists ADD COLUMN members TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE playlists ADD COLUMN friends_can_see INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE playlist_items ADD COLUMN added_by TEXT;
+DELETE FROM meta WHERE key = 'sync.cursor';
+";
+
+const MIGRATIONS: &[&str] = &[V1, V2, V3, V4];
 
 pub fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;

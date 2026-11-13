@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH g AS (\n               SELECT a.recording_id, a.semantic,\n                      COALESCE((SELECT sum((s ->> 'p')::real) FROM jsonb_array_elements(\n                                    CASE WHEN jsonb_typeof(a.styles) = 'array' THEN a.styles ELSE '[]' END) s\n                                WHERE s ->> 'name' LIKE ANY($1)), 0) AS p\n               FROM track_analysis a\n           ),\n           hits AS (\n               SELECT DISTINCT ON (g.recording_id) t.id, g.p,\n                      CASE WHEN $3::real[] IS NULL OR g.semantic IS NULL THEN NULL\n                           ELSE g.semantic <=> $3::real[]::halfvec(512) END AS dist\n               FROM g JOIN tracks t ON t.recording_id = g.recording_id\n               LEFT JOIN albums al ON al.id = t.album_id\n               WHERE g.p >= 0.15\n                  OR EXISTS (SELECT 1 FROM unnest(COALESCE(al.genres, '{}')) x WHERE x LIKE ANY($2))\n               ORDER BY g.recording_id, (t.album_id IS NULL), t.rank DESC NULLS LAST, t.id\n           )\n           SELECT id AS \"id!\" FROM hits ORDER BY dist NULLS LAST, p DESC, id LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "Float4Array",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "21833cc11668a3efb178e82b2c0a33a573a0151debb1d304e6940c181d532ec6"
+}

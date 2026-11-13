@@ -4,9 +4,12 @@ pub mod admin_catalog;
 pub mod analysis;
 pub mod auth;
 pub mod catalog;
+pub mod collab;
 pub mod connect;
+pub mod describe;
 pub mod events;
 pub mod fetcher;
+pub mod friends;
 pub mod home;
 pub mod images;
 pub mod imports;
@@ -30,6 +33,7 @@ pub mod sync;
 pub mod system;
 pub mod taste;
 pub mod updates;
+pub mod versions;
 pub mod wave;
 pub mod wave_presets;
 pub mod ws;
@@ -91,6 +95,8 @@ pub fn router(state: AppState) -> Router {
         .merge(playlists::routes())
         .merge(playlist_folders::routes())
         .merge(playlist_set::routes())
+        .merge(collab::routes())
+        .merge(friends::routes())
         .merge(home::routes())
         .merge(taste::routes())
         .merge(rewind::routes())
@@ -105,9 +111,11 @@ pub fn router(state: AppState) -> Router {
         .merge(analysis::routes())
         .merge(wave::routes())
         .merge(wave_presets::routes())
+        .merge(describe::routes())
         .merge(connect::routes())
         .merge(offline::routes())
         .merge(jam::host_routes())
+        .merge(versions::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())

@@ -13,6 +13,7 @@ export function useTrackActions() {
   const share = useShare()
   const report = useReportRecording()
   const why = useWhyTrack()
+  const versions = useVersionsStore()
   const t = useNuxtApp().$i18n.t
 
   /** «Не рекомендовать» трек или исполнителя — в список, который ведёт сам человек («Мой вкус»), с отменой */
@@ -43,8 +44,19 @@ export function useTrackActions() {
       { label: t('pl.add'), icon: 'ph:plus-circle', onSelect: () => pui.pick([track]) },
       { label: t('track.radio'), icon: 'ph:waveform', onSelect: () => void player.startWave(undefined, { seed: { type: 'track', id: track.id }, title: track.title }) },
       { label: liked ? t('player.unlike') : t('player.like'), icon: liked ? 'ph:heart-break' : 'ph:heart', kbd: ['L'], onSelect: () => player.toggleLike(track) },
-      { kind: 'separator' },
     ]
+    // Играющий трек: другие версии той же песни — «Оригинал», «Slowed», «Sped up»
+    const own = opts.nowPlaying && versions.available && versions.current?.trackId === track.id ? versions.current : null
+    if (own) {
+      const selected = versions.waiting?.version.kind ?? own.kind
+      entries.push({
+        label: t('versions.label'),
+        icon: 'ph:gauge',
+        hint: versions.label(selected),
+        children: versions.options.map(o => ({ label: versions.label(o.kind), checked: o.kind === selected, onSelect: () => void versions.switchTo(o.kind) })),
+      })
+    }
+    entries.push({ kind: 'separator' })
     // «Скачать на это устройство» — только в приложении: сайт файлов не хранит
     // (скачанный в составе альбома или запаса трек отдельно не открепить — пункта нет)
     if (offline.available) {

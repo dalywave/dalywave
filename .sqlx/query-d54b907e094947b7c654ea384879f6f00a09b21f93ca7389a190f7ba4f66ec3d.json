@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM play_events p\n               JOIN track_artists ta ON ta.track_id = p.track_id\n               JOIN artists a ON a.id = ta.artist_id\n               WHERE p.user_id = $1 AND a.name = $2 AND p.started_at < $3\n                 AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d54b907e094947b7c654ea384879f6f00a09b21f93ca7389a190f7ba4f66ec3d"
+}

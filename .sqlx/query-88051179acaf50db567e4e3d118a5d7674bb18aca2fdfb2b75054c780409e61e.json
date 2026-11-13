@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM taste_train_tasks\n                              WHERE device_id = $1\n                                AND (status = 'leased' OR leased_at > now() - make_interval(hours => $3)))\n                  AND NOT EXISTS (SELECT 1 FROM taste_train_tasks\n                                  WHERE user_id IS NOT DISTINCT FROM $2\n                                    AND (status = 'leased' OR (status = 'done' AND finished_at > now() - make_interval(hours => $4))))\n                  AND NOT EXISTS (SELECT 1 FROM model_versions\n                                  WHERE kind = 'taste' AND user_id IS NOT DISTINCT FROM $2 AND origin = 'device'\n                                    AND created_at > now() - make_interval(hours => $4))\n                  AS \"due!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "due!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "88051179acaf50db567e4e3d118a5d7674bb18aca2fdfb2b75054c780409e61e"
+}

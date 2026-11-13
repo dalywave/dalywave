@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO model_versions (kind, version, active) VALUES ('taste', $1, true)\n                 ON CONFLICT (kind, version) DO UPDATE SET active = true",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8417594298105502522b97d5f794d8cdaf49f9d569b10c1bc456add8ddc6e563"
+}

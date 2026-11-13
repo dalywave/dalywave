@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE private_sessions SET ended_at = greatest(started_at, now())\n             WHERE user_id = $1 AND ended_at > now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ac165e52db78304aa5657c8a0c16b2a1c4dede61799661e684d50e9aa4066d9e"
+}

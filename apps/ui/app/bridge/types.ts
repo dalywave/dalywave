@@ -12,7 +12,7 @@ import type {
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
-  LyricsSearchResults, TrackLyrics,
+  LyricsSearchResults, TrackLyrics, TrackVersions, VersionChoice, VersionKind,
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
@@ -21,6 +21,8 @@ import type {
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
   WhyTrack,
+  FriendList, FriendProfile, FriendRequestResult, InviteLink, PeopleList, PersonCard, Privacy, PrivacyPatch, PlaylistInvite,
+  DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
 } from '~/api/types'
 import type { DownloaderSnapshot, TrainerSnapshot } from './tauri/shell'
 
@@ -578,6 +580,12 @@ export interface Bridge {
     lyrics(trackId: string): Promise<TrackLyrics>
     /** Песни, в тексте которых есть строчка (среди уже взятых текстов) */
     searchLyrics(q: string, limit?: number): Promise<LyricsSearchResults>
+    /** Версии той же песни, выпущенные исполнителем: оригинал, slowed, super slowed, sped up */
+    versions(trackId: string): Promise<TrackVersions>
+    /** Запомнить выбранную версию для основного исполнителя трека; `original` — забыть */
+    chooseVersion(trackId: string, kind: VersionKind): Promise<void>
+    /** Исполнители, у которых выбрана не оригинальная версия */
+    versionChoices(): Promise<VersionChoice[]>
     /** Похожие по звучанию на трек (не больше двух у артиста) — «Подходит к плейлисту» */
     similar(trackId: string, limit?: number): Promise<WaveItems>
     /** «Умное перемешивание»: похожее на весь список (не из него и не из `exclude`) — подпись «Подобрано» */
@@ -598,6 +606,20 @@ export interface Bridge {
     undoLess(damperId: string): Promise<void>
     /** Сбросить вкус: грани и миксы собираются заново по новым прослушиваниям */
     reset(): Promise<void>
+  }
+
+  /** «Плейлист по описанию»: словами — предпросмотр, «ещё в том же духе», сохранение обычным плейлистом */
+  describe: {
+    /** Собрать по описанию; `exclude` — треки прошлой сборки («Пересобрать») */
+    preview(text: string, exclude?: string[]): Promise<DescribePreview>
+    /** Ещё треки в том же духе: без показанных, начало — к последнему */
+    more(brief: DescribeBrief, exclude: string[], afterTrackId: string | null, count?: number): Promise<WaveItems>
+    save(body: SaveDescribed): Promise<PlaylistSummary>
+    /** Понятое у сохранённого плейлиста; собран не по описанию — `null` */
+    get(playlistId: string): Promise<DescribedPlaylist | null>
+    setWeekly(playlistId: string, weekly: boolean): Promise<DescribedPlaylist>
+    /** «Ещё в том же духе» в конец сохранённого; id добавленных треков */
+    extend(playlistId: string, count?: number): Promise<string[]>
   }
 
   /** «Итоги года»: годы с прослушиваниями, итоги года («по сей день» — у текущего), плейлист лучших треков */
@@ -701,6 +723,38 @@ export interface Bridge {
     /** Плейлисты удалённой папки встают на её место */
     removeFolder(id: string): Promise<PlaylistList>
     moveFolder(id: string, body: MovePlaylistFolder): Promise<PlaylistList>
+    /** Совместный: участники добавляют, убирают и переставляют треки; выключить — участники уходят */
+    setCollaborative(id: string, on: boolean): Promise<PlaylistSummary>
+    /** Видят ли друзья плейлист на странице владельца */
+    setVisibility(id: string, friendsCanSee: boolean): Promise<PlaylistSummary>
+    /** Ссылка-приглашение в совместный; `reset` — новая, прежняя перестаёт работать */
+    invite(id: string, reset?: boolean): Promise<InviteLink>
+    /** Позвать друзей (плейлист становится совместным) */
+    addMembers(id: string, userIds: string[]): Promise<PlaylistSummary>
+    /** Убрать участника; свой id — выйти из плейлиста */
+    removeMember(id: string, userId: string): Promise<void>
+    /** Куда зовёт ссылка: плейлист, владелец, вошёл ли уже */
+    joinPreview(code: string): Promise<PlaylistInvite>
+    join(code: string): Promise<PlaylistSummary>
+  }
+
+  /** Друзья: запросы, ссылка, что слушают, страница друга, приватность */
+  friends: {
+    list(): Promise<FriendList>
+    /** Люди сервиса по имени (пусто — все) */
+    people(q?: string): Promise<PeopleList>
+    request(userId: string): Promise<FriendRequestResult>
+    cancel(userId: string): Promise<void>
+    accept(userId: string): Promise<FriendRequestResult>
+    decline(userId: string): Promise<void>
+    remove(userId: string): Promise<void>
+    profile(userId: string): Promise<FriendProfile>
+    /** Своя ссылка «Добавить в друзья»; `reset` — новая */
+    invite(reset?: boolean): Promise<InviteLink>
+    invitePreview(code: string): Promise<PersonCard>
+    useInvite(code: string): Promise<PersonCard>
+    privacy(): Promise<Privacy>
+    updatePrivacy(patch: PrivacyPatch): Promise<Privacy>
   }
 
   /** Уведомления: центр, настройки по видам и тихие часы, подписки устройств на push */

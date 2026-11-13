@@ -17,6 +17,7 @@ use crate::{
     jam::{JamChanged, JamNowEvent, JamReaction},
     jobs::{AcquisitionStatus, JobStatus},
     notifications::{Notification, NotificationsRead},
+    social::{FriendActivityEvent, FriendsChange},
     sync::SyncEntity,
 };
 
@@ -72,6 +73,12 @@ pub enum ServerEvent {
     /// Уведомления прочитаны (на этом или другом устройстве).
     #[serde(rename = "notification.read")]
     NotificationRead(NotificationsRead),
+    /// Друзья или запросы в друзья изменились (и приватность — на других устройствах).
+    #[serde(rename = "friends.changed")]
+    FriendsChanged(FriendsChange),
+    /// Друг начал слушать другое или перестал.
+    #[serde(rename = "friends.activity")]
+    FriendActivity(FriendActivityEvent),
 }
 
 /// Сообщение клиента.

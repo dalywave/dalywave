@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Track } from '~/api/types'
+import type { PersonRef, Track } from '~/api/types'
 import type { MenuEntry } from '~/types/ui'
 
 // Строка трека — одна для подборок, очереди, альбомов и поиска.
@@ -19,7 +19,9 @@ const props = withDefaults(defineProps<{
   selected?: boolean
   /** Пункты меню места, где показан трек («Убрать из плейлиста») */
   extra?: () => MenuEntry[]
-}>(), { variant: 'default' })
+  /** Совместный плейлист: кто добавил трек; `null` — неизвестно (место под аватар остаётся) */
+  by?: PersonRef | null
+}>(), { variant: 'default', by: undefined })
 
 const emit = defineEmits<{ play: [] }>()
 const player = usePlayerStore()
@@ -112,6 +114,12 @@ function onKey(e: KeyboardEvent) {
           <span class="tr__state tr__state--warn" role="img" :aria-label="t(`track.status.${status}`)"><Icon name="ph:warning-circle" /></span>
         </UiTooltip>
       </span>
+      <!-- Совместный плейлист: кто добавил -->
+      <span v-if="by !== undefined" class="tr__by">
+        <UiTooltip v-if="by" :text="t('pl.addedBy', { name: by.name })">
+          <span class="tr__by-av" role="img" :aria-label="t('pl.addedBy', { name: by.name })"><FriendsAvatar :person="by" :size="20" /></span>
+        </UiTooltip>
+      </span>
       <!-- Действия места: «Добавить в плейлист» и «Убрать» у подобранного в очереди -->
       <slot name="actions" />
       <UiIconButton
@@ -195,6 +203,8 @@ function onKey(e: KeyboardEvent) {
 .tr__state--warn { color: var(--warning); }
 .tr__state--spin :deep(svg) { animation: spin 1.1s linear infinite; }
 .tr__dur { width: 40px; text-align: right; font-size: var(--fs-small); color: var(--text-3); }
+.tr__by { display: inline-grid; place-items: center; width: 28px; height: 28px; flex: none; }
+.tr__by-av { display: inline-grid; }
 .tr :deep(.tr__like), .tr :deep(.tr__more) { opacity: 0; }
 .tr:hover :deep(.tr__like), .tr.is-hover :deep(.tr__like), .tr:focus-within :deep(.tr__like), .tr.is-menu :deep(.tr__like),
 .tr:hover :deep(.tr__more), .tr.is-hover :deep(.tr__more), .tr:focus-within :deep(.tr__more), .tr.is-menu :deep(.tr__more),

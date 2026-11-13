@@ -117,6 +117,10 @@ fn base_page() -> SyncPage {
             updated_at: Utc::now(),
             folder_id: None,
             position: 1024.0,
+            collaborative: false,
+            owner: None,
+            members: Vec::new(),
+            friends_can_see: true,
         }],
         playlist_items: vec![
             SyncPlaylistItem {
@@ -126,6 +130,7 @@ fn base_page() -> SyncPage {
                 track_id: id(101),
                 position: 1.0,
                 added_at: Utc::now(),
+                added_by: None,
             },
             SyncPlaylistItem {
                 id: id(31),
@@ -134,6 +139,7 @@ fn base_page() -> SyncPage {
                 track_id: id(100),
                 position: 2.0,
                 added_at: Utc::now(),
+                added_by: None,
             },
         ],
         ..Default::default()
@@ -546,6 +552,10 @@ fn folders_and_settings_follow_rev_and_tombstones() {
         updated_at: Utc::now(),
         folder_id: folder.map(id),
         position,
+        collaborative: false,
+        owner: None,
+        members: Vec::new(),
+        friends_can_see: true,
     };
     let folder = |rev: i64, title: &str, collapsed: bool| SyncPlaylistFolder {
         id: id(70),
@@ -603,4 +613,88 @@ fn folders_and_settings_follow_rev_and_tombstones() {
     assert!(list.folders.is_empty());
     assert!(list.items.iter().all(|p| p.folder_id.is_none()));
     assert!(store.settings().unwrap().hide_explicit);
+}
+
+#[test]
+fn shared_playlist_keeps_owner_members_and_who_added() {
+    use dalywave_protocol::social::{PersonRef, PlaylistAccess};
+    let mut store = Store::memory().unwrap();
+    store.apply(&base_page()).unwrap();
+    let masha = PersonRef {
+        id: id(900),
+        name: "Маша".into(),
+        avatar_url: Some("https://daly.rest/a/masha.png".into()),
+    };
+    let me = PersonRef {
+        id: id(901),
+        name: "Я".into(),
+        avatar_url: None,
+    };
+    // Совместный плейлист Маши, где я участник: её трек и мой
+    let page = SyncPage {
+        cursor: "30".into(),
+        playlists: vec![SyncPlaylist {
+            id: id(40),
+            rev: 70,
+            title: "Вечер".into(),
+            description: String::new(),
+            kind: PlaylistKind::User,
+            pinned: false,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            folder_id: None,
+            position: -1024.0,
+            collaborative: true,
+            owner: Some(masha.clone()),
+            members: vec![me.clone()],
+            friends_can_see: true,
+        }],
+        playlist_items: vec![
+            SyncPlaylistItem {
+                id: id(41),
+                rev: 71,
+                playlist_id: id(40),
+                track_id: id(100),
+                position: 1.0,
+                added_at: Utc::now(),
+                added_by: Some(masha.id),
+            },
+            SyncPlaylistItem {
+                id: id(42),
+                rev: 72,
+                playlist_id: id(40),
+                track_id: id(101),
+                position: 2.0,
+                added_at: Utc::now(),
+                added_by: Some(me.id),
+            },
+        ],
+        ..Default::default()
+    };
+    store.apply(&page).unwrap();
+    let pl = store.playlist(id(40)).unwrap().unwrap();
+    assert!(pl.playlist.collaborative);
+    assert_eq!(pl.playlist.access, PlaylistAccess::Member);
+    assert_eq!(pl.playlist.owner.as_ref(), Some(&masha));
+    assert_eq!(pl.playlist.members, vec![me.clone()]);
+    assert_eq!(pl.items[0].added_by, Some(masha.id));
+    assert_eq!(pl.items[1].added_by, Some(me.id));
+    // Свой плейлист — свой
+    let own = store.playlist(id(20)).unwrap().unwrap();
+    assert_eq!(own.playlist.access, PlaylistAccess::Owner);
+    assert!(own.playlist.owner.is_none());
+
+    // Меня убрали из плейлиста: tombstone плейлиста удаляет и его позиции
+    let gone = SyncPage {
+        cursor: "31".into(),
+        tombstones: vec![SyncTombstone {
+            rev: 80,
+            entity: SyncEntity::Playlists,
+            key: json!({ "id": id(40) }),
+            deleted_at: Utc::now(),
+        }],
+        ..Default::default()
+    };
+    store.apply(&gone).unwrap();
+    assert!(store.playlist(id(40)).unwrap().is_none());
 }

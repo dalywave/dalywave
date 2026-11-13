@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE model_versions SET active = false\n             WHERE kind = 'taste' AND active AND user_id IS NOT DISTINCT FROM $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3aafc4ee0c58c2c459806320397080db3d2d73327ed496699499de01e0a0fdbc"
+}
