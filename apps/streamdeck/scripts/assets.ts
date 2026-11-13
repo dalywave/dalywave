@@ -78,7 +78,6 @@ const appIcon = (size: number) => svg(size, size, [
 // PNG значка (его требует Stream Deck) рисует scripts/icons.ts — Chrome нужен один раз, файлы в репозитории
 write('imgs/plugin/icon-source.svg', appIcon(512))
 write('imgs/plugin/category.svg', listIcon('wave', 28))
-write('imgs/layout/pulse.svg', svg(200, 100, '<rect width="200" height="100" fill="#ffffff"/>'))
 
 // ---------- манифест ----------
 

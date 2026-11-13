@@ -87,10 +87,4 @@ export function neoFields(s: { cover: string | null, title: string, subtitle: st
   return { cover: roundedArt(s.cover, 42), title: s.title, subtitle: s.subtitle }
 }
 
-/** Пульс в такт: подсветка всей полосы на долю, 0…0,2 */
-export function pulseFields(level: number): Fields {
-  const opacity = Math.round(Math.min(0.2, Math.max(0, level)) * 10) / 10
-  return { pulse: { opacity } }
-}
 
-export const PULSE_FILL = dataUri(svg(200, 100, '<rect width="200" height="100" fill="#ffffff"/>'))

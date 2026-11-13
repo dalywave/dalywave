@@ -5,10 +5,9 @@ import type { JsonObject } from '@elgato/utils'
 import { account } from '../account'
 import { t } from '../i18n'
 import { player } from '../player'
-import { pulse } from '../pulse'
 import { type GlyphName } from '../render/glyphs.gen'
 import { coverKey, iconKey } from '../render/keys'
-import { LAYOUT, neoFields, pulseFields, trackFields, volumeFields } from '../render/strip'
+import { LAYOUT, neoFields, trackFields, volumeFields } from '../render/strip'
 import { api } from '../api'
 import { trackSubtitle } from '../catalog'
 import type { TransitionMode } from '../types'
@@ -327,49 +326,16 @@ export class SleepAction extends DeckAction<SleepSettings> {
 
 // ---------- Сейчас играет (кнопка и экран Neo) ----------
 
-interface NowSettings { [k: string]: boolean | string | undefined, pulse?: boolean | string }
-
-function pulseOn(s: { pulse?: boolean | string }): boolean {
-  return s.pulse !== false && s.pulse !== 'false'
-}
+type NowSettings = Record<string, boolean | string | undefined>
 
 export class NowPlayingAction extends DeckAction<NowSettings> {
   override readonly manifestId = 'rest.daly.wave.nowplaying'
   protected override ticking = true
   protected override needsDevice = false
-  private flash = false
-
-  constructor() {
-    super()
-    pulse.on('beat', (on) => {
-      this.flash = on
-      for (const inst of this.instances.values()) {
-        if (pulseOn(inst.settings) && inst.action.isKey()) this.renderOne(inst.action.id)
-      }
-    })
-  }
-
-  protected override appeared(inst: Instance<NowSettings>): void {
-    inst.data.pulse = pulseOn(inst.settings) && inst.action.isKey()
-    if (inst.data.pulse) pulse.use(true)
-  }
-
-  protected override settingsChanged(inst: Instance<NowSettings>): void {
-    const want = pulseOn(inst.settings) && inst.action.isKey()
-    if (want !== inst.data.pulse) pulse.use(want)
-    inst.data.pulse = want
-  }
-
-  override onWillDisappear(ev: Parameters<DeckAction<NowSettings>['onWillDisappear']>[0]): void {
-    const inst = this.instances.get(ev.action.id)
-    if (inst?.data.pulse) pulse.use(false)
-    super.onWillDisappear(ev)
-  }
 
   protected override renderKey(inst: Instance<NowSettings>): void {
     const tr = player.track
-    const shade = inst.data.pulse && pulse.active && !this.flash ? 0.14 : 0
-    this.setImage(inst, coverKey({ cover: tr ? currentCover() : null, progress: player.progress(), playing: player.playing || !tr, shade }))
+    this.setImage(inst, coverKey({ cover: tr ? currentCover() : null, progress: player.progress(), playing: player.playing || !tr }))
   }
 
   protected override renderNeo(inst: Instance<NowSettings>): void {
@@ -390,44 +356,19 @@ export class NowPlayingAction extends DeckAction<NowSettings> {
 // ---------- Multimedia (крутилка) ----------
 
 type MediaMode = 'tracks' | 'seek' | 'volume'
-interface MediaSettings { [k: string]: string | boolean | undefined, mode?: MediaMode, pulse?: boolean | string }
+interface MediaSettings { [k: string]: string | boolean | undefined, mode?: MediaMode }
 const MEDIA_MODES: MediaMode[] = ['tracks', 'seek', 'volume']
 
 export class MultimediaAction extends DeckAction<MediaSettings> {
   override readonly manifestId = 'rest.daly.wave.multimedia'
   protected override ticking = true
-  private flash = false
-
-  constructor() {
-    super()
-    pulse.on('beat', (on) => {
-      this.flash = on
-      for (const inst of this.instances.values()) {
-        if (inst.data.pulse && this.modeOf(inst) !== 'volume' && !this.problem()) this.feedback(inst, pulseFields(on && pulse.active ? 0.1 : 0))
-      }
-    })
-  }
 
   private modeOf(inst: Instance<MediaSettings>): MediaMode {
     return (inst.data.mode as MediaMode | undefined) ?? inst.settings.mode ?? 'tracks'
   }
 
-  protected override appeared(inst: Instance<MediaSettings>): void {
-    inst.data.pulse = pulseOn(inst.settings)
-    if (inst.data.pulse) pulse.use(true)
-  }
-
   protected override settingsChanged(inst: Instance<MediaSettings>): void {
     delete inst.data.mode
-    const want = pulseOn(inst.settings)
-    if (want !== inst.data.pulse) pulse.use(want)
-    inst.data.pulse = want
-  }
-
-  override onWillDisappear(ev: Parameters<DeckAction<MediaSettings>['onWillDisappear']>[0]): void {
-    const inst = this.instances.get(ev.action.id)
-    if (inst?.data.pulse) pulse.use(false)
-    super.onWillDisappear(ev)
   }
 
   protected override renderDial(inst: Instance<MediaSettings> & { action: DialAction<MediaSettings> }): void {
@@ -447,7 +388,6 @@ export class MultimediaAction extends DeckAction<MediaSettings> {
       progress: player.progress(),
       playing: player.playing || !tr,
     }))
-    if (!pulse.active || !inst.data.pulse) this.feedback(inst, pulseFields(0))
     const rotate = mode === 'seek' ? t().modeSeek : t().modeTracks
     if (inst.data.trigger !== rotate) {
       inst.data.trigger = rotate

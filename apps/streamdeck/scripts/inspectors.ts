@@ -80,11 +80,10 @@ const ADD_SCRIPT = `
 </script>`
 
 const FIELDS: Record<string, string> = {
-  nowplaying: [help('helpNow'), checkbox('pulse', 'pulse', 'pulseLabel')].join(''),
+  nowplaying: help('helpNow'),
   playback: select('mode', 'mode', [['toggle', 'toggle'], ['play', 'play'], ['pause', 'pause'], ['next', 'next'], ['previous', 'previous']], 'toggle'),
   multimedia: [
     select('mode', 'dialMode', [['tracks', 'modeTracks'], ['seek', 'modeSeek'], ['volume', 'modeVolume']], 'tracks'),
-    checkbox('pulse', 'pulse', 'pulseLabel'),
     help('helpMultimedia'),
   ].join(''),
   volume: [

@@ -63,7 +63,6 @@ const now = { cover: cover(0), title: 'Кто тебе сказал?', subtitle:
 const STRIPS: [string, string][] = [
   ['Мультимедиа: трек', strip('track', trackFields(now))],
   ['На паузе', strip('track', trackFields({ ...now, playing: false }))],
-  ['Пульс в такт (доля)', strip('track', { ...trackFields(now), pulse: { opacity: 0.1 } })],
   ['Громкость', strip('volume', volumeFields({ level: 0.64, muted: false, label: '64 %', track: 'Кто тебе сказал? — Lowborn' }))],
   ['Без звука', strip('volume', volumeFields({ level: 0.64, muted: true, label: t().muted, track: 'Кто тебе сказал? — Lowborn' }))],
   ['Коллекция', strip('list', listFields({ cover: cover(1), fallback: 'playlist-bold', title: 'Не так как ты хочешь', subtitle: 'Mzlff', counter: '3 из 24' }))],
@@ -81,7 +80,6 @@ const STRIPS: [string, string][] = [
 
 const KEYS: [string, string][] = [
   ['Сейчас играет', coverKey({ cover: cover(0), progress: 0.42, playing: true })],
-  ['…на доле (пульс)', coverKey({ cover: cover(0), progress: 0.42, playing: true, shade: 0.14 })],
   ['…на паузе', coverKey({ cover: cover(0), progress: 0.42, playing: false })],
   ['Играть', iconKey({ glyph: 'play-fill' })],
   ['Пауза', iconKey({ glyph: 'pause-fill' })],

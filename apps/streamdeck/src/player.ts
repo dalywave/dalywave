@@ -5,7 +5,7 @@ import { ApiError, api } from './api'
 import { Link } from './link'
 import type {
   ConnectDevice, PlayContext, PlaybackState, PlaylistDetail, QueueItem, RemoteCommand, RepeatMode,
-  Track, TrackAnalysis, TransitionMode, WaveSettings,
+  Track, TransitionMode, WaveSettings,
 } from './types'
 
 export const TRANSITIONS: TransitionMode[] = ['gapless', 'smooth', 'smart', 'dj']
@@ -31,7 +31,6 @@ export class Player extends EventEmitter<PlayerEvents> {
   private playlistCache = new Map<string, Promise<PlaylistDetail | null>>()
   private playlistTracks = new Map<string, Map<string, string[]>>()
   private playlistTitles = new Map<string, string>()
-  private beatCache = new Map<string, Promise<number[]>>()
   private localVolume: { value: number, at: number } | null = null
   private localMuted: { value: boolean, at: number } | null = null
   private localFlags: { shuffle?: boolean, repeat?: RepeatMode, transition?: TransitionMode, at: number } | null = null
@@ -221,21 +220,6 @@ export class Player extends EventEmitter<PlayerEvents> {
       return null
     })
     this.playlistCache.set(id, p)
-    return p
-  }
-
-  /** Сетка долей трека, мс; нет анализа — пусто */
-  beats(trackId: string): Promise<number[]> {
-    const hit = this.beatCache.get(trackId)
-    if (hit) return hit
-    const p = api.get<TrackAnalysis>(`/api/tracks/${trackId}/analysis`)
-      .then(a => ((a.bpmConfidence ?? 1) >= 0.3 ? a.beatsMs : []))
-      .catch(() => [])
-    this.beatCache.set(trackId, p)
-    if (this.beatCache.size > 50) {
-      const first = this.beatCache.keys().next().value
-      if (first !== undefined) this.beatCache.delete(first)
-    }
     return p
   }
 

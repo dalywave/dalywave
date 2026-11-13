@@ -28,8 +28,6 @@ export interface CoverFace {
   /** 0…1 */
   progress: number
   playing: boolean
-  /** Затемнение для пульса в такт: 0 — обложка как есть */
-  shade?: number
   /** Подпись поверх (очередь: «Далее») */
   label?: string
 }
@@ -82,7 +80,7 @@ export function coverKey(face: CoverFace): string {
   const parts: string[] = [`<rect width="${KEY}" height="${KEY}" fill="${C.bg}"/>`]
   if (face.cover) parts.push(image(0, 0, KEY, KEY, face.cover))
   else parts.push(glyph('music-notes-bold', 72, 66, 64, C.text4))
-  const shade = (face.playing ? 0 : 0.45) + (face.shade ?? 0)
+  const shade = face.playing ? 0 : 0.45
   if (shade > 0) parts.push(`<rect width="${KEY}" height="${KEY}" fill="#000" fill-opacity="${Math.min(0.8, shade).toFixed(2)}"/>`)
   if (!face.playing) parts.push(glyph('play-fill', 72, 66, 52, C.text1))
   if (face.label) {
@@ -137,7 +135,3 @@ export function statusKey(kind: 'connect' | 'offline' | 'noDevice', label: strin
   return iconKey({ glyph: g, tone: 'off', label })
 }
 
-/** Сплошная заливка для пульса полосы */
-export function pulseFill(w: number, h: number, color = '#ffffff'): string {
-  return dataUri(svg(w, h, `<rect width="${w}" height="${h}" fill="${color}"/>`))
-}

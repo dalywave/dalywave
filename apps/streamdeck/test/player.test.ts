@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { nextBeat } from '../src/pulse'
 import { Player } from '../src/player'
 import type { ConnectAck, ConnectDevice, PlaybackState, RemoteCommand } from '../src/types'
 import { waveTitle } from '../src/catalog'
@@ -137,18 +136,6 @@ describe('позиция', () => {
     expect(player.position()).toBeLessThan(12_500)
     player.link.state = { ...player.link.state, playing: false }
     expect(player.position()).toBe(10_000)
-  })
-})
-
-describe('пульс в такт', () => {
-  const beats = [0, 500, 1000, 1500, 2000, 2250, 2500, 2750, 3000]
-  test('следующая доля после позиции', () => {
-    expect(nextBeat(beats, 600, null)).toBe(1000)
-    expect(nextBeat(beats, 3000, null)).toBeNull()
-  })
-  test('быстрые доли — через одну (не чаще ~2,5 раза в секунду)', () => {
-    expect(nextBeat(beats, 2100, 2000)).toBe(2500)
-    expect(nextBeat(beats, 2600, 2500)).toBe(3000)
   })
 })
 

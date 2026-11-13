@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { coverKey, iconKey, shrink, statusKey } from '../src/render/keys'
-import { listFields, pulseFields, trackFields, volumeFields, volumeGlyph } from '../src/render/strip'
+import { listFields, trackFields, volumeFields, volumeGlyph } from '../src/render/strip'
 import { fit, textWidth } from '../src/render/svg'
 
 function decode(uri: string): string {
@@ -54,8 +54,7 @@ describe('кнопки', () => {
     expect(paused).toContain('fill-opacity="0.45"')
   })
 
-  test('пульс затемняет обложку между долями', () => {
-    expect(decode(coverKey({ cover: null, progress: 0, playing: true, shade: 0.14 }))).toContain('fill-opacity="0.14"')
+  test('играющая обложка не затемнена', () => {
     expect(decode(coverKey({ cover: null, progress: 0, playing: true }))).not.toContain('<rect width="144" height="144" fill="#000"')
   })
 
@@ -85,11 +84,5 @@ describe('полоса', () => {
     const f = listFields({ cover: null, fallback: 'waves-bold', colors: ['#1d8cbc', '#aef0ff'], title: 'Спокойное', subtitle: '', counter: '2 из 7' })
     expect(decode(f.cover as string)).toContain('#aef0ff')
     expect(f.counter).toBe('2 из 7')
-  })
-
-  test('пульс: прозрачность шагами по 0,1 и не ярче 0,2', () => {
-    expect(pulseFields(0.1)).toEqual({ pulse: { opacity: 0.1 } })
-    expect(pulseFields(0.9)).toEqual({ pulse: { opacity: 0.2 } })
-    expect(pulseFields(-1)).toEqual({ pulse: { opacity: 0 } })
   })
 })
