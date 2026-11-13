@@ -65,7 +65,9 @@ const SAMPLE: PlateTrack = { id: 'sample', title: 'Float', artist: 'Call Me Kari
 const preview = computed<PlateTrack>(() => {
   const tr = player.current?.track
   if (!tr) return SAMPLE
-  return { id: tr.id, title: tr.title, artist: tr.artists.map(a => a.name).join(', '), cover: tr.album?.image?.small ?? null }
+  // В приложении адрес картинки относительный к серверу — как у всех обложек, через мост
+  const cover = tr.album?.image?.small
+  return { id: tr.id, title: tr.title, artist: tr.artists.map(a => a.name).join(', '), cover: cover ? bridge.resolveUrl(cover) : null }
 })
 const previewAt = ref(Date.now())
 watch(() => preview.value.id, () => (previewAt.value = Date.now()))

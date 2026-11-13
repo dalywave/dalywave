@@ -240,6 +240,7 @@
 		17F5055370C371339A65AFD4 /* macos.rs */ = {isa = PBXFileReference; path = macos.rs; sourceTree = "<group>"; };
 		186F9B3EE551C347F9025F98 /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
 		1AD983A4882E2E568FD6593D /* audio.rs */ = {isa = PBXFileReference; path = audio.rs; sourceTree = "<group>"; };
+		207A8FDAEA899B777ABE164E /* export.rs */ = {isa = PBXFileReference; path = export.rs; sourceTree = "<group>"; };
 		21915CE4038CA63D3585AB63 /* ios.rs */ = {isa = PBXFileReference; path = ios.rs; sourceTree = "<group>"; };
 		23AC2109AB9EA57AAE92D6E7 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		253DBBE975A202E6D5DF3810 /* error.rs */ = {isa = PBXFileReference; path = error.rs; sourceTree = "<group>"; };
@@ -509,6 +510,7 @@
 				4DD55E8BAC864777E137F488 /* discord.rs */,
 				5D23FE966015BD36E8390CBC /* downloader.rs */,
 				253DBBE975A202E6D5DF3810 /* error.rs */,
+				207A8FDAEA899B777ABE164E /* export.rs */,
 				994AECBA29B15044C466628E /* focus.rs */,
 				DE1F407F37E3B60496B5DF7A /* haptics.rs */,
 				21915CE4038CA63D3585AB63 /* ios.rs */,
@@ -800,6 +802,20 @@
 				3F874C4DFC5C8D82AB83D562 /* Sources */,
 			);
 			path = TVApp;
+			sourceTree = "<group>";
+		};
+		"TEMP_1D59DEE3-4355-4832-A10F-33DF0EF67CED" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
+			sourceTree = "<group>";
+		};
+		"TEMP_8D148B3F-76C6-4EA2-AF95-31F60ED64783" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
