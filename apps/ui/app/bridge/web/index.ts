@@ -762,6 +762,12 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       // Все люди одной страницей, ждущие доступа — первыми
       users: () => unwrap(api.GET('/api/admin/users')),
       updateUser: (id, patch) => done(api.PATCH('/api/admin/users/{id}', { params: { path: { id } }, body: patch })),
+      userTable: () => unwrap(api.GET('/api/admin/users/table')),
+      userDetail: id => unwrap(api.GET('/api/admin/users/{id}', { params: { path: { id } } })),
+      userHistory: (id, cursor, limit = 50) => unwrap(api.GET('/api/admin/users/{id}/history', { params: { path: { id }, query: { cursor: cursor ?? undefined, limit } } })),
+      revokeUserSessions: async id => (await unwrap(api.DELETE('/api/admin/users/{id}/sessions', { params: { path: { id } } }))).revoked,
+      deleteUser: (id, confirmName) => done(api.DELETE('/api/admin/users/{id}', { params: { path: { id } }, body: { confirmName } })),
+      live: () => unwrap(api.GET('/api/admin/live')),
       authOverview: () => unwrap(api.GET('/api/admin/auth')),
       createUser: user => unwrap(api.POST('/api/admin/users', { body: user })),
       resetLink: id => unwrap(api.POST('/api/admin/users/{id}/reset', { params: { path: { id } } })),

@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod acquire;
+pub mod admin_live;
 pub mod audit;
 pub mod auth;
 pub mod boot;

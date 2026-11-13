@@ -5,7 +5,7 @@ use axum::{
     Router,
     extract::State,
     http::StatusCode,
-    routing::{delete, get, patch},
+    routing::{delete, get},
 };
 use chrono::{DateTime, Utc};
 use dalywave_protocol::{
@@ -33,7 +33,13 @@ use crate::{
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/users", get(list_users))
-        .route("/users/{id}", patch(update_user))
+        .route(
+            "/users/{id}",
+            get(super::admin_users::detail)
+                .patch(update_user)
+                .delete(super::admin_users::delete_user),
+        )
+        .merge(super::admin_users::routes())
         .route("/sessions", get(list_sessions))
         .route("/sessions/{id}", delete(revoke_session))
         .route("/audit", get(audit_log))
@@ -80,8 +86,9 @@ pub async fn list_users(State(st): State<AppState>) -> AppResult<Json<UserList>>
     responses(
         (status = 200, description = "Пользователь после изменения", body = AdminUser),
         (status = 404, description = "Нет такого пользователя", body = ErrorBody),
-        (status = 409, description = "Нельзя снять admin с себя (`cannot_demote_self`) \
-                                      или заблокировать себя (`cannot_disable_self`)", body = ErrorBody),
+        (status = 400, description = "Пустое имя", body = ErrorBody),
+        (status = 409, description = "Нельзя снять admin с себя (`cannot_demote_self`), заблокировать себя \
+                                      (`cannot_disable_self`) или последнего администратора (`last_admin`)", body = ErrorBody),
     ),
 )]
 pub async fn update_user(
@@ -104,6 +111,15 @@ pub async fn update_user(
     let myself = user.id == principal.user.id;
     let actor = Some(principal.user.id);
     let subject = Some(user.id.to_string());
+    // Единственный незаблокированный администратор: без него админка останется без хозяина
+    let last_admin = super::admin_users::is_last_admin(&mut tx, &user).await?;
+    let wants_demote = patch
+        .roles
+        .as_ref()
+        .is_some_and(|r| !r.contains(&Role::Admin));
+    if last_admin && (wants_demote || patch.disabled == Some(true)) && !myself {
+        return Err(super::admin_users::last_admin_error());
+    }
 
     let before = user.roles();
     let mut roles = before.clone();
@@ -163,10 +179,37 @@ pub async fn update_user(
         }
     }
 
+    let mut name = None;
+    if let Some(wanted) = patch.name {
+        let wanted: String = wanted
+            .trim()
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(128)
+            .collect();
+        if wanted.is_empty() {
+            return Err(bad("имя не может быть пустым"));
+        }
+        if wanted != user.name {
+            let payload = json!({ "from": user.name, "to": wanted });
+            audit::record(
+                &mut *tx,
+                actor,
+                audit::USER_RENAMED,
+                subject.clone(),
+                payload,
+            )
+            .await?;
+            name = Some(wanted);
+        }
+    }
+
     let updated = sqlx::query_as!(
         UserRow,
         r#"UPDATE users SET roles = $2, idp_admin = $3, disabled = $4, updated_at = now(),
-               idp_admin_issuer = CASE WHEN $3 THEN idp_admin_issuer END
+               idp_admin_issuer = CASE WHEN $3 THEN idp_admin_issuer END,
+               disabled_at = CASE WHEN NOT $4 THEN NULL WHEN disabled THEN disabled_at ELSE now() END,
+               name = COALESCE($5, name), name_locked = name_locked OR $5::text IS NOT NULL
            WHERE id = $1
            RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
                      last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
@@ -174,6 +217,7 @@ pub async fn update_user(
         &role_names(&roles),
         idp_admin,
         disabled,
+        name,
     )
     .fetch_one(&mut *tx)
     .await?;

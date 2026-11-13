@@ -692,6 +692,7 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
 pub async fn announce(db: &PgPool, hub: &realtime::Hub, user: Uuid) -> AppResult<()> {
     let list = devices(db, user).await?;
     realtime::deliver(hub, Audience::User(user), ServerEvent::ConnectDevices(list));
+    crate::admin_live::notify(hub, user);
     Ok(())
 }
 

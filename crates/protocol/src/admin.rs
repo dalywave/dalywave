@@ -57,6 +57,9 @@ pub struct UserPatch {
     pub roles: Option<Vec<Role>>,
     #[serde(default)]
     pub disabled: Option<bool>,
+    /// Новое имя: задано вручную, провайдер при входе его больше не меняет.
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 /// Способы входа на сервере — только чтение: настраиваются переменными окружения.

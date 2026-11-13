@@ -350,7 +350,7 @@ pub async fn sign_in(
             sqlx::query_as!(
                 UserRow,
                 r#"UPDATE users SET email = $2, email_verified = $3,
-                       name = COALESCE($4, name), avatar_url = COALESCE($5, avatar_url),
+                       name = CASE WHEN name_locked THEN name ELSE COALESCE($4, name) END, avatar_url = COALESCE($5, avatar_url),
                        roles = $6, idp_admin = $7, idp_admin_issuer = $8, last_login_at = now(), updated_at = now()
                    WHERE id = $1
                    RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
@@ -492,7 +492,7 @@ pub async fn owner(st: &AppState) -> AppResult<UserRow> {
             let role_list = role_names(&roles);
             let user = sqlx::query_as!(
                 UserRow,
-                r#"UPDATE users SET roles = $2, disabled = false, updated_at = now() WHERE id = $1
+                r#"UPDATE users SET roles = $2, disabled = false, disabled_at = NULL, updated_at = now() WHERE id = $1
                    RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
                              last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
                 u.id,

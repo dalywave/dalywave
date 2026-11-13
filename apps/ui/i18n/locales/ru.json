@@ -487,12 +487,16 @@
       "storage": "Хранилище",
       "reco": "Рекомендации",
       "import": "Импорт",
-      "access": "Доступ",
+      "access": "Приглашения и вход",
       "settings": "Настройки",
       "log": "Журнал",
       "groupWork": "Скачивание",
       "groupMusic": "Музыка",
-      "groupSystem": "Система"
+      "groupSystem": "Система",
+      "users": "Пользователи",
+      "live": "Сейчас",
+      "library": "Библиотека",
+      "groupPeople": "Люди"
     },
     "failed": "Не загрузилось",
     "retry": "Повторить",
@@ -573,6 +577,36 @@
     "executor": {
       "server": "Сервер",
       "device": "Загрузчик"
+    },
+    "people": {
+      "context": {
+        "wave": "Волна",
+        "playlist": "Плейлист «{title}»",
+        "album": "Альбом «{title}»",
+        "artist": "Артист «{title}»",
+        "radio": "Радио «{title}»",
+        "mix": "Микс «{title}»",
+        "search": "Из поиска",
+        "library": "Из медиатеки",
+        "queue": "Из очереди",
+        "remote": "С пульта"
+      },
+      "status": {
+        "online": "В сети",
+        "disabled": "Заблокирован",
+        "waiting": "Ждёт доступа",
+        "seen": "Был {when}",
+        "never": "Не входил"
+      },
+      "role": {
+        "admin": "Администратор",
+        "listener": "Слушатель"
+      },
+      "login": "логин {name}",
+      "emergency": "аварийный вход",
+      "private": "Приватная сессия",
+      "paused": "На паузе",
+      "idle": "Ничего не играет"
     }
   },
   "connect": {

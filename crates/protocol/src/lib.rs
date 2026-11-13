@@ -36,6 +36,7 @@ macro_rules! names {
 }
 
 pub mod admin;
+pub mod admin_users;
 pub mod analysis;
 pub mod auth;
 pub mod catalog;

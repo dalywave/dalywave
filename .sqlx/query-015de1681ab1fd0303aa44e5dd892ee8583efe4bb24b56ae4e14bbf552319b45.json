@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET roles = $2, idp_admin = $3, disabled = $4, updated_at = now(),\n               idp_admin_issuer = CASE WHEN $3 THEN idp_admin_issuer END\n           WHERE id = $1\n           RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                     last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"",
+  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                  last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"\n           FROM users ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -143,12 +143,7 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid",
-        "TextArray",
-        "Bool",
-        "Bool"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -166,5 +161,5 @@
       null
     ]
   },
-  "hash": "d013570178715f0fecc97ca5cb2ca3f7b949ef315093624c5e623401cf48cf40"
+  "hash": "015de1681ab1fd0303aa44e5dd892ee8583efe4bb24b56ae4e14bbf552319b45"
 }

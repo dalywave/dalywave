@@ -487,12 +487,16 @@
       "storage": "Storage",
       "reco": "Recommendations",
       "import": "Import",
-      "access": "Access",
+      "access": "Invites & sign-in",
       "settings": "Settings",
       "log": "Log",
       "groupWork": "Downloading",
       "groupMusic": "Music",
-      "groupSystem": "System"
+      "groupSystem": "System",
+      "users": "Users",
+      "live": "Now",
+      "library": "Library",
+      "groupPeople": "People"
     },
     "failed": "Didn't load",
     "retry": "Retry",
@@ -573,6 +577,36 @@
     "executor": {
       "server": "Server",
       "device": "Downloader"
+    },
+    "people": {
+      "context": {
+        "wave": "Wave",
+        "playlist": "Playlist “{title}”",
+        "album": "Album “{title}”",
+        "artist": "Artist “{title}”",
+        "radio": "Radio “{title}”",
+        "mix": "Mix “{title}”",
+        "search": "From search",
+        "library": "From library",
+        "queue": "From queue",
+        "remote": "From a remote"
+      },
+      "status": {
+        "online": "Online",
+        "disabled": "Blocked",
+        "waiting": "Waiting for access",
+        "seen": "Seen {when}",
+        "never": "Never signed in"
+      },
+      "role": {
+        "admin": "Admin",
+        "listener": "Listener"
+      },
+      "login": "username {name}",
+      "emergency": "emergency sign-in",
+      "private": "Private session",
+      "paused": "Paused",
+      "idle": "Nothing playing"
     }
   },
   "connect": {

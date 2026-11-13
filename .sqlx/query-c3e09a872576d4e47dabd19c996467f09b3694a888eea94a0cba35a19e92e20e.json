@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"total!\",\n                  count(*) FILTER (WHERE status = 'ready') AS \"ready!\",\n                  count(*) FILTER (WHERE status IN ('failed', 'unavailable', 'disputed')) AS \"failed!\",\n                  count(*) FILTER (WHERE status IN ('queued', 'matching', 'downloading', 'verifying', 'processing')) AS \"active!\"\n           FROM acquisitions WHERE requested_by = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "active!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c3e09a872576d4e47dabd19c996467f09b3694a888eea94a0cba35a19e92e20e"
+}

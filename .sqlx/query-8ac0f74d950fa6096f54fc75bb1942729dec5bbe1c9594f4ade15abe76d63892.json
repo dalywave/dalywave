@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.id,\n                  EXISTS (SELECT 1 FROM connect_devices c\n                          WHERE c.user_id = u.id AND c.connection IS NOT NULL\n                            AND c.last_seen_at > now() - make_interval(secs => $2)) AS \"online!\",\n                  GREATEST(u.last_login_at,\n                           (SELECT max(s.last_seen_at) FROM sessions s WHERE s.user_id = u.id),\n                           (SELECT max(c.last_seen_at) FROM connect_devices c WHERE c.user_id = u.id)) AS last_seen_at,\n                  COALESCE(p.listened, 0)::bigint AS \"listened!\",\n                  COALESCE(p.plays, 0)::bigint AS \"plays!\"\n           FROM users u\n           LEFT JOIN LATERAL (SELECT sum(e.played_ms) AS listened, count(*) AS plays FROM play_events e\n                              WHERE e.user_id = u.id AND e.started_at > now() - interval '30 days') p ON true\n           WHERE u.id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "online!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "listened!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "plays!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "8ac0f74d950fa6096f54fc75bb1942729dec5bbe1c9594f4ade15abe76d63892"
+}

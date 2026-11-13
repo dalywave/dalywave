@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET email = $2, email_verified = $3,\n                       name = COALESCE($4, name), avatar_url = COALESCE($5, avatar_url),\n                       roles = $6, idp_admin = $7, idp_admin_issuer = $8, last_login_at = now(), updated_at = now()\n                   WHERE id = $1\n                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                             last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"",
+  "query": "UPDATE users SET email = $2, email_verified = $3,\n                       name = CASE WHEN name_locked THEN name ELSE COALESCE($4, name) END, avatar_url = COALESCE($5, avatar_url),\n                       roles = $6, idp_admin = $7, idp_admin_issuer = $8, last_login_at = now(), updated_at = now()\n                   WHERE id = $1\n                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                             last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"",
   "describe": {
     "columns": [
       {
@@ -170,5 +170,5 @@
       null
     ]
   },
-  "hash": "3a26670fa4a5da98a9de7fb48779bacc9fc25cff3a0a3cfbbfbf5b73446cee48"
+  "hash": "0212588442dc83ad1f3921f4b6f649b9921b74bed692d479f6397f35bf00979b"
 }

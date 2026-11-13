@@ -16,6 +16,11 @@ pub const USER_CREATED: &str = "user.created";
 pub const ROLES_CHANGED: &str = "user.roles_changed";
 pub const USER_DISABLED: &str = "user.disabled";
 pub const USER_ENABLED: &str = "user.enabled";
+pub const USER_RENAMED: &str = "user.renamed";
+/// Аккаунт удалён со всеми данными
+pub const USER_DELETED: &str = "user.deleted";
+/// Все сессии человека отозваны («выйти везде»)
+pub const SESSIONS_REVOKED: &str = "user.sessions_revoked";
 /// Вход через провайдера привязан к уже известному человеку (настройки, подтверждённая почта)
 pub const IDENTITY_LINKED: &str = "user.identity_linked";
 pub const IDENTITY_UNLINKED: &str = "user.identity_unlinked";

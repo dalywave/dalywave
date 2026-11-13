@@ -6,6 +6,7 @@
 mod accounts;
 mod admin;
 mod admin_sections;
+mod admin_users;
 mod analysis;
 mod app_login;
 mod catalog;

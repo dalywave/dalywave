@@ -3,6 +3,7 @@ pub mod acquisitions;
 pub mod admin;
 pub mod admin_catalog;
 pub mod admin_library;
+pub mod admin_users;
 pub mod analysis;
 pub mod auth;
 pub mod catalog;

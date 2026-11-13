@@ -12,6 +12,7 @@ import type {
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
   PlaylistPatch, PlaylistSummary, PresaveResult, SavedAlbumPage, SearchResults, UpcomingList, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
+  UserDirectory, UserDetail, UserHistoryPage, LiveOverview,
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
   LyricsSearchResults, TrackLyrics, TrackVersions, VersionChoice, VersionKind,
@@ -977,6 +978,17 @@ export interface Bridge {
     overview(): Promise<AdminOverview>
     users(): Promise<UserList>
     updateUser(id: string, patch: UserPatch): Promise<void>
+    /** Люди с активностью: в сети, когда был, часы за 30 дней */
+    userTable(): Promise<UserDirectory>
+    /** Страница человека: профиль, «сейчас слушает», статистика, приглашения, скачивания */
+    userDetail(id: string): Promise<UserDetail>
+    userHistory(id: string, cursor?: string | null, limit?: number): Promise<UserHistoryPage>
+    /** «Выйти везде»: отзывает все сессии и устройства человека */
+    revokeUserSessions(id: string): Promise<number>
+    /** Удаляет аккаунт со всеми данными; `confirmName` — имя человека */
+    deleteUser(id: string, confirmName: string): Promise<void>
+    /** «Сейчас»: кто в сети и что слушает */
+    live(): Promise<LiveOverview>
     /** Способы входа (только чтение — настраиваются переменными окружения) */
     authOverview(): Promise<AuthOverview>
     createUser(user: NewUser): Promise<CreatedUser>
