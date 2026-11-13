@@ -65,6 +65,8 @@ pub use dalywave_transitions::Analysis;
 pub use eq::{EQ_BANDS, EQ_BANDS_HZ, EQ_MAX_DB, EqPreset, EqSettings};
 pub use error::AudioError;
 pub use mixer::equal_power;
+#[doc(hidden)]
+pub use output::FakeOutput;
 pub use route::{BufferedOutput, RouteProbe};
 
 /// Куда выводится звук.
@@ -82,6 +84,17 @@ pub enum OutputConfig {
     /// Тестовый режим: выход рендерится в память так быстро, как готовы данные,
     /// без недогрузок. Используется для проверки стыков.
     Capture { sample_rate: u32 },
+    /// Проверки: вывод как у устройства — свой поток, реальное время, сторож вывода; умеет
+    /// «зависать», как при зависшем аудиосервере ([`FakeOutput`]). Звук никуда не идёт.
+    #[doc(hidden)]
+    Fake { sample_rate: u32, fake: FakeOutput },
+}
+
+impl OutputConfig {
+    /// Вывод через поток устройства: настоящее или проверочное.
+    fn is_device(&self) -> bool {
+        matches!(self, Self::Device { .. } | Self::Fake { .. })
+    }
 }
 
 /// Режим перехода между треками.
@@ -410,6 +423,16 @@ pub enum Event {
     },
     /// Таймер сна: поставили, сняли, началось затухание или сработал.
     Sleep(SleepStatus),
+    /// Звук должен идти, а системный вывод не отвечает (аудиосервер завис, вывод не запускается
+    /// или не берёт звук). Движок повторяет попытки с отступом (1, 2, 5, 10, 30 с) и продолжит с
+    /// той же позиции. Приходит при каждой попытке: `attempt` — номер, `retry_in_ms` — до
+    /// следующей.
+    OutputStalled {
+        attempt: u32,
+        retry_in_ms: u64,
+    },
+    /// Ждать вывод больше не нужно: звук снова идёт или человек поставил паузу.
+    OutputRecovered,
 }
 
 /// Снимок состояния для синхронных запросов (интерфейс, «Сейчас играет»).
@@ -452,6 +475,8 @@ pub struct Snapshot {
     pub output_buffered: bool,
     /// Сколько звука отдано наперёд и ещё не слышно, мс (у cpal — 0).
     pub output_ahead_ms: u32,
+    /// Системный вывод не отвечает, движок ждёт его ([`Event::OutputStalled`]).
+    pub output_stalled: bool,
 }
 
 pub(crate) enum Command {
@@ -513,6 +538,9 @@ impl Engine {
     /// Создаёт движок и открывает устройство вывода (на macOS первый раз — до 200 мс, поэтому
     /// не на главном потоке). На iOS аудиосессию нужно активировать до вызова
     /// (`apple::activate_audio_session`), иначе частота устройства может быть не той.
+    ///
+    /// Устройство не открылось (аудиосервер не отвечает, устройства нет) — движок всё равно
+    /// создаётся: вывод откроется по команде play, а пока его нет — [`Event::OutputStalled`].
     pub fn new(config: EngineConfig) -> Result<(Engine, Receiver<Event>), AudioError> {
         let (tx, rx) = crossbeam_channel::unbounded();
         let (ev_tx, ev_rx) = crossbeam_channel::unbounded();
@@ -543,6 +571,7 @@ impl Engine {
             has_previous: false,
             output_buffered: false,
             output_ahead_ms: 0,
+            output_stalled: false,
         }));
         let capture = Arc::new(Mutex::new(Vec::new()));
         // Устройство открывается в потоке контроллера (cpal::Stream не везде Send),

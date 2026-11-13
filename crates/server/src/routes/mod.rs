@@ -25,6 +25,7 @@ pub mod overlay;
 pub mod playlist_folders;
 pub mod playlist_set;
 pub mod playlists;
+pub mod presaves;
 pub mod queue;
 pub mod reco;
 pub mod recognize;
@@ -32,6 +33,7 @@ pub mod rewind;
 pub mod settings;
 pub mod share;
 pub mod sources;
+pub mod story;
 pub mod stream;
 pub mod sync;
 pub mod system;
@@ -114,6 +116,7 @@ pub fn router(state: AppState) -> Router {
         .merge(notifications::routes())
         .merge(export::routes())
         .merge(embed::routes())
+        .merge(presaves::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
     let play = events::routes()
         .merge(stream::routes())
@@ -128,6 +131,7 @@ pub fn router(state: AppState) -> Router {
         .merge(versions::routes())
         .merge(tv::party_routes())
         .merge(overlay::routes())
+        .merge(story::routes())
         .merge(video::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()

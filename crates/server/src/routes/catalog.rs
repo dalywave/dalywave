@@ -129,11 +129,16 @@ pub async fn artist(
     )
     .fetch_all(&st.db)
     .await?;
+    // Анонсы (дата выхода у слушателя ещё не наступила) — отдельно, в «Скоро»
+    let mut conn = st.db.acquire().await?;
+    let today = crate::presave::user_today(&mut conn, user, chrono::Utc::now()).await?;
+    drop(conn);
     let release_ids = sqlx::query_scalar!(
         "SELECT al.id FROM artist_releases r JOIN albums al ON al.id = r.album_id
-         WHERE r.artist_id = $1
+         WHERE r.artist_id = $1 AND (al.release_date IS NULL OR al.release_date <= $2)
          ORDER BY al.release_date DESC NULLS LAST, al.id DESC",
-        id
+        id,
+        today,
     )
     .fetch_all(&st.db)
     .await?;
@@ -176,6 +181,7 @@ pub async fn artist(
         follow,
         tracks_on_server,
         tracks_total,
+        upcoming: crate::presave::for_artist(&st.db, user, id, today).await?,
     }))
 }
 

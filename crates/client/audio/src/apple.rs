@@ -2,7 +2,8 @@
 //!
 //! - iOS: AVAudioSession (категория `.playback`, маршрут «длинное аудио» для AirPlay 2, активация —
 //!   не на главном потоке), прерывания
-//!   (звонок, Siri), смена маршрута (наушники, AirPlay), текущий маршрут, сброс медиасервисов.
+//!   (звонок, Siri), смена маршрута (наушники, AirPlay), текущий маршрут, сброс медиасервисов,
+//!   пространственное аудио на AirPods (`spatial_description`).
 //! - iOS и macOS: «Сейчас играет» (MPNowPlayingInfoCenter) и команды с экрана блокировки,
 //!   гарнитуры, Пункта управления, медиаклавиш (MPRemoteCommandCenter).
 //!
@@ -64,6 +65,11 @@ pub enum SessionEvent {
     RouteChanged,
     /// Система перезапустила медиасервисы: сессию настроить заново, вывод открыть заново.
     MediaServicesReset,
+    /// Пространственное аудио на выходе включили или выключили (Пункт управления, другие
+    /// наушники): `RoutePort::spatial` поменялся.
+    SpatialChanged {
+        enabled: bool,
+    },
 }
 
 #[derive(Clone, Debug, Default)]
@@ -146,6 +152,7 @@ pub fn activate_audio_session() -> Result<(f64, f64), String> {
         AVAudioSession, AVAudioSessionCategoryOptions, AVAudioSessionCategoryPlayback,
         AVAudioSessionModeDefault, AVAudioSessionRouteSharingPolicy,
     };
+    tolerate_slow_audio_server();
     unsafe {
         let session = AVAudioSession::sharedInstance();
         let category = AVAudioSessionCategoryPlayback.ok_or("нет категории playback")?;
@@ -163,6 +170,90 @@ pub fn activate_audio_session() -> Result<(f64, f64), String> {
             .map_err(|e| format!("setActive: {}", e.localizedDescription()))?;
         Ok((session.sampleRate(), session.IOBufferDuration()))
     }
+}
+
+/// iOS: пространственное аудио для журнала: на каких выходах маршрута оно включено, заявлен ли
+/// многоканальный звук и как система сейчас выводит звук сессии (`renderingMode`, iOS 17.2+).
+///
+/// Как оно работает у DalyWave. Движок играет стерео через RemoteIO (cpal) — сессия `.playback`,
+/// «длинное аудио», приложение в «Сейчас играет» (MPNowPlayingInfoCenter и пульт). Такому
+/// приложению iOS сама предлагает «Пространственное стерео» в Пункте управления (удержать
+/// громкость → «Пространственное аудио»: Выкл / Фиксированное / С отслеживанием головы) и сама
+/// пространственно сводит его выход на AirPods и Beats — с эквалайзером, «Диджеем» и без пауз,
+/// без лишней задержки. `setSupportsMultichannelContent` не ставим: он для приложений, которые
+/// отдают многоканальный звук (5.1, Atmos) и сводят его сами; у нас стерео.
+#[cfg(target_os = "ios")]
+pub fn spatial_description() -> String {
+    use objc2::runtime::Sel;
+    use objc2_avf_audio::AVAudioSession;
+    unsafe {
+        let session = AVAudioSession::sharedInstance();
+        let ports = current_route()
+            .iter()
+            .map(|p| format!("{}={}", p.name, if p.spatial { "on" } else { "off" }))
+            .collect::<Vec<_>>()
+            .join(", ");
+        // renderingMode — только с iOS 17.2, а приложение запускается и на iOS 15
+        let any_session: &AnyObject = any(&*session);
+        let has_mode: bool = msg_send![
+            any_session,
+            respondsToSelector: Sel::register(c"renderingMode")
+        ];
+        let mode = if has_mode {
+            match session.renderingMode().0 {
+                0 => "n/a",
+                1 => "mono-stereo",
+                2 => "surround",
+                3 => "spatial",
+                4 => "dolby",
+                5 => "atmos",
+                _ => "other",
+            }
+        } else {
+            "unknown"
+        };
+        format!(
+            "outputs [{ports}], multichannel {}, rendering {mode}",
+            session.supportsMultichannelContent()
+        )
+    }
+}
+
+/// iOS: не падать, когда аудиосервер системы долго не отвечает.
+///
+/// AudioToolbox ждёт ответа медиасервера на запуск вывода (`AURemoteIO::Start`) 9 секунд, а не
+/// дождавшись, роняет приложение (`_ReportRPCTimeout` → `abort`): так бывает, когда сервер завис
+/// или занят (симулятор при запуске, сброс медиасервисов). Срок AudioToolbox берёт из настройки
+/// `rpc_timeout` домена `com.apple.coreaudio` (секунды; 0 — ждать без срока). На iOS этот домен
+/// лежит в контейнере приложения и на систему не влияет. Ставим 0: запуск ждёт сервер в потоке
+/// устройства (output.rs), движок тем временем сообщает «звук недоступен» и повторяет попытки, а
+/// умерший сервер отвечает ошибкой, а не тишиной. AudioToolbox читает значение один раз — звать
+/// до первого обращения к звуку (запуск приложения; [`activate_audio_session`] зовёт сама).
+#[cfg(target_os = "ios")]
+pub fn tolerate_slow_audio_server() {
+    use objc2_core_foundation::{
+        CFNumber, CFPreferencesAppSynchronize, CFPreferencesGetAppIntegerValue,
+        CFPreferencesSetAppValue, CFString, CFType,
+    };
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let key = CFString::from_static_str("rpc_timeout");
+        let domain = CFString::from_static_str("com.apple.coreaudio");
+        let mut exists = 0u8;
+        // SAFETY: указатель на локальную переменную.
+        let current = unsafe { CFPreferencesGetAppIntegerValue(&key, &domain, &mut exists) };
+        if exists != 0 && current == 0 {
+            return;
+        }
+        let zero = CFNumber::new_i32(0);
+        let value: &CFType = &zero;
+        // SAFETY: число — допустимое значение настройки.
+        unsafe { CFPreferencesSetAppValue(&key, Some(value), &domain) };
+        CFPreferencesAppSynchronize(&domain);
+        log::info!(
+            "audio: AudioToolbox waits for the audio server without a deadline (rpc_timeout 0)"
+        );
+    });
 }
 
 /// iOS: политика маршрута сессии сейчас — для журнала (`long-form` или `default`).
@@ -467,6 +558,25 @@ where
             ));
         }
         let h = handler.clone();
+        let block = RcBlock::new(move |n: NonNull<NSNotification>| {
+            let enabled = user_info_usize(
+                n.as_ref(),
+                objc2_avf_audio::AVAudioSessionSpatialAudioEnabledKey,
+            )
+            .is_some_and(|v| v != 0);
+            h(SessionEvent::SpatialChanged { enabled });
+        });
+        if let Some(name) =
+            objc2_avf_audio::AVAudioSessionSpatialPlaybackCapabilitiesChangedNotification
+        {
+            observers.push(nc.addObserverForName_object_queue_usingBlock(
+                Some(name),
+                None,
+                Some(&queue),
+                &block,
+            ));
+        }
+        let h = handler.clone();
         let block =
             RcBlock::new(move |_n: NonNull<NSNotification>| h(SessionEvent::MediaServicesReset));
         if let Some(name) = objc2_avf_audio::AVAudioSessionMediaServicesWereResetNotification {
@@ -490,6 +600,8 @@ pub struct RoutePort {
     /// Как его называет система: «Динамик», «AirPods Захара», «Гостиная»
     pub name: String,
     pub kind: crate::devices::OutputKind,
+    /// Выход умеет пространственное аудио и оно включено (AirPods, Beats)
+    pub spatial: bool,
 }
 
 /// iOS: куда сейчас идёт звук приложения (обычно один выход). Можно звать с любого потока.
@@ -507,6 +619,7 @@ pub fn current_route() -> Vec<RoutePort> {
                     kind: port_kind(&port_type),
                     port_type: port_type.to_string(),
                     name: port.portName().to_string(),
+                    spatial: port.isSpatialAudioEnabled(),
                 }
             })
             .collect()

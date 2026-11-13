@@ -218,6 +218,8 @@
     "acquiringLong": "Loading — will start by itself",
     "waitingDownloader": "Waiting to load",
     "waitingDownloaderLong": "Waiting to load — will start by itself",
+    "soundRetrying": "No sound — retrying…",
+    "soundRetryingLong": "Sound unavailable — retrying, will continue where it stopped",
     "skip": "Play next",
     "unavailable": "“{title}” is unavailable — playing the next one",
     "waveEmpty": "Nothing to build the wave from yet — like a few tracks first"
@@ -612,6 +614,14 @@
     "hour": "1 hour",
     "endOfTrack": "End of Track",
     "mini": "Mini Player"
+  },
+  "beat": {
+    "label": "Feel the beat",
+    "noGrid": "Not available for this track",
+    "on": "Your phone taps along on strong beats while DalyWave is open"
+  },
+  "story": {
+    "action": "Share as a story"
   },
   "share": {
     "action": "Share",

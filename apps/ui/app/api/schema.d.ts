@@ -1871,6 +1871,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/library/presaves/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["presave"];
+        post?: never;
+        delete: operations["cancel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library/tracks": {
         parameters: {
             query?: never;
@@ -1898,6 +1914,22 @@ export interface paths {
         put: operations["like"];
         post?: never;
         delete: operations["unlike"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["upcoming"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3055,6 +3087,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tracks/{id}/story": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["story_video"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tracks/{id}/story/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["story_audio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/{id}/stream": {
         parameters: {
             query?: never;
@@ -3707,6 +3771,8 @@ export interface components {
             tracksOnServer: number;
             /** Format: int64 */
             tracksTotal: number;
+            /** @description Анонсированные релизы («Скоро»), ближайшие первыми. В `releases` их нет. */
+            upcoming?: components["schemas"]["UpcomingRelease"][];
         };
         /** @description Ответ `GET /api/artists/{id}/about`. `about: null` — статьи нет, блока нет. */
         ArtistInfo: {
@@ -6294,6 +6360,11 @@ export interface components {
         Pong: {
             id: string | null;
         };
+        /** @description Ответ «Сохранить заранее». */
+        PresaveResult: {
+            /** @description Релиз уже вышел — альбом сразу сохранён в медиатеку (предсохранения нет). */
+            savedNow: boolean;
+        };
         /** @description Приватность прослушиваний. */
         Privacy: {
             /**
@@ -8361,6 +8432,19 @@ export interface components {
         TvTokenRequest: {
             appVersion?: string | null;
             deviceCode: string;
+        };
+        /** @description «Скоро выйдет»: сохранённое заранее и анонсы артистов из подписок, ближайшие первыми. */
+        UpcomingList: {
+            items: components["schemas"]["UpcomingRelease"][];
+        };
+        /** @description Анонсированный релиз: дата выхода ещё не наступила (по часовому поясу слушателя). */
+        UpcomingRelease: {
+            /** @description Дата выхода — `album.releaseDate`. */
+            album: components["schemas"]["AlbumSummary"];
+            /** @description Артист релиза — в подписках. */
+            followed: boolean;
+            /** @description Сохранён заранее: в день выхода сервер положит его в медиатеку и пришлёт уведомление. */
+            presaved: boolean;
         };
         /**
          * @description Ответ в формате tauri-plugin-updater. Имена полей задаёт плагин (`pub_date`), поэтому здесь
@@ -13451,6 +13535,59 @@ export interface operations {
             };
         };
     };
+    presave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id альбома */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сохранено заранее (повтор безопасен). Релиз уже вышел — альбом сразу в медиатеке, как `PUT /api/library/albums/{id}` (`savedNow`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresaveResult"];
+                };
+            };
+            /** @description Нет такого альбома */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id альбома */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Предсохранение снято (если было) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     liked_tracks: {
         parameters: {
             query?: {
@@ -13533,6 +13670,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    upcoming: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сохранённое заранее и анонсы артистов из подписок, ближайшие первыми. «Сегодня» — по часовому поясу из настроек уведомлений */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingList"];
+                };
             };
         };
     };
@@ -16892,6 +17049,102 @@ export interface operations {
             };
             /** @description Нет такого трека */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    story_video: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Видео истории без звука (MP4 с H.264 или WebM), до 64 МБ */
+        requestBody: {
+            content: {
+                "video/mp4": number[];
+            };
+        };
+        responses: {
+            /** @description Готовая история: MP4, H.264 + AAC, звук — 15 с с припева */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": unknown;
+                };
+            };
+            /** @description Нет такого трека (`not_found`) или звука для истории (`no_audio`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Видео больше 64 МБ */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Видео не читается (`not_a_video`, `story_failed`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    story_audio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 15 с с припева в WAV (PCM 16 бит, 44,1 кГц, стерео) с мягким входом и выходом: из звука на сервере или превью Deezer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/wav": unknown;
+                };
+            };
+            /** @description Нет такого трека (`not_found`) или звука для истории (`no_audio`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Deezer, хранилище или ffmpeg недоступны */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

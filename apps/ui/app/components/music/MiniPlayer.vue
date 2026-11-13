@@ -106,6 +106,7 @@ function onCancel() {
       <span v-else-if="connect.remote" class="mini__sub mini__sub--remote ellipsis"><Icon :name="ICON[connect.activeKind]" class="mini__dev" />{{ connect.activeName }}</span>
       <span v-else-if="connect.orphaned" class="mini__sub mini__sub--lost ellipsis">{{ t('connect.wasOn', { name: connect.activeName }) }}</span>
       <MusicPendingNote v-else-if="player.pending" :pending="player.pending" />
+      <MusicSoundNote v-else-if="player.soundLost" />
       <span v-else class="mini__sub ellipsis">{{ track.artists.map(a => a.name).join(', ') }}</span>
     </button>
     <div class="mini__actions">

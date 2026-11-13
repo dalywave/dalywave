@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT al.id FROM artist_releases r JOIN albums al ON al.id = r.album_id\n         WHERE r.artist_id = $1\n         ORDER BY al.release_date DESC NULLS LAST, al.id DESC",
+  "query": "SELECT al.id FROM artist_releases r JOIN albums al ON al.id = r.album_id\n         WHERE r.artist_id = $1 AND (al.release_date IS NULL OR al.release_date <= $2)\n         ORDER BY al.release_date DESC NULLS LAST, al.id DESC",
   "describe": {
     "columns": [
       {
@@ -17,12 +17,13 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Date"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "724c3d5ae675d9fa6f145e13fe2c5b88495ccf08b02e528984bf85049975827b"
+  "hash": "67c399badb422a94edae95d88641706d5f1bed3c87eb13fb2fdbc11a28862aec"
 }

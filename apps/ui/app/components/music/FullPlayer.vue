@@ -35,7 +35,17 @@ const paneOptions = computed(() => [
   { value: 'lyrics' as const, label: t('player.lyrics') },
   { value: 'queue' as const, label: t('player.queue') },
 ])
-const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
+// «Почувствуй бит» (iPhone): выключатель в этом же меню
+const beat = useBeatStore()
+void beat.init()
+const menuItems = computed(() => {
+  if (!menuOpen.value || !track.value) return []
+  const items = menuFor(track.value, { nowPlaying: true })
+  // Выключатель — среди действий с тем, что играет, до переходов и «Поделиться»
+  const at = items.findIndex(e => e.kind === 'separator')
+  items.splice(at < 0 ? items.length : at, 0, ...beat.menuEntries())
+  return items
+})
 
 // ---------- Текст песни «сценой» ----------
 // Телефон: кнопка «Текст» — обложка уезжает в шапку (рядом название и исполнитель), текст занимает
@@ -295,6 +305,9 @@ onBeforeUnmount(() => {
             <MusicPendingNote :pending="player.pending" long />
             <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
           </div>
+          <div v-else-if="player.soundLost" class="fp__pending">
+            <MusicSoundNote long />
+          </div>
         </div>
         <div class="fp__info">
           <h2 class="fp__title" :title="track.title">{{ track.title }}</h2>
@@ -388,6 +401,9 @@ onBeforeUnmount(() => {
                     <MusicPendingNote :pending="player.pending" long />
                     <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
                   </div>
+                  <div v-else-if="player.soundLost" class="fp__pending">
+                    <MusicSoundNote long />
+                  </div>
                 </div>
 
                 <div class="tp__info">
@@ -470,6 +486,9 @@ onBeforeUnmount(() => {
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
                 <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
+              </div>
+              <div v-else-if="player.soundLost" class="fp__pending">
+                <MusicSoundNote long />
               </div>
             </div>
 

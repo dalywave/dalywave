@@ -69,6 +69,7 @@
 		8C70DB90614646E97E1E63F8 /* WidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 518756D0A7E6E6E1D95B9905 /* WidgetViews.swift */; };
 		903E17F5B3A348AAA776BFEB /* AppShortcuts.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7E940980C4193C05C04F336E /* AppShortcuts.strings */; };
 		92E2BAEBC66B72B82343A299 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 375402116E2037E9999A79FF /* MediaPlayer.framework */; };
+		973D451FF9EB43CD391606C5 /* DalyWaveBeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8757432A62FA0CE791E7B5 /* DalyWaveBeat.swift */; };
 		97B0289A53433337BAB14FC2 /* SiriShortcutsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FF71152266545FD5E1C1F0E /* SiriShortcutsTests.swift */; };
 		9828E9C9DB3212A81E32DCBF /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 68781904E0B82109FBBE62C0 /* Localizable.strings */; };
 		9C306B5F61E5251C968B26E6 /* WidgetActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E57474B4D74E653C678BC0 /* WidgetActions.swift */; };
@@ -83,6 +84,7 @@
 		B1819ACB2E8EFC9828A1A690 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA9586AE765B48537E1CACE /* WidgetIntents.swift */; };
 		B2256499133D0A5B8A158A31 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3C12E0D418269F691759B755 /* main.mm */; };
 		B31F007C38D30533A065C5F5 /* WaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34187436670EFED00241A1C1 /* WaveView.swift */; };
+		B400A1BFD36AFFCBBE1216CD /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 60682E37B1D8A9DE89F6FB18 /* CoreHaptics.framework */; };
 		B7287C79DF54C3B1DFBCD052 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 896A78BDB930A17D87632D0C /* Localizable.strings */; };
 		B7FF745BD6654F557CAFDA64 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB852A5757460E97877E17EA /* CoreGraphics.framework */; };
 		BB17D7CE152FEFB799EF7FCB /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2AEBA112F0DD216034B423 /* Theme.swift */; };
@@ -275,6 +277,7 @@
 		5D9A41810C91F9D868EDDF83 /* siri.rs */ = {isa = PBXFileReference; path = siri.rs; sourceTree = "<group>"; };
 		5EA4B34E99CF6A448EED0179 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		5EE8D3754EB6635BC61E5266 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		60682E37B1D8A9DE89F6FB18 /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = System/Library/Frameworks/CoreHaptics.framework; sourceTree = SDKROOT; };
 		6107F62A7B3C96990854B4B9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		670CBC2ADAB6CE48A7904EEF /* mini.rs */ = {isa = PBXFileReference; path = mini.rs; sourceTree = "<group>"; };
 		68781904E0B82109FBBE62C0 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -322,6 +325,7 @@
 		A9DD0496943717BF685CF20E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA7CA547CF66672A2C67B62F /* WidgetsHomeScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetsHomeScreenTests.swift; sourceTree = "<group>"; };
 		AB676CCF0A0B3DD6A6F2A9A2 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
+		AB8757432A62FA0CE791E7B5 /* DalyWaveBeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DalyWaveBeat.swift; sourceTree = "<group>"; };
 		ADA380FCDDDFE5CB9990DCAD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B072C937A128077FC78C55AE /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		B26F325A7592D1690C067E81 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -346,6 +350,7 @@
 		D3FD55343CD88ECBD9F99ABD /* dalywave-siri.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "dalywave-siri.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D439E9BF9652190398434011 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		D517CCC2BCF9B66A4AFCB7C8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		D69492290FD36C38CABA6EBA /* screensaver.rs */ = {isa = PBXFileReference; path = screensaver.rs; sourceTree = "<group>"; };
 		D7D61A0AB54D8DCFAAA1C573 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		D9C094241682F36FAFC622E9 /* dalywave-share.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "dalywave-share.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9E270ECE1B189E64138C9FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -369,6 +374,7 @@
 		F1D4206A9C6B76E8F07BCC07 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		F22931C9FECB45445CA6BD05 /* dalywave-watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "dalywave-watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F51B3BE09351E2360BF640B4 /* Connect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connect.swift; sourceTree = "<group>"; };
+		FF709B75F14E3E87DA7D2A79 /* beat.rs */ = {isa = PBXFileReference; path = beat.rs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -405,6 +411,7 @@
 				E7893E2054D9A0C7D9692783 /* CoreMedia.framework in Frameworks */,
 				7627E31190D782C1E9B5D995 /* Intents.framework in Frameworks */,
 				30C6D39129658D17C16862B0 /* UserNotifications.framework in Frameworks */,
+				B400A1BFD36AFFCBBE1216CD /* CoreHaptics.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -456,6 +463,7 @@
 				5EE8D3754EB6635BC61E5266 /* AVKit.framework */,
 				D439E9BF9652190398434011 /* CoreAudio.framework */,
 				EB852A5757460E97877E17EA /* CoreGraphics.framework */,
+				60682E37B1D8A9DE89F6FB18 /* CoreHaptics.framework */,
 				A6803B5439958761417885FA /* CoreMedia.framework */,
 				2CE9544FBFC46CCB95BAEB85 /* Intents.framework */,
 				51D42D29EB38AED4AEBFFAAE /* libapp.a */,
@@ -497,6 +505,7 @@
 			children = (
 				1AD983A4882E2E568FD6593D /* audio.rs */,
 				82E855B1FFBF5A66BB26A28E /* auth.rs */,
+				FF709B75F14E3E87DA7D2A79 /* beat.rs */,
 				4DD55E8BAC864777E137F488 /* discord.rs */,
 				5D23FE966015BD36E8390CBC /* downloader.rs */,
 				253DBBE975A202E6D5DF3810 /* error.rs */,
@@ -515,6 +524,7 @@
 				CACBA222A62B8509E07E4FE4 /* presence.rs */,
 				8F2DA7FA3A01AC4E6A8C9B87 /* push.rs */,
 				78F428E4B3B528B3EF4190E7 /* recognize.rs */,
+				D69492290FD36C38CABA6EBA /* screensaver.rs */,
 				39AE223214B55ED7B90ABF77 /* settings.rs */,
 				5D9A41810C91F9D868EDDF83 /* siri.rs */,
 				3741B8EE0756D0F278CC21C7 /* snap.rs */,
@@ -656,6 +666,7 @@
 			isa = PBXGroup;
 			children = (
 				7E940980C4193C05C04F336E /* AppShortcuts.strings */,
+				AB8757432A62FA0CE791E7B5 /* DalyWaveBeat.swift */,
 				497BDAEAD0CAFB60ED861D68 /* DalyWaveFocus.swift */,
 				D2DFBAE387F99376B9271CFE /* DalyWaveIntents.swift */,
 				BDAF17457D058E173A55F65C /* DalyWaveWidgets.swift */,
@@ -789,20 +800,6 @@
 				3F874C4DFC5C8D82AB83D562 /* Sources */,
 			);
 			path = TVApp;
-			sourceTree = "<group>";
-		};
-		"TEMP_6F2ABD5B-5E4A-4416-B3BB-EA76E508B863" /* x86_64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = x86_64;
-			sourceTree = "<group>";
-		};
-		"TEMP_8234AECB-8BAC-458E-B48D-6E785AF549A7" /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = arm64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1178,6 +1175,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				973D451FF9EB43CD391606C5 /* DalyWaveBeat.swift in Sources */,
 				2EEDAA7E4485F8B150A252E6 /* DalyWaveFocus.swift in Sources */,
 				4453EC8CDDA6393E3AA90D2E /* DalyWaveIntents.swift in Sources */,
 				6F41A88FFFF8C01323B3FF67 /* DalyWaveWidgets.swift in Sources */,
@@ -1378,7 +1376,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y5KR5JPCRG;
 				INFOPLIST_FILE = WatchApp/Info.plist;
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.watchkitapp;
 				PRODUCT_NAME = DalyWaveWatch;
 				SDKROOT = watchos;
@@ -1406,7 +1404,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.widgets;
 				PRODUCT_NAME = DalyWaveWidgets;
 				SDKROOT = iphoneos;
@@ -1429,7 +1427,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.watchkitapp.widgets;
 				PRODUCT_NAME = DalyWaveWatchWidgets;
 				SDKROOT = watchos;
@@ -1454,7 +1452,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.watchkitapp.widgets;
 				PRODUCT_NAME = DalyWaveWatchWidgets;
 				SDKROOT = watchos;
@@ -1481,7 +1479,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.siri;
 				PRODUCT_NAME = DalyWaveSiri;
 				SDKROOT = iphoneos;
@@ -1506,7 +1504,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.share;
 				PRODUCT_NAME = DalyWaveShare;
 				SDKROOT = iphoneos;
@@ -1556,7 +1554,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.widgets;
 				PRODUCT_NAME = DalyWaveWidgets;
 				SDKROOT = iphoneos;
@@ -1574,7 +1572,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y5KR5JPCRG;
 				INFOPLIST_FILE = WatchApp/Info.plist;
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.watchkitapp;
 				PRODUCT_NAME = DalyWaveWatch;
 				SDKROOT = watchos;
@@ -1661,7 +1659,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave;
 				PRODUCT_NAME = DalyWaveTV;
 				SDKROOT = appletvos;
@@ -1685,7 +1683,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.topshelf;
 				PRODUCT_NAME = DalyWaveTopShelf;
 				SDKROOT = appletvos;
@@ -1788,7 +1786,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.share;
 				PRODUCT_NAME = DalyWaveShare;
 				SDKROOT = iphoneos;
@@ -1813,7 +1811,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.siri;
 				PRODUCT_NAME = DalyWaveSiri;
 				SDKROOT = iphoneos;
@@ -1836,7 +1834,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave.topshelf;
 				PRODUCT_NAME = DalyWaveTopShelf;
 				SDKROOT = appletvos;
@@ -1894,7 +1892,7 @@
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave;
 				PRODUCT_NAME = DalyWave;
 				SDKROOT = iphoneos;
@@ -1954,7 +1952,7 @@
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave;
 				PRODUCT_NAME = DalyWave;
 				SDKROOT = iphoneos;
@@ -1978,7 +1976,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.8;
+				MARKETING_VERSION = 0.1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = rest.daly.wave;
 				PRODUCT_NAME = DalyWaveTV;
 				SDKROOT = appletvos;

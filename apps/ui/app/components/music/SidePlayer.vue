@@ -76,6 +76,9 @@ function openDevices() {
           <MusicPendingNote :pending="player.pending" long />
           <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
         </div>
+        <div v-else-if="player.soundLost" class="side__pending">
+          <MusicSoundNote long />
+        </div>
       </div>
 
       <i class="side__space" aria-hidden="true" />

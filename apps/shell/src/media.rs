@@ -278,7 +278,20 @@ fn ios_observers(app: &AppHandle) -> Vec<dalywave_audio::apple::SessionObservers
     let was_playing = Arc::new(AtomicBool::new(false));
     let session = observe_session(move |ev| {
         log::info!("audio session: {ev:?}");
+        if matches!(ev, SessionEvent::SpatialChanged { .. }) {
+            // Пространственное аудио включили или выключили — строке в настройках «Звук»
+            log::info!(
+                "spatial audio: {}",
+                dalywave_audio::apple::spatial_description()
+            );
+            crate::audio::changed(&handle);
+            return;
+        }
         if ev == SessionEvent::RouteChanged {
+            log::info!(
+                "spatial audio: {}",
+                dalywave_audio::apple::spatial_description()
+            );
             // AirPlay, наушники, Bluetooth — шторке «Устройства» новый маршрут, движку — выбор
             // вывода: AirPlay (и несколько HomePod) — буферизованный, остальное — обычный
             crate::audio::changed(&handle);
@@ -310,7 +323,7 @@ fn ios_observers(app: &AppHandle) -> Vec<dalywave_audio::apple::SessionObservers
                 }
             }
             SessionEvent::HeadphonesUnplugged => engine.pause(),
-            SessionEvent::RouteChanged => {}
+            SessionEvent::RouteChanged | SessionEvent::SpatialChanged { .. } => {}
             SessionEvent::MediaServicesReset => {
                 std::thread::spawn(move || {
                     if let Err(e) = dalywave_audio::apple::activate_audio_session() {
@@ -399,6 +412,7 @@ pub fn on_player_event(app: &AppHandle, ev: &Event) {
     // Виджетам позиция не нужна — только смена трека и «играет или пауза»
     if force || track_changed {
         crate::widgets::now_playing(app, now.as_ref());
+        crate::screensaver::now_playing(app, now.as_ref());
     }
     *media.synced.lock().unwrap_or_else(|e| e.into_inner()) = now.as_ref().map(|n| Synced {
         at: Instant::now(),

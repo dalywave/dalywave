@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE album_presaves SET cancelled_at = now()\n                         WHERE album_id = $1 AND delivered_at IS NULL AND cancelled_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9e164657c184ccbcd2d337f8d9b349937ff3126e0faba1c713fa2846a81c672b"
+}

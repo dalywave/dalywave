@@ -30,6 +30,7 @@ onMounted(() => {
     <MusicPlaylistSet />
     <MusicPlaylistPeople />
     <MusicReportRecording />
+    <MusicStoryShare />
     <MusicWhyTrack />
     <MusicSharedLink />
     <MusicEmbedDialog />

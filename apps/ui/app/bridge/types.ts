@@ -8,7 +8,7 @@ import type {
   RecoSettingsPatch, RecoTask, ResolveRequest, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
   ClientMessage, DeviceInfo, FeedbackEvent, FollowRequest, FollowedArtistPage, Health, HistoryPage, Home, JobPage, JobStatus,
   LaneList, LanePatch, LibraryOverview, LikedTrackPage, Me, NewPlaylist, PlayEvent, PlaylistDetail, PlaylistList,
-  PlaylistPatch, PlaylistSummary, SavedAlbumPage, SearchResults, SearchScope, ServerEvent, ServerEventType,
+  PlaylistPatch, PlaylistSummary, PresaveResult, SavedAlbumPage, SearchResults, UpcomingList, SearchScope, ServerEvent, ServerEventType,
   SessionList, Track, UserList, UserPatch, WaveFeedbackKind,
   SoundSearchResults, TasteDamper, TasteOverview, Rewind, RewindEvent, RewindEventPatch, RewindMore, RewindSoundtrack, RewindYears, WaveItems, WaveSeed, NewWavePreset, WavePreset, WavePresetPatch,
   ImportItem, ImportItemFix, ImportItemPage, ImportItemStatus, ImportList, ImportSummary, ListImportRequest, YandexImportRequest,
@@ -146,6 +146,8 @@ export interface AudioOutput {
   kind: AudioOutputKind
   /** Сейчас звук идёт сюда */
   current: boolean
+  /** iPhone и iPad: на выходе включено пространственное аудио (AirPods, Beats) */
+  spatial?: boolean
 }
 
 export interface AudioOutputs {
@@ -180,6 +182,9 @@ export interface AudioEngineEvents {
   advance: (uid: string, reason: 'auto' | 'user') => void
   /** Приложение: таймер сна в движке поставили, сняли, началось затухание, сработал */
   sleep: (s: SleepState) => void
+  /** Приложение: системный вывод звука не отвечает (`false`) — движок ждёт и повторяет сам,
+   *  потом играет с того же места; `true` — снова работает */
+  sound: (available: boolean) => void
 }
 
 /** Таймер сна: через `ms` или в конце текущего трека */
@@ -579,6 +584,12 @@ export interface Bridge {
   /** Системное уведомление, пока приложение открыто (macOS, Windows); на остальных — null */
   readonly systemNotify: SystemNotify | null
 
+  /** «Почувствуй бит»: Taptic Engine на сильных долях (приложение на iPhone); на остальных — null */
+  readonly beat: BeatHaptics | null
+
+  /** Заставка DalyWave для Mac (приложение на macOS); на остальных — null */
+  readonly screensaver: ScreensaverBridge | null
+
   auth: {
     providers(): Promise<AuthProviders>
     /** null — сессии нет */
@@ -629,6 +640,10 @@ export interface Bridge {
     chart(id: string): Promise<ChartDetail>
     /** Отрывок ~15 с с припева перед включением: место в звуке на сервере или превью Deezer */
     hook(trackId: string): Promise<TrackHook>
+    /** Звук видео-истории: 15 с с припева, WAV */
+    storyAudio(trackId: string): Promise<ArrayBuffer>
+    /** Видео истории без звука → готовый MP4 (H.264 + AAC): звук добавляет сервер */
+    storyVideo(trackId: string, video: Blob): Promise<Blob>
     /** Кто сделал трек: авторы, продюсеры, звукорежиссёры, лейбл, год */
     credits(trackId: string): Promise<TrackCredits>
     /** Об артисте: начало статьи Википедии и факты; `about: null` — статьи нет */
@@ -695,6 +710,11 @@ export interface Bridge {
     unlike(trackId: string): Promise<void>
     saveAlbum(albumId: string): Promise<void>
     unsaveAlbum(albumId: string): Promise<void>
+    /** «Скоро выйдет»: сохранённое заранее и анонсы артистов из подписок, ближайшие первыми */
+    upcoming(): Promise<UpcomingList>
+    /** «Сохранить заранее»: в день выхода альбом ляжет в медиатеку; уже вышел — сохраняется сразу (`savedNow`) */
+    presave(albumId: string): Promise<PresaveResult>
+    unpresave(albumId: string): Promise<void>
     follow(artistId: string, request?: FollowRequest): Promise<void>
     unfollow(artistId: string): Promise<void>
     blocked(): Promise<BlockedList>
@@ -963,6 +983,21 @@ export interface AppPush {
   register(prompt: boolean): Promise<{ token: string, environment: 'sandbox' | 'production' } | null>
   /** Число на значке приложения */
   setBadge(count: number): void
+}
+
+/** «Почувствуй бит» (iPhone): удары Taptic Engine на сильных долях по сетке из анализа трека */
+export interface BeatHaptics {
+  /** `supported` — у устройства есть Taptic Engine с Core Haptics */
+  state(): Promise<{ supported: boolean, enabled: boolean }>
+  set(enabled: boolean): Promise<{ supported: boolean, enabled: boolean }>
+  /** Есть ли у трека сетка долей (без неё выключатель недоступен) */
+  check(trackId: string): Promise<boolean>
+}
+
+/** Заставка DalyWave для Mac: есть ли в сборке, установлена ли; установка открывает настройки заставки */
+export interface ScreensaverBridge {
+  state(): Promise<{ available: boolean, installed: boolean }>
+  install(): Promise<{ available: boolean, installed: boolean }>
 }
 
 /** Системное уведомление приложения для компьютера, пока оно открыто; щелчок открывает `link` */

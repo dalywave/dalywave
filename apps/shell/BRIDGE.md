@@ -206,6 +206,7 @@ const shell = createShell({ invoke, listen })
 | `player:ended` | `null` | очередь движка доиграла |
 | `player:level` | `{ rms, peak, bands: [low, mid, high] }` | ~20 раз в секунду, пока включено `setLevels(true)` |
 | `player:sleep` | `PlayerSleep` | таймер сна поставили, сняли, началось затухание, сработал (`finished`) |
+| `player:sound` | `{ available }` | системный вывод не отвечает (аудиосервер завис) — движок ждёт и повторяет с отступом; `true` — снова работает или пауза |
 | `player:now` | `PlayerNow \| null` | только окну мини-плеера: другой трек, пауза, конец очереди |
 | `audio:outputs` | `AudioOutputs` | появилось или пропало устройство вывода, сменились устройство по умолчанию или маршрут |
 | `server:changed` | `{ serverUrl }` | сменили адрес сервера |
@@ -401,7 +402,7 @@ macOS и Windows: окно 360 × 136 поверх всех — обложка, 
 ```ts
 interface AudioOutputs {
   mode: 'list' | 'picker'
-  outputs: { id: string, name: string, kind: AudioOutputKind, current: boolean }[]
+  outputs: { id: string, name: string, kind: AudioOutputKind, current: boolean, spatial?: boolean }[]
   followsSystem: boolean
 }
 type AudioOutputKind = 'builtin' | 'headphones' | 'bluetooth' | 'airplay' | 'usb' | 'hdmi' | 'other'
@@ -427,7 +428,10 @@ AirPlay ушла из сети, ЦАП выдернули) — пауза, вы�
 управления; на iPad — поповер у нижнего края экрана по центру). `outputs` — текущий маршрут, обычно
 один элемент с `current: true`: `name` — как его называет система («Динамик», «Гостиная»), `id` —
 тип порта (`Speaker`, `Headphones`, `BluetoothA2DPOutput`, `AirPlay`…). Выбор в окне приходит
-событием `audio:outputs`; `followsSystem` всегда `true`.
+событием `audio:outputs`; `followsSystem` всегда `true`. `spatial: true` — на этом выходе включено
+пространственное аудио (AirPods, Beats): режим «Фиксированное» или «С отслеживанием головы» человек
+выбирает в Пункте управления (удержать громкость), сводит звук сама iOS. Включили или выключили —
+тоже приходит `audio:outputs`.
 
 `audio.setOutput()` на iPhone и `audio.showPicker()` на компьютере отклоняются с кодом
 `unsupported`.
@@ -525,6 +529,16 @@ interface TrackDownload { trackId: string, state: 'queued' | 'downloading' | 're
 
 **Тактильный отклик** — `haptic(kind)`: `light` | `medium` | `heavy` | `soft` | `rigid` (удар), `selection`,
 `success` | `warning` | `error`. Только iPhone (UIKit); на компьютерах ничего. Неизвестный `kind` — `invalid`.
+
+**«Почувствуй бит»** (iPhone, `src/beat.rs` + `DalyWaveBeat.swift`): удары Core Haptics на сильных долях
+того, что играет, по сетке из `/api/tracks/{id}/analysis`, с поправкой на задержку вывода; только пока
+приложение на экране. `beat_state()` и `beat_set(enabled)` → `{ supported, enabled }` (`supported` — есть
+Taptic Engine), `beat_check(trackId)` → `boolean` — есть ли у трека сетка. Выбор хранит интерфейс (`dw.beat`).
+
+**Заставка для Mac** (`src/screensaver.rs`, `apps/shell/saver`): `screensaver_state()` и `screensaver_install()`
+→ `{ available, installed }`; установка копирует `Contents/Resources/DalyWave.saver` в `~/Library/Screen Savers`
+и открывает настройки заставки. Что играет, заставка спрашивает у приложения: `GET http://127.0.0.1:47815/now-playing`
+→ `{ playing, title, artist, artworkUrl? }`.
 
 **Проверка без входа** — `DALYWAVE_OFFLINE_SMOKE=<тестовый сервер>`: своя база, файлы тестового сервера
 качаются тем же путём (iPhone — фоновой сессией), затем «Без сети», волна из скачанного и воспроизведение

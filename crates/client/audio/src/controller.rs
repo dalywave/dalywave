@@ -38,10 +38,21 @@ const POSITION_EVERY: Duration = Duration::from_millis(250);
 const LEVEL_EVERY: Duration = Duration::from_millis(40);
 /// Пауза дольше этого — останавливаем поток устройства (на iOS система сможет усыпить приложение).
 const STOP_OUTPUT_AFTER: Duration = Duration::from_secs(3);
-/// Устройство не просит звук столько времени, хотя должно играть — вывод открывается заново,
-/// не помогло — ошибка: иначе плеер молча висит в «загрузке» (так бывает, когда системный
-/// звук завис: coreaudiod не вызывает колбэки ни у одного устройства).
+/// Устройство не просит звук столько времени, хотя должно играть, — системный вывод не отвечает
+/// (coreaudiod или медиасервер iOS завис: запуск вывода не возвращается, колбэки не приходят).
+/// Иначе плеер молча висел бы в «загрузке».
 const OUTPUT_STALL: Duration = Duration::from_secs(3);
+/// Повторы, пока вывод не отвечает: через столько после предыдущей попытки (дальше — по последнему).
+const RETRY_BACKOFF: [Duration; 5] = [
+    Duration::from_secs(1),
+    Duration::from_secs(2),
+    Duration::from_secs(5),
+    Duration::from_secs(10),
+    Duration::from_secs(30),
+];
+/// Брошенных потоков устройства (застряли в аудиосервере) не больше этого: пока их столько,
+/// новые попытки не открываются — застряли бы так же.
+const MAX_ABANDONED: u32 = 3;
 /// «Диджей»: переход не раньше, чем через столько от текущей позиции — входящему нужно открыться,
 /// перемотаться к сильной доле и набрать буфер.
 const DJ_LEAD_MS: f64 = 12_000.0;
@@ -90,6 +101,12 @@ struct SleepRun {
     track_index: Option<usize>,
     /// Затухание отдано микшеру
     fade_sent: bool,
+}
+
+/// Системный вывод не отвечает: сколько попыток было и когда следующая.
+struct Outage {
+    attempt: u32,
+    next_try: Instant,
 }
 
 /// Анализ трека: ещё идёт или готов (None — его нет).
@@ -234,8 +251,8 @@ struct Controller {
     paused_since: Option<Instant>,
     /// Сторож вывода: последнее значение счётчика кадров и с какого момента оно не растёт.
     stall: Option<(u64, Instant)>,
-    stall_reopened: bool,
-    stall_reported: bool,
+    /// Системный вывод не отвечает, а звук нужен: ждём и повторяем
+    outage: Option<Outage>,
     buffering: bool,
     seek_target_ms: Option<u64>,
     consecutive_errors: u32,
@@ -287,7 +304,10 @@ fn route_kinds(cfg: &EngineConfig, device: Option<&str>) -> Vec<OutputKind> {
     if let Some(p) = &cfg.route {
         return p.kinds();
     }
-    if matches!(cfg.output, OutputConfig::Capture { .. }) {
+    if matches!(
+        cfg.output,
+        OutputConfig::Capture { .. } | OutputConfig::Fake { .. }
+    ) {
         return Vec::new();
     }
     platform_route(device)
@@ -334,6 +354,26 @@ fn forward_issues(rx: Receiver<OutputIssue>, issues: &Sender<Issue>, generation:
         });
 }
 
+/// Вывода нет (не открылся при запуске): микшер ни к чему не подключён, частота — обычная.
+/// Настоящий откроется по команде play.
+fn detached_parts(cfg: &EngineConfig) -> OutputParts {
+    let rate = match cfg.output {
+        OutputConfig::Fake { sample_rate, .. } | OutputConfig::Capture { sample_rate } => {
+            sample_rate
+        }
+        OutputConfig::Device { .. } => 48_000,
+    };
+    let (_mixer, ports) = Mixer::new(rate, cfg.start_threshold_ms, cfg.volume);
+    OutputParts {
+        output: Output::None,
+        rate,
+        channels: 2,
+        ports,
+        load: Arc::new(LoadStats::default()),
+        device: None,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn open_output(
     cfg: &EngineConfig,
@@ -370,20 +410,46 @@ fn open_output(
             }
             #[cfg(not(target_vendor = "apple"))]
             let _ = buffered;
-            let (device, supported, device_id) = output::query_device(device)?;
-            let rate = supported.sample_rate();
-            let (mixer, ports) = Mixer::new(rate, cfg.start_threshold_ms, volume);
             let (tx, rx) = crossbeam_channel::unbounded::<OutputIssue>();
-            let (output, info) =
-                Output::open_device(device, supported, buffer_frames, mixer, load.clone(), tx)?;
+            let (output, opened) = Output::open_device(
+                device.map(str::to_string),
+                buffer_frames,
+                cfg.start_threshold_ms,
+                volume,
+                load.clone(),
+                tx,
+            )?;
             forward_issues(rx, issues, generation);
             Ok(OutputParts {
                 output,
-                rate: info.sample_rate,
-                channels: info.channels,
-                ports,
+                rate: opened.info.sample_rate,
+                channels: opened.info.channels,
+                ports: opened.ports,
                 load,
-                device: device_id,
+                device: opened.device,
+            })
+        }
+        OutputConfig::Fake {
+            sample_rate,
+            ref fake,
+        } => {
+            let (tx, rx) = crossbeam_channel::unbounded::<OutputIssue>();
+            let (output, opened) = Output::open_fake(
+                fake.clone(),
+                sample_rate,
+                cfg.start_threshold_ms,
+                volume,
+                load.clone(),
+                tx,
+            )?;
+            forward_issues(rx, issues, generation);
+            Ok(OutputParts {
+                output,
+                rate: opened.info.sample_rate,
+                channels: opened.info.channels,
+                ports: opened.ports,
+                load,
+                device: None,
             })
         }
         OutputConfig::Capture { sample_rate } => {
@@ -422,11 +488,11 @@ impl Controller {
         let (issues_tx, issues_rx) = crossbeam_channel::unbounded();
         let device_pref = match &cfg.output {
             OutputConfig::Device { device, .. } => device.clone(),
-            OutputConfig::Capture { .. } => None,
+            OutputConfig::Capture { .. } | OutputConfig::Fake { .. } => None,
         };
         let kinds = route_kinds(&cfg, device_pref.as_deref());
         let buffered_want = route::wants_buffered(cfg.buffered, &kinds).unwrap_or(false);
-        let parts = match open_output(
+        let opened = match open_output(
             &cfg,
             device_pref.as_deref(),
             None,
@@ -436,7 +502,6 @@ impl Controller {
             0,
             buffered_want,
         ) {
-            Ok(p) => p,
             // Буферизованный не открылся — обычный, звук важнее
             Err(e) if buffered_want => {
                 log::warn!("buffered output failed to open: {e}; using realtime");
@@ -449,10 +514,21 @@ impl Controller {
                     &issues_tx,
                     0,
                     false,
-                )?
+                )
+            }
+            r => r,
+        };
+        let parts = match opened {
+            Ok(p) => p,
+            // Аудиосервер не отвечает или устройства нет: движок всё равно нужен (очередь,
+            // «Сейчас играет»), вывод откроется по команде play
+            Err(e) if cfg.output.is_device() => {
+                log::warn!("output did not open: {e}; will retry on play");
+                detached_parts(&cfg)
             }
             Err(e) => return Err(e),
         };
+        let output_lost = matches!(parts.output, Output::None);
         log::info!(
             "output: {} Hz, {} ch, {}, {} (route {})",
             parts.rate,
@@ -495,7 +571,7 @@ impl Controller {
             issues_rx,
             output: parts.output,
             output_gen: 0,
-            output_lost: false,
+            output_lost,
             output_reopens: 0,
             device_pref,
             output_device: parts.device,
@@ -522,8 +598,7 @@ impl Controller {
             last_level_emit: Instant::now(),
             paused_since: None,
             stall: None,
-            stall_reopened: false,
-            stall_reported: false,
+            outage: None,
             buffering: false,
             seek_target_ms: None,
             consecutive_errors: 0,
@@ -820,48 +895,111 @@ impl Controller {
         self.update_snapshot();
     }
 
-    /// Сторож вывода: должно звучать, а устройство не берёт ни кадра.
+    /// Сторож вывода: должно звучать, а устройство не берёт ни кадра — системный вывод не отвечает.
+    /// Тогда [`Event::OutputStalled`] и повторы с отступом ([`RETRY_BACKOFF`]); устройство снова
+    /// берёт звук — [`Event::OutputRecovered`], играет дальше с той же позиции.
     fn watch_output(&mut self) {
-        // Буферизованный вывод берёт звук рывками и ждёт данных сам — сторож только у cpal
-        let active = self.want_play
-            && matches!(self.cfg.output, OutputConfig::Device { .. })
-            && !self.output.is_buffered()
+        let clock = self.clock();
+        if !self.cfg.output.is_device() || !self.want_play {
+            // Пауза: ждать вывод незачем, откроем по команде play
+            self.stall = None;
+            self.end_outage();
+            return;
+        }
+        // Кадры идут — вывод жив
+        if let Some((c, _)) = self.stall
+            && c != clock
+        {
+            self.stall = Some((clock, Instant::now()));
+            if self.output.is_running() {
+                self.end_outage();
+            }
+            return;
+        }
+        if let Some(o) = &self.outage {
+            if Instant::now() >= o.next_try {
+                self.retry_output();
+            }
+            return;
+        }
+        // Буферизованный вывод берёт звук рывками и ждёт данных сам — сторож только у устройства
+        let watching = !self.output.is_buffered()
             && self.output.is_running()
             && matches!(self.state, PlaybackState::Loading | PlaybackState::Playing);
-        let clock = self.ports.shared.clock.load(Ordering::Relaxed);
-        if !active {
+        if !watching {
             self.stall = None;
             return;
         }
         match self.stall {
-            Some((c, since)) if c == clock => {
-                if since.elapsed() < OUTPUT_STALL {
-                    return;
-                }
-                if !self.stall_reopened {
-                    self.stall_reopened = true;
-                    self.stall = None;
-                    log::warn!("output: the device has not asked for audio for 3 s, reopening");
-                    self.reopen_output(None, "output callbacks stalled");
-                } else if !self.stall_reported {
-                    self.stall_reported = true;
-                    log::error!("output: the system audio does not run the device (stalled)");
-                    self.set_buffering(false);
-                    self.emit(Event::Error {
-                        index: self.index,
-                        id: self.index.and_then(|i| self.id_at(i)),
-                        message: "системный звук не отвечает: устройство вывода не берёт звук"
-                            .into(),
-                    });
-                }
+            Some((_, since)) if since.elapsed() >= OUTPUT_STALL => {
+                log::warn!(
+                    "output: the device has not asked for audio for {} s{}",
+                    OUTPUT_STALL.as_secs(),
+                    match self.output.busy_for() {
+                        Some(d) => format!(", its start hangs for {:.1} s", d.as_secs_f64()),
+                        None => String::new(),
+                    }
+                );
+                self.begin_outage();
             }
-            _ => {
-                if self.stall.is_some_and(|(c, _)| c != clock) {
-                    self.stall_reopened = false;
-                    self.stall_reported = false;
-                }
-                self.stall = Some((clock, Instant::now()));
-            }
+            Some(_) => {}
+            None => self.stall = Some((clock, Instant::now())),
+        }
+    }
+
+    /// Вывод не отвечает: сообщить и ждать первой попытки.
+    fn begin_outage(&mut self) {
+        if self.outage.is_some() {
+            return;
+        }
+        let wait = RETRY_BACKOFF[0];
+        self.outage = Some(Outage {
+            attempt: 0,
+            next_try: Instant::now() + wait,
+        });
+        self.set_buffering(false);
+        self.emit(Event::OutputStalled {
+            attempt: 0,
+            retry_in_ms: wait.as_millis() as u64,
+        });
+    }
+
+    fn end_outage(&mut self) {
+        if self.outage.take().is_some() {
+            log::info!("output: sound runs again");
+            self.emit(Event::OutputRecovered);
+        }
+    }
+
+    /// Очередная попытка: открыть вывод заново с той же позиции. Если поток устройства ещё ждёт
+    /// аудиосервер (запуск не вернулся), новый не открываем — тот заиграет сам, когда сервер
+    /// ответит; новый застрял бы так же.
+    fn retry_output(&mut self) {
+        let Some(o) = &mut self.outage else { return };
+        o.attempt += 1;
+        let attempt = o.attempt;
+        let wait = RETRY_BACKOFF[(attempt as usize).min(RETRY_BACKOFF.len() - 1)];
+        o.next_try = Instant::now() + wait;
+        let waiting = self.output.busy_for();
+        let abandoned = output::abandoned_threads();
+        if let Some(d) = waiting {
+            log::warn!(
+                "output: attempt {attempt}: the start still waits for the system audio ({:.1} s)",
+                d.as_secs_f64()
+            );
+        } else if abandoned >= MAX_ABANDONED {
+            log::warn!("output: attempt {attempt}: {abandoned} device threads are stuck, waiting");
+        } else {
+            log::warn!("output: attempt {attempt}: reopening the output");
+            self.reopen_output(None, "the output did not respond, retrying");
+        }
+        self.stall = Some((self.clock(), Instant::now()));
+        // Открытие могло кончить ожидание (пауза) — тогда сообщать не о чем
+        if self.outage.is_some() {
+            self.emit(Event::OutputStalled {
+                attempt,
+                retry_in_ms: wait.as_millis() as u64,
+            });
         }
     }
 
@@ -1065,7 +1203,8 @@ impl Controller {
         if self.output_lost {
             // Устройство пропадало: открываем вывод заново, текущий трек продолжится с места
             self.reopen_output(None, "play after the output device was lost");
-            if self.output_lost {
+            // Не открылся: ждём системный вывод (повторы) или, если ждать нечего, — пауза
+            if self.output_lost && self.outage.is_none() {
                 self.want_play = false;
             }
             return;
@@ -1103,6 +1242,12 @@ impl Controller {
 
     fn resume_output(&mut self) {
         self.paused_since = None;
+        if self.output_lost && self.cfg.output.is_device() && self.outage.is_none() {
+            // Вывода нет (не открылся при запуске, пропал): открыть сейчас — открытие продолжит
+            // само, а не откроется — ждём системный вывод и повторяем
+            self.reopen_output(None, "play without an output");
+            return;
+        }
         self.output.start();
         let fade = self.declick();
         self.mixer(MixerCmd::Resume { fade });
@@ -1320,6 +1465,13 @@ impl Controller {
                     log::warn!("output stream invalidated: {msg}");
                     reopen = Some(msg);
                 }
+                OutputIssue::StartFailed(msg) => {
+                    // Система не дала запустить вывод: звук нужен — ждём и пробуем снова
+                    log::warn!("output did not start: {msg}");
+                    if self.want_play && self.output.is_running() {
+                        self.begin_outage();
+                    }
+                }
                 OutputIssue::Other(msg) => log::debug!("output: {msg}"),
             }
         }
@@ -1334,7 +1486,7 @@ impl Controller {
     /// Выбор устройства вывода: открыть вывод заново, если звук идёт не туда.
     fn set_output_device(&mut self, id: Option<String>) {
         self.device_pref = id;
-        if matches!(self.cfg.output, OutputConfig::Capture { .. }) {
+        if !matches!(self.cfg.output, OutputConfig::Device { .. }) {
             return;
         }
         if self.device_pref == self.output_device && !self.output_lost {
@@ -1454,6 +1606,16 @@ impl Controller {
                 self.output_device = None;
                 self.output_lost = true;
                 self.seek_target_ms = self.index.map(|_| position);
+                if self.want_play && self.cfg.output.is_device() {
+                    // Звук нужен: ждём системный вывод и пробуем снова, потом — с того же места
+                    if self.index.is_some()
+                        && matches!(self.state, PlaybackState::Idle | PlaybackState::Paused)
+                    {
+                        self.set_state(PlaybackState::Loading);
+                    }
+                    self.begin_outage();
+                    return;
+                }
                 if self.want_play {
                     self.want_play = false;
                     self.set_state(PlaybackState::Paused);
@@ -2460,6 +2622,7 @@ impl Controller {
                 .is_some(),
             output_buffered: self.output.is_buffered(),
             output_ahead_ms: (ahead * 1000 / u64::from(self.device_rate.max(1))) as u32,
+            output_stalled: self.outage.is_some(),
         };
         if let Ok(mut s) = self.snap.lock() {
             *s = snap;
