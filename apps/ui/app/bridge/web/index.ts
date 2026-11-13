@@ -359,6 +359,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
     updates: opts.updates ?? devUpdates() ?? { onAvailable: () => () => {}, state: async () => null, onState: () => () => {}, check: noWindow, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
+    desktopApps: () => unwrap(api.GET('/api/downloads')),
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
     trainer: opts.trainer !== undefined ? opts.trainer : devTrainer(),
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),

@@ -7,11 +7,11 @@ use utoipa::{
 };
 
 use crate::routes::{
-    acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe, embed,
-    events, export, fetcher, friends, home, images, imports, info, jam, library, lyrics,
-    notifications, offline, overlay, playlist_folders, playlist_set, playlists, presaves, queue,
-    reco, recognize, rewind, settings, share, sources, story, stream, sync, system, taste, tv,
-    updates, versions, video, wave, wave_presets, ws,
+    acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe,
+    downloads, embed, events, export, fetcher, friends, home, images, imports, info, jam, library,
+    lyrics, notifications, offline, overlay, playlist_folders, playlist_set, playlists, presaves,
+    queue, reco, recognize, rewind, settings, share, sources, story, stream, sync, system, taste,
+    tv, updates, versions, video, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -23,6 +23,8 @@ use crate::routes::{
         updates::check,
         updates::upload,
         updates::register,
+        downloads::desktop_apps,
+        downloads::desktop_app_latest,
         auth::providers,
         auth::oidc_start,
         auth::oidc_callback,

@@ -121,6 +121,8 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/devices/remote",
         "/api/devices/remote/command",
         "/api/devices/remote/transfer",
+        "/api/downloads",
+        "/api/downloads/{platform}/latest",
         "/api/embed/tracks/{id}/clip",
         "/api/events",
         "/api/export/library",

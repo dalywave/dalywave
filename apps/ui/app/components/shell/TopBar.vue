@@ -8,6 +8,7 @@ const route = useRoute()
 const router = useRouter()
 const ui = useUiStore()
 const auth = useAuthStore()
+const bridge = useBridge()
 const toast = useToast()
 const { t } = useI18n()
 
@@ -60,6 +61,10 @@ async function logout() {
   }
 }
 
+// Установщики Mac и Windows — только на сайте: в приложениях есть автообновление
+const appsOpen = ref(false)
+const desktopApps: MenuEntry[] = bridge.kind === 'web' ? [{ label: t('nav.desktopApps'), icon: 'ph:desktop', onSelect: () => (appsOpen.value = true) }] : []
+
 const accountMenu = computed<MenuEntry[]>(() => [
   { kind: 'heading', label: auth.user?.name ?? '', hint: auth.user?.email ?? undefined },
   priv.entry(),
@@ -67,6 +72,7 @@ const accountMenu = computed<MenuEntry[]>(() => [
   { kind: 'separator' },
   { label: t('nav.history'), icon: 'ph:clock-counter-clockwise', onSelect: () => navigateTo('/history') },
   { label: t('nav.settings'), icon: 'ph:gear-six', onSelect: () => navigateTo('/settings') },
+  ...desktopApps,
   ...(auth.isAdmin ? [{ label: t('nav.admin'), icon: 'ph:shield-check', onSelect: () => navigateTo('/admin') }] : []),
   { kind: 'separator' },
   { label: t('nav.logout'), icon: 'ph:sign-out', danger: true, onSelect: logout },
@@ -96,6 +102,7 @@ const accountMenu = computed<MenuEntry[]>(() => [
         <span v-if="priv.on.value" class="avatar__private" aria-hidden="true"><Icon name="ph:eye-slash-bold" /></span>
       </button>
     </UiMenu>
+    <ShellDesktopApps v-if="desktopApps.length" v-model:open="appsOpen" />
   </header>
 </template>
 

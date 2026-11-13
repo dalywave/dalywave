@@ -25,6 +25,7 @@ import type {
   FriendList, FriendProfile, FriendRequestResult, InviteLink, PeopleList, PersonCard, Privacy, PrivacyPatch, PlaylistInvite,
   DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
   AlbumMotion, TrackClip,
+  AppDownloads,
 } from '~/api/types'
 import type { DownloaderSnapshot, TrainerSnapshot } from './tauri/shell'
 
@@ -555,6 +556,9 @@ export interface Bridge {
 
   /** Язык меню в трее и строке меню приложения */
   setLocale(locale: 'ru' | 'en'): void
+
+  /** Установщики приложений для компьютера (меню аккаунта на сайте): последние версии по платформам */
+  desktopApps(): Promise<AppDownloads>
 
   /** Загрузчик на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
   readonly downloader: Downloader | null

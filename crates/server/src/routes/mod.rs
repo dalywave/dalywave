@@ -7,6 +7,7 @@ pub mod catalog;
 pub mod collab;
 pub mod connect;
 pub mod describe;
+pub mod downloads;
 pub mod embed;
 pub mod events;
 pub mod export;
@@ -99,6 +100,7 @@ pub fn router(state: AppState) -> Router {
         .merge(lyrics::routes())
         .merge(share::routes())
         .merge(info::routes())
+        .merge(downloads::routes())
         .route_layer(from_fn_with_state(state.clone(), require_access));
     let library = library::routes()
         .merge(playlists::routes())

@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT target, arch, version, installer_key AS \"key!\", installer_size AS \"size!\", published_at\n           FROM app_releases WHERE installer_key IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "target",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "target"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "arch",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "arch"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "key!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "installer_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "size!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "installer_size"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "app_releases",
+            "name": "published_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "27ad1351c4ded80111761c70cd96714cb0024ac49f009235381420f12a519296"
+}

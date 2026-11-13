@@ -14,7 +14,7 @@ use object_store::{
     aws::{AmazonS3, AmazonS3Builder},
     memory::InMemory,
     path::Path,
-    signer::{Method, Signer},
+    signer::{Method, SignedUrlOptions, Signer},
 };
 use url::Url;
 use uuid::Uuid;
@@ -351,6 +351,25 @@ impl Storage {
         Ok(self.signer.signed_url(Method::GET, &path, ttl).await?)
     }
 
+    /// Подписанная ссылка на скачивание файла под именем `file_name`: хранилище отдаст его с
+    /// `Content-Disposition: attachment` (параметр входит в подпись, подменить имя нельзя).
+    pub async fn presign_download(
+        &self,
+        key: &str,
+        ttl: Duration,
+        file_name: &str,
+    ) -> Result<Url, StorageError> {
+        let path = Path::parse(key)?;
+        let options = SignedUrlOptions::new().with_query([(
+            "response-content-disposition",
+            format!("attachment; filename=\"{file_name}\""),
+        )]);
+        Ok(self
+            .signer
+            .signed_url_opts(Method::GET, &path, ttl, &options)
+            .await?)
+    }
+
     /// Подписанная ссылка на скачивание для сервиса анализа: по его адресу хранилища, если он задан.
     pub async fn presign_get_for_ml(&self, key: &str, ttl: Duration) -> Result<Url, StorageError> {
         let path = Path::parse(key)?;
@@ -446,6 +465,17 @@ mod tests {
         let url = s.presign_get("audio/x.ogg", AUDIO_GET_TTL).await.unwrap();
         assert_eq!(url.host_str(), Some("files.example.com"));
         assert_eq!(url.path(), "/dalywave/audio/x.ogg");
+        let dl = s
+            .presign_download("releases/x.dmg", AUDIO_GET_TTL, "DalyWave-0.2.0.dmg")
+            .await
+            .unwrap();
+        assert_eq!(dl.host_str(), Some("files.example.com"));
+        assert!(
+            dl.as_str().contains(
+                "response-content-disposition=attachment%3B%20filename%3D%22DalyWave-0.2.0.dmg%22"
+            ),
+            "{dl}"
+        );
         // Без своего адреса сервис анализа получает ту же ссылку, что и клиенты
         let ml = s
             .presign_get_for_ml("audio/x.ogg", ML_GET_TTL)

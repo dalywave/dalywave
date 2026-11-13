@@ -975,6 +975,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["desktop_apps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downloads/{platform}/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["desktop_app_latest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/embed/tracks/{id}/clip": {
         parameters: {
             query?: never;
@@ -3719,8 +3751,35 @@ export interface components {
          * @enum {string}
          */
         ApnsEnvironment: "sandbox" | "production";
+        AppDownload: {
+            /** @description `aarch64` или `x86_64` */
+            arch: string;
+            /** @description Под каким именем файл сохранится, например `DalyWave-0.2.0.dmg` */
+            fileName: string;
+            /** @description Минимальная версия системы: `13` — macOS 13, `10` — Windows 10 */
+            minOsVersion: string;
+            /** @description `macos` или `windows` */
+            os: string;
+            /** @description `mac` (Apple silicon), `mac-intel`, `windows` */
+            platform: string;
+            /** Format: date-time */
+            publishedAt: string;
+            /**
+             * Format: int64
+             * @description Размер установщика
+             */
+            sizeBytes: number;
+            /** @description Скачать: редирект на файл */
+            url: string;
+            version: string;
+        };
         AppRelease: {
             arch: string;
+            /**
+             * Format: int64
+             * @description Размер установщика, если он есть в выпуске
+             */
+            installerSizeBytes?: number | null;
             notes?: string | null;
             /** Format: date-time */
             publishedAt: string;
@@ -4622,6 +4681,10 @@ export interface components {
             downloader: components["schemas"]["Downloader"];
             /** @description `dwk_…`: `fetcher worker --token` или файл `~/.config/dalywave/downloader-token`. */
             token: string;
+        };
+        Downloads: {
+            /** @description Платформы, для которых есть установщик; порядок — Mac, Mac Intel, Windows */
+            apps: components["schemas"]["AppDownload"][];
         };
         /** @description Копия плейлиста или микса — обычный плейлист человека. */
         DuplicatePlaylist: {
@@ -11174,6 +11237,92 @@ export interface operations {
             };
         };
     };
+    desktop_apps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Последние установщики приложений для компьютера */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Downloads"];
+                };
+            };
+            /** @description Нужен вход */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `no_access` — ролей ещё нет */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    desktop_app_latest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `mac`, `mac-intel` или `windows` */
+                platform: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Редирект на установщик в хранилище: ссылка живёт 15 минут, файл сохранится как `DalyWave-<версия>.dmg` */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нужен вход */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `no_access` — ролей ещё нет */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Неизвестная платформа или установщика ещё нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     embed_clip: {
         parameters: {
             query?: never;
@@ -15925,7 +16074,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description `not_uploaded` — файла ещё нет в хранилище */
+            /** @description `not_uploaded` — файла обновления или установщика ещё нет в хранилище */
             409: {
                 headers: {
                     [name: string]: unknown;

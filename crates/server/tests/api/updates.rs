@@ -2,7 +2,10 @@ use axum::http::StatusCode;
 use serde_json::json;
 use sqlx::PgPool;
 
-use crate::common::{Auth, TestApp};
+use crate::{
+    common::{Auth, TestApp},
+    mock::Person,
+};
 
 const TOKEN: &str = "release-token-0123456789abcdef0123456789abcdef";
 const SIG: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZQo=";
@@ -184,4 +187,144 @@ async fn check_returns_the_newest_release(db: PgPool) {
         .await
         .unwrap();
     assert_eq!(count, 3);
+}
+
+/// Файл в хранилище по ссылке от сервера — как его кладёт конвейер.
+async fn upload_file(app: &TestApp, target: &str, arch: &str, version: &str, file: &str) {
+    let res = app
+        .post(
+            "/api/releases/uploads",
+            json!({ "target": target, "arch": arch, "version": version, "fileName": file }),
+            &Auth::Bearer(TOKEN.into()),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let key = res.body["key"].as_str().unwrap().to_string();
+    app.state
+        .storage
+        .put(&key, vec![7u8; 128], "application/octet-stream", None)
+        .await
+        .unwrap();
+}
+
+/// Выпуск macOS с образом диска: архив обновления и `.dmg` рядом.
+async fn publish_mac(app: &TestApp, version: &str) {
+    let dmg = format!("DalyWave_{version}_aarch64.dmg");
+    upload_file(app, "darwin", "aarch64", version, "DalyWave.app.tar.gz").await;
+    upload_file(app, "darwin", "aarch64", version, &dmg).await;
+    let mut body = release(version, "DalyWave.app.tar.gz");
+    body["installerFileName"] = json!(dmg);
+    let res = app
+        .post("/api/releases", body, &Auth::Bearer(TOKEN.into()))
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["installerSizeBytes"], 128);
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn installers_are_registered_with_the_release(db: PgPool) {
+    let app = app(db).await;
+    let auth = Auth::Bearer(TOKEN.into());
+    // Установщик не загружен — выпуск не регистрируется
+    upload_file(&app, "darwin", "aarch64", "0.2.0", "DalyWave.app.tar.gz").await;
+    let mut body = release("0.2.0", "DalyWave.app.tar.gz");
+    body["installerFileName"] = json!("DalyWave_0.2.0_aarch64.dmg");
+    let res = app.post("/api/releases", body.clone(), &auth).await;
+    assert_eq!(res.status, StatusCode::CONFLICT, "{}", res.text);
+    assert_eq!(res.code(), "not_uploaded");
+    // Архив обновления — не установщик
+    body["installerFileName"] = json!("DalyWave.app.tar.gz");
+    let res = app.post("/api/releases", body, &auth).await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST, "{}", res.text);
+
+    // Windows: установщик NSIS и есть файл обновления
+    let exe = "DalyWave_0.2.0_x64-setup.exe";
+    upload_file(&app, "windows", "x86_64", "0.2.0", exe).await;
+    let res = app
+        .post(
+            "/api/releases",
+            json!({
+                "target": "windows", "arch": "x86_64", "version": "0.2.0",
+                "fileName": exe, "installerFileName": exe, "signature": SIG,
+            }),
+            &auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["sizeBytes"], 128);
+    assert_eq!(res.body["installerSizeBytes"], 128);
+
+    // Автообновление установщика не замечает: тот же ответ, что и раньше
+    publish_mac(&app, "0.2.0").await;
+    let res = app
+        .get("/api/updates/darwin/aarch64/0.1.0", &Auth::None)
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let url = res.body["url"].as_str().unwrap();
+    assert!(url.contains("/0.2.0/DalyWave.app.tar.gz?"), "{url}");
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn downloads_for_people_with_a_role(db: PgPool) {
+    let app = app(db).await;
+    // Без входа и без ролей — нельзя, как и весь каталог
+    let res = app.get("/api/downloads", &Auth::None).await;
+    assert_eq!(res.status, StatusCode::UNAUTHORIZED);
+    let res = app.get("/api/downloads/mac/latest", &Auth::None).await;
+    assert_eq!(res.status, StatusCode::UNAUTHORIZED);
+    let stranger = Auth::Cookie(app.login(&Person::new("stranger")).await);
+    let res = app.get("/api/downloads", &stranger).await;
+    assert_eq!(res.status, StatusCode::FORBIDDEN);
+    assert_eq!(res.code(), "no_access");
+
+    let me = app.listener("fan").await;
+    // Выпусков ещё нет — пусто, скачать нечего
+    let res = app.get("/api/downloads", &me).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    assert_eq!(res.body["apps"], json!([]));
+    let res = app.get("/api/downloads/mac/latest", &me).await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
+
+    // Выпуск без установщика (прежний конвейер) скачать нельзя, а с установщиком — можно,
+    // и самый новый по SemVer
+    publish(&app, "0.30.0", "DalyWave.app.tar.gz").await;
+    publish_mac(&app, "0.2.0").await;
+    publish_mac(&app, "0.10.0").await;
+    publish_mac(&app, "0.9.0").await;
+    let res = app.get("/api/downloads", &me).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let apps = res.body["apps"].as_array().unwrap();
+    assert_eq!(apps.len(), 1, "{}", res.text);
+    let mac = &apps[0];
+    assert_eq!(mac["platform"], "mac");
+    assert_eq!(mac["os"], "macos");
+    assert_eq!(mac["arch"], "aarch64");
+    assert_eq!(mac["version"], "0.10.0");
+    assert_eq!(mac["sizeBytes"], 128);
+    assert_eq!(mac["fileName"], "DalyWave-0.10.0.dmg");
+    assert_eq!(mac["minOsVersion"], "13");
+    assert_eq!(mac["url"], "/api/downloads/mac/latest");
+    assert!(mac["publishedAt"].is_string());
+
+    let res = app.get("/api/downloads/mac/latest", &me).await;
+    assert_eq!(res.status, StatusCode::FOUND, "{}", res.text);
+    assert_eq!(res.headers["cache-control"], "no-store");
+    let url = res.location();
+    assert!(
+        url.contains("/releases/darwin/aarch64/0.10.0/DalyWave_0.10.0_aarch64.dmg?"),
+        "{url}"
+    );
+    assert!(url.contains("X-Amz-Expires=900"), "{url}");
+    assert!(
+        url.contains("filename%3D%22DalyWave-0.10.0.dmg%22"),
+        "{url}"
+    );
+    // Windows ещё не выпущен; платформы linux на сайте нет
+    for path in [
+        "/api/downloads/windows/latest",
+        "/api/downloads/linux/latest",
+    ] {
+        let res = app.get(path, &me).await;
+        assert_eq!(res.status, StatusCode::NOT_FOUND, "{path}");
+    }
 }

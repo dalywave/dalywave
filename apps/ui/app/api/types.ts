@@ -227,6 +227,9 @@ export type TvLogin = Schemas['TvLogin']
 
 // Админка
 export type Health = Schemas['Health']
+// Приложения для компьютера: установщики с сайта
+export type AppDownload = Schemas['AppDownload']
+export type AppDownloads = Schemas['Downloads']
 export type AdminUser = Schemas['AdminUser']
 export type UserList = Schemas['UserList']
 export type UserPatch = Schemas['UserPatch']

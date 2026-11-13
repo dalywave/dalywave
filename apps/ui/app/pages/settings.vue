@@ -22,6 +22,9 @@ useHead({ title: () => t('title') })
 // Название в верхней строке телефона — когда крупный заголовок ушёл под неё
 const { y: scrollY } = useWindowScroll()
 
+// Установщики Mac и Windows — на сайте; в приложениях вместо них автообновление
+const appsOpen = ref(false)
+
 const health = ref<Health | null>(null)
 const healthFailed = ref(false)
 onMounted(async () => {
@@ -253,6 +256,12 @@ const language = computed({
     <SettingsGroup :title="t('about')">
       <!-- Приложение для компьютера: версия и «Обновление готово — Перезапустить» -->
       <ShellAppUpdateRow />
+      <template v-if="bridge.kind === 'web'">
+        <SettingsRow as="button" :title="tg('nav.desktopApps')" :description="t('desktopAppsDesc')" @click="appsOpen = true">
+          <Icon name="ph:caret-right" class="set__chev" aria-hidden="true" />
+        </SettingsRow>
+        <ShellDesktopApps v-model:open="appsOpen" />
+      </template>
       <!-- Сервер — только когда с ним беда; остальное про него живёт в админке -->
       <SettingsRow v-if="healthFailed" :title="t('server')">
         <span class="status status--bad"><i />{{ t('serverDown') }}</span>
@@ -355,6 +364,7 @@ const language = computed({
     "motionDesc": "Кусок клипа без звука в плеере и в «Открытиях»",
     "motionWifi": "Только по Wi-Fi",
     "about": "О приложении",
+    "desktopAppsDesc": "Mac и Windows",
     "server": "Сервер",
     "serverDown": "Не отвечает",
     "version": "Версия"
@@ -403,6 +413,7 @@ const language = computed({
     "motionDesc": "A silent loop from the music video in the player and in Discover",
     "motionWifi": "Wi-Fi only",
     "about": "About",
+    "desktopAppsDesc": "Mac and Windows",
     "server": "Server",
     "serverDown": "Not responding",
     "version": "Version"

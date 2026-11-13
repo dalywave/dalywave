@@ -2,14 +2,18 @@
 // Выпуск приложения на сервер автообновлений: файл обновления и его подпись из уже собранного
 // бандла (cargo tauri build с ключом подписи) → хранилище R2 → регистрация выпуска. После неё
 // установленные приложения увидят новую версию при следующей проверке (запуск или раз в 6 часов).
+// Вместе с ним уходит установщик для людей — его отдаёт сайт («Приложения для компьютера»):
+// macOS — .dmg из bundle/dmg, Windows — тот же установщик NSIS, что и обновление.
 //
 //   DALYWAVE_RELEASE_TOKEN=… bun apps/shell/scripts/release.ts [--target <triple>] [--notes "…"]
+//   bun apps/shell/scripts/release.ts --dry-run   — только найти файлы и показать, что уйдёт
 //
 // --target — тройка сборки (`aarch64-apple-darwin`, `x86_64-pc-windows-msvc`), если бандл собран
 // с --target (CI); без него — бандл из target/release этой машины. Сервер — --server или
 // DALYWAVE_RELEASE_SERVER (по умолчанию https://wave.daly.rest). Что нового — --notes,
 // --notes-file или RELEASE_NOTES. Токен — только из окружения и никуда не печатается.
 // Ключа R2 скрипту не нужно: сервер выдаёт подписанную ссылку на загрузку (docs/decisions.md).
+// --bundle <папка> — бандл из другого места (проверка скрипта на подставных файлах).
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
@@ -41,6 +45,13 @@ function platform(triple: string | undefined): { target: 'darwin' | 'windows', a
   const cpu = triple ? triple.split('-')[0] : process.arch === 'arm64' ? 'aarch64' : process.arch === 'x64' ? 'x86_64' : process.arch
   if (cpu !== 'aarch64' && cpu !== 'x86_64') fail(`архитектура ${cpu} не поддерживается`)
   return { target: os, arch: cpu }
+}
+
+/** Установщик для сайта: macOS — образ диска этой версии, Windows — сам файл обновления */
+function installer(bundle: string, target: 'darwin' | 'windows', version: string, update: string): string | null {
+  if (target === 'windows') return update
+  const dir = join(bundle, 'dmg')
+  return existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.dmg') && f.includes(`_${version}_`)).map(f => join(dir, f))[0] ?? null : null
 }
 
 /** Файл обновления текущей версии и его подпись `.sig` */
@@ -84,8 +95,9 @@ async function api<T>(server: string, token: string, path: string, body: unknown
   return JSON.parse(text) as T
 }
 
-const token = process.env.DALYWAVE_RELEASE_TOKEN?.trim()
-if (!token) fail('нет DALYWAVE_RELEASE_TOKEN (тот же, что в .env сервера; apps/shell/README.md, «Выпуск»)')
+const dryRun = process.argv.includes('--dry-run')
+const token = process.env.DALYWAVE_RELEASE_TOKEN?.trim() ?? ''
+if (!token && !dryRun) fail('нет DALYWAVE_RELEASE_TOKEN (тот же, что в .env сервера; apps/shell/README.md, «Выпуск»)')
 const server = (arg('server') ?? process.env.DALYWAVE_RELEASE_SERVER ?? 'https://wave.daly.rest').replace(/\/$/, '')
 const triple = arg('target')
 const notesFile = arg('notes-file')
@@ -93,20 +105,37 @@ const notes = arg('notes') ?? (notesFile ? readFileSync(notesFile, 'utf8') : pro
 
 const version = appVersion()
 const { target, arch } = platform(triple)
-const bundle = join(SHELL, 'target', ...(triple ? [triple] : []), 'release', 'bundle')
+const bundle = arg('bundle') ?? join(SHELL, 'target', ...(triple ? [triple] : []), 'release', 'bundle')
 const { file, signature } = artifact(bundle, target, version)
 // В хранилище — с версией и архитектурой в имени: по ключу сразу видно, что это
 const fileName = target === 'darwin' ? `DalyWave_${version}_${arch}.app.tar.gz` : `DalyWave_${version}_${arch}-setup.exe`
-const size = statSync(file).size
+const setup = installer(bundle, target, version, file)
+const installerFileName = setup === file ? fileName : setup ? `DalyWave_${version}_${arch}.dmg` : null
+const mb = (path: string) => `${(statSync(path).size / 1048576).toFixed(1)} МБ`
 
-console.log(`DalyWave ${version} ${target}/${arch}: ${file} (${(size / 1048576).toFixed(1)} МБ) → ${server}`)
-const upload = await api<{ key: string, url: string }>(server, token, '/api/releases/uploads', { target, arch, version, fileName })
-const put = await fetch(upload.url, {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/octet-stream' },
-  body: Bun.file(file),
-})
-if (!put.ok) fail(`загрузка в хранилище: ${put.status} ${(await put.text()).slice(0, 300)}`)
-console.log(`загружено: ${upload.key}`)
-const release = await api<{ version: string, publishedAt: string }>(server, token, '/api/releases', { target, arch, version, fileName, signature, notes })
+console.log(`DalyWave ${version} ${target}/${arch} → ${server}`)
+console.log(`  обновление: ${file} (${mb(file)})`)
+if (setup) console.log(`  установщик: ${setup === file ? 'тот же файл' : `${setup} (${mb(setup)})`}`)
+// Без установщика автообновление всё равно выходит, но на сайте останется прежняя версия
+else console.warn(`  установщика нет: в ${join(bundle, 'dmg')} нет .dmg версии ${version} — на сайте останется прежняя версия`)
+if (dryRun) {
+  console.log('проверка (--dry-run): на сервер ничего не ушло')
+  process.exit(0)
+}
+
+/** Файл в хранилище по ссылке от сервера, мимо самого сервера */
+async function put(path: string, name: string): Promise<void> {
+  const upload = await api<{ key: string, url: string }>(server, token, '/api/releases/uploads', { target, arch, version, fileName: name })
+  const res = await fetch(upload.url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: Bun.file(path),
+  })
+  if (!res.ok) fail(`загрузка в хранилище: ${res.status} ${(await res.text()).slice(0, 300)}`)
+  console.log(`загружено: ${upload.key}`)
+}
+
+await put(file, fileName)
+if (setup && installerFileName && setup !== file) await put(setup, installerFileName)
+const release = await api<{ version: string, publishedAt: string }>(server, token, '/api/releases', { target, arch, version, fileName, signature, notes, installerFileName })
 console.log(`выпуск ${release.version} для ${target}/${arch} зарегистрирован (${release.publishedAt})`)
