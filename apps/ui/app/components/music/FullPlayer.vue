@@ -112,8 +112,6 @@ const { label: contextLabel, kicker, title: phoneTitle } = useNowPlayingContext(
 /** Планшет горизонтально: закрепить плеер колонкой сбоку и свернуть этот слой */
 const prefs = usePrefsStore()
 const motion = useMotionStore()
-// Видео вместо обложки заказывается, как только трек заиграл: к раскрытию плеера оно уже готово
-watch(() => track.value?.id, id => motion.prefetch(id), { immediate: true })
 function pinSide() {
   prefs.sidePlayer = true
   void ui.collapsePlayer()
@@ -135,6 +133,9 @@ const open = computed({
 function close() {
   ui.playerOpen = false
 }
+
+// Клип: квадратом вместо обложки, целиком с подсветкой, фоном или «кино» — по настройке
+const clip = usePlayerClip({ track, open, art, busy: () => menuOpen.value || lyricsOn.value })
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.variant === 'stage' && ui.playerOpen) close()
@@ -285,10 +286,11 @@ onBeforeUnmount(() => {
 <template>
   <!-- Большой экран: сцена поверх содержимого -->
   <Transition v-if="variant === 'stage'" name="stage">
-    <section v-if="open && track" ref="beatEl" class="fp" :class="{ 'fp--lyrics': lyricsOn }" :aria-label="t('player.expand')">
+    <section v-if="open && track" ref="beatEl" class="fp" :class="[{ 'fp--lyrics': lyricsOn }, clip.classes]" :aria-label="t('player.expand')">
       <div class="fp__wave">
         <MusicWaveCanvas layout="stage" :box="art" />
       </div>
+      <MusicPlayerClip :clip="clip" place="screen" :image="track.album?.image" :active="open" />
       <UiIconButton class="fp__collapse" icon="ph:caret-down" :label="t('player.collapse')" :kbd="['Esc']" tone="glass" side="right" @click="close" />
       <div class="fp__context"><i class="fp__dot" :class="{ 'fp__dot--any': player.waveActive && player.wave.mood === 'any' }" />{{ contextLabel }}</div>
       <div v-if="player.waveActive" class="fp__mood">
@@ -298,9 +300,9 @@ onBeforeUnmount(() => {
 
       <div class="fp__stage">
         <div class="fp__col">
-        <div ref="art" class="fp__art">
+        <div ref="art" class="fp__art" :style="clip.artStyle">
           <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-          <MusicMotionCover :track="track" :active="open" />
+          <MusicPlayerClip :clip="clip" place="art" :image="track.album?.image" :active="open" />
           <div v-if="player.pending" class="fp__pending">
             <MusicPendingNote :pending="player.pending" long />
             <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -352,7 +354,7 @@ onBeforeUnmount(() => {
       <DialogContent
         v-if="track"
         class="pp"
-        :class="{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet', 'is-lyrics': variant === 'phone' && lyricsOn, 'is-lyrics-pane': variant === 'tablet' && pane === 'lyrics', 'is-calm': calm }"
+        :class="[{ 'is-dragging': dragging, 'is-settling': settling, 'pp--tablet': variant === 'tablet', 'is-lyrics': variant === 'phone' && lyricsOn, 'is-lyrics-pane': variant === 'tablet' && pane === 'lyrics', 'is-calm': calm }, clip.classes]"
         :style="{ '--tint': player.waveActive ? 'var(--m2)' : 'var(--amb-1)' }"
         :aria-describedby="undefined"
         @open-auto-focus.prevent
@@ -367,9 +369,10 @@ onBeforeUnmount(() => {
           <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
           <div class="pp__ambient" aria-hidden="true" />
+          <MusicPlayerClip :clip="clip" place="screen" :image="track.album?.image" :active="open" touch />
           <!-- Текст «сценой» на телефоне: видео вместо обложки — тихим фоном за строками -->
           <Transition name="pp-backdrop">
-            <div v-if="variant === 'phone' && lyricsOn && motion.src(track, 'tall')" class="pp__backdrop" aria-hidden="true">
+            <div v-if="variant === 'phone' && lyricsOn && clip.lyricsBackdrop && motion.src(track, 'tall')" class="pp__backdrop" aria-hidden="true">
               <MusicMotionCover :track="track" shape="tall" :active="open && lyricsOn" />
             </div>
           </Transition>
@@ -394,9 +397,9 @@ onBeforeUnmount(() => {
 
             <div class="tp__main">
               <div class="tp__player">
-                <div ref="art" class="tp__art">
+                <div ref="art" class="tp__art" :style="clip.artStyle">
                   <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-                  <MusicMotionCover :track="track" :active="open" />
+                  <MusicPlayerClip :clip="clip" place="art" :image="track.album?.image" :active="open" />
                   <div v-if="player.pending" class="fp__pending">
                     <MusicPendingNote :pending="player.pending" long />
                     <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -480,9 +483,9 @@ onBeforeUnmount(() => {
               </UiMenu>
             </header>
 
-            <div v-show="!lyricsOn" ref="art" class="pp__art">
+            <div v-show="!lyricsOn" ref="art" class="pp__art" :style="clip.artStyle">
               <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-              <MusicMotionCover :track="track" :active="open && !lyricsOn" />
+              <MusicPlayerClip :clip="clip" place="art" :image="track.album?.image" :active="open && !lyricsOn" />
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
                 <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -819,6 +822,78 @@ onBeforeUnmount(() => {
 .tp__pane.is-lyrics { background: color-mix(in oklab, var(--amb-3) 30%, rgba(10, 12, 16, 0.55)); }
 .tp__pane.is-lyrics .tp__pane-body { position: relative; overflow: hidden; padding-bottom: 0; }
 
+/* ---------- Клип в плеере (usePlayerClip, PlayerClip.vue) ----------
+   «Широкий»: блок обложки — по пропорциям клипа, горизонтальный клип чуть шире квадрата;
+   картинка уходит под клип. «Фон» и «Кино»: клип на весь плеер, волны нет, название с кнопками —
+   внизу слева поверх затемнения, обложка — маленькая рядом с названием */
+.clip-wide :is(.fp__art, .pp__art, .tp__art) { transition: width var(--dur-4) var(--ease-out), height var(--dur-4) var(--ease-out); }
+.clip-wide :is(.fp__art, .pp__art, .tp__art) > :deep(.art) { visibility: hidden; }
+/* Волна — тише: вокруг клипа светятся его цвета */
+.clip-wide.clip-shown :is(.fp__wave, .pp__wave) { opacity: 0.35; }
+.fp.clip-land .fp__art { width: min(520px, 56vh, 100%); }
+.fp--lyrics.clip-land .fp__art { width: 100%; }
+/* Телефон: клип ниже квадрата — он посередине свободного места, управление остаётся внизу */
+.pp.clip-land .pp__art { width: 100%; margin-block: auto; }
+.pp.clip-land:not(.is-lyrics) .pp__secondary { margin-top: clamp(8px, 1.6vh, 14px); }
+.pp.clip-land .tp__art { width: min(100%, 48vh, 560px); }
+
+.fp.clip-screen { background: #000; }
+.clip-screen :is(.fp__wave, .pp__wave, .pp__ambient) { display: none; }
+.fp.clip-screen .fp__stage { justify-content: flex-end; align-items: flex-start; padding: 72px 48px 40px; }
+.fp.clip-screen .fp__col { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; justify-items: start; gap: 20px; width: 100%; max-width: 760px; }
+.fp.clip-screen .fp__art { width: 84px; }
+.fp.clip-screen .fp__art :deep(.art) { border-radius: var(--r-2); box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.9); transform: none; }
+.fp.clip-screen .fp__info { align-items: flex-start; max-width: 100%; text-align: left; }
+.fp.clip-screen :is(.fp__byline, .fp__chips) { justify-content: flex-start; }
+.fp.clip-screen .fp__reactions { grid-column: 1 / -1; justify-content: flex-start; }
+.fp--lyrics.clip-screen .fp__stage { align-items: stretch; justify-content: flex-start; padding: 0 0 0 48px; }
+.fp--lyrics.clip-screen .fp__col { align-content: end; width: min(46%, 520px); padding: 72px 24px 40px 0; }
+.fp--lyrics.clip-screen .fp__art { width: 72px; }
+/* Текст песни поверх клипа — на тёмной подложке */
+.fp--lyrics.clip-screen .fp__lyrics { background: linear-gradient(90deg, rgba(6, 8, 12, 0), rgba(6, 8, 12, 0.66) 72px); }
+.pp.clip-screen .pp__art { display: none; }
+.pp.clip-screen .pp__info { margin-top: auto; }
+.pp.clip-screen:not(.is-lyrics) .pp__secondary { margin-top: clamp(8px, 1.6vh, 14px); }
+.pp.clip-screen .tp__art { visibility: hidden; }
+/* Затемнение под текстом — по месту текста на каждом устройстве: на белом кадре светлый текст
+   держит ≥ 4,5:1 (название — больше), выше видно клип */
+.fp.clip-screen :is(.fp__context, .fp__mood) { background: rgba(8, 10, 14, 0.62); }
+.pp.clip-screen :deep(.pcs__shade) {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.82) 0, rgba(0, 0, 0, 0.62) 8%, rgba(0, 0, 0, 0) 18%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0, rgba(0, 0, 0, 0.8) 42%, rgba(0, 0, 0, 0.42) 54%, rgba(0, 0, 0, 0) 70%);
+}
+.pp.is-lyrics.clip-screen :deep(.pcs__shade) { background: rgba(0, 0, 0, 0.68); }
+.pp.clip-screen .pp__kicker { color: var(--text-2); }
+/* iPad вертикально: низ закрыт листом «Текст / Очередь» — клип во всю ширину над ним, а не
+   обрезанной серединой на весь экран; название и кнопки — на затемнении ниже клипа */
+@media (orientation: portrait) {
+  .pp--tablet.clip-screen :deep(.pcs video) {
+    height: 64%;
+    -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+    mask-image: linear-gradient(180deg, #000 70%, transparent);
+  }
+  .pp--tablet.clip-screen :deep(.pcs__shade) {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0, rgba(0, 0, 0, 0) 9%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0.8) 34%, rgba(0, 0, 0, 0.86) 100%);
+  }
+}
+@media (orientation: landscape) {
+  .pp--tablet.clip-screen :deep(.pcs__shade) {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0, rgba(0, 0, 0, 0) 12%),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.86) 0, rgba(0, 0, 0, 0.8) 52%, rgba(0, 0, 0, 0) 74%);
+  }
+  .pp.clip-screen .tp .tp__pane, .pp.clip-screen .tp .tp__pane.is-lyrics { padding: 14px 16px 0; background: rgba(8, 10, 14, 0.7); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+}
+/* «Кино»: без движения уходит всё, кроме клипа; движение, касание, клавиша — возвращают */
+.clip-cinema :is(.fp__stage, .fp__context, .fp__mood, .pp__body, .tp),
+.clip-cinema :deep(:is(.fp__collapse, .pcs__shade)) { transition: opacity 600ms var(--ease-out); }
+.clip-idle :is(.fp__stage, .fp__context, .fp__mood, .pp__body, .tp),
+.clip-idle :deep(:is(.fp__collapse, .pcs__shade)) { opacity: 0; pointer-events: none; }
+.fp.clip-idle { cursor: none; }
+
 /* ---------- Светлая тема: светлая сцена ----------
    Плеер не выпадает тёмным островом между светлыми панелями. Фон — спокойная пастель тона
    обложки (те же --amb-*, что у фона приложения): яркость постоянная и высокая, насыщенность
@@ -885,6 +960,19 @@ onBeforeUnmount(() => {
 @media (orientation: landscape) {
   :root[data-theme='light'] .tp__pane { background: rgba(255, 255, 255, 0.45); box-shadow: inset 0 0 0 1px var(--hair); }
   :root[data-theme='light'] .tp .tp__pane.is-lyrics { background: none; box-shadow: none; }
+}
+/* Клип на весь плеер — тёмный остров (.scheme-dark) и на светлой теме: светлый текст поверх
+   затемнения; пастельные подмены выше возвращаются к тёмным */
+:root[data-theme='light'] :is(.fp, .pp).clip-screen {
+  --text-2: rgba(232, 236, 244, 0.72);
+  --text-3: rgba(232, 236, 244, 0.6);
+  --accent-ink: color-mix(in oklab, var(--accent) 62%, #fff);
+}
+:root[data-theme='light'] .fp.clip-screen :is(.fp__context, .fp__mood) { background: rgba(8, 10, 14, 0.62); box-shadow: inset 0 0 0 1px var(--line); }
+:root[data-theme='light'] .pp.clip-screen .pp__frame { background-color: #000; }
+:root[data-theme='light'] .pp.clip-screen .tp__pane { background: rgba(14, 16, 21, 0.72); box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.08); }
+@media (orientation: landscape) {
+  :root[data-theme='light'] .pp.clip-screen .tp .tp__pane { background: rgba(8, 10, 14, 0.62); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
 }
 
 @media (prefers-reduced-motion: reduce) {

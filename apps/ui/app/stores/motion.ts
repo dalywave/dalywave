@@ -81,10 +81,21 @@ export const useMotionStore = defineStore('motion', () => {
     return shape === 'tall' ? (m.tall ?? m.square) : (m.square ?? m.tall)
   }
 
+  /** Что за видео у трека: клип, живая обложка альбома, никакого — или ещё неизвестно (`null`) */
+  function kind(track: Pick<Track, 'id'> | null | undefined): 'clip' | 'artwork' | 'none' | null {
+    const e = track ? entries.get(track.id) : undefined
+    const c = e?.clip
+    if (!e || (!c && !e.tries)) return null
+    if (c?.state === 'ready' && c.url) return 'clip'
+    if (c?.motion?.state === 'ready' && (c.motion.square || c.motion.tall)) return 'artwork'
+    // Сервер ещё ищет видео — ждём, пока не кончатся перезапросы
+    return c && pending(c) && e.tries <= RETRY_MS.length ? null : 'none'
+  }
+
   /** Видео, которые пришли вместе с лентой: лишний запрос не нужен */
   function remember(clip: TrackClip) {
     if (!pending(clip)) entries.set(clip.trackId, { clip, at: Date.now(), tries: 0 })
   }
 
-  return { allowed, cellular, src, prefetch, remember }
+  return { allowed, cellular, src, kind, prefetch, remember }
 })

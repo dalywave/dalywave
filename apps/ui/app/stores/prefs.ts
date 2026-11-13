@@ -7,6 +7,11 @@ export type ScrubberStyle = 'wave' | 'line'
 export type ThemePref = 'dark' | 'light' | 'system'
 const THEMES: ThemePref[] = ['dark', 'light', 'system']
 
+/** Клип в полном плеере: квадратом вместо обложки, целиком с подсветкой, фоном на весь плеер,
+ *  «кино» (крупно, интерфейс прячется) или не показывать вовсе */
+export type ClipStyle = 'square' | 'wide' | 'backdrop' | 'cinema' | 'off'
+export const CLIP_STYLES: ClipStyle[] = ['square', 'wide', 'backdrop', 'cinema', 'off']
+
 /**
  * Настройки интерфейса «под себя». Плоский объект с отметкой времени: так же целиком уйдёт
  * на сервер, когда появится синхронизация между устройствами (побеждает более поздняя запись)
@@ -21,13 +26,15 @@ export interface Preferences {
   motion: boolean
   /** …только по Wi-Fi: на сотовой — обычная обложка */
   motionWifiOnly: boolean
+  /** Как клип показан в полном плеере (живая обложка альбома — всегда на месте обложки) */
+  clipStyle: ClipStyle
   updatedAt: string | null
 }
 
 export type PreferencesPatch = Partial<Omit<Preferences, 'updatedAt'>>
 
 const STORAGE_KEY = 'dw.prefs'
-const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', motion: true, motionWifiOnly: false, updatedAt: null }
+const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', motion: true, motionWifiOnly: false, clipStyle: 'square', updatedAt: null }
 
 // По умолчанию — тёмная: «Полночь» задумана тёмной; светлую и «как в системе»
 // выбирают в настройках. Ключ и значения читает и скрипт в <head> (utils/theme.ts) — до отрисовки
@@ -41,6 +48,7 @@ function sanitize(raw: unknown): Preferences {
     theme: THEMES.includes(r.theme as ThemePref) ? r.theme as ThemePref : DEFAULTS.theme,
     motion: typeof r.motion === 'boolean' ? r.motion : DEFAULTS.motion,
     motionWifiOnly: typeof r.motionWifiOnly === 'boolean' ? r.motionWifiOnly : DEFAULTS.motionWifiOnly,
+    clipStyle: CLIP_STYLES.includes(r.clipStyle as ClipStyle) ? r.clipStyle as ClipStyle : DEFAULTS.clipStyle,
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : null,
   }
 }
@@ -98,6 +106,11 @@ export const usePrefsStore = defineStore('prefs', () => {
     set: v => update({ motionWifiOnly: v }),
   })
 
+  const clipStyle = computed<ClipStyle>({
+    get: () => prefs.value.clipStyle,
+    set: v => update({ clipStyle: v }),
+  })
+
   // Выбор в другой вкладке подхватывается сразу (key = null — там очистили хранилище)
   if (import.meta.client) {
     window.addEventListener('storage', (e) => {
@@ -105,5 +118,5 @@ export const usePrefsStore = defineStore('prefs', () => {
     })
   }
 
-  return { prefs, scrubber, sidePlayer, theme, motion, motionWifiOnly, update }
+  return { prefs, scrubber, sidePlayer, theme, motion, motionWifiOnly, clipStyle, update }
 })

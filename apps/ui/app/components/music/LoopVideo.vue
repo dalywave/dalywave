@@ -7,7 +7,9 @@ const props = withDefaults(defineProps<{
   active?: boolean
   /** Номер круга: сменился — видео с начала (карточки ленты: в такт с отрывком звука) */
   cycle?: number
-}>(), { active: true, cycle: 0 })
+  /** Как кадр ложится в рамку: обрезается по ней (cover) или целиком (contain) */
+  fit?: 'cover' | 'contain'
+}>(), { active: true, cycle: 0, fit: 'cover' })
 const emit = defineEmits<{ ready: [boolean] }>()
 
 const bridge = useBridge()
@@ -50,6 +52,9 @@ function onPlaying() {
   shown.value = true
   emit('ready', true)
 }
+// Кадр нужен снаружи: подсветка вокруг клипа в плеере берёт из него цвета
+defineExpose({ el })
+
 function onError() {
   shown.value = false
   emit('ready', false)
@@ -63,6 +68,7 @@ function onError() {
     :key="url"
     class="lv"
     :class="{ 'is-shown': shown }"
+    :style="fit === 'contain' ? { objectFit: 'contain' } : undefined"
     :src="url"
     muted
     loop
