@@ -2,7 +2,7 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, BeatHaptics, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, ScreensaverBridge, Section, SourceResult, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, BeatHaptics, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, ScreensaverBridge, Section, SourceResult, StoryMoment, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
@@ -34,6 +34,9 @@ export function gainFor(lufs: number | null | undefined, truePeak: number | null
   if (truePeak != null) gain = Math.min(gain, -1 - truePeak)
   return gain
 }
+
+/** Момент истории в адресе: `?startMs=&lengthMs=` */
+const momentQuery = (m?: StoryMoment) => query({ startMs: m?.startMs != null ? Math.round(m.startMs) : null, lengthMs: m?.lengthMs })
 
 function detectPlatform(): Platform {
   const ua = navigator.userAgent
@@ -434,13 +437,13 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       charts: () => unwrap(api.GET('/api/charts')),
       chart: id => unwrap(api.GET('/api/charts/{id}', { params: { path: { id } } })),
       hook: id => unwrap(api.GET('/api/tracks/{id}/hook', { params: { path: { id } } })),
-      storyAudio: async (id) => {
-        const res = await http.raw('GET', `/api/tracks/${id}/story/audio`)
+      storyAudio: async (id, moment) => {
+        const res = await http.raw('GET', `/api/tracks/${id}/story/audio${momentQuery(moment)}`)
         if (!res.ok) throw toApiError(res.status, await res.json().catch(() => null))
         return await res.arrayBuffer()
       },
-      storyVideo: async (id, video) => {
-        const res = await http.raw('POST', `/api/tracks/${id}/story`, { body: video, headers: { 'Content-Type': video.type || 'video/mp4' } })
+      storyVideo: async (id, video, moment) => {
+        const res = await http.raw('POST', `/api/tracks/${id}/story${momentQuery(moment)}`, { body: video, headers: { 'Content-Type': video.type || 'video/mp4' } })
         if (!res.ok) throw toApiError(res.status, await res.json().catch(() => null))
         return new Blob([await res.arrayBuffer()], { type: 'video/mp4' })
       },

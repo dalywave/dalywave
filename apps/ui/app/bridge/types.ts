@@ -663,10 +663,10 @@ export interface Bridge {
     chart(id: string): Promise<ChartDetail>
     /** Отрывок ~15 с с припева перед включением: место в звуке на сервере или превью Deezer */
     hook(trackId: string): Promise<TrackHook>
-    /** Звук видео-истории: 15 с с припева, WAV */
-    storyAudio(trackId: string): Promise<ArrayBuffer>
-    /** Видео истории без звука → готовый MP4 (H.264 + AAC): звук добавляет сервер */
-    storyVideo(trackId: string, video: Blob): Promise<Blob>
+    /** Звук видео-истории, WAV: 15 с с припева или выбранный момент (`startMs` — у превью Deezer от его начала) */
+    storyAudio(trackId: string, moment?: StoryMoment): Promise<ArrayBuffer>
+    /** Видео истории без звука → готовый MP4 (H.264 + AAC): звук — тот же момент, его добавляет сервер */
+    storyVideo(trackId: string, video: Blob, moment?: StoryMoment): Promise<Blob>
     /** Кто сделал трек: авторы, продюсеры, звукорежиссёры, лейбл, год */
     credits(trackId: string): Promise<TrackCredits>
     /** Об артисте: начало статьи Википедии и факты; `about: null` — статьи нет */
@@ -1043,4 +1043,10 @@ export interface ScreensaverBridge {
 /** Системное уведомление приложения для компьютера, пока оно открыто; щелчок открывает `link` */
 export interface SystemNotify {
   show(n: { id: string, title: string, body: string, link: string | null }): Promise<boolean>
+}
+
+/** Момент трека для истории: начало и длина (10, 15 или 30 с) */
+export interface StoryMoment {
+  startMs?: number
+  lengthMs?: number
 }

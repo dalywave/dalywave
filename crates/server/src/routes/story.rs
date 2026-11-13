@@ -11,7 +11,12 @@ use axum::{
 use dalywave_protocol::ErrorBody;
 use uuid::Uuid;
 
-use crate::{error::AppResult, extract::Path, state::AppState, story};
+use crate::{
+    error::AppResult,
+    extract::{Path, Query},
+    state::AppState,
+    story,
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -27,16 +32,21 @@ pub fn routes() -> Router<AppState> {
     path = "/api/tracks/{id}/story/audio",
     tag = "playback",
     security(("session" = []), ("device" = [])),
-    params(("id" = Uuid, Path, description = "id трека")),
+    params(("id" = Uuid, Path, description = "id трека"), story::Moment),
     responses(
-        (status = 200, description = "15 с с припева в WAV (PCM 16 бит, 44,1 кГц, стерео) с мягким входом и выходом: \
+        (status = 200, description = "Отрывок (15 с с припева или выбранный момент) в WAV (PCM 16 бит, 44,1 кГц, стерео) с мягким входом и выходом: \
                                       из звука на сервере или превью Deezer", content_type = "audio/wav"),
+        (status = 400, description = "Длина не 10, 15 или 30 с", body = ErrorBody),
         (status = 404, description = "Нет такого трека (`not_found`) или звука для истории (`no_audio`)", body = ErrorBody),
         (status = 503, description = "Deezer, хранилище или ffmpeg недоступны", body = ErrorBody),
     ),
 )]
-pub async fn story_audio(State(st): State<AppState>, Path(id): Path<Uuid>) -> AppResult<Response> {
-    let wav = story::audio_wav(&st, id).await?;
+pub async fn story_audio(
+    State(st): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(moment): Query<story::Moment>,
+) -> AppResult<Response> {
+    let wav = story::audio_wav(&st, id, moment).await?;
     Ok((
         [
             (header::CONTENT_TYPE, "audio/wav"),
@@ -52,11 +62,12 @@ pub async fn story_audio(State(st): State<AppState>, Path(id): Path<Uuid>) -> Ap
     path = "/api/tracks/{id}/story",
     tag = "playback",
     security(("session" = []), ("device" = [])),
-    params(("id" = Uuid, Path, description = "id трека")),
+    params(("id" = Uuid, Path, description = "id трека"), story::Moment),
     request_body(content = Vec<u8>, content_type = "video/mp4",
                  description = "Видео истории без звука (MP4 с H.264 или WebM), до 64 МБ"),
     responses(
-        (status = 200, description = "Готовая история: MP4, H.264 + AAC, звук — 15 с с припева", content_type = "video/mp4"),
+        (status = 200, description = "Готовая история: MP4, H.264 + AAC, звук — тот же отрывок, что у `/story/audio` с теми же параметрами", content_type = "video/mp4"),
+        (status = 400, description = "Длина не 10, 15 или 30 с", body = ErrorBody),
         (status = 404, description = "Нет такого трека (`not_found`) или звука для истории (`no_audio`)", body = ErrorBody),
         (status = 413, description = "Видео больше 64 МБ", body = ErrorBody),
         (status = 422, description = "Видео не читается (`not_a_video`, `story_failed`)", body = ErrorBody),
@@ -65,9 +76,10 @@ pub async fn story_audio(State(st): State<AppState>, Path(id): Path<Uuid>) -> Ap
 pub async fn story_video(
     State(st): State<AppState>,
     Path(id): Path<Uuid>,
+    Query(moment): Query<story::Moment>,
     body: Bytes,
 ) -> AppResult<Response> {
-    let mp4 = story::mux(&st, id, &body).await?;
+    let mp4 = story::mux(&st, id, moment, &body).await?;
     Ok((
         [
             (header::CONTENT_TYPE, "video/mp4"),
