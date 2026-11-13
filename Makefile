@@ -79,6 +79,9 @@ app: sidecar ## приложение macOS с загрузчиком и заст
 bump-version: ## новая версия приложения: make bump-version [VERSION=0.2.0], без VERSION — +1 к последней цифре
 	@bash apps/shell/scripts/bump-version.sh "$(VERSION)"
 
+release: ## выпуск везде: версия +1, сайт, TestFlight, Mac, Windows (CI): make release [NOTES="…"]
+	@NOTES="$(NOTES)" bash apps/shell/scripts/release-all.sh
+
 release-mac: ## собрать и выпустить приложение macOS на сервер обновлений: make release-mac [NOTES="…"]
 	@[ -f "$(UPDATER_KEY)" ] || { echo "Нет $(UPDATER_KEY): без ключа подписи обновлений выпуск невозможен"; exit 1; }
 	@[ -n "$${DALYWAVE_RELEASE_TOKEN:-}" ] || security find-generic-password -s dalywave-release-token -a "$$USER" >/dev/null 2>&1 || \
@@ -156,4 +159,4 @@ fmt: ## отформатировать код
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint --fix; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff format .; fi
 
-.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release-mac ios ios-build testflight testflight-tv ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt
+.PHONY: help up down db-reset api worker ml downloader ui sidecar app bump-version release release-mac ios ios-build testflight testflight-tv ios-sim ios-test audio-test test-audio-server design api-types sqlx-prepare test lint deploy fmt
