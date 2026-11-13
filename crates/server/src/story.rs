@@ -9,7 +9,8 @@
 //!   (VP8/VP9 из MediaRecorder) — перекодируется в H.264.
 //!
 //! Откуда звук — как у «Послушать припев» (`/hook`): файл записи на сервере с места припева, иначе —
-//! превью Deezer (оно и так с припева).
+//! превью Deezer (оно и так с припева). Момент и длину (10, 15 или 30 с) человек может выбрать сам
+//! (редактор момента в окне «История»): `?startMs=&lengthMs=` у обоих путей.
 
 use std::{
     path::{Path, PathBuf},
@@ -28,8 +29,12 @@ use crate::{
     state::AppState,
 };
 
-/// Длина истории.
+/// Длина истории по умолчанию.
 pub const STORY_MS: i64 = 15_000;
+/// Длины на выбор в редакторе момента.
+pub const LENGTHS: [i64; 3] = [10_000, 15_000, 30_000];
+/// Превью Deezer — 30 с.
+pub const PREVIEW_MS: i64 = 30_000;
 /// Видео без звука от приложения — не больше (15 с 1080×1920 H.264 — 5–15 МБ).
 pub const MAX_VIDEO_BYTES: usize = 64 * 1024 * 1024;
 const TOOL_TIMEOUT: Duration = Duration::from_secs(90);
@@ -43,22 +48,77 @@ fn exe(name: &str) -> String {
         .unwrap_or_else(|_| name.to_string())
 }
 
-/// Мягкий вход и выход отрывка длиной [`STORY_MS`].
-fn fades() -> String {
-    let len = STORY_MS as f64 / 1000.0;
+/// Какой момент трека взять: начало (нет — с припева) и длина (нет — [`STORY_MS`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize, utoipa::IntoParams)]
+#[serde(rename_all = "camelCase")]
+#[into_params(parameter_in = Query)]
+pub struct Moment {
+    /// Начало отрывка в треке, мс (у превью Deezer — от начала превью). Нет — с припева.
+    pub start_ms: Option<i64>,
+    /// Длина: 10000, 15000 или 30000 мс. Нет — 15000.
+    pub length_ms: Option<i64>,
+}
+
+impl Moment {
+    /// Длина отрывка; не из списка — ошибка.
+    pub fn length(&self) -> AppResult<i64> {
+        match self.length_ms {
+            None => Ok(STORY_MS),
+            Some(l) if LENGTHS.contains(&l) => Ok(l),
+            Some(_) => Err(AppError::BadRequest(
+                "длина истории — 10, 15 или 30 секунд".into(),
+            )),
+        }
+    }
+}
+
+/// Начало отрывка внутри звука длиной `total_ms`: не дальше, чем помещается весь отрывок.
+pub fn clamp_start(start_ms: i64, length_ms: i64, total_ms: i64) -> i64 {
+    start_ms.min(total_ms - length_ms).max(0)
+}
+
+/// Мягкий вход и выход отрывка.
+fn fades(length_ms: i64) -> String {
+    let len = length_ms as f64 / 1000.0;
     format!("{FADE_IN},afade=t=out:st={:.2}:d=1", len - 1.0)
 }
 
 /// Откуда брать звук истории.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Source {
-    /// Файл записи в хранилище, с места припева.
-    File { key: String, start_ms: i64 },
-    /// Превью Deezer (уже с припева).
-    Preview { url: String },
+    /// Файл записи в хранилище, с места припева (или выбранного).
+    File {
+        key: String,
+        start_ms: i64,
+        length_ms: i64,
+    },
+    /// Превью Deezer (уже с припева); начало — внутри превью.
+    Preview {
+        url: String,
+        start_ms: i64,
+        length_ms: i64,
+    },
 }
 
-pub async fn source(st: &AppState, track_id: Uuid) -> AppResult<Source> {
+impl Source {
+    pub fn clip(&self) -> (i64, i64) {
+        match self {
+            Self::File {
+                start_ms,
+                length_ms,
+                ..
+            }
+            | Self::Preview {
+                start_ms,
+                length_ms,
+                ..
+            } => (*start_ms, *length_ms),
+        }
+    }
+}
+
+pub async fn source(st: &AppState, track_id: Uuid, moment: Moment) -> AppResult<Source> {
+    let length_ms = moment.length()?;
     let row = sqlx::query!(
         r#"SELECT t.deezer_id, t.recording_id, r.audio_status AS "audio_status?"
            FROM tracks t LEFT JOIN recordings r ON r.id = t.recording_id WHERE t.id = $1"#,
@@ -71,15 +131,19 @@ pub async fn source(st: &AppState, track_id: Uuid) -> AppResult<Source> {
         && let Some(rec) = row.recording_id
         && let Some(file) = acquire::playable_file(&st.db, rec).await?
     {
-        let start_ms = chorus::starts(&st.db, &[track_id], STORY_MS)
-            .await?
-            .remove(&track_id)
-            .map_or(0, |(start, _)| start);
+        let start_ms = match moment.start_ms {
+            Some(s) => s,
+            None => chorus::starts(&st.db, &[track_id], length_ms)
+                .await?
+                .remove(&track_id)
+                .map_or(0, |(start, _)| start),
+        };
         // Место припева — по длительности трека в каталоге; у файла она бывает короче
-        let start_ms = start_ms.min(i64::from(file.duration_ms) - STORY_MS).max(0);
+        let start_ms = clamp_start(start_ms, length_ms, i64::from(file.duration_ms));
         return Ok(Source::File {
             key: file.storage_key,
             start_ms,
+            length_ms,
         });
     }
     let preview = match row.deezer_id {
@@ -93,26 +157,31 @@ pub async fn source(st: &AppState, track_id: Uuid) -> AppResult<Source> {
         },
         None => None,
     };
+    let start_ms = clamp_start(moment.start_ms.unwrap_or(0), length_ms, PREVIEW_MS);
     preview
-        .map(|url| Source::Preview { url })
+        .map(|url| Source::Preview {
+            url,
+            start_ms,
+            length_ms,
+        })
         .ok_or(AppError::Missing {
             code: "no_audio",
             message: "у трека нет звука для истории".into(),
         })
 }
 
-/// Звук источника — во временный файл; начало отрывка, мс.
-async fn fetch(st: &AppState, source: &Source, dir: &Path) -> AppResult<(PathBuf, i64)> {
+/// Звук источника — во временный файл.
+async fn fetch(st: &AppState, source: &Source, dir: &Path) -> AppResult<PathBuf> {
     let path = dir.join("source");
     match source {
-        Source::File { key, start_ms } => {
+        Source::File { key, .. } => {
             st.storage
                 .download_to(key, &path)
                 .await
                 .map_err(|e| AppError::Unavailable(format!("хранилище не отдало файл: {e}")))?;
-            Ok((path, *start_ms))
+            Ok(path)
         }
-        Source::Preview { url } => {
+        Source::Preview { url, .. } => {
             let res = st
                 .http
                 .get(url)
@@ -128,7 +197,7 @@ async fn fetch(st: &AppState, source: &Source, dir: &Path) -> AppResult<(PathBuf
             tokio::fs::write(&path, &bytes)
                 .await
                 .map_err(|e| AppError::Internal(e.into()))?;
-            Ok((path, 0))
+            Ok(path)
         }
     }
 }
@@ -173,7 +242,7 @@ fn secs(ms: i64) -> String {
 }
 
 /// Аргументы ffmpeg: отрывок звука в WAV.
-pub fn audio_args(input: &Path, start_ms: i64, output: &Path) -> Vec<String> {
+pub fn audio_args(input: &Path, start_ms: i64, length_ms: i64, output: &Path) -> Vec<String> {
     vec![
         "-hide_banner".into(),
         "-loglevel".into(),
@@ -183,12 +252,12 @@ pub fn audio_args(input: &Path, start_ms: i64, output: &Path) -> Vec<String> {
         "-ss".into(),
         secs(start_ms),
         "-t".into(),
-        secs(STORY_MS),
+        secs(length_ms),
         "-i".into(),
         input.display().to_string(),
         "-vn".into(),
         "-af".into(),
-        fades(),
+        fades(length_ms),
         "-ac".into(),
         "2".into(),
         "-ar".into(),
@@ -206,7 +275,7 @@ pub fn mux_args(
     video: &Path,
     h264: bool,
     audio: &Path,
-    start_ms: i64,
+    (start_ms, length_ms): (i64, i64),
     output: &Path,
 ) -> Vec<String> {
     let mut a: Vec<String> = vec![
@@ -220,7 +289,7 @@ pub fn mux_args(
         "-ss".into(),
         secs(start_ms),
         "-t".into(),
-        secs(STORY_MS),
+        secs(length_ms),
         "-i".into(),
         audio.display().to_string(),
         "-map".into(),
@@ -251,7 +320,7 @@ pub fn mux_args(
     }
     a.extend([
         "-af".to_string(),
-        fades(),
+        fades(length_ms),
         "-c:a".into(),
         "aac".into(),
         "-b:a".into(),
@@ -261,7 +330,7 @@ pub fn mux_args(
         "-ar".into(),
         "44100".into(),
         "-t".into(),
-        secs(STORY_MS),
+        secs(length_ms),
         "-movflags".into(),
         "+faststart".into(),
         "-f".into(),
@@ -272,16 +341,17 @@ pub fn mux_args(
 }
 
 /// Отрывок звука истории: WAV.
-pub async fn audio_wav(st: &AppState, track_id: Uuid) -> AppResult<Vec<u8>> {
-    let source = source(st, track_id).await?;
+pub async fn audio_wav(st: &AppState, track_id: Uuid, moment: Moment) -> AppResult<Vec<u8>> {
+    let source = source(st, track_id, moment).await?;
     let _slot = SLOTS
         .acquire()
         .await
         .map_err(|e| AppError::Internal(e.into()))?;
     let dir = tempfile::tempdir().map_err(|e| AppError::Internal(e.into()))?;
-    let (input, start_ms) = fetch(st, &source, dir.path()).await?;
+    let input = fetch(st, &source, dir.path()).await?;
+    let (start_ms, length_ms) = source.clip();
     let out = dir.path().join("story.wav");
-    run("ffmpeg", &audio_args(&input, start_ms, &out)).await?;
+    run("ffmpeg", &audio_args(&input, start_ms, length_ms, &out)).await?;
     tokio::fs::read(&out)
         .await
         .map_err(|e| AppError::Internal(e.into()))
@@ -315,11 +385,16 @@ async fn video_codec(path: &Path) -> AppResult<String> {
 }
 
 /// Видео без звука от приложения + отрывок → готовый MP4.
-pub async fn mux(st: &AppState, track_id: Uuid, video: &[u8]) -> AppResult<Vec<u8>> {
+pub async fn mux(
+    st: &AppState,
+    track_id: Uuid,
+    moment: Moment,
+    video: &[u8],
+) -> AppResult<Vec<u8>> {
     if video.is_empty() {
         return Err(AppError::BadRequest("нет видео".into()));
     }
-    let source = source(st, track_id).await?;
+    let source = source(st, track_id, moment).await?;
     let _slot = SLOTS
         .acquire()
         .await
@@ -330,11 +405,11 @@ pub async fn mux(st: &AppState, track_id: Uuid, video: &[u8]) -> AppResult<Vec<u
         .await
         .map_err(|e| AppError::Internal(e.into()))?;
     let codec = video_codec(&video_path).await?;
-    let (input, start_ms) = fetch(st, &source, dir.path()).await?;
+    let input = fetch(st, &source, dir.path()).await?;
     let out = dir.path().join("story.mp4");
     run(
         "ffmpeg",
-        &mux_args(&video_path, codec == "h264", &input, start_ms, &out),
+        &mux_args(&video_path, codec == "h264", &input, source.clip(), &out),
     )
     .await?;
     tokio::fs::read(&out)
@@ -348,7 +423,12 @@ mod tests {
 
     #[test]
     fn audio_is_cut_from_the_hook_with_fades() {
-        let a = audio_args(Path::new("/t/in"), 57_900, Path::new("/t/out.wav"));
+        let a = audio_args(
+            Path::new("/t/in"),
+            57_900,
+            STORY_MS,
+            Path::new("/t/out.wav"),
+        );
         let s = a.join(" ");
         assert!(s.contains("-ss 57.900 -t 15.000 -i /t/in"), "{s}");
         assert!(
@@ -360,13 +440,58 @@ mod tests {
 
     #[test]
     fn h264_is_copied_other_codecs_are_reencoded() {
-        let copy = mux_args(Path::new("v"), true, Path::new("a"), 0, Path::new("o")).join(" ");
+        let copy = mux_args(
+            Path::new("v"),
+            true,
+            Path::new("a"),
+            (0, STORY_MS),
+            Path::new("o"),
+        )
+        .join(" ");
         assert!(copy.contains("-map 0:v:0 -map 1:a:0 -c:v copy"), "{copy}");
         assert!(copy.contains("-c:a aac -b:a 192k"), "{copy}");
         assert!(copy.contains("-movflags +faststart -f mp4 o"), "{copy}");
-        let vp9 = mux_args(Path::new("v"), false, Path::new("a"), 1000, Path::new("o")).join(" ");
+        let vp9 = mux_args(
+            Path::new("v"),
+            false,
+            Path::new("a"),
+            (1000, STORY_MS),
+            Path::new("o"),
+        )
+        .join(" ");
         assert!(vp9.contains("-c:v libx264"), "{vp9}");
         assert!(vp9.contains("-pix_fmt yuv420p"), "{vp9}");
         assert!(vp9.contains("-ss 1.000 -t 15.000 -i a"), "{vp9}");
+    }
+
+    #[test]
+    fn chosen_moment_is_clamped_and_length_checked() {
+        let m = |start_ms, length_ms| Moment {
+            start_ms,
+            length_ms,
+        };
+        assert_eq!(m(None, None).length().unwrap(), STORY_MS);
+        assert_eq!(m(None, Some(30_000)).length().unwrap(), 30_000);
+        assert!(m(None, Some(20_000)).length().is_err());
+        // Конец отрывка не выходит за трек, начало — не меньше нуля
+        assert_eq!(clamp_start(200_000, 15_000, 180_000), 165_000);
+        assert_eq!(clamp_start(-5, 10_000, 180_000), 0);
+        assert_eq!(clamp_start(12_000, 30_000, PREVIEW_MS), 0);
+        assert_eq!(clamp_start(12_000, 10_000, PREVIEW_MS), 12_000);
+        // Длина отрывка — во входе, затухании и выходе
+        let a = audio_args(Path::new("i"), 0, 30_000, Path::new("o")).join(" ");
+        assert!(a.contains("-t 30.000"), "{a}");
+        assert!(a.contains("afade=t=out:st=29.00:d=1"), "{a}");
+        let v = mux_args(
+            Path::new("v"),
+            true,
+            Path::new("a"),
+            (5_000, 10_000),
+            Path::new("o"),
+        )
+        .join(" ");
+        assert!(v.contains("-ss 5.000 -t 10.000 -i a"), "{v}");
+        assert!(v.contains("afade=t=out:st=9.00:d=1"), "{v}");
+        assert!(v.contains("-t 10.000 -movflags"), "{v}");
     }
 }

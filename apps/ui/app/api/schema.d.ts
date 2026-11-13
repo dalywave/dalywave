@@ -18994,7 +18994,12 @@ export interface operations {
     };
     story_video: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Начало отрывка в треке, мс (у превью Deezer — от начала превью). Нет — с припева. */
+                startMs?: number;
+                /** @description Длина: 10000, 15000 или 30000 мс. Нет — 15000. */
+                lengthMs?: number;
+            };
             header?: never;
             path: {
                 /** @description id трека */
@@ -19009,13 +19014,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Готовая история: MP4, H.264 + AAC, звук — 15 с с припева */
+            /** @description Готовая история: MP4, H.264 + AAC, звук — тот же отрывок, что у `/story/audio` с теми же параметрами */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "video/mp4": unknown;
+                };
+            };
+            /** @description Длина не 10, 15 или 30 с */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Нет такого трека (`not_found`) или звука для истории (`no_audio`) */
@@ -19049,7 +19063,12 @@ export interface operations {
     };
     story_audio: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Начало отрывка в треке, мс (у превью Deezer — от начала превью). Нет — с припева. */
+                startMs?: number;
+                /** @description Длина: 10000, 15000 или 30000 мс. Нет — 15000. */
+                lengthMs?: number;
+            };
             header?: never;
             path: {
                 /** @description id трека */
@@ -19059,13 +19078,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 15 с с припева в WAV (PCM 16 бит, 44,1 кГц, стерео) с мягким входом и выходом: из звука на сервере или превью Deezer */
+            /** @description Отрывок (15 с с припева или выбранный момент) в WAV (PCM 16 бит, 44,1 кГц, стерео) с мягким входом и выходом: из звука на сервере или превью Deezer */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "audio/wav": unknown;
+                };
+            };
+            /** @description Длина не 10, 15 или 30 с */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Нет такого трека (`not_found`) или звука для истории (`no_audio`) */
