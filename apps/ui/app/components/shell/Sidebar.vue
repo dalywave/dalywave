@@ -148,7 +148,7 @@ async function createPlaylist() {
       </UiTooltip>
     </nav>
 
-    <div class="side__scroll no-scrollbar">
+    <div class="side__scroll thin-scrollbar">
       <section class="sec">
         <header class="sec__head">
           <span class="sec__title">{{ t('nav.pinned') }}</span>
@@ -288,7 +288,8 @@ async function createPlaylist() {
 .nav.is-active { color: var(--text-1); background: var(--side-active); }
 .nav__kbd { margin-left: auto; opacity: 0; transition: opacity var(--dur-1); }
 .nav:hover .nav__kbd { opacity: 1; }
-.side__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 12px 12px; }
+/* Классическая полоса (Windows) — в правом отступе: место оставлено всегда, пункты не сдвигаются */
+.side__scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 20px calc(12px - var(--sb-size, 0px)) 12px 12px; }
 .sec + .sec { margin-top: 20px; }
 .sec__head { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 4px 0 12px; }
 .sec__title { font-size: var(--fs-micro); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; color: var(--text-3); }
@@ -341,7 +342,7 @@ async function createPlaylist() {
 .side--touch .side__nav { gap: 2px; padding: 0 10px; }
 .side--touch .nav { height: 46px; font-size: var(--fs-h4); }
 .side--touch .nav__icon { font-size: 22px; }
-.side--touch .side__scroll { padding: 18px 10px 12px; }
+.side--touch .side__scroll { padding: 18px calc(10px - var(--sb-size, 0px)) 12px 10px; }
 .side--touch .sec__head { height: 44px; padding-right: 0; }
 .side--touch .sec__actions { gap: 0; }
 .side--touch .item { min-height: 56px; }
@@ -361,7 +362,7 @@ async function createPlaylist() {
 .side--rail .side__nav { padding: 0 10px; }
 .side--rail .nav { justify-content: center; padding: 0; height: 44px; }
 .side--rail .nav__label, .side--rail .nav__kbd { display: none; }
-.side--rail .side__scroll { padding: 16px 10px 12px; }
+.side--rail .side__scroll { padding: 16px calc(10px - var(--sb-size, 0px)) 12px 10px; }
 /* Подписи разделов в полосе не помещаются — вместо них волосок */
 .side--rail .sec__head { height: 1px; margin: 0 14px 12px; padding: 0; background: var(--hair); }
 .side--rail .sec__title { display: none; }

@@ -37,7 +37,7 @@ const moreOpen = ref(false)
 const moreItems = computed<MenuEntry[]>(() => {
   const list: MenuEntry[] = [{ label: t('sound.sleep'), icon: sound.sleepActive ? 'ph:moon-fill' : 'ph:moon', children: sleepItems.value.filter(e => e.kind !== 'heading') }]
   const mini = bridge.miniPlayer
-  if (mini) list.push({ label: t('sound.mini'), icon: 'ph:picture-in-picture', kbd: [bridge.platform === 'macos' ? '⌘' : 'Ctrl', '⇧', 'M'], onSelect: () => void mini.open() })
+  if (mini) list.push({ label: t('sound.mini'), icon: 'ph:picture-in-picture', kbd: ['⌘', '⇧', 'M'], onSelect: () => void mini.open() })
   return list
 })
 </script>

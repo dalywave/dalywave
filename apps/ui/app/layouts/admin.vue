@@ -111,7 +111,7 @@ onMounted(() => void nextTick(revealTab))
 
 <style scoped>
 .adm { position: relative; z-index: 1; display: grid; background: var(--ink-1); grid-template-columns: 232px minmax(0, 1fr); height: 100vh; height: 100dvh; }
-.adm__side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: calc(22px + var(--titlebar-inset, 0px) - min(var(--titlebar-inset, 0px), 18px)) 12px 12px; background: var(--side-bg); border-right: 1px solid var(--side-edge); }
+.adm__side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; scrollbar-gutter: stable; padding: calc(22px + var(--titlebar-inset, 0px) - min(var(--titlebar-inset, 0px), 18px)) calc(12px - var(--sb-size, 0px)) 12px 12px; background: var(--side-bg); border-right: 1px solid var(--side-edge); }
 .adm.is-titlebar-mac-inset { --titlebar-inset: var(--titlebar-size, 48px); }
 .adm.is-titlebar-windows { padding-top: var(--titlebar-size, 32px); }
 .adm__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 4px; }
@@ -127,7 +127,7 @@ onMounted(() => void nextTick(revealTab))
 .adm__link:focus-visible, .adm__tab:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .adm__link.is-active { color: var(--text-1); background: var(--side-active); }
 .adm__count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); background: color-mix(in oklab, var(--warning) 22%, transparent); font-size: 11px; font-weight: 700; color: var(--warning); }
-.adm__main { min-width: 0; overflow-y: auto; }
+.adm__main { min-width: 0; overflow-y: auto; scrollbar-gutter: stable; }
 .adm__phone { position: sticky; top: 0; z-index: 5; background: var(--ink-1); border-bottom: 1px solid var(--hair); }
 .adm__phone-bar { display: flex; align-items: center; gap: 8px; padding: calc(var(--safe-top) + 4px) 8px 0; }
 .adm__phone-title { font-size: var(--fs-h4); font-weight: 700; }

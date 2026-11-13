@@ -116,7 +116,8 @@ const accountMenu = computed<MenuEntry[]>(() => [
   gap: 12px;
   height: var(--topbar-h);
   margin-bottom: calc(var(--topbar-h) * -1);
-  padding: 0 24px 0 32px;
+  /* Справа — без ширины классической полосы прокрутки колонки (AppShell) */
+  padding: 0 calc(24px - var(--sb-size, 0px)) 0 32px;
   transition: background-color var(--dur-3), box-shadow var(--dur-3);
 }
 .top.is-scrolled {
@@ -163,6 +164,6 @@ const accountMenu = computed<MenuEntry[]>(() => [
 .friends__icon { font-size: 18px; }
 .friends__dot { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--ink-1); }
 @media (max-width: 1023px) {
-  .top { padding: 0 16px 0 20px; }
+  .top { padding: 0 calc(16px - var(--sb-size, 0px)) 0 20px; }
 }
 </style>

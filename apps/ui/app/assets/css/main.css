@@ -92,9 +92,12 @@
   .caps { font-size: var(--fs-micro); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
+  /* Накладные полосы (macOS, iOS) — системные, только тоньше и в тон; классические — см. ниже */
   .thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
-  .thin-scrollbar::-webkit-scrollbar { width: 12px; height: 12px; }
-  .thin-scrollbar::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 12px; border: 4px solid transparent; background-clip: content-box; }
+  /* Chromium (WebView2) рисует ::-webkit-scrollbar, только пока scrollbar-width и scrollbar-color не заданы */
+  @supports selector(::-webkit-scrollbar) {
+    :root[data-scrollbars='classic'] .thin-scrollbar { scrollbar-width: auto; scrollbar-color: auto; }
+  }
   .glass {
     background: var(--glass);
     -webkit-backdrop-filter: blur(30px) saturate(1.4);
@@ -107,6 +110,30 @@
   }
   .drag-region { -webkit-app-region: drag; app-region: drag; }
   .no-drag { -webkit-app-region: no-drag; app-region: no-drag; }
+}
+
+
+/* Классические полосы прокрутки (Windows, Linux, Mac с «Показывать всегда»; признак ставит
+   plugins/scrollbars.client.ts) — единый вид для всех прокручиваемых областей: без дорожки и стрелок,
+   тихий ползунок 6 px, под указателем — шире и темнее. (Проявлять его только над областью нельзя:
+   Chromium не перерисовывает полосу, когда меняется :hover самой области.) Ширина полосы —
+   --sb-size: на неё колонка содержимого сужает свой правый отступ (AppShell). Слой base — чтобы
+   .no-scrollbar и стили компонентов, прячущие полосу, всегда были сильнее */
+@layer base {
+  :root[data-scrollbars='classic'] { --sb-size: 10px; }
+  @supports selector(::-webkit-scrollbar) {
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); background: transparent; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-track,
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-corner { background: transparent; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-thumb { min-height: 40px; min-width: 40px; border: 2px solid transparent; border-radius: var(--sb-size); background: var(--scroll-thumb); background-clip: padding-box; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-thumb:hover,
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-thumb:active { border-width: 1px; background-color: var(--scroll-thumb-hover); }
+  }
+  /* Firefox: своих частей полосы нет — тонкая системная в тон */
+  @supports not selector(::-webkit-scrollbar) {
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *) { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  }
 }
 
 /* Тёмный остров в светлой теме (токены — в tokens.css): свой цвет текста по умолчанию */

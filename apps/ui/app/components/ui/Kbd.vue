@@ -1,10 +1,12 @@
 <script setup lang="ts">
-defineProps<{ keys: string[] }>()
+// Сочетание пишется по-маковски (⌘ K); на Windows и Linux подпись — Ctrl K (utils/keys.ts)
+const props = defineProps<{ keys: string[] }>()
+const shown = computed(() => platformKeys(props.keys))
 </script>
 
 <template>
-  <span class="kbd" :aria-label="keys.join(' + ')">
-    <kbd v-for="k in keys" :key="k">{{ k }}</kbd>
+  <span class="kbd" :aria-label="shown.join(' + ')">
+    <kbd v-for="(k, i) in shown" :key="i">{{ k }}</kbd>
   </span>
 </template>
 
