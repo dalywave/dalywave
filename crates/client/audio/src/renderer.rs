@@ -26,8 +26,9 @@ use crossbeam_channel::Sender;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObjectProtocol, ProtocolObject};
 use objc2_av_foundation::{
-    AVQueuedSampleBufferRendering, AVQueuedSampleBufferRenderingStatus,
-    AVSampleBufferAudioRenderer, AVSampleBufferRenderSynchronizer,
+    AVAudioSpatializationFormats, AVQueuedSampleBufferRendering,
+    AVQueuedSampleBufferRenderingStatus, AVSampleBufferAudioRenderer,
+    AVSampleBufferRenderSynchronizer,
 };
 use objc2_core_audio_types::{
     AudioStreamBasicDescription, kAudioFormatFlagIsFloat, kAudioFormatFlagIsPacked,
@@ -451,6 +452,16 @@ fn run(
     // SAFETY: объекты AVFoundation создаются и живут только в этом потоке
     let (renderer, sync) = unsafe {
         let renderer = AVSampleBufferAudioRenderer::new();
+        // Пространственное аудио и для стерео: по умолчанию рендерер сводит пространственно только
+        // многоканальное. На AirPods и Beats режим (фиксированное или с отслеживанием головы)
+        // выбирает человек в Пункте управления; колонкам AirPlay это свойство безразлично
+        renderer.setAllowedAudioSpatializationFormats(
+            AVAudioSpatializationFormats::MonoStereoAndMultichannel,
+        );
+        log::info!(
+            "renderer: spatialization formats {:#x}",
+            renderer.allowedAudioSpatializationFormats().0
+        );
         #[cfg(target_os = "macos")]
         if let Some(uid) = &device_uid {
             renderer.setAudioOutputDeviceUniqueID(Some(&objc2_foundation::NSString::from_str(uid)));

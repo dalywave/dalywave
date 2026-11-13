@@ -54,6 +54,13 @@ const hideExplicit = computed({
   get: () => account.settings.hideExplicit,
   set: (v: boolean) => void account.update({ hideExplicit: v }),
 })
+
+// ---------- Пространственное аудио: iPhone и iPad, режим выбирается в Пункте управления ----------
+
+const spatialAvailable = bridge.kind === 'tauri' && (bridge.platform === 'ios' || bridge.platform === 'ipados')
+const outputs = spatialAvailable ? useAudioOutputs() : null
+const spatialOutput = computed(() => outputs?.state.value.outputs.find(o => o.current && o.spatial) ?? null)
+
 const qualityWifi = computed({
   get: () => account.settings.qualityWifi,
   set: (v: 'high' | 'normal') => void account.update({ qualityWifi: v }),
@@ -126,6 +133,13 @@ const language = computed({
         <UiSwitch v-model="player.normalize" :label="t('normalize')" hide-label />
       </SettingsRow>
       <MusicEqPicker v-if="sound.eqSupported" />
+      <SettingsRow
+        v-if="spatialAvailable"
+        :title="t('spatial')"
+        :description="spatialOutput ? t('spatialOnDesc', { name: spatialOutput.name }) : t('spatialDesc')"
+      >
+        <span v-if="spatialOutput" class="set__state">{{ t('spatialOn') }}</span>
+      </SettingsRow>
       <SettingsRow :title="t('scrubber')" stack>
         <MusicScrubberStylePicker v-model="prefs.scrubber" :label="t('scrubber')" />
       </SettingsRow>
@@ -273,6 +287,8 @@ const language = computed({
 .status--bad { color: var(--danger); }
 .status--bad i { background: var(--danger); }
 .value { font-size: var(--fs-small); color: var(--text-2); }
+/* Состояние справа — как у эквалайзера («Выключен») */
+.set__state { font-size: var(--fs-body); color: var(--text-2); white-space: nowrap; }
 
 @media (max-width: 699px) {
   .set { gap: 32px; padding: 0 16px; }
@@ -296,6 +312,10 @@ const language = computed({
     "importDesc": "Из Spotify, списком или своими файлами",
     "playback": "Воспроизведение",
     "normalize": "Выравнивать громкость",
+    "spatial": "Пространственное аудио",
+    "spatialDesc": "С AirPods: удерживайте громкость в Пункте управления",
+    "spatialOnDesc": "{name}: режим — в Пункте управления, удерживая громкость",
+    "spatialOn": "Включено",
     "scrubber": "Полоса прокрутки",
     "explicit": "Без нецензурного",
     "explicitDesc": "Треки с пометкой «E» не играют",
@@ -337,6 +357,10 @@ const language = computed({
     "importDesc": "From Spotify, a list or your own files",
     "playback": "Playback",
     "normalize": "Normalize volume",
+    "spatial": "Spatial Audio",
+    "spatialDesc": "With AirPods: touch and hold volume in Control Center",
+    "spatialOnDesc": "{name}: pick the mode in Control Center by holding volume",
+    "spatialOn": "On",
     "scrubber": "Progress bar",
     "explicit": "No explicit content",
     "explicitDesc": "Tracks marked “E” won't play",
