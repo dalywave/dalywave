@@ -223,6 +223,10 @@ const language = computed({
       <SettingsRow :title="t('motion')" :description="t('motionDesc')">
         <UiSwitch v-model="prefs.motion" :label="t('motion')" hide-label />
       </SettingsRow>
+      <!-- Как клип показан в полном плеере: квадратом, целиком, фоном, «кино» или никак -->
+      <SettingsRow v-if="prefs.motion" :title="t('clipStyle')" stack>
+        <MusicClipStylePicker v-model="prefs.clipStyle" :label="t('clipStyle')" />
+      </SettingsRow>
       <SettingsRow v-if="prefs.motion && (ui.isTouchUi || offline.available)" :title="t('motionWifi')">
         <UiSwitch v-model="prefs.motionWifiOnly" :label="t('motionWifi')" hide-label />
       </SettingsRow>
@@ -363,6 +367,7 @@ const language = computed({
     "motion": "Видео вместо обложки",
     "motionDesc": "Кусок клипа без звука в плеере и в «Открытиях»",
     "motionWifi": "Только по Wi-Fi",
+    "clipStyle": "Клипы в плеере",
     "about": "О приложении",
     "desktopAppsDesc": "Mac, Windows и Stream Deck",
     "server": "Сервер",
@@ -412,6 +417,7 @@ const language = computed({
     "motion": "Video instead of artwork",
     "motionDesc": "A silent loop from the music video in the player and in Discover",
     "motionWifi": "Wi-Fi only",
+    "clipStyle": "Music videos in the player",
     "about": "About",
     "desktopAppsDesc": "Mac, Windows and Stream Deck",
     "server": "Server",
