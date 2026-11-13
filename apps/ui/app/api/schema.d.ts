@@ -943,6 +943,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/embed/tracks/{id}/clip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["embed_clip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -953,6 +969,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ingest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/export/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export_library"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/export/liked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export_liked"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/export/playlists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export_playlist"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2185,6 +2249,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["duplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{id}/embed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["embed_settings"];
+        put: operations["update_embed_settings"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3830,6 +3910,11 @@ export interface components {
             /** @enum {string} */
             type: "connect.signal";
         });
+        /**
+         * @description Откуда отрывок встраиваемого плеера.
+         * @enum {string}
+         */
+        ClipSource: "chorus" | "preview";
         /** @description Подтверждение команды: клиент шлёт его с `to` (кому), сервер доставляет с `from` (от кого). */
         ConnectAck: {
             /** @description Машинная причина: `offline` (устройства нет в сети), `failed`, `unsupported`. */
@@ -4304,6 +4389,22 @@ export interface components {
             /** @description Название копии; без него — как у исходного. */
             title?: string | null;
         };
+        /** @description Отрывок для встраиваемого плеера: ссылка живёт недолго, полный трек без входа не отдаётся. */
+        EmbedClip: {
+            /** Format: int64 */
+            lengthMs: number;
+            source: components["schemas"]["ClipSource"];
+            url: string;
+        };
+        /** @description Нарезать отрывок трека для встраиваемого плеера. */
+        EmbedClipPayload: {
+            /** Format: uuid */
+            trackId: string;
+        };
+        /** @description Можно ли встраивать плейлист на чужие сайты (`/embed/playlist/{id}`). По умолчанию — нет. */
+        EmbedSettings: {
+            embeddable: boolean;
+        };
         /**
          * @description Почему прослушивание закончилось.
          * @enum {string}
@@ -4335,6 +4436,15 @@ export interface components {
             duplicates: number;
             rejected: components["schemas"]["RejectedEvent"][];
         };
+        /**
+         * @description Формат выгрузки.
+         *
+         *     `csv` — таблица «Артист, Трек, Альбом, ISRC, Длительность, Добавлено» (UTF-8 с BOM: её понимают
+         *     Excel, TuneMyMusic и Soundiiz); `m3u8` — список для плееров со ссылками на страницы треков;
+         *     `json` — всё с порядком, папками и датами; `zip` — вся медиатека отдельными файлами.
+         * @enum {string}
+         */
+        ExportFormat: "csv" | "m3u8" | "json" | "zip";
         /** @description Грань вкуса с примерами. */
         FacetView: {
             /** @description Поправки по времени суток (`timeOfDay`) и устройству (`platform`): больше 1 — грань слушают чаще. */
@@ -10723,6 +10833,56 @@ export interface operations {
             };
         };
     };
+    embed_clip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id трека */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Отрывок 30 с для встраиваемого плеера: с припева (`chorus`) или превью Deezer (`preview`). Без входа; ссылка подписана и живёт час */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedClip"];
+                };
+            };
+            /** @description Нет такого трека или отрывка у него нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Слишком много отрывков с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `clip_preparing`: отрывок нарезается — спросить ещё раз позже; или Deezer не ответил */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     ingest: {
         parameters: {
             query?: never;
@@ -10747,6 +10907,147 @@ export interface operations {
             };
             /** @description Больше 500 событий одного вида */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    export_library: {
+        parameters: {
+            query?: {
+                /** @description Формат файла. Вся медиатека — `zip` (по умолчанию) или `json`; список — `csv`, `m3u8`, `json`. */
+                format?: components["schemas"]["ExportFormat"];
+                /** @description Вся медиатека: добавить историю прослушиваний. */
+                history?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Файл (`Content-Disposition: attachment`). `zip` — CSV и M3U8 любимых и каждого плейлиста (по папкам), таблицы альбомов и артистов, полный JSON; `json` — всё одним файлом. `history=true` — с историей прослушиваний */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+            /** @description Формат не `zip` и не `json` */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Сервер уже собирает несколько выгрузок — попробовать через минуту */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    export_liked: {
+        parameters: {
+            query?: {
+                /** @description Формат файла. Вся медиатека — `zip` (по умолчанию) или `json`; список — `csv`, `m3u8`, `json`. */
+                format?: components["schemas"]["ExportFormat"];
+                /** @description Вся медиатека: добавить историю прослушиваний. */
+                history?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Любимые треки файлом: `csv` (по умолчанию), `m3u8` или `json` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Архив — только для всей медиатеки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Сервер уже собирает несколько выгрузок */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    export_playlist: {
+        parameters: {
+            query?: {
+                /** @description Формат файла. Вся медиатека — `zip` (по умолчанию) или `json`; список — `csv`, `m3u8`, `json`. */
+                format?: components["schemas"]["ExportFormat"];
+                /** @description Вся медиатека: добавить историю прослушиваний. */
+                history?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Плейлист файлом в его порядке: `csv` (по умолчанию), `m3u8` или `json` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Архив — только для всей медиатеки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого плейлиста или он чужой (совместный — только участникам) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Сервер уже собирает несколько выгрузок */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14210,6 +14511,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaylistSummary"];
+                };
+            };
+            /** @description Нет такого плейлиста */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    embed_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Можно ли встраивать плейлист на чужие сайты */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedSettings"];
+                };
+            };
+            /** @description Нет такого плейлиста или он чужой */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_embed_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id плейлиста */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbedSettings"];
+            };
+        };
+        responses: {
+            /** @description Сохранено: плейлист открывается во встраиваемом плеере без входа (или нет) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedSettings"];
+                };
+            };
+            /** @description Не свой плейлист */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Нет такого плейлиста */

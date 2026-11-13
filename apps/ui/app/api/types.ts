@@ -302,6 +302,9 @@ export type ShareKind = Schemas['ShareKind']
 export type ShareCard = Schemas['ShareCard']
 export type LinkSource = Schemas['LinkSource']
 export type ResolvedLink = Schemas['ResolvedLink']
+// Выгрузка медиатеки и встраиваемый плеер
+export type ExportFormat = Schemas['ExportFormat']
+export type EmbedSettings = Schemas['EmbedSettings']
 
 export type ErrorBody = Schemas['ErrorBody']
 

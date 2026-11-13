@@ -141,7 +141,7 @@ const moreItems = computed<MenuEntry[]>(() => {
     ...(described.value && weekly.value !== null ? [{ label: t('weekly'), icon: 'ph:calendar-check', checked: weekly.value, onSelect: () => void toggleWeekly() }] : []),
     ...pla.menuFor(pl.value, { page: true }),
     { kind: 'separator' },
-    shareMenu.entry('playlist', pl.value.id, pl.value.title),
+    shareMenu.entry('playlist', pl.value.id, pl.value.title, { owner: (pl.value.access ?? 'owner') === 'owner' }),
   ]
 })
 

@@ -32,6 +32,7 @@ onMounted(() => {
     <MusicReportRecording />
     <MusicWhyTrack />
     <MusicSharedLink />
+    <MusicEmbedDialog />
     <UiConfirm />
     <UiPrompt />
   </TooltipProvider>

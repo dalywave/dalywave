@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.title FROM playlists p\n         WHERE p.id = $1 AND (p.user_id = $2 OR (p.collaborative AND EXISTS (\n             SELECT 1 FROM playlist_members m WHERE m.playlist_id = p.id AND m.user_id = $2)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "title"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a64c0fbe44da69989f8191d8f73f9a19cc23c59c0c2df800a60dd62668e9f091"
+}

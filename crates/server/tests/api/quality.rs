@@ -26,6 +26,12 @@ pub fn ffmpeg_available() -> bool {
 
 /// Три секунды синуса в Opus внутри MP4 — как файлы с YouTube.
 pub fn opus_bytes() -> Vec<u8> {
+    opus_seconds(3)
+}
+
+/// Синус заданной длины в Opus внутри MP4.
+pub fn opus_seconds(seconds: u32) -> Vec<u8> {
+    let sine = format!("sine=frequency=440:duration={seconds}");
     let dir = tempfile::tempdir().unwrap();
     let out = dir.path().join("a.m4a");
     let res = std::process::Command::new(ffmpeg())
@@ -35,7 +41,7 @@ pub fn opus_bytes() -> Vec<u8> {
             "-f",
             "lavfi",
             "-i",
-            "sine=frequency=440:duration=3",
+            sine.as_str(),
             "-ac",
             "2",
             "-c:a",

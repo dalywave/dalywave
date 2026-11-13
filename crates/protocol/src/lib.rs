@@ -43,6 +43,7 @@ pub mod connect;
 pub mod describe;
 pub mod error;
 pub mod events;
+pub mod export;
 pub mod fetcher;
 pub mod home;
 pub mod imports;
