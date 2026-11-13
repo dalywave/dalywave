@@ -11,6 +11,8 @@ import { chromium } from "playwright-core";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
+const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 27_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+
 const SIZES = {
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   phoneSmall: { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
@@ -24,6 +26,14 @@ const SIZES = {
   iphone69: { viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
   ipad13: { viewport: { width: 1032, height: 1376 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   ipad13l: { viewport: { width: 1376, height: 1032 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // Складной iPhone Duo (симулятор Xcode 27.2, iOS 27.2): сложенный — внешний экран 466×678 pt, строка
+  // состояния — колонкой справа (отступ справа ≈83 pt); раскрытый — внутренний 951×669 pt, строка
+  // состояния в правом верхнем углу (WKWebView отдаёт её отступом сверху ≈81 pt); 669×951 — раскрытый
+  // и повёрнутый (отступы — как у раскрытого, не замерены). Строка браузера — iPhone: по ней интерфейс
+  // узнаёт платформу ios. safe — env(safe-area-inset-*) WebView на симуляторе, по снимкам
+  duoFolded: { viewport: { width: 466, height: 678 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA, safe: { top: 0, right: 83, bottom: 34, left: 0 } },
+  duoOpen: { viewport: { width: 951, height: 669 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA, safe: { top: 81, right: 0, bottom: 36, left: 0 } },
+  duoOpenPortrait: { viewport: { width: 669, height: 951 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA, safe: { top: 81, right: 0, bottom: 36, left: 0 } },
 };
 
 function parse(argv) {
@@ -66,14 +76,26 @@ let problems = 0;
 for (const sizeName of opts.sizes) {
   const size = SIZES[sizeName];
   if (!size) throw new Error(`неизвестный размер ${sizeName}: ${Object.keys(SIZES).join(", ")}`);
+  const { safe, ...device } = size;
   const context = await browser.newContext({
-    ...size,
+    ...device,
     deviceScaleFactor: opts.dpr ?? size.deviceScaleFactor,
     colorScheme: opts.theme === "light" ? "light" : "dark",
     reducedMotion: opts.reducedMotion ? "reduce" : "no-preference",
     locale: "ru-RU",
     timezoneId: "Europe/Berlin",
   });
+  // Chrome без окна не знает вырезов экрана: отступы безопасной зоны устройства — переменными токенов
+  if (safe) {
+    await context.addInitScript((s) => {
+      const css = `:root{--safe-top:${s.top}px!important;--safe-right:${s.right}px!important;--safe-bottom:${s.bottom}px!important;--safe-left:${s.left}px!important}`;
+      document.addEventListener("DOMContentLoaded", () => {
+        const el = document.createElement("style");
+        el.textContent = css;
+        document.head.append(el);
+      });
+    }, safe);
+  }
   if (opts.init) await context.addInitScript(opts.init);
   for (const urlTemplate of opts.urls) {
     for (const cookie of opts.cookies) {

@@ -6,7 +6,9 @@
 // горизонтально ещё «закрепить сбоку» — карточка разворачивается в колонку «Сейчас играет» справа
 import type { ConnectKind } from '~/api/types'
 
-withDefaults(defineProps<{ inline?: boolean, dock?: boolean }>(), {})
+// fold — раскрытый складной iPhone: полоса внизу колонки содержимого, справа от бокового меню
+// (как мини-плеер Apple Music рядом с боковой панелью); кроме ⏯ и ⏭ — «Где играть»
+withDefaults(defineProps<{ inline?: boolean, dock?: boolean, fold?: boolean }>(), {})
 
 const player = usePlayerStore()
 const connect = useConnectStore()
@@ -88,7 +90,7 @@ function onCancel() {
   <div
     v-if="track"
     class="mini"
-    :class="{ 'mini--inline': inline, 'mini--dock': dock, 'scheme-dark': dock, 'is-lifting': lift }"
+    :class="{ 'mini--inline': inline, 'mini--dock': dock, 'mini--fold': fold, 'mini--side': !dock && !fold && !inline && ui.isSideBar, 'scheme-dark': dock, 'is-lifting': lift }"
     :style="lift ? { transform: `translate3d(0, ${lift}px, 0)` } : undefined"
     @click.capture="open"
     @pointerdown="onDown"
@@ -107,7 +109,7 @@ function onCancel() {
     </button>
     <div class="mini__actions">
       <UiIconButton v-if="dock && ui.canSidePlayer" icon="ph:sidebar-simple" class="side-icon" :label="t('player.pinSide')" size="lg" tone="solid" :tooltip="false" @click="prefs.sidePlayer = true" />
-      <UiIconButton v-if="dock" icon="ph:devices" :label="t('player.devices')" size="lg" tone="solid" :active="connect.remote" :tooltip="false" @click="ui.openPanel('devices')" />
+      <UiIconButton v-if="dock || fold" icon="ph:devices" :label="t('player.devices')" size="lg" tone="solid" :active="connect.remote" :tooltip="false" @click="ui.openPanel('devices')" />
       <UiIconButton :icon="player.playing ? 'ph:pause-fill' : 'ph:play-fill'" :label="player.playing ? t('common.pause') : connect.orphaned ? t('connect.continueHere') : t('common.play')" size="lg" tone="solid" :tooltip="false" @click="player.toggle()" />
       <UiIconButton v-if="!dock" icon="ph:skip-forward-fill" :label="t('player.next')" size="lg" tone="solid" :tooltip="false" @click="player.next('skipped')" />
     </div>
@@ -173,6 +175,21 @@ function onCancel() {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 36px -14px rgba(0, 0, 0, 0.9);
   transition: background-color var(--dur-mood) var(--ease-in-out), transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Сложенный складной iPhone: вкладки — столбиком в колонке справа, мини-плеер — внизу колонки содержимого */
+.mini--side { right: calc(var(--safe-right) + 4px); bottom: calc(var(--safe-bottom) + 12px); }
+/* Раскрытый складной iPhone: полоса по ширине колонки содержимого (--fold-side-w задаёт оболочка) */
+.mini--fold {
+  left: calc(var(--fold-side-w, 0px) + var(--safe-left) + 16px);
+  right: calc(var(--safe-right) + 16px);
+  bottom: calc(var(--safe-bottom) + 12px);
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  height: var(--dock-h);
+  padding: 0 8px;
+  border-radius: 20px;
+}
+.mini--fold :deep(.art) { width: 48px; border-radius: 10px; }
+.mini--fold .mini__sub { font-size: var(--fs-small); }
+.mini--fold .mini__progress { left: 16px; right: 16px; }
 .mini--dock :deep(.art) { width: 48px; border-radius: 10px; }
 .mini--dock .mini__sub { color: rgba(255, 255, 255, 0.72); font-size: var(--fs-small); }
 .mini--dock .mini__progress { left: 16px; right: 16px; bottom: 0; background: rgba(255, 255, 255, 0.16); }

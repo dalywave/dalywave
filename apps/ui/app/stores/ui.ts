@@ -16,6 +16,26 @@ export const useUiStore = defineStore('ui', () => {
   const searchFocus = ref(0)
 
   const isPhone = useMediaQuery('(max-width: 699px)')
+  /** Раскрытый складной iPhone (iPhone Duo): внутренний экран 951×669 pt (повёрнутый — 669×951).
+   *  Как приложения Apple на нём — боковое меню слева вместо вкладок, справа содержимое. Узнаётся по
+   *  ширине и высоте на iPhone: сложенный (внешний экран 466 pt) и обычный iPhone, в том числе лёжа
+   *  (высота до 440 pt), — телефон. Колонка содержимого раскрытого вертикально (~430 pt) — телефонная
+   *  (isPhone), горизонтально — планшетная (isTouch). Складывание — только смена размера окна:
+   *  раскладка переключается на лету, страница и музыка остаются */
+  const iphone = import.meta.client && useBridge().platform === 'ios'
+  const unfolded = useMediaQuery('(min-width: 600px) and (min-height: 560px)')
+  const isFoldable = computed(() => iphone && unfolded.value)
+  /** Сложенный складной iPhone держит строку состояния сбоку, в колонке справа (≈83 pt во всю высоту,
+   *  отступ безопасной зоны справа). Как у приложений Apple, вкладки встают в эту колонку столбиком,
+   *  а не полосой снизу. Ширину колонки знает только CSS — меряем пробным элементом */
+  const safeRight = ref(0)
+  if (import.meta.client && iphone) {
+    const probe = document.createElement('div')
+    probe.style.cssText = 'position:fixed;top:0;left:0;height:0;width:var(--safe-right,0px);visibility:hidden;pointer-events:none'
+    document.body.append(probe)
+    useResizeObserver(probe, () => (safeRight.value = probe.offsetWidth))
+  }
+  const isSideBar = computed(() => isPhone.value && safeRight.value >= 44)
   const isDesktop = useMediaQuery('(min-width: 1100px)')
   const isTablet = computed(() => !isPhone.value && !isDesktop.value)
   /** Узкая боковая панель из значков */
@@ -25,13 +45,13 @@ export const useUiStore = defineStore('ui', () => {
    *  iPad с трекпадом — тоже он: главный указатель всё равно палец */
   const coarse = useMediaQuery('(pointer: coarse)')
   const ipad = import.meta.client && useBridge().platform === 'ipados'
-  const isTouch = computed(() => !isPhone.value && (coarse.value || ipad))
+  const isTouch = computed(() => !isPhone.value && (coarse.value || ipad || iphone))
   /** Интерфейс под палец — телефон или планшет: крупные цели, листы вместо панелей, без подсказок */
   const isTouchUi = computed(() => isPhone.value || isTouch.value)
   /** Планшет горизонтально (iPad от 1000 pt): места хватает, чтобы держать плеер колонкой сбоку.
    *  Ориентация — тоже условие: большой iPad вертикально шире 1000 pt, но колонка там тесная */
   const wide = useMediaQuery('(min-width: 1000px) and (orientation: landscape)')
-  const canSidePlayer = computed(() => isTouch.value && wide.value)
+  const canSidePlayer = computed(() => isTouch.value && wide.value && !isFoldable.value)
   /** «Плеер сбоку» сейчас на экране: включён в настройках, планшет лежит горизонтально и что-то играет.
    *  Вертикально — обычная карточка внизу, даже если настройка включена */
   const sidePlayer = computed(() => canSidePlayer.value && usePrefsStore().sidePlayer && !!usePlayerStore().current)
@@ -107,5 +127,5 @@ export const useUiStore = defineStore('ui', () => {
     searchFocus.value++
   }
 
-  return { panelOpen, panelTab, playerOpen, playerLyrics, sheetTab, searchFocus, isPhone, isDesktop, isTablet, isRail, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
+  return { panelOpen, panelTab, playerOpen, playerLyrics, sheetTab, searchFocus, isPhone, isFoldable, isSideBar, isDesktop, isTablet, isRail, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
 })
