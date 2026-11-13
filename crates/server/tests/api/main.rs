@@ -13,6 +13,7 @@ mod common;
 mod connect;
 mod deezer;
 mod describe;
+mod device_choice;
 mod events;
 mod explicit;
 mod export;

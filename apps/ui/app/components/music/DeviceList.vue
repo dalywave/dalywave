@@ -6,7 +6,9 @@ import type { PlaybackDevice } from '~/bridge/types'
 // «Играть здесь» (или «Продолжить здесь», если активное пропало).
 // `compact` — всплывающая панель и правая панель на большом экране; `sheet` — лист на телефоне:
 // строки на всю ширину с тонкими разделителями, разделы «Это устройство», другие устройства
-// DalyWave и вывод звука (AirPlay и Bluetooth), если платформа его умеет
+// DalyWave и вывод звука (AirPlay и Bluetooth), если платформа его умеет.
+// ⋯ у устройства раскрывает его настройки прямо в списке (MusicDeviceSettings): где играть выбранное
+// на нём и «Медиаплеер» — у такого устройства в подписи метка
 const props = withDefaults(defineProps<{
   devices: PlaybackDevice[]
   playing?: boolean
@@ -38,7 +40,20 @@ const others = computed(() => props.devices.filter(d => !d.current && d !== play
 const noneActive = computed(() => !props.devices.some(d => d.active))
 const isOn = (d: PlaybackDevice) => !!d.active || (d.current && noneActive.value)
 
+/** Настройки — у устройств, где играет звук (не у часов и Stream Deck) */
+const configurable = (d: PlaybackDevice) => !d.remote && d.online
+const editing = ref<string | null>(null)
+function toggleSettings(d: PlaybackDevice) {
+  editing.value = editing.value === d.id ? null : d.id
+}
+
+const withMedia = (d: PlaybackDevice, text: string) => (d.mediaPlayer ? `${text} · ${t('devices.mediaPlayer')}` : text)
+
 function meta(d: PlaybackDevice) {
+  return withMedia(d, baseMeta(d))
+}
+
+function baseMeta(d: PlaybackDevice) {
   if (d.current) {
     if (isOn(d)) return t('devices.here')
     return playingElsewhere.value && !playingElsewhere.value.online ? t('connect.continueHere') : t('connect.playHere')
@@ -81,45 +96,63 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
   <div v-if="variant === 'sheet'" class="dsheet">
     <section v-if="playingElsewhere" class="dsec">
       <h3 class="dsec__title">{{ t('connect.nowSection') }}</h3>
-      <button type="button" class="drow is-current" :class="{ 'is-offline': !playingElsewhere.online }" aria-current="true" @click="emit('select', playingElsewhere)">
-        <Icon :name="iconOf(playingElsewhere)" class="drow__icon" />
-        <span class="drow__text">
-          <span class="drow__name ellipsis">{{ playingElsewhere.name }}</span>
-          <span class="drow__meta">
-            <span v-if="playingElsewhere.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
-            <!-- Раздел уже называется «Сейчас играет» — под именем не повторяем -->
-            {{ playingElsewhere.online ? kindLabel(playingElsewhere) : meta(playingElsewhere) }}
+      <div class="dwrap">
+        <button type="button" class="drow is-current" :class="{ 'is-offline': !playingElsewhere.online }" aria-current="true" @click="emit('select', playingElsewhere)">
+          <Icon :name="iconOf(playingElsewhere)" class="drow__icon" />
+          <span class="drow__text">
+            <span class="drow__name ellipsis">{{ playingElsewhere.name }}</span>
+            <span class="drow__meta">
+              <span v-if="playingElsewhere.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
+              <!-- Раздел уже называется «Сейчас играет» — под именем не повторяем -->
+              {{ playingElsewhere.online ? withMedia(playingElsewhere, kindLabel(playingElsewhere)) : meta(playingElsewhere) }}
+            </span>
           </span>
-        </span>
-        <Icon name="ph:check-bold" class="drow__check" />
-      </button>
+          <Icon name="ph:check-bold" class="drow__check" />
+        </button>
+        <button v-if="configurable(playingElsewhere)" type="button" class="drow__more" :aria-label="t('devices.settings')" :aria-expanded="editing === playingElsewhere.id" @click="toggleSettings(playingElsewhere)">
+          <Icon name="ph:dots-three-bold" />
+        </button>
+        <MusicDeviceSettings v-if="editing === playingElsewhere.id" :device="playingElsewhere" variant="sheet" />
+      </div>
     </section>
 
     <section v-if="here.length" class="dsec">
       <h3 class="dsec__title">{{ t('devices.thisDevice') }}</h3>
-      <button v-for="d in here" :key="d.id" type="button" class="drow" :class="{ 'is-current': isOn(d), 'is-cta': !isOn(d) }" :aria-current="isOn(d) || undefined" @click="emit('select', d)">
-        <Icon :name="iconOf(d)" class="drow__icon" />
-        <span class="drow__text">
-          <span class="drow__name ellipsis">{{ d.name }}</span>
-          <span class="drow__meta">
-            <span v-if="isOn(d)" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
-            {{ meta(d) }}
+      <div v-for="d in here" :key="d.id" class="dwrap">
+        <button type="button" class="drow" :class="{ 'is-current': isOn(d), 'is-cta': !isOn(d) }" :aria-current="isOn(d) || undefined" @click="emit('select', d)">
+          <Icon :name="iconOf(d)" class="drow__icon" />
+          <span class="drow__text">
+            <span class="drow__name ellipsis">{{ d.name }}</span>
+            <span class="drow__meta">
+              <span v-if="isOn(d)" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
+              {{ meta(d) }}
+            </span>
           </span>
-        </span>
-        <Icon v-if="isOn(d)" name="ph:check-bold" class="drow__check" />
-        <Icon v-else name="ph:play-circle" class="drow__check drow__check--cta" />
-      </button>
+          <Icon v-if="isOn(d)" name="ph:check-bold" class="drow__check" />
+          <Icon v-else name="ph:play-circle" class="drow__check drow__check--cta" />
+        </button>
+        <button v-if="configurable(d)" type="button" class="drow__more" :aria-label="t('devices.settings')" :aria-expanded="editing === d.id" @click="toggleSettings(d)">
+          <Icon name="ph:dots-three-bold" />
+        </button>
+        <MusicDeviceSettings v-if="editing === d.id" :device="d" variant="sheet" />
+      </div>
     </section>
 
     <section v-if="others.length" class="dsec">
       <h3 class="dsec__title">{{ t('devices.otherApps') }}</h3>
-      <button v-for="d in others" :key="d.id" type="button" class="drow" :class="{ 'is-offline': !d.online, 'is-remote': d.remote }" :disabled="d.remote" @click="emit('select', d)">
-        <Icon :name="iconOf(d)" class="drow__icon" />
-        <span class="drow__text">
-          <span class="drow__name ellipsis">{{ d.name }}</span>
-          <span class="drow__meta ellipsis">{{ meta(d) }}</span>
-        </span>
-      </button>
+      <div v-for="d in others" :key="d.id" class="dwrap">
+        <button type="button" class="drow" :class="{ 'is-offline': !d.online, 'is-remote': d.remote }" :disabled="d.remote" @click="emit('select', d)">
+          <Icon :name="iconOf(d)" class="drow__icon" />
+          <span class="drow__text">
+            <span class="drow__name ellipsis">{{ d.name }}</span>
+            <span class="drow__meta ellipsis">{{ meta(d) }}</span>
+          </span>
+        </button>
+        <button v-if="configurable(d)" type="button" class="drow__more" :aria-label="t('devices.settings')" :aria-expanded="editing === d.id" @click="toggleSettings(d)">
+          <Icon name="ph:dots-three-bold" />
+        </button>
+        <MusicDeviceSettings v-if="editing === d.id" :device="d" variant="sheet" />
+      </div>
     </section>
 
     <section class="dsec">
@@ -179,27 +212,30 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 
   <!-- Большой экран: всплывающая и правая панель -->
   <div v-else class="devs" role="list">
-    <button
-      v-for="d in devices"
-      :key="d.id"
-      type="button"
-      role="listitem"
-      class="dev"
-      :class="{ 'is-current': isOn(d), 'is-offline': !d.online, 'is-cta': d.current && !isOn(d), 'is-remote': d.remote }"
-      :aria-current="isOn(d) || undefined"
-      :disabled="d.remote && !d.current"
-      @click="emit('select', d)"
-    >
-      <span class="dev__icon"><Icon :name="iconOf(d)" /></span>
-      <span class="dev__text">
-        <span class="dev__name ellipsis">{{ d.name }}</span>
-        <span class="dev__meta">
-          <span v-if="isOn(d) && d.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
-          {{ meta(d) }}
+    <div v-for="d in devices" :key="d.id" role="listitem" class="devwrap" :class="{ 'is-editing': editing === d.id }">
+      <button
+        type="button"
+        class="dev"
+        :class="{ 'is-current': isOn(d), 'is-offline': !d.online, 'is-cta': d.current && !isOn(d), 'is-remote': d.remote }"
+        :aria-current="isOn(d) || undefined"
+        :disabled="d.remote && !d.current"
+        @click="emit('select', d)"
+      >
+        <span class="dev__icon"><Icon :name="iconOf(d)" /></span>
+        <span class="dev__text">
+          <span class="dev__name ellipsis">{{ d.name }}</span>
+          <span class="dev__meta">
+            <span v-if="isOn(d) && d.online" class="dev__eq" :class="{ 'is-paused': !playing }" aria-hidden="true"><i /><i /><i /></span>
+            <span class="ellipsis">{{ meta(d) }}</span>
+          </span>
         </span>
-      </span>
-      <Icon v-if="isOn(d)" name="ph:check" class="dev__check" />
-    </button>
+        <Icon v-if="isOn(d)" name="ph:check" class="dev__check" />
+      </button>
+      <button v-if="configurable(d)" type="button" class="dev__more" :aria-label="t('devices.settings')" :aria-expanded="editing === d.id" @click="toggleSettings(d)">
+        <Icon name="ph:dots-three-bold" />
+      </button>
+      <MusicDeviceSettings v-if="editing === d.id" :device="d" />
+    </div>
     <template v-if="out.mode">
       <div class="pop__sep" role="presentation" />
       <button v-if="out.mode === 'picker'" type="button" role="listitem" class="dev" @click="out.showPicker()">
@@ -255,6 +291,11 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 
 <style scoped>
 .devs { display: flex; flex-direction: column; gap: 2px; }
+/* Строка устройства и ⋯ рядом; настройки раскрываются под ней на всю ширину */
+.devwrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-radius: 12px; }
+.devwrap.is-editing { background: var(--fill-1); }
+.dev__more { display: grid; place-items: center; width: 32px; height: 32px; margin-right: 4px; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); font-size: 18px; transition: background-color var(--dur-1), color var(--dur-1); }
+.dev__more:hover, .dev__more:focus-visible, .dev__more[aria-expanded='true'] { background: var(--fill-2); color: var(--text-1); outline: none; }
 .dev { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 12px; background: transparent; text-align: left; transition: background-color var(--dur-1); }
 .dev:hover, .dev:focus-visible { background: var(--fill-2); outline: none; }
 .dev__icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--fill-2); color: var(--text-2); font-size: 20px; }
@@ -262,7 +303,7 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
 .dev__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .dev__name { font-weight: 600; }
 .dev.is-current .dev__name { color: var(--accent); }
-.dev__meta { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--text-3); }
+.dev__meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-caption); color: var(--text-3); }
 .dev.is-offline { opacity: 0.5; }
 .dev.is-current.is-offline { opacity: 0.7; }
 /* Часы — пульт: видны в списке, но перенести на них звук нельзя */
@@ -295,7 +336,13 @@ const systemHint = computed(() => (out.state.value.followsSystem ? out.current.v
   color: var(--text-1);
   -webkit-tap-highlight-color: transparent;
 }
-.drow + .drow::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 0.5px; background: rgba(var(--hi-rgb), 0.1); }
+.drow + .drow::before, .dwrap + .drow::before, .dwrap + .dwrap::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 0.5px; background: rgba(var(--hi-rgb), 0.1); }
+/* Устройство и ⋯ рядом (зона касания 44 pt); настройки раскрываются под строкой */
+.dwrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.dwrap .drow { padding-right: 4px; }
+.drow__more { display: grid; place-items: center; width: 44px; height: 44px; margin-right: 8px; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); font-size: 22px; -webkit-tap-highlight-color: transparent; }
+.drow__more:active, .drow__more[aria-expanded='true'] { background: rgba(var(--hi-rgb), 0.06); color: var(--text-1); }
+.drow__more:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .drow:active { background: rgba(var(--hi-rgb), 0.06); }
 .drow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .drow__icon { flex: none; width: 24px; font-size: 24px; color: var(--text-2); }

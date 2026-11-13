@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT prefer FROM connect_choices\n         WHERE user_id = $1 AND from_id = $2 AND to_id = $3 AND prefer_until > now()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "prefer",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_choices",
+            "name": "prefer"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "931df4e2d9c4c780892f7d976219ad6e4747c8a9403a45136d718867fff93874"
+}

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { ConnectDevice, ConnectKind, PlaybackState, RemoteCommand, ServerEvent, Track } from '~/api/types'
+import type { ConnectDevice, ConnectDevicePatch, ConnectKind, PlaybackState, RemoteCommand, ServerEvent, Track } from '~/api/types'
 import type { PlaybackDevice, Platform } from '~/bridge/types'
 import type { TransitionMode } from './player'
 
@@ -9,6 +9,13 @@ import type { TransitionMode } from './player'
 // показывает снимок (позицию досчитываем по времени сервера), действия уходят командами с
 // подтверждением; изменение видно сразу и откатывается, если устройство не ответило.
 // Активное пропало (15 с без связи) — «Продолжить здесь» с того же места.
+//
+// Где заиграет новая музыка, выбранная на пульте (альбом, волна), решает сервер (crates/server/src/
+// choice.rs): команда уходит с `pick`, ответ `connect.placed` — там (команда ушла активному) или здесь
+// (пульт включает сам, активное встаёт на паузу). Для решения активное устройство, пока играет, раз в
+// 30 с сообщает, как давно его трогали (`connect.presence`): приложение на компьютере — простой системы,
+// сайт и телефон — ввод на странице. После выбора — тост «Играет на … · Включить здесь»: поправка в
+// одно нажатие, а две одинаковые подряд сервер запоминает (`connect.learned`).
 
 const HEARTBEAT_MS = 5000
 const ACK_TIMEOUT_MS = 5000
@@ -16,6 +23,10 @@ const PUBLISH_DEBOUNCE_MS = 120
 /** Позиция ушла от ожидаемой больше чем на столько — была перемотка: снимок сразу */
 const SEEK_JUMP_MS = 1500
 const TICK_MS = 250
+/** Как часто играющее устройство сообщает о присутствии */
+const PRESENCE_MS = 30_000
+/** Тост «Играет на … · Включить здесь» */
+const PLACED_TOAST_MS = 6000
 
 type ServerEventOf<T extends ServerEvent['type']> = Extract<ServerEvent, { type: T }>
 
@@ -75,6 +86,11 @@ export const useConnectStore = defineStore('connect', () => {
   let publishTimer: ReturnType<typeof setTimeout> | undefined
   /** Звук заиграл здесь, сервер ещё не подтвердил: прежнее «активно другое» уже не в счёт */
   let claiming = false
+  /** Музыка выбрана на пульте, ждём `connect.placed`: как включить её здесь, если решат «здесь» */
+  const picks = new Map<string, { local: () => unknown, timer: ReturnType<typeof setTimeout> }>()
+  /** Последний ввод на странице (мышь, клавиатура, касание) — у сайта и телефона нет простоя системы */
+  let lastInput = Date.now()
+  const handheld = bridge.platform === 'ios' || bridge.platform === 'ipados' || bridge.platform === 'android'
 
   const active = computed(() => list.value.find(d => d.id === activeId.value) ?? null)
   const isActive = computed(() => !!activeId.value && activeId.value === deviceId.value)
@@ -98,6 +114,8 @@ export const useConnectStore = defineStore('connect', () => {
       volume: d.capabilities.volume,
       remote: !!d.capabilities.remote,
       platform: d.platform,
+      choice: d.choice ?? 'auto',
+      mediaPlayer: !!d.mediaPlayer,
     }))
     // Связи с сервером ещё нет — само устройство в списке всё равно есть
     if (!own) rows.unshift({ id: deviceId.value, name: deviceName(), kind: kindOf(bridge.platform, app), current: true, online: true, lastSeenAt: null, active: isActive.value })
@@ -272,7 +290,7 @@ export const useConnectStore = defineStore('connect', () => {
     if (!player.mirrored) return false
     // «Играть» (с наушников, экрана блокировки), пока ждёт «Продолжить здесь?» — это «да»
     if ((cmd.action === 'play' || (cmd.action === 'toggle' && !shown.value?.playing)) && useHandoffStore().takePending()) return true
-    if (remote.value) return command(cmd)
+    if (remote.value) return local && (cmd.action === 'playTracks' || cmd.action === 'startWave') ? pick(cmd, local) : command(cmd)
     // Активного нет в сети. Новое (альбом, волна) — просто играем здесь
     if (cmd.action === 'playTracks' || cmd.action === 'startWave') {
       leave()
@@ -303,7 +321,7 @@ export const useConnectStore = defineStore('connect', () => {
     await player.connectTakeOver(s, pos, play ?? !!s?.playing)
   }
 
-  function transferTo(d: PlaybackDevice) {
+  function transferTo(d: Pick<PlaybackDevice, 'id' | 'name'>) {
     const id = crypto.randomUUID()
     if (!bridge.live.send({ type: 'connect.transfer', id, to: d.id })) {
       toast.error(t('connect.noLink'))
@@ -335,6 +353,126 @@ export const useConnectStore = defineStore('connect', () => {
     transferTo(d)
   }
 
+  // ---------- Где заиграет выбранная музыка ----------
+
+  /** Звук здесь идёт в наушники (телефон: тогда выбранное на нём играет на нём) */
+  async function headphonesOn(): Promise<boolean> {
+    if (!bridge.outputs) return false
+    const s = await bridge.outputs.get().catch(() => null)
+    const cur = s?.outputs.find(o => o.current)
+    return cur?.kind === 'headphones' || cur?.kind === 'bluetooth'
+  }
+
+  /** Новая музыка на пульте: сервер решит, где ей играть. `local` — включить её здесь */
+  function pick(cmd: RemoteCommand, local: () => unknown): boolean {
+    const to = activeId.value
+    if (!to) return false
+    const id = crypto.randomUUID()
+    void (handheld ? headphonesOn() : Promise.resolve(false)).then((headphones) => {
+      if (!bridge.live.send({ type: 'connect.command', id, to, command: cmd, pick: { headphones } })) {
+        toast.error(t('connect.noLink'))
+        return
+      }
+      const name = activeName.value
+      picks.set(id, {
+        local,
+        timer: setTimeout(() => {
+          picks.delete(id)
+          fail(t('connect.noAnswer', { name }))
+        }, ACK_TIMEOUT_MS),
+      })
+    })
+    return true
+  }
+
+  /** Перенести сюда то, что играет там: продолжит с позиции сервера, когда придёт `connect.active` */
+  function bringHere() {
+    const id = crypto.randomUUID()
+    if (!bridge.live.send({ type: 'connect.transfer', id, to: deviceId.value, play: true })) {
+      toast.error(t('connect.noLink'))
+      return
+    }
+    const name = activeName.value
+    pendingCmds.set(id, {
+      timer: setTimeout(() => {
+        pendingCmds.delete(id)
+        toast.error(t('connect.noAnswer', { name }))
+      }, ACK_TIMEOUT_MS),
+    })
+  }
+
+  function onPlaced(e: ServerEventOf<'connect.placed'>) {
+    const p = picks.get(e.id)
+    if (!p) return
+    clearTimeout(p.timer)
+    picks.delete(e.id)
+    // Второе устройство пары: для «Включить на …». Своя настройка («Всегда здесь») — без тоста
+    const other = list.value.find(d => d.id === (e.here ? e.other : e.deviceId))
+    const toastable = e.reason !== 'setting' && !!other?.online && other.id !== deviceId.value
+    if (e.here) {
+      // Сервер уже сделал это устройство активным: прежнее остановится, музыка включается здесь
+      leave()
+      activeId.value = deviceId.value
+      claiming = true
+      void Promise.resolve(p.local()).catch(() => {})
+      if (toastable) {
+        toast.show({
+          // «Здесь», как в «Включить здесь»: имя этого устройства длинное и съедает кнопку
+          text: t('connect.placedHere'),
+          icon: 'ph:speaker-hifi',
+          duration: PLACED_TOAST_MS,
+          action: { label: t('connect.moveTo', { name: other.name }), onClick: () => transferTo(other) },
+        })
+      }
+      return
+    }
+    // Там: ждём подтверждения устройства, как у любой команды
+    track(e.id)
+    if (toastable) {
+      toast.show({
+        text: t('connect.placed', { name: other.name }),
+        icon: 'ph:speaker-hifi',
+        duration: PLACED_TOAST_MS,
+        action: { label: t('connect.moveHere'), onClick: bringHere },
+      })
+    }
+  }
+
+  function onLearned(e: ServerEventOf<'connect.learned'>) {
+    const nameOf = (id: string) => list.value.find(d => d.id === id)?.name ?? ''
+    // «Запомнил: с ноутбука — на ПК» или «выбранное на ноутбуке играет на нём»
+    const text = e.here
+      ? t('connect.learnedSame', { from: nameOf(e.from) })
+      : t('connect.learned', { from: nameOf(e.from), to: nameOf(e.to) })
+    toast.show({ text, icon: 'ph:check-circle-fill', duration: PLACED_TOAST_MS })
+  }
+
+  /** Как давно трогали это устройство: приложение на компьютере знает простой всей системы */
+  async function sendPresence() {
+    const system = bridge.systemIdle ? await bridge.systemIdle().catch(() => null) : null
+    const idleMs = Math.max(0, Math.round(system ?? Date.now() - lastInput))
+    bridge.live.send({ type: 'connect.presence', idleMs, source: system != null ? 'system' : 'page', headphones: await headphonesOn() })
+  }
+
+  const playingHere = computed(() => isActive.value && !player.mirrored && player.playing)
+
+  /** Настройки устройства (это или любое другое из списка): сразу в списке, ошибка — откат */
+  async function updateDevice(id: string, patch: ConnectDevicePatch) {
+    const before = list.value
+    list.value = list.value.map(d => (d.id === id ? { ...d, ...patch, choice: patch.choice ?? d.choice, mediaPlayer: patch.mediaPlayer ?? d.mediaPlayer } : d))
+    try {
+      const fresh = await bridge.updateDevice(id, patch)
+      list.value = fresh.devices
+    }
+    catch {
+      list.value = before
+      toast.error(t('connect.saveFailed'))
+    }
+  }
+
+  /** Это устройство в списке сервера (его настройки) */
+  const self = computed(() => list.value.find(d => d.id === deviceId.value) ?? null)
+
   // ---------- События сервера ----------
 
   function onDevices(e: ServerEventOf<'connect.devices'>) {
@@ -349,6 +487,12 @@ export const useConnectStore = defineStore('connect', () => {
     ready.value = true
     if (first && e.deviceId && e.deviceId !== deviceId.value && !e.transfer && !player.mirrored && player.current) {
       claim()
+      return
+    }
+    // Сервер решил играть выбранное здесь (`connect.placed` следом или уже пришёл): музыку включит
+    // onPlaced (если пришёл раньше — сюда не попадём: ожидание уже снято), прежнюю очередь не переносим
+    if (e.deviceId === deviceId.value && !e.transfer && !e.state && picks.size) {
+      activeId.value = e.deviceId
       return
     }
     if (e.deviceId === deviceId.value) claiming = false
@@ -484,6 +628,16 @@ export const useConnectStore = defineStore('connect', () => {
     bridge.live.on('connect.state', onState)
     bridge.live.on('connect.command', e => void onCommand(e))
     bridge.live.on('connect.ack', onAck)
+    bridge.live.on('connect.placed', onPlaced)
+    bridge.live.on('connect.learned', onLearned)
+
+    // Присутствие: ввод на странице; пока здесь играет звук — раз в 30 с серверу (и сразу при старте и паузе)
+    const touched = () => (lastInput = Date.now())
+    for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart', 'focus'] as const) window.addEventListener(ev, touched, { passive: true, capture: true })
+    watch(playingHere, () => void sendPresence())
+    setInterval(() => {
+      if (playingHere.value) void sendPresence()
+    }, PRESENCE_MS)
 
     // Звук заиграл здесь — это устройство становится активным, прежнее остановится
     watch(() => player.playing && !player.mirrored, (here) => {
@@ -522,6 +676,7 @@ export const useConnectStore = defineStore('connect', () => {
     // Вернулись на вкладку (или приложение iPhone из фона): сразу на связи. Сокет переподключает мост
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return
+      touched()
       heartbeat()
       if (isActive.value) publish()
     })
@@ -567,6 +722,7 @@ export const useConnectStore = defineStore('connect', () => {
   return {
     started, ready, deviceId, activeId, active, isActive, remote, orphaned, activeName, activeKind, devices, shown,
     volume, muted, transition, volumeControl, djAvailable,
-    start, refresh, select, continueHere, transferTo,
+    self,
+    start, refresh, select, continueHere, transferTo, updateDevice,
   }
 })

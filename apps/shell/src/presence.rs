@@ -2,6 +2,10 @@
 //! `com.apple.screenIsLocked` и `com.apple.screenIsUnlocked`. Интерфейсу — событие `system:lock`
 //! `{ locked }`, а он — серверу сигналом подхвата (stores/handoff.ts, crates/server/src/handoff.rs):
 //! экран заблокирован давно, а к телефону подключили наушники — «Продолжить здесь?».
+//!
+//! Простой системы ([`system_idle_ms`]): сколько не трогали мышь и клавиатуру. Пока здесь играет звук,
+//! интерфейс раз в ~30 с сообщает его серверу (`connect.presence`): выбрали музыку на другом устройстве,
+//! а здесь давно никого — играть там (crates/server/src/choice.rs).
 
 #![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
@@ -45,3 +49,50 @@ pub fn init(app: &tauri::AppHandle) {
 
 #[cfg(not(target_os = "macos"))]
 pub fn init(_app: &tauri::AppHandle) {}
+
+/// Сколько миллисекунд во всей системе не было ввода (мышь, клавиатура, трекпад); `None` — система
+/// этого не сообщает (iPhone, iPad: там пользуются самим приложением, интерфейс знает это сам).
+#[tauri::command]
+pub fn system_idle_ms() -> Option<u64> {
+    idle_ms()
+}
+
+#[cfg(target_os = "macos")]
+fn idle_ms() -> Option<u64> {
+    /// `kCGEventSourceStateCombinedSessionState`: ввод всех источников сеанса.
+    const COMBINED_SESSION: i32 = 0;
+    /// `kCGAnyInputEventType`
+    const ANY_INPUT: u32 = u32::MAX;
+    #[link(name = "CoreGraphics", kind = "framework")]
+    unsafe extern "C" {
+        fn CGEventSourceSecondsSinceLastEventType(state: i32, event_type: u32) -> f64;
+    }
+    // SAFETY: функция без указателей, только читает время последнего события сеанса
+    let secs = unsafe { CGEventSourceSecondsSinceLastEventType(COMBINED_SESSION, ANY_INPUT) };
+    (secs.is_finite() && secs >= 0.0).then_some((secs * 1000.0) as u64)
+}
+
+#[cfg(windows)]
+fn idle_ms() -> Option<u64> {
+    use windows_sys::Win32::{
+        System::SystemInformation::GetTickCount,
+        UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO},
+    };
+    let mut info = LASTINPUTINFO {
+        cbSize: size_of::<LASTINPUTINFO>() as u32,
+        dwTime: 0,
+    };
+    // SAFETY: структура своя, размер указан; функция только заполняет её
+    if unsafe { GetLastInputInfo(&mut info) } == 0 {
+        return None;
+    }
+    // Оба счётчика — миллисекунды с запуска системы, переполняются раз в 49 дней: разность по модулю
+    // SAFETY: без аргументов
+    let now = unsafe { GetTickCount() };
+    Some(u64::from(now.wrapping_sub(info.dwTime)))
+}
+
+#[cfg(not(any(target_os = "macos", windows)))]
+fn idle_ms() -> Option<u64> {
+    None
+}

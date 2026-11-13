@@ -66,6 +66,7 @@ export interface WebBridgeOptions extends HttpOptions {
   trainer?: Trainer | null
   /** Вывод звука приложения; на сайте — окно AirPlay Safari, если оно есть */
   outputs?: AudioRoutes | null
+  systemIdle?: (() => Promise<number | null>) | null
   /** Загрузки на устройство (приложение) */
   offline?: OfflineBridge | null
   /** Тактильный отклик (приложение на iPhone) */
@@ -369,6 +370,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     serverConfig: () => unwrap(api.GET('/api/config')),
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
     trainer: opts.trainer !== undefined ? opts.trainer : devTrainer(),
+    systemIdle: opts.systemIdle ?? null,
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
     offline: opts.offline !== undefined ? opts.offline : devOffline(),
     haptic: opts.haptic ?? (() => {}),
@@ -747,6 +749,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       if (mock && mocked('devices')) return mock.devices()
       return [{ id: 'this', name: opts.kind === 'tauri' ? 'Это устройство' : 'Этот браузер', kind: opts.isDesktopApp ? 'laptop' : 'web', current: true, online: true, lastSeenAt: new Date().toISOString() }]
     },
+
+    updateDevice: (id, patch) => unwrap(api.PATCH('/api/devices/{id}', { params: { path: { id } }, body: patch })),
 
     jam: createJam(http),
 

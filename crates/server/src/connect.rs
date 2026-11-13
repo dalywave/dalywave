@@ -108,8 +108,12 @@ pub async fn handle(
             Ok(None)
         }
         ClientMessage::ConnectClaim(_) => claim(st, user, link).await.map(|_| None),
-        ClientMessage::ConnectTransfer(t) => transfer(st, user, t).await,
+        ClientMessage::ConnectTransfer(t) => {
+            let by = link.device.clone();
+            transfer_by(st, user, by.as_deref(), t).await
+        }
         ClientMessage::ConnectSignal(s) => crate::handoff::signal(st, user, link, s).await,
+        ClientMessage::ConnectPresence(p) => crate::choice::presence(st, user, link, p).await,
     };
     result.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "connect message failed");
@@ -427,6 +431,13 @@ async fn command(
     let Some(from) = link.device.clone() else {
         return Ok(None);
     };
+    // Новая музыка с пульта: где ей играть, решает сервер (crate::choice)
+    if let Some(pick) = send
+        .pick
+        .filter(|_| crate::choice::is_new_music(&send.command))
+    {
+        return crate::choice::pick(st, user, from, send, pick).await;
+    }
     if !is_online(&st.db, user, &send.to).await? {
         return Ok(Some(ServerEvent::ConnectAck(ConnectAck {
             id: send.id,
@@ -488,9 +499,20 @@ async fn set_active(db: &PgPool, user: Uuid, device: &str) -> AppResult<Option<S
     Ok(row.prev)
 }
 
+/// Перенос, который решил сам сервер (подхват на другом устройстве) или пульт по HTTP.
 pub async fn transfer(
     st: &AppState,
     user: Uuid,
+    t: ConnectTransfer,
+) -> AppResult<Option<ServerEvent>> {
+    transfer_by(st, user, None, t).await
+}
+
+/// Перенос по просьбе устройства `by`: он же может оказаться поправкой автоматики (crate::choice).
+async fn transfer_by(
+    st: &AppState,
+    user: Uuid,
+    by: Option<&str>,
     t: ConnectTransfer,
 ) -> AppResult<Option<ServerEvent>> {
     let ack = |ok: bool, error: Option<&str>| {
@@ -556,6 +578,11 @@ pub async fn transfer(
         }),
     );
     announce(&st.db, &st.hub, user).await?;
+    if let Some(by) = by
+        && let Err(e) = crate::choice::transferred(st, user, by, &t.to).await
+    {
+        tracing::warn!(error = %e, "placement correction failed");
+    }
     Ok(ack(true, None))
 }
 
@@ -621,7 +648,7 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
     .await?
     .flatten();
     let rows = sqlx::query!(
-        r#"SELECT id, name, kind, platform, app_version, capabilities, last_seen_at,
+        r#"SELECT id, name, kind, platform, app_version, capabilities, last_seen_at, choice, media_player,
                   (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS "online!"
            FROM connect_devices
            WHERE user_id = $1
@@ -651,6 +678,8 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
             app_version: r.app_version,
             online: r.online,
             last_seen_at: r.last_seen_at,
+            choice: r.choice.parse().unwrap_or_default(),
+            media_player: r.media_player,
         })
         .collect();
     Ok(ConnectDevices {
@@ -660,7 +689,7 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
 }
 
 /// Свежий список — всем устройствам человека.
-async fn announce(db: &PgPool, hub: &realtime::Hub, user: Uuid) -> AppResult<()> {
+pub async fn announce(db: &PgPool, hub: &realtime::Hub, user: Uuid) -> AppResult<()> {
     let list = devices(db, user).await?;
     realtime::deliver(hub, Audience::User(user), ServerEvent::ConnectDevices(list));
     Ok(())

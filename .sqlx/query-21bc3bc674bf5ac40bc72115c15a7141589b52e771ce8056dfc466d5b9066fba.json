@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO connect_choices (user_id, from_id, to_id, decided, decided_at)\n             VALUES ($1, $2, $3, $4, now())\n             ON CONFLICT (user_id, from_id, to_id) DO UPDATE SET\n                 streak = CASE WHEN connect_choices.decided_at IS NOT NULL THEN 0 ELSE connect_choices.streak END,\n                 decided = EXCLUDED.decided, decided_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "21bc3bc674bf5ac40bc72115c15a7141589b52e771ce8056dfc466d5b9066fba"
+}

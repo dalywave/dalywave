@@ -195,6 +195,7 @@ pub fn run() {
         .on_window_event(window::on_event)
         .invoke_handler(tauri::generate_handler![
             platform::platform_info,
+            presence::system_idle_ms,
             #[cfg(desktop)]
             window::window_minimize,
             #[cfg(desktop)]

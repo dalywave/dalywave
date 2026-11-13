@@ -9,6 +9,7 @@ pub mod auth;
 pub mod boot;
 pub mod catalog;
 pub mod charts;
+pub mod choice;
 pub mod chorus;
 pub mod config;
 pub mod connect;

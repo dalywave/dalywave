@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE connect_devices SET choice = coalesce($3, choice), media_player = coalesce($4, media_player)\n         WHERE user_id = $1 AND id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "638936f41515713987f13236ce8003ab6bddc378fa6ae76ec64b55b519f58b71"
+}

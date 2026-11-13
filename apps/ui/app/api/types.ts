@@ -204,6 +204,12 @@ export type PlaybackState = Schemas['PlaybackState']
 export type ConnectOutput = Schemas['ConnectOutput']
 export type ConnectSignalKind = Schemas['ConnectSignalKind']
 export type ConnectHandoff = Schemas['ConnectHandoff']
+// Где заиграет музыка, выбранная на другом устройстве
+export type ConnectDevices = Schemas['ConnectDevices']
+export type ConnectDevicePatch = Schemas['ConnectDevicePatch']
+export type ConnectPlaced = Schemas['ConnectPlaced']
+export type ConnectLearned = Schemas['ConnectLearned']
+export type PlayChoice = Schemas['PlayChoice']
 // Оверлей «Сейчас играет» для стрима
 export type OverlayInfo = Schemas['OverlayInfo']
 export type OverlayLink = Schemas['OverlayLink']

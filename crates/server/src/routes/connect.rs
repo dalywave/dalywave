@@ -7,12 +7,15 @@
 
 use axum::{
     Router,
-    extract::State,
-    routing::{get, post},
+    extract::{Path, State},
+    routing::{get, patch, post},
 };
 use dalywave_protocol::{
     ErrorBody,
-    connect::{ConnectAck, ConnectHello, ConnectOverview, ConnectSend, ConnectTransfer},
+    connect::{
+        ConnectAck, ConnectDevicePatch, ConnectDevices, ConnectHello, ConnectOverview, ConnectSend,
+        ConnectTransfer,
+    },
 };
 
 use crate::{auth::Principal, error::AppResult, extract::Json, state::AppState};
@@ -23,6 +26,7 @@ pub fn routes() -> Router<AppState> {
         .route("/devices/remote", post(remote_presence))
         .route("/devices/remote/command", post(remote_command))
         .route("/devices/remote/transfer", post(remote_transfer))
+        .route("/devices/{id}", patch(update_device))
 }
 
 #[utoipa::path(
@@ -107,5 +111,29 @@ pub async fn remote_transfer(
 ) -> AppResult<Json<ConnectAck>> {
     Ok(Json(
         crate::connect::remote_transfer(&st, &principal, t).await?,
+    ))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/devices/{id}",
+    tag = "playback",
+    security(("session" = []), ("device" = [])),
+    params(("id" = String, Path, description = "Id устройства из списка «Где играть»")),
+    request_body = ConnectDevicePatch,
+    responses(
+        (status = 200, description = "Настройки сохранены; свежий список — и всем устройствам по WebSocket", body = ConnectDevices),
+        (status = 401, description = "Нет сессии", body = ErrorBody),
+        (status = 404, description = "Нет такого устройства", body = ErrorBody),
+    ),
+)]
+pub async fn update_device(
+    State(st): State<AppState>,
+    principal: Principal,
+    Path(id): Path<String>,
+    Json(patch): Json<ConnectDevicePatch>,
+) -> AppResult<Json<ConnectDevices>> {
+    Ok(Json(
+        crate::choice::update_device(&st, principal.user.id, &id, patch).await?,
     ))
 }
