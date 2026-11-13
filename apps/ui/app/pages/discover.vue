@@ -123,7 +123,7 @@ async function refreshVideos() {
       if (!card) continue
       card.clip = clip
       card.asked++
-      if (clip.motion) motion.remember(clip.motion)
+      motion.remember(clip)
     }
   }
   catch {
@@ -400,13 +400,10 @@ const wavebox = ref<HTMLElement | null>(null)
           </div>
 
           <template v-if="Math.abs(i - index) <= 2">
-            <div v-if="mediaOf(c).kind === 'clip'" class="dc__media dc__media--clip">
+            <!-- Клип или живая обложка — на всю карточку, края обрезаются, как в TikTok -->
+            <div v-if="mediaOf(c).kind !== 'cover'" class="dc__media">
               <MusicCoverArt :image="c.track.album?.image" size="large" :alt="''" class="dc__poster" />
-              <MusicLoopVideo :src="mediaOf(c).src" :active="i === index" :cycle="i === index ? cycle : 0" />
-            </div>
-            <div v-else-if="mediaOf(c).kind === 'motion'" class="dc__media" :class="ui.isPhone ? 'dc__media--tall' : 'dc__media--square'">
-              <MusicCoverArt :image="c.track.album?.image" size="large" :alt="''" class="dc__poster" />
-              <MusicLoopVideo :src="mediaOf(c).src" :active="i === index" />
+              <MusicLoopVideo :src="mediaOf(c).src" :active="i === index" :cycle="mediaOf(c).kind === 'clip' && i === index ? cycle : 0" />
             </div>
             <div v-else class="dc__cover">
               <div v-if="i === index" class="dc__wave"><MusicWaveCanvas layout="stage-phone" :box="wavebox" dark /></div>
@@ -524,14 +521,10 @@ const wavebox = ref<HTMLElement | null>(null)
 .dc__backdrop { position: absolute; inset: -10%; z-index: 0; }
 .dc__backdrop img { width: 100%; height: 100%; object-fit: cover; filter: blur(48px) saturate(1.25) brightness(0.55); transform: scale(1.1); }
 
-.dc__media { position: absolute; z-index: 1; overflow: hidden; }
-/* Клип 16:9 — кадрирован до 4:5: крупнее, но без потери половины кадра */
-.dc__media--clip { left: 0; right: 0; top: 50%; aspect-ratio: 4 / 5; transform: translateY(-56%); }
-.dc__media--tall { inset: 0; }
-.dc__media--square { left: 8%; right: 8%; top: 50%; aspect-ratio: 1; transform: translateY(-58%); border-radius: var(--r-3); }
-.dc__poster { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: inherit; }
+.dc__media { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
+/* Пока видео не пошло — обложка, размытая на весь кадр */
+.dc__poster { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; filter: blur(24px) brightness(0.6); transform: scale(1.15); }
 .dc__poster :deep(.art__img) { object-fit: cover; }
-.dc__media--clip .dc__poster { filter: blur(18px) brightness(0.7); transform: scale(1.1); }
 
 .dc__cover { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; }
 .dc__wave { position: absolute; inset: 0; opacity: 0.6; }
@@ -541,10 +534,11 @@ const wavebox = ref<HTMLElement | null>(null)
 /* Подписи читаются поверх любого кадра */
 .dc__shade {
   position: absolute;
-  inset: auto 0 0;
+  inset: 0;
   z-index: 2;
-  height: 46%;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.62));
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent calc(var(--safe-top) + 120px)),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.32) 30%, transparent 52%);
   pointer-events: none;
 }
 .dc__info {

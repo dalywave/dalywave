@@ -102,6 +102,8 @@ const { label: contextLabel, kicker, title: phoneTitle } = useNowPlayingContext(
 /** Планшет горизонтально: закрепить плеер колонкой сбоку и свернуть этот слой */
 const prefs = usePrefsStore()
 const motion = useMotionStore()
+// Видео вместо обложки заказывается, как только трек заиграл: к раскрытию плеера оно уже готово
+watch(() => track.value?.id, id => motion.prefetch(id), { immediate: true })
 function pinSide() {
   prefs.sidePlayer = true
   void ui.collapsePlayer()
@@ -288,7 +290,7 @@ onBeforeUnmount(() => {
         <div class="fp__col">
         <div ref="art" class="fp__art">
           <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-          <MusicMotionCover :album-id="track.album?.id" :active="open" />
+          <MusicMotionCover :track="track" :active="open" />
           <div v-if="player.pending" class="fp__pending">
             <MusicPendingNote :pending="player.pending" long />
             <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -352,10 +354,10 @@ onBeforeUnmount(() => {
           <DialogTitle class="sr-only">{{ track.title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ contextLabel }}</DialogDescription>
           <div class="pp__ambient" aria-hidden="true" />
-          <!-- Текст «сценой» на телефоне: живая обложка — тихим фоном за строками -->
+          <!-- Текст «сценой» на телефоне: видео вместо обложки — тихим фоном за строками -->
           <Transition name="pp-backdrop">
-            <div v-if="variant === 'phone' && lyricsOn && motion.get(track.album?.id)" class="pp__backdrop" aria-hidden="true">
-              <MusicMotionCover :album-id="track.album?.id" shape="tall" :active="open && lyricsOn" />
+            <div v-if="variant === 'phone' && lyricsOn && motion.src(track, 'tall')" class="pp__backdrop" aria-hidden="true">
+              <MusicMotionCover :track="track" shape="tall" :active="open && lyricsOn" />
             </div>
           </Transition>
           <div class="pp__wave"><MusicWaveCanvas :layout="variant === 'tablet' ? 'stage' : 'stage-phone'" :box="art" /></div>
@@ -381,7 +383,7 @@ onBeforeUnmount(() => {
               <div class="tp__player">
                 <div ref="art" class="tp__art">
                   <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-                  <MusicMotionCover :album-id="track.album?.id" :active="open" />
+                  <MusicMotionCover :track="track" :active="open" />
                   <div v-if="player.pending" class="fp__pending">
                     <MusicPendingNote :pending="player.pending" long />
                     <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>
@@ -464,7 +466,7 @@ onBeforeUnmount(() => {
 
             <div v-show="!lyricsOn" ref="art" class="pp__art">
               <MusicCoverArt :image="track.album?.image" size="large" :alt="track.album?.title ?? ''" eager />
-              <MusicMotionCover :album-id="track.album?.id" :active="open && !lyricsOn" />
+              <MusicMotionCover :track="track" :active="open && !lyricsOn" />
               <div v-if="player.pending" class="fp__pending">
                 <MusicPendingNote :pending="player.pending" long />
                 <UiButton size="sm" icon="ph:skip-forward" @click="player.next('skipped')">{{ t('player.skip') }}</UiButton>

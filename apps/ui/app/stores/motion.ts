@@ -1,20 +1,23 @@
-import type { AlbumMotion } from '~/api/types'
+import type { AlbumMotion, Track, TrackClip } from '~/api/types'
 
 /** Ссылки подписаны на несколько часов: через час спрашиваем заново */
 const FRESH_MS = 60 * 60 * 1000
-/** Обложка ищется — спросить снова через столько (дальше реже), не больше нескольких раз */
-const RETRY_MS = [6_000, 15_000, 40_000]
+/** Видео ищется — спросить снова через столько (дальше реже): клип загрузчик режет за 10–20 секунд,
+ *  но перед ним может быть очередь */
+const RETRY_MS = [8_000, 15_000, 30_000, 60_000, 120_000]
 
 interface Entry {
-  motion: AlbumMotion | null
+  clip: TrackClip | null
   at: number
   tries: number
 }
 
 /**
- * Живые обложки альбомов (Apple Music): одна загрузка на альбом, ответ «ищется» перепрашивается
- * несколько раз. Видео показывается, только если его разрешают настройки устройства, сеть
- * и «уменьшение движения» ([`allowed`])
+ * Видео вместо обложки, как Canvas у Spotify: зацикленный кусок официального клипа трека без звука
+ * (тот же, что в ленте «Открытия»), а нет клипа — живая обложка альбома, если Apple её отдаст.
+ * Одна загрузка на трек; «ищется» перепрашивается несколько раз — сервер в это время заказывает
+ * клип загрузчику. Показывается, только если разрешают настройки устройства, сеть и «уменьшение
+ * движения» ([`allowed`])
  */
 export const useMotionStore = defineStore('motion', () => {
   const bridge = useBridge()
@@ -36,39 +39,52 @@ export const useMotionStore = defineStore('motion', () => {
   /** Видео без звука можно показывать: включено, не «только по Wi-Fi» на сотовой, движение не уменьшено */
   const allowed = computed(() => prefs.motion && !ui.reducedMotion && !(prefs.motionWifiOnly && cellular.value))
 
-  async function load(albumId: string) {
-    const prev = entries.get(albumId)
+  function pending(c: TrackClip | null) {
+    return !c || c.state === 'pending' || c.motion?.state === 'pending'
+  }
+
+  async function load(trackId: string) {
+    const prev = entries.get(trackId)
+    const tries = (prev?.tries ?? 0) + 1
     try {
-      const motion = await bridge.video.albumMotion(albumId)
-      const tries = (prev?.tries ?? 0) + 1
-      entries.set(albumId, { motion, at: Date.now(), tries })
-      if (motion.state === 'pending' && tries <= RETRY_MS.length) {
-        clearTimeout(timers.get(albumId))
-        timers.set(albumId, setTimeout(() => void load(albumId), RETRY_MS[tries - 1]))
+      const [clip] = await bridge.video.clips([trackId])
+      entries.set(trackId, { clip: clip ?? null, at: Date.now(), tries })
+      if (clip && pending(clip) && tries <= RETRY_MS.length) {
+        clearTimeout(timers.get(trackId))
+        timers.set(trackId, setTimeout(() => void load(trackId), RETRY_MS[tries - 1]))
       }
     }
     catch {
       // Сервер не ответил — останется обычная обложка; спросим при следующем показе через час
-      entries.set(albumId, { motion: null, at: Date.now(), tries: prev?.tries ?? 0 })
+      entries.set(trackId, { clip: prev?.clip ?? null, at: Date.now(), tries })
     }
   }
 
-  /** Живая обложка альбома, если она есть и готова; запрос — при первом обращении */
-  function get(albumId: string | null | undefined): AlbumMotion | null {
-    if (!albumId || !allowed.value) return null
-    const e = entries.get(albumId)
-    if (!e || Date.now() - e.at > FRESH_MS) {
-      if (!e) entries.set(albumId, { motion: null, at: Date.now(), tries: 0 })
-      void load(albumId)
-    }
-    const m = e?.motion
-    return m?.state === 'ready' ? m : null
+  /** Заказать видео трека заранее (началось воспроизведение): к раскрытию плеера оно уже будет */
+  function prefetch(trackId: string | null | undefined) {
+    if (!trackId || !allowed.value) return
+    const e = entries.get(trackId)
+    if (e && Date.now() - e.at < FRESH_MS) return
+    entries.set(trackId, { clip: e?.clip ?? null, at: Date.now(), tries: 0 })
+    void load(trackId)
   }
 
-  /** Обложки, которые пришли вместе с клипами ленты: лишний запрос не нужен */
-  function remember(motion: AlbumMotion) {
-    entries.set(motion.albumId, { motion, at: Date.now(), tries: 0 })
+  /** Видео для обложки трека: клип, иначе живая обложка альбома; `tall` — для вертикального фона */
+  function src(track: Pick<Track, 'id'> | null | undefined, shape: 'square' | 'tall' = 'square'): string | null {
+    if (!track || !allowed.value) return null
+    // Заказ — не во время вычисления: состояние меняется уже после него
+    if (!entries.has(track.id)) queueMicrotask(() => prefetch(track.id))
+    const c = entries.get(track.id)?.clip
+    if (c?.state === 'ready' && c.url) return c.url
+    const m: AlbumMotion | null | undefined = c?.motion?.state === 'ready' ? c.motion : null
+    if (!m) return null
+    return shape === 'tall' ? (m.tall ?? m.square) : (m.square ?? m.tall)
   }
 
-  return { allowed, cellular, get, remember }
+  /** Видео, которые пришли вместе с лентой: лишний запрос не нужен */
+  function remember(clip: TrackClip) {
+    if (!pending(clip)) entries.set(clip.trackId, { clip, at: Date.now(), tries: 0 })
+  }
+
+  return { allowed, cellular, src, prefetch, remember }
 })

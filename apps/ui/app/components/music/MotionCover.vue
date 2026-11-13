@@ -1,26 +1,23 @@
 <script setup lang="ts">
-// Живая обложка альбома поверх обычной: квадратная — в рамке обложки, вертикальная (`tall`) — для
-// фона телефона; вертикальной нет — квадратная. Ставится внутрь блока обложки с position: relative.
-// Нет живой обложки, выключена в настройках или «уменьшение движения» — не рисуется вовсе
+import type { Track } from '~/api/types'
+
+// Видео вместо обложки (как Canvas у Spotify): зацикленный кусок клипа трека без звука, нет клипа —
+// живая обложка альбома. Кадр обрезается по рамке (object-fit: cover): в квадрате обложки и на
+// вертикальном фоне телефона (`tall`). Ставится внутрь блока обложки с position: relative.
+// Нет видео, выключено в настройках или «уменьшение движения» — не рисуется вовсе
 const props = withDefaults(defineProps<{
-  albumId?: string | null
+  track?: Pick<Track, 'id'> | null
   shape?: 'square' | 'tall'
   active?: boolean
-}>(), { shape: 'square', active: true })
+}>(), { track: null, shape: 'square', active: true })
 
 const motion = useMotionStore()
-const ready = ref(false)
-const src = computed(() => {
-  const m = motion.get(props.albumId)
-  if (!m) return null
-  return props.shape === 'tall' ? (m.tall ?? m.square) : (m.square ?? m.tall)
-})
-watch(src, () => (ready.value = false))
+const src = computed(() => motion.src(props.track, props.shape))
 </script>
 
 <template>
-  <div v-if="src" class="mc" :class="{ 'is-ready': ready }">
-    <MusicLoopVideo :src="src" :active="active" @ready="ready = $event" />
+  <div v-if="src" class="mc">
+    <MusicLoopVideo :src="src" :active="active" />
   </div>
 </template>
 
