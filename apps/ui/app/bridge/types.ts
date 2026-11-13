@@ -17,7 +17,7 @@ import type {
   HistoryDays, WrongRecordingReport, WrongRecordingResult,
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
-  MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
+  MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch, OverlayInfo, OverlayLink,
   Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack, Party, PartyPatch, TvCode, TvLogin, TvToken,
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
@@ -802,6 +802,15 @@ export interface Bridge {
   settings: {
     get(): Promise<UserSettings>
     update(patch: UserSettingsPatch): Promise<UserSettings>
+  }
+
+  /** Оверлей «Сейчас играет» для стрима: секретная ссылка для OBS */
+  overlay: {
+    get(): Promise<OverlayInfo>
+    /** Новая ссылка; прежняя перестаёт работать */
+    rotate(): Promise<OverlayLink>
+    update(patch: { hidePrivate?: boolean }): Promise<OverlayInfo>
+    disable(): Promise<void>
   }
 
   /** «Моя волна»: сессия на сервере помнит выданное и реакции, её id — и в событиях прослушивания */

@@ -740,5 +740,16 @@
       "ru": "Топ России",
       "world": "Топ мира"
     }
+  },
+  "handoff": {
+    "suggestHeadphones": "{output} теперь здесь",
+    "suggestAway": "Продолжить здесь? Музыка осталась на «{name}»",
+    "continue": "Продолжить",
+    "movedHere": "Музыка продолжилась здесь",
+    "movedHereWith": "Музыка перешла за наушниками {output}",
+    "movedTo": "Музыка перешла на «{name}»"
+  },
+  "focus": {
+    "applied": "Волна под фокус: «{name}»"
   }
 }

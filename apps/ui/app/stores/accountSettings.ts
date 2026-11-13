@@ -8,6 +8,7 @@ const DEFAULTS: UserSettings = {
   qualityCellular: 'normal',
   qualityDownload: 'high',
   playlistSort: 'recent',
+  handoff: 'suggest',
   updatedAt: null,
 }
 

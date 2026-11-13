@@ -136,6 +136,7 @@ export type SetApplied = Schemas['SetApplied']
 // Настройки слушателя (общие для устройств): фильтр нецензурного, качество, порядок плейлистов
 export type UserSettings = Schemas['UserSettings']
 export type UserSettingsPatch = Schemas['UserSettingsPatch']
+export type HandoffMode = Schemas['HandoffMode']
 export type WifiQuality = Schemas['WifiQuality']
 export type CellularQuality = Schemas['CellularQuality']
 export type DownloadQuality = Schemas['DownloadQuality']
@@ -184,6 +185,15 @@ export type ConnectDevice = Schemas['ConnectDevice']
 export type ConnectKind = Schemas['ConnectKind']
 export type ConnectOverview = Schemas['ConnectOverview']
 export type PlaybackState = Schemas['PlaybackState']
+// Подхват на другом устройстве
+export type ConnectOutput = Schemas['ConnectOutput']
+export type ConnectSignalKind = Schemas['ConnectSignalKind']
+export type ConnectHandoff = Schemas['ConnectHandoff']
+// Оверлей «Сейчас играет» для стрима
+export type OverlayInfo = Schemas['OverlayInfo']
+export type OverlayLink = Schemas['OverlayLink']
+export type OverlayNow = Schemas['OverlayNow']
+export type OverlayTrack = Schemas['OverlayTrack']
 export type RemoteCommand = Schemas['RemoteCommand']
 export type ConnectQueueItem = Schemas['QueueItem']
 

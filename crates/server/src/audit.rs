@@ -39,6 +39,11 @@ pub const TASTE_RESET: &str = "taste.reset";
 /// Слушатель отметил основной файл записи как «Неверная запись»
 pub const RECORDING_REPORTED: &str = "recording.reported";
 
+/// Подхват на другом устройстве: музыка перенесена или предложена (причина — в payload)
+pub const HANDOFF: &str = "connect.handoff";
+/// Ссылка на оверлей для стрима создана заново (прежняя перестала работать) или выключена
+pub const OVERLAY_LINK: &str = "overlay.link";
+
 pub async fn record(
     db: impl PgExecutor<'_>,
     actor: Option<Uuid>,

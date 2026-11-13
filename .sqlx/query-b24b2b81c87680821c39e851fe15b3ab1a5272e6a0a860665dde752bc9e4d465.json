@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE user_settings SET\n             hide_explicit = COALESCE($2, hide_explicit),\n             quality_wifi = COALESCE($3, quality_wifi),\n             quality_cellular = COALESCE($4, quality_cellular),\n             quality_download = COALESCE($5, quality_download),\n             playlist_sort = COALESCE($6, playlist_sort),\n             handoff = COALESCE($7, handoff),\n             updated_at = now()\n         WHERE user_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b24b2b81c87680821c39e851fe15b3ab1a5272e6a0a860665dde752bc9e4d465"
+}

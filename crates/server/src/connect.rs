@@ -109,6 +109,7 @@ pub async fn handle(
         }
         ClientMessage::ConnectClaim(_) => claim(st, user, link).await.map(|_| None),
         ClientMessage::ConnectTransfer(t) => transfer(st, user, t).await,
+        ClientMessage::ConnectSignal(s) => crate::handoff::signal(st, user, link, s).await,
     };
     result.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "connect message failed");

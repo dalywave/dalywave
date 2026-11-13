@@ -75,7 +75,15 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
     "NSView",
     "NSWindow",
 ] }
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSGeometry"] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "block2",
+    "NSGeometry",
+    "NSDistributedNotificationCenter",
+    "NSNotification",
+    "NSOperation",
+    "NSString",
+] }
 
 # iPhone и iPad: окно входа поверх приложения, токен в защищённой связке ключей iOS
 [target.'cfg(target_os = "ios")'.dependencies]

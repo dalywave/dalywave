@@ -39,7 +39,8 @@ async fn settings_have_defaults_change_and_sync(db: PgPool) {
     assert_eq!(
         res.body,
         json!({ "hideExplicit": false, "qualityWifi": "high", "qualityCellular": "normal",
-                "qualityDownload": "high", "playlistSort": "recent", "updatedAt": null })
+                "qualityDownload": "high", "playlistSort": "recent", "handoff": "suggest",
+                "updatedAt": null })
     );
     // Синхронизация без правок настроек не несёт
     let first = app.get("/api/sync", &me).await;

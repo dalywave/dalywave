@@ -25,7 +25,12 @@ fn cookie(auth: &Auth) -> String {
 
 /// Устройство: соединение, представившееся `connect.hello`. Ответ на hello — `connect.active`
 /// (кто играет и что) — приходит этому соединению первым, раньше списка устройств.
-async fn device(addr: std::net::SocketAddr, auth: &Auth, id: &str, kind: &str) -> Socket {
+pub(crate) async fn device(
+    addr: std::net::SocketAddr,
+    auth: &Auth,
+    id: &str,
+    kind: &str,
+) -> Socket {
     device_with(addr, auth, id, kind).await.0
 }
 
@@ -55,14 +60,14 @@ async fn device_with(
     (ws, active)
 }
 
-async fn send(ws: &mut Socket, msg: Value) {
+pub(crate) async fn send(ws: &mut Socket, msg: Value) {
     ws.send(Message::Text(msg.to_string().into()))
         .await
         .unwrap();
 }
 
 /// Следующее сообщение этого типа; остальные пропускаются.
-async fn next_of(ws: &mut Socket, kind: &str) -> Value {
+pub(crate) async fn next_of(ws: &mut Socket, kind: &str) -> Value {
     tokio::time::timeout(Duration::from_secs(5), async {
         loop {
             match ws.next().await.expect("socket closed").unwrap() {
@@ -82,7 +87,7 @@ async fn next_of(ws: &mut Socket, kind: &str) -> Value {
 }
 
 /// Ничего этого типа не приходит (пока не ответит ping).
-async fn none_of(ws: &mut Socket, kind: &str) {
+pub(crate) async fn none_of(ws: &mut Socket, kind: &str) {
     send(ws, json!({ "type": "ping", "id": "probe" })).await;
     loop {
         let v = next_any(ws).await;
@@ -114,7 +119,7 @@ fn track(title: &str) -> Value {
     })
 }
 
-fn state(position: u32, playing: bool) -> Value {
+pub(crate) fn state(position: u32, playing: bool) -> Value {
     json!({
         "current": { "uid": "u1", "track": track("Первый"), "source": "context" },
         "upcoming": [{ "uid": "u2", "track": track("Второй"), "source": "context" }],

@@ -1936,6 +1936,7 @@ export interface paths {
         trace?: never;
     };
     "/api/party": {
+    "/api/overlay": {
         parameters: {
             query?: never;
             header?: never;
@@ -1943,12 +1944,62 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_party"];
+        get: operations["info"];
+        put?: never;
+        post?: never;
+        delete: operations["disable"];
+        options?: never;
+        head?: never;
+        patch: operations["update"];
+        trace?: never;
+    };
+    "/api/overlay/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/overlay/now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["now"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch: operations["update_party"];
+        patch?: never;
+        trace?: never;
+    };
+    "/api/overlay/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stream_now"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/playlist-folders": {
@@ -1980,7 +2031,7 @@ export interface paths {
         delete: operations["remove_delete_playlist_folders_id_"];
         options?: never;
         head?: never;
-        patch: operations["update"];
+        patch: operations["update_patch_playlist_folders_id_"];
         trace?: never;
     };
     "/api/playlist-folders/{id}/move": {
@@ -3762,6 +3813,9 @@ export interface components {
         }) | (components["schemas"]["ConnectTransfer"] & {
             /** @enum {string} */
             type: "connect.transfer";
+        }) | (components["schemas"]["ConnectSignal"] & {
+            /** @enum {string} */
+            type: "connect.signal";
         });
         /** @description Подтверждение команды: клиент шлёт его с `to` (кому), сервер доставляет с `from` (от кого). */
         ConnectAck: {
@@ -3824,6 +3878,18 @@ export interface components {
             /** @description Необязательная метка — для журнала клиента; сервер её не читает. */
             id?: string | null;
         };
+        /** @description `connect.handoff`: музыку подхватили (`transferred`) или предлагают подхватить на устройстве `to`. */
+        ConnectHandoff: {
+            from: string;
+            /** @description Имя наушников («AirPods Захара»), если причина — они. */
+            output: string | null;
+            /** @description Продолжить со звуком (на прежнем устройстве музыка играла). */
+            play: boolean;
+            reason: components["schemas"]["HandoffReason"];
+            to: string;
+            /** @description Перенос уже сделан (режим «Сразу»); иначе — предложение «Продолжить здесь?». */
+            transferred: boolean;
+        };
         /** @description Первое сообщение устройства после `hello` сервера: кто оно. Повторяется после каждого переподключения. */
         ConnectHello: {
             appVersion?: string | null;
@@ -3840,6 +3906,14 @@ export interface components {
          * @enum {string}
          */
         ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch" | "tv";
+        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch";
+        /** @description Устройство вывода звука, о котором сообщает `connect.signal`. */
+        ConnectOutput: {
+            /** @description `builtin`, `headphones`, `bluetooth`, `airplay`, `usb`, `hdmi`, `other`. */
+            kind: string;
+            /** @description Имя, как его показывает система: «AirPods Захара». */
+            name: string;
+        };
         /** @description `GET /api/devices`: устройства и последнее состояние. */
         ConnectOverview: {
             activeDeviceId: string | null;
@@ -3856,6 +3930,21 @@ export interface components {
             id: string;
             to: string;
         };
+        /**
+         * @description `connect.signal`: повод подхватить музыку на другом устройстве. Сервер сводит сигналы всех устройств
+         *     человека и решает: перенести, предложить или ничего.
+         */
+        ConnectSignal: {
+            output?: components["schemas"]["ConnectOutput"] | null;
+            /** @description У `output_lost`: звук здесь играл, когда вывод пропал. */
+            playing?: boolean;
+            signal: components["schemas"]["ConnectSignalKind"];
+        };
+        /**
+         * @description Что случилось с устройством.
+         * @enum {string}
+         */
+        ConnectSignalKind: "output_lost" | "output_added" | "locked" | "unlocked" | "foreground";
         /** @description Снимок активного устройства — всем устройствам человека. */
         ConnectState: {
             deviceId: string;
@@ -4449,6 +4538,18 @@ export interface components {
             /** @description Что поменялось: `requests`, `friends`, `privacy`. */
             what: string;
         };
+        /**
+         * @description «Подхват на другом устройстве»: наушники перешли с компьютера на телефон (или телефон открыли, пока
+         *     компьютер заблокирован) — музыка за ними. По умолчанию — предложение: ложный перенос (наушники просто
+         *     сели) останавливает музыку там, где её слушали, а предложение стоит одного нажатия.
+         * @enum {string}
+         */
+        HandoffMode: "off" | "suggest" | "auto";
+        /**
+         * @description Почему музыка переходит.
+         * @enum {string}
+         */
+        HandoffReason: "headphones" | "away";
         /** @description Голова сети вкуса на отложенных по времени данных: у сети и у правил. */
         HeadMetrics: {
             /** Format: double */
@@ -5574,6 +5675,52 @@ export interface components {
         };
         OidcProvider: {
             /** @description Подпись кнопки входа, например `daly.rest`. */
+            title: string;
+        };
+        /** @description `GET /api/overlay`: ссылки ещё нет — `link: null`. */
+        OverlayInfo: {
+            link: components["schemas"]["OverlayLink"] | null;
+        };
+        /** @description Ссылка на оверлей: `GET /api/overlay`, `POST /api/overlay/link`. */
+        OverlayLink: {
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Плашка прячется, пока идёт приватная сессия. */
+            hidePrivate: boolean;
+            /** @description Адрес страницы для OBS без параметров вида: `https://…/overlay?k=dwo_…`. */
+            url: string;
+        };
+        /** @description Что показать на плашке: `GET /api/overlay/now`, события `now` потока `/api/overlay/stream`. */
+        OverlayNow: {
+            /**
+             * Format: date-time
+             * @description Время сервера.
+             */
+            at: string;
+            /** Format: int32 */
+            durationMs: number;
+            playing: boolean;
+            /**
+             * Format: int32
+             * @description Позиция на момент `at`; пока играет, время идёт.
+             */
+            positionMs: number;
+            track: components["schemas"]["OverlayTrack"] | null;
+            /** @description Показывать плашку: играет и не приватная сессия. Иначе — тихо спрятать. */
+            visible: boolean;
+        };
+        /** @description `PATCH /api/overlay`. */
+        OverlayPatch: {
+            hidePrivate?: boolean | null;
+        };
+        /** @description Трек на плашке. */
+        OverlayTrack: {
+            /** @description Артисты через запятую. */
+            artist: string;
+            /** @description Обложка 250×250 (путь `/api/images/…` или адрес Deezer). */
+            cover: string | null;
+            /** Format: uuid */
+            id: string;
             title: string;
         };
         /**
@@ -6799,6 +6946,9 @@ export interface components {
         }) | (components["schemas"]["ConnectAck"] & {
             /** @enum {string} */
             type: "connect.ack";
+        }) | (components["schemas"]["ConnectHandoff"] & {
+            /** @enum {string} */
+            type: "connect.handoff";
         }) | (components["schemas"]["JamChanged"] & {
             /** @enum {string} */
             type: "jam.changed";
@@ -7955,6 +8105,8 @@ export interface components {
             roles?: components["schemas"]["Role"][] | null;
         };
         UserSettings: {
+            /** @description Подхват музыки на другом устройстве (`connect.signal` → `connect.handoff`). */
+            handoff?: components["schemas"]["HandoffMode"];
             /**
              * @description «Без нецензурного»: explicit-треки не играют в волне, миксах и автопродолжении, в списках — серым;
              *     если в каталоге есть чистая версия, играет она.
@@ -7972,6 +8124,7 @@ export interface components {
         };
         /** @description Изменить часть настроек; не названные поля остаются как были. */
         UserSettingsPatch: {
+            handoff?: components["schemas"]["HandoffMode"] | null;
             hideExplicit?: boolean | null;
             playlistSort?: components["schemas"]["PlaylistSort"] | null;
             qualityCellular?: components["schemas"]["CellularQuality"] | null;
@@ -13109,6 +13262,7 @@ export interface operations {
         };
     };
     get_party: {
+    info: {
         parameters: {
             query?: never;
             header?: never;
@@ -13118,17 +13272,38 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Идёт ли вечеринка и её настройки */
+            /** @description Ссылка на оверлей; `link: null` — ещё не создана */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Party"];
+                    "application/json": components["schemas"]["OverlayInfo"];
                 };
             };
         };
     };
     update_party: {
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Оверлей выключен: ссылка больше не работает */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update: {
         parameters: {
             query?: never;
             header?: never;
@@ -13142,12 +13317,111 @@ export interface operations {
         };
         responses: {
             /** @description Вечеринка с новыми настройками. Включение открывает «Слушать вместе» (QR для гостей) и продлевает вечеринку на 12 часов; всем устройствам — `party.changed` */
+                "application/json": components["schemas"]["OverlayPatch"];
+            };
+        };
+        responses: {
+            /** @description Ссылка после правки */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Party"];
+                    "application/json": components["schemas"]["OverlayInfo"];
+                };
+            };
+            /** @description Ссылки ещё нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Новая ссылка; прежняя перестала работать */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayLink"];
+                };
+            };
+        };
+    };
+    now: {
+        parameters: {
+            query: {
+                /** @description Токен из ссылки (`dwo_…`). */
+                k: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Что сейчас играет у владельца ссылки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverlayNow"];
+                };
+            };
+            /** @description Ссылка неверна, сменена или выключена */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    stream_now: {
+        parameters: {
+            query: {
+                /** @description Токен из ссылки (`dwo_…`). */
+                k: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SSE: событие `now` (OverlayNow) сразу и при каждой перемене; `gone` — ссылка больше не работает */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Ссылка неверна, сменена или выключена */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -13226,7 +13500,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_patch_playlist_folders_id_: {
         parameters: {
             query?: never;
             header?: never;
