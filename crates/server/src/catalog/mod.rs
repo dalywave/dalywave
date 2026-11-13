@@ -5,6 +5,7 @@
 //! запись, трек без ISRC получает свою. Пока ISRC неизвестен (трек пришёл из популярного артиста),
 //! записи у трека нет; она появится, когда трек загрузится целиком или в составе альбома.
 
+pub mod find;
 pub mod views;
 
 use std::{collections::HashSet, time::Duration};
@@ -900,8 +901,9 @@ fn push_unique(list: &mut Vec<Uuid>, id: Uuid) {
     }
 }
 
-/// Поиск по каталогу Deezer: найденное сохраняется облегчёнными строками и отдаётся нашими id.
-/// Если не ответил один из видов поиска, остальные всё равно показываются.
+/// Поиск по каталогу Deezer как есть — для сопоставления (плейлист по описанию, ссылки): найденное
+/// сохраняется облегчёнными строками и отдаётся нашими id. Если не ответил один из видов поиска,
+/// остальные всё равно показываются. Поиск для людей — [`find::catalog`].
 pub async fn search(
     db: &PgPool,
     deezer: &Deezer,
@@ -956,94 +958,6 @@ pub async fn search(
         push_unique(&mut hits.artists, id);
     }
     tx.commit().await?;
-    Ok(hits)
-}
-
-/// Поиск по медиатеке: лайки, сохранённые альбомы, подписки и всё, что уже на сервере. Сравнение —
-/// без регистра и диакритики (`search_norm`), по триграммам; подходят куски слов и опечатки.
-/// Каждое слово запроса должно найтись: «lowborn dev» — это Devil, а не все треки Lowborn.
-pub async fn search_library(
-    db: &PgPool,
-    user_id: Uuid,
-    q: &str,
-    types: Types,
-    limit: i64,
-) -> Result<Hits, sqlx::Error> {
-    let mut hits = Hits::default();
-    if types.track {
-        hits.tracks = sqlx::query_scalar!(
-            r#"WITH q AS (SELECT search_norm($2) AS v,
-                          ARRAY(SELECT w FROM unnest(string_to_array(search_norm($2), ' ')) AS w WHERE w <> '') AS words),
-               docs AS (
-                   SELECT t.id,
-                          search_norm(t.title || ' ' || t.title_version || ' ' || COALESCE(
-                              (SELECT string_agg(a.name, ' ') FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
-                               WHERE ta.track_id = t.id), '')) AS doc,
-                          search_norm(t.title) AS title
-                   FROM tracks t
-                   LEFT JOIN recordings r ON r.id = t.recording_id
-                   WHERE r.audio_status = 'ready'
-                      OR EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $1 AND l.track_id = t.id)
-                      OR EXISTS (SELECT 1 FROM saved_albums s WHERE s.user_id = $1 AND s.album_id = t.album_id)
-               )
-               SELECT d.id AS "id!" FROM docs d, q
-               WHERE (SELECT bool_and(strpos(d.doc, w) > 0 OR word_similarity(w, d.doc) >= 0.6) FROM unnest(q.words) AS w)
-               ORDER BY (strpos(d.title, q.v) > 0) DESC, word_similarity(q.v, d.doc) DESC, d.id
-               LIMIT $3"#,
-            user_id,
-            q,
-            limit,
-        )
-        .fetch_all(db)
-        .await?;
-    }
-    if types.album {
-        hits.albums = sqlx::query_scalar!(
-            r#"WITH q AS (SELECT search_norm($2) AS v,
-                          ARRAY(SELECT w FROM unnest(string_to_array(search_norm($2), ' ')) AS w WHERE w <> '') AS words),
-               docs AS (
-                   SELECT al.id, search_norm(al.title || ' ' || a.name) AS doc, search_norm(al.title) AS title
-                   FROM albums al JOIN artists a ON a.id = al.artist_id
-                   WHERE EXISTS (SELECT 1 FROM saved_albums s WHERE s.user_id = $1 AND s.album_id = al.id)
-                      OR EXISTS (SELECT 1 FROM tracks t JOIN recordings r ON r.id = t.recording_id
-                                 WHERE t.album_id = al.id AND r.audio_status = 'ready')
-               )
-               SELECT d.id AS "id!" FROM docs d, q
-               WHERE (SELECT bool_and(strpos(d.doc, w) > 0 OR word_similarity(w, d.doc) >= 0.6) FROM unnest(q.words) AS w)
-               ORDER BY (strpos(d.title, q.v) > 0) DESC, word_similarity(q.v, d.doc) DESC, d.id
-               LIMIT $3"#,
-            user_id,
-            q,
-            limit,
-        )
-        .fetch_all(db)
-        .await?;
-    }
-    if types.artist {
-        hits.artists = sqlx::query_scalar!(
-            r#"WITH q AS (SELECT search_norm($2) AS v,
-                          ARRAY(SELECT w FROM unnest(string_to_array(search_norm($2), ' ')) AS w WHERE w <> '') AS words),
-               docs AS (
-                   SELECT a.id, search_norm(a.name) AS doc
-                   FROM artists a
-                   WHERE EXISTS (SELECT 1 FROM followed_artists f WHERE f.user_id = $1 AND f.artist_id = a.id)
-                      OR EXISTS (SELECT 1 FROM track_artists ta JOIN liked_tracks l ON l.track_id = ta.track_id
-                                 WHERE ta.artist_id = a.id AND l.user_id = $1)
-                      OR EXISTS (SELECT 1 FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                                 JOIN recordings r ON r.id = t.recording_id
-                                 WHERE ta.artist_id = a.id AND r.audio_status = 'ready')
-               )
-               SELECT d.id AS "id!" FROM docs d, q
-               WHERE (SELECT bool_and(strpos(d.doc, w) > 0 OR word_similarity(w, d.doc) >= 0.6) FROM unnest(q.words) AS w)
-               ORDER BY (strpos(d.doc, q.v) = 1) DESC, word_similarity(q.v, d.doc) DESC, d.id
-               LIMIT $3"#,
-            user_id,
-            q,
-            limit,
-        )
-        .fetch_all(db)
-        .await?;
-    }
     Ok(hits)
 }
 

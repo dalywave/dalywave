@@ -1,0 +1,13 @@
+[package]
+name = "dalywave-textmatch"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Нечёткое сравнение названий для поиска: неверная раскладка, транслитерация, звучание, опечатки"
+
+# Чистый Rust: общий для сервера (поиск по каталогу и медиатеке) и локальной базы приложений
+# (crates/client/store подключает путём). Поля пакета заданы явно, а не из workspace: база приложений
+# собирается в своём workspace crates/client.
+[dependencies]
+unicode-normalization = "0.1"

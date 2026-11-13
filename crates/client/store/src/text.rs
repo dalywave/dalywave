@@ -1,27 +1,10 @@
-//! Текст для поиска: без регистра и диакритики, «ё» = «е» — как `search_norm` на сервере.
+//! Текст для поиска — общий с сервером (crates/textmatch): нормализация, латиница и ключ звучания.
 
-use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
+use dalywave_textmatch::Name;
+pub use dalywave_textmatch::normalize;
 
-pub fn normalize(s: &str) -> String {
-    s.nfd()
-        .filter(|c| !is_combining_mark(*c))
-        .flat_map(char::to_lowercase)
-        .map(|c| if c == 'ё' { 'е' } else { c })
-        .collect::<String>()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn folds_case_and_marks() {
-        assert_eq!(normalize("Ёлка"), "елка");
-        assert_eq!(normalize("  Beyoncé   Knowles "), "beyonce knowles");
-        // «й» после разложения — «и» с меткой: в поиске это одна буква, как у unaccent
-        assert_eq!(normalize("Йога"), "иога");
-    }
+/// Колонки поиска строки: нормализованный текст, латиница и ключ звучания.
+pub(crate) fn search_columns(s: &str) -> (String, String, String) {
+    let n = Name::new(s);
+    (normalize(s), n.latin().to_string(), n.sound().to_string())
 }

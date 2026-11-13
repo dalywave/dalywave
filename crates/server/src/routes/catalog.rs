@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::{
     auth::Principal,
-    catalog::{self, Types, views},
+    catalog::{self, Types, find, views},
     cursor,
     error::{AppError, AppResult, bad},
     extract::{Json, Path, Query},
@@ -63,7 +63,8 @@ fn parse_types(raw: Option<&str>) -> AppResult<Types> {
     security(("session" = []), ("device" = [])),
     params(SearchQuery),
     responses(
-        (status = 200, description = "Найденное: треки, альбомы, артисты", body = SearchResults),
+        (status = 200, description = "Найденное: треки, альбомы, артисты. Находит и по русской записи \
+                                      латинского имени, и в другой раскладке, и с опечаткой", body = SearchResults),
         (status = 400, description = "Пустой запрос, неверные types или limit", body = ErrorBody),
         (status = 503, description = "Deezer не ответил (только `scope=catalog`)", body = ErrorBody),
     ),
@@ -84,17 +85,20 @@ pub async fn search(
     let types = parse_types(q.types.as_deref())?;
     let scope = q.scope.unwrap_or_default();
     let user = principal.user.id;
-    let hits = match scope {
+    let found = match scope {
         SearchScope::Catalog => {
-            catalog::search(&st.db, &st.deezer, text, types, limit as u32).await?
+            find::catalog(&st.db, &st.deezer, text, types, limit as u32).await?
         }
-        SearchScope::Library => catalog::search_library(&st.db, user, text, types, limit).await?,
+        SearchScope::Library => find::library(&st.db, user, text, types, limit).await?,
     };
+    let hits = found.hits;
     Ok(Json(SearchResults {
         scope,
         tracks: views::tracks(&st.db, &hits.tracks, user).await?,
         albums: views::albums(&st.db, &hits.albums, user).await?,
         artists: views::artists(&st.db, &hits.artists, user).await?,
+        top: found.top,
+        suggestion: found.suggestion,
     }))
 }
 

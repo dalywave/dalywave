@@ -96,18 +96,28 @@ pub async fn search_lyrics(
         return Err(bad("строчка — от 3 символов"));
     }
     let limit = i64::from(q.limit.unwrap_or(20).clamp(1, MAX_SEARCH));
-    let rows = sqlx::query!(
-        r#"SELECT track_id, plain AS "plain!"
-             FROM track_lyrics
-            WHERE plain IS NOT NULL AND NOT instrumental
-              AND search_norm(plain) LIKE '%' || search_norm($1) || '%'
-            ORDER BY fetched_at DESC
-            LIMIT $2"#,
-        like_escape(text),
-        limit,
-    )
-    .fetch_all(&st.db)
-    .await?;
+    // Строчка, набранная не в той раскладке («z yt pyf.»), ищется и исправленной
+    let fixed = dalywave_textmatch::fix_layout(text);
+    let mut text = text;
+    let mut rows = Vec::new();
+    for line in std::iter::once(text).chain(fixed.as_deref()) {
+        rows = sqlx::query!(
+            r#"SELECT track_id, plain AS "plain!"
+                 FROM track_lyrics
+                WHERE plain IS NOT NULL AND NOT instrumental
+                  AND search_norm(plain) LIKE '%' || search_norm($1) || '%'
+                ORDER BY fetched_at DESC
+                LIMIT $2"#,
+            like_escape(line),
+            limit,
+        )
+        .fetch_all(&st.db)
+        .await?;
+        text = line;
+        if !rows.is_empty() {
+            break;
+        }
+    }
     let ids: Vec<Uuid> = rows.iter().map(|r| r.track_id).collect();
     let mut tracks: HashMap<Uuid, _> = views::tracks(&st.db, &ids, principal.user.id)
         .await?

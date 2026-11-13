@@ -1209,11 +1209,11 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "dalywave-protocol",
+ "dalywave-textmatch",
  "rusqlite",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
- "unicode-normalization",
  "uuid 1.29.2",
 ]
 
@@ -1237,6 +1237,13 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "serde",
+]
+
+[[package]]
+name = "dalywave-textmatch"
+version = "0.1.0"
+dependencies = [
+ "unicode-normalization",
 ]
 
 [[package]]

@@ -500,8 +500,8 @@ pub async fn search(
         album: false,
         artist: false,
     };
-    let hits = catalog::search(&st.db, &st.deezer, text, types, 20).await?;
-    let mut items = jam::jam_tracks(&st.db, &hits.tracks).await?;
+    let found = catalog::find::catalog(&st.db, &st.deezer, text, types, 20).await?;
+    let mut items = jam::jam_tracks(&st.db, &found.hits.tracks).await?;
     // У хозяина «Без нецензурного» — гостю explicit не показываем
     if reco::hide_explicit(&st.db, g.session.host).await? {
         items.retain(|t| !t.explicit);

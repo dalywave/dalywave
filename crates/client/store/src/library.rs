@@ -1,13 +1,13 @@
 //! Медиатека из локальной базы — в тех же типах, что отдаёт сервер: экраны не знают, откуда данные.
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use dalywave_protocol::{
     catalog::{
         AlbumDetail, AlbumRef, AlbumSummary, ArtistDetail, ArtistRef, ArtistRole, ArtistSummary,
-        AudioStatus, FollowState, ImageSet, RecordType, Releases, SearchResults, SearchScope,
-        Track, TrackArtist,
+        AudioStatus, DeezerKind, FollowState, ImageSet, RecordType, Releases, SearchResults,
+        SearchScope, SearchTop, Track, TrackArtist,
     },
     library::{
         DownloadPolicy, FollowedArtist, FollowedArtistPage, LibraryCounts, LibraryOverview,
@@ -16,10 +16,25 @@ use dalywave_protocol::{
     },
     social::{PersonRef, PlaylistAccess},
 };
-use rusqlite::{OptionalExtension, Row, params};
+use dalywave_textmatch::{Query, Top};
+use rusqlite::{OptionalExtension, Row, functions::FunctionFlags, params};
 use uuid::Uuid;
 
 use crate::{Store, StoreResult, normalize};
+
+/// Найденное локальным поиском: сходство с запросом (с артистами и по одному названию) и своё ли.
+struct Scored {
+    id: Uuid,
+    name: String,
+    score: f32,
+    by_name: f32,
+    mine: bool,
+}
+
+/// Сходство ступенями по 0,02: внутри ступени решает своё и название.
+fn step(score: f32) -> i32 {
+    (score * 50.0).round() as i32
+}
 
 /// Что искать в локальной базе.
 #[derive(Debug, Clone, Copy)]
@@ -523,60 +538,145 @@ impl Store {
         }))
     }
 
-    /// Поиск по медиатеке и всему, что есть в базе: без регистра и диакритики, по началу слов и подстроке.
+    /// Поиск по медиатеке и всему, что есть в базе — как поиск по медиатеке на сервере: без регистра и
+    /// диакритики, по куску слова, с опечаткой, в другой раскладке и по звучанию («капсайз» — Capsize).
+    /// Порядок — по сходству с запросом, при равном — любимое и сохранённое выше.
     pub fn search(&self, s: LocalSearch) -> StoreResult<SearchResults> {
-        let q = normalize(s.q);
-        if q.is_empty() {
-            return Ok(SearchResults {
-                scope: SearchScope::Library,
-                tracks: Vec::new(),
-                albums: Vec::new(),
-                artists: Vec::new(),
-            });
-        }
-        let like = format!("%{}%", q.replace(['%', '_'], ""));
-        let prefix = format!("{}%", q.replace(['%', '_'], ""));
-        let limit = s.limit as i64;
-        // Совпадение с начала названия — выше, любимое и сохранённое — выше
-        let track_ids = self.ids(
-            "SELECT t.id FROM tracks t
-             WHERE t.search LIKE ?1
-                OR EXISTS (SELECT 1 FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
-                           WHERE ta.track_id = t.id AND a.search LIKE ?1)
-             ORDER BY (t.search LIKE ?2) DESC,
-                      EXISTS (SELECT 1 FROM liked_tracks l WHERE l.track_id = t.id) DESC, t.title
-             LIMIT ?3",
-            params![like, prefix, limit],
-        )?;
-        let album_ids = self.ids(
-            "SELECT al.id FROM albums al LEFT JOIN artists ar ON ar.id = al.artist_id
-             WHERE al.search LIKE ?1 OR ar.search LIKE ?1
-             ORDER BY (al.search LIKE ?2) DESC,
-                      EXISTS (SELECT 1 FROM saved_albums s WHERE s.album_id = al.id) DESC, al.title
-             LIMIT ?3",
-            params![like, prefix, limit],
-        )?;
-        let artist_ids = self.ids(
-            "SELECT a.id FROM artists a WHERE a.search LIKE ?1
-             ORDER BY (a.search LIKE ?2) DESC,
-                      EXISTS (SELECT 1 FROM followed_artists f WHERE f.artist_id = a.id) DESC, a.name
-             LIMIT ?3",
-            params![like, prefix, limit],
-        )?;
-        let mut albums = Vec::new();
-        for id in album_ids {
-            albums.extend(self.album_summary(id)?);
-        }
-        let mut artists = Vec::new();
-        for id in artist_ids {
-            artists.extend(self.artist_summary(id)?);
-        }
-        Ok(SearchResults {
+        let mut out = SearchResults {
             scope: SearchScope::Library,
-            tracks: self.tracks(&track_ids)?,
-            albums,
-            artists,
-        })
+            tracks: Vec::new(),
+            albums: Vec::new(),
+            artists: Vec::new(),
+            top: None,
+            suggestion: None,
+        };
+        if normalize(s.q).is_empty() {
+            return Ok(out);
+        }
+        let query = Arc::new(Query::new(s.q));
+        // Отбор — по готовым колонкам латиницы и звучания, той же проверкой, что и на сервере
+        let filter = Arc::clone(&query);
+        self.conn().create_scalar_function(
+            "search_hit",
+            2,
+            FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+            move |ctx| {
+                let latin = ctx.get::<String>(0)?;
+                let sound = ctx.get::<String>(1)?;
+                Ok(filter.hits(&latin, &sound))
+            },
+        )?;
+        let found = self.search_scored(&query);
+        self.conn().remove_function("search_hit", 2)?;
+        let (tracks, albums, artists) = found?;
+
+        let pick = |mut list: Vec<Scored>| {
+            list.sort_by(|a, b| {
+                step(b.score)
+                    .cmp(&step(a.score))
+                    .then(b.mine.cmp(&a.mine))
+                    .then(a.name.cmp(&b.name))
+            });
+            list.truncate(s.limit);
+            list
+        };
+        let titles: Vec<(String, f32)> =
+            tracks.iter().map(|t| (t.name.clone(), t.by_name)).collect();
+        let (tracks, albums, artists) = (pick(tracks), pick(albums), pick(artists));
+        let named = |list: &[Scored]| -> Vec<(Uuid, String, f32)> {
+            list.iter()
+                .map(|x| (x.id, x.name.clone(), x.by_name))
+                .collect()
+        };
+        let (top, suggestion) = query.verdict(&named(&artists), &named(&albums), &titles);
+        out.top = top.map(|t| match t {
+            Top::Artist(id) => SearchTop {
+                kind: DeezerKind::Artist,
+                id,
+            },
+            Top::Album(id) => SearchTop {
+                kind: DeezerKind::Album,
+                id,
+            },
+        });
+        out.suggestion = suggestion;
+        out.tracks = self.tracks(&tracks.iter().map(|t| t.id).collect::<Vec<_>>())?;
+        for a in albums {
+            out.albums.extend(self.album_summary(a.id)?);
+        }
+        for a in artists {
+            out.artists.extend(self.artist_summary(a.id)?);
+        }
+        Ok(out)
+    }
+
+    /// Треки, альбомы и артисты, прошедшие отбор `search_hit`, с оценкой сходства.
+    fn search_scored(&self, q: &Query) -> StoreResult<(Vec<Scored>, Vec<Scored>, Vec<Scored>)> {
+        let conn = self.conn();
+        let mut st = conn.prepare(
+            "SELECT t.id, trim(t.title || ' ' || t.version),
+                    COALESCE((SELECT group_concat(a.name, char(31) ORDER BY ta.position)
+                              FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
+                              WHERE ta.track_id = t.id), ''),
+                    EXISTS (SELECT 1 FROM liked_tracks l WHERE l.track_id = t.id)
+             FROM tracks t
+             WHERE search_hit(
+                 t.latin || ' ' || COALESCE((SELECT group_concat(a.latin, ' ') FROM track_artists ta
+                                             JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id = t.id), ''),
+                 t.sound || ' ' || COALESCE((SELECT group_concat(a.sound, ' ') FROM track_artists ta
+                                             JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id = t.id), ''))",
+        )?;
+        let tracks = st
+            .query_map([], |r| {
+                let title: String = r.get(1)?;
+                let names: String = r.get(2)?;
+                let names: Vec<&str> = names.split('\u{1f}').filter(|n| !n.is_empty()).collect();
+                Ok(Scored {
+                    id: uuid(r.get(0)?),
+                    score: q.score_track(&title, &names),
+                    by_name: q.score(&title),
+                    mine: r.get(3)?,
+                    name: title,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut st = conn.prepare(
+            "SELECT al.id, al.title, COALESCE(ar.name, ''),
+                    EXISTS (SELECT 1 FROM saved_albums s WHERE s.album_id = al.id)
+             FROM albums al LEFT JOIN artists ar ON ar.id = al.artist_id
+             WHERE search_hit(al.latin || ' ' || COALESCE(ar.latin, ''), al.sound || ' ' || COALESCE(ar.sound, ''))",
+        )?;
+        let albums = st
+            .query_map([], |r| {
+                let title: String = r.get(1)?;
+                let artist: String = r.get(2)?;
+                Ok(Scored {
+                    id: uuid(r.get(0)?),
+                    score: q.score_track(&title, &[artist]),
+                    by_name: q.score(&title),
+                    mine: r.get(3)?,
+                    name: title,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut st = conn.prepare(
+            "SELECT a.id, a.name, EXISTS (SELECT 1 FROM followed_artists f WHERE f.artist_id = a.id)
+             FROM artists a WHERE search_hit(a.latin, a.sound)",
+        )?;
+        let artists = st
+            .query_map([], |r| {
+                let name: String = r.get(1)?;
+                let score = q.score(&name);
+                Ok(Scored {
+                    id: uuid(r.get(0)?),
+                    score,
+                    by_name: score,
+                    mine: r.get(2)?,
+                    name,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok((tracks, albums, artists))
     }
 
     /// Трек «не рекомендовать» или его артист.

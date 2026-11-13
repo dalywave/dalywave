@@ -17,6 +17,7 @@ path = "src/bin/worker.rs"
 [dependencies]
 dalywave-protocol.workspace = true
 dalywave-taste.workspace = true
+dalywave-textmatch.workspace = true
 dalywave-transitions.workspace = true
 
 aes-gcm.workspace = true

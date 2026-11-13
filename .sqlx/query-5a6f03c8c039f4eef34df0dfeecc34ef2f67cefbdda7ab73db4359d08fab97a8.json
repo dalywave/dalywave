@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT track_id, plain AS \"plain!\"\n             FROM track_lyrics\n            WHERE plain IS NOT NULL AND NOT instrumental\n              AND search_norm(plain) LIKE '%' || search_norm($1) || '%'\n            ORDER BY fetched_at DESC\n            LIMIT $2",
+  "query": "SELECT track_id, plain AS \"plain!\"\n                 FROM track_lyrics\n                WHERE plain IS NOT NULL AND NOT instrumental\n                  AND search_norm(plain) LIKE '%' || search_norm($1) || '%'\n                ORDER BY fetched_at DESC\n                LIMIT $2",
   "describe": {
     "columns": [
       {
@@ -37,5 +37,5 @@
       true
     ]
   },
-  "hash": "19fe8d52a6c656ab9048339668af0336a64a952b5ada13dcc34e37ad7a15a784"
+  "hash": "5a6f03c8c039f4eef34df0dfeecc34ef2f67cefbdda7ab73db4359d08fab97a8"
 }

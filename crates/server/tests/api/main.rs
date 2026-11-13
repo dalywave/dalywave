@@ -39,6 +39,7 @@ mod realtime;
 mod reco;
 mod recognize;
 mod rewind;
+mod search;
 mod share;
 mod storage;
 mod stream;

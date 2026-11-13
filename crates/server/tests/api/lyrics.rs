@@ -414,6 +414,11 @@ async fn search_by_line(db: PgPool) {
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["track"]["id"], track.to_string());
     assert_eq!(items[0]["line"], "Ёжик в тумане идёт");
+    // Не в той раскладке: «t;br d nevfyt»
+    let res = app
+        .get("/api/lyrics/search?q=t%3Bbr%20d%20nevfyt", &auth)
+        .await;
+    assert_eq!(res.body["items"][0]["line"], "Ёжик в тумане идёт");
 
     let res = app.get("/api/lyrics/search?q=100%25", &auth).await;
     assert_eq!(res.body["items"], json!([]));

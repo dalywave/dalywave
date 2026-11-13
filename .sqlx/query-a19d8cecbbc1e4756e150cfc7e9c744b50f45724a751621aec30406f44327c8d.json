@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.id, a.name FROM artists a\n               WHERE (EXISTS (SELECT 1 FROM followed_artists f WHERE f.user_id = $1 AND f.artist_id = a.id)\n                      OR EXISTS (SELECT 1 FROM track_artists ta JOIN liked_tracks l ON l.track_id = ta.track_id\n                                 WHERE ta.artist_id = a.id AND l.user_id = $1)\n                      OR EXISTS (SELECT 1 FROM track_artists ta JOIN tracks t ON t.id = ta.track_id\n                                 JOIN recordings r ON r.id = t.recording_id\n                                 WHERE ta.artist_id = a.id AND r.audio_status = 'ready'))\n                 AND (EXISTS (SELECT 1 FROM unnest($2::text[]) f\n                              WHERE (SELECT bool_and(strpos(a.latin, w) > 0 OR word_similarity(w, a.latin) >= 0.6)\n                                     FROM unnest(string_to_array(f, ' ')) w WHERE w <> ''))\n                      OR EXISTS (SELECT 1 FROM unnest($3::text[]) k WHERE strpos(' ' || a.sound, ' ' || k) > 0))\n               ORDER BY word_similarity($4, a.latin) DESC, a.id\n               LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray",
+        "TextArray",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a19d8cecbbc1e4756e150cfc7e9c744b50f45724a751621aec30406f44327c8d"
+}

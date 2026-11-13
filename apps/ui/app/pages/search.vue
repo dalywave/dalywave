@@ -116,11 +116,21 @@ const solid = computed(() => searching.value || scrollY.value > 40)
 onMounted(() => void library.loadOverview().catch(() => {}))
 const followed = computed(() => library.overview?.followedArtists.map(f => f.artist) ?? [])
 
-// Лучшее совпадение: артист с этим именем, иначе альбом с этим названием, иначе первый трек
+// Лучшее совпадение: в котором уверен сервер («капсайз» — Capsize), иначе артист с этим именем,
+// альбом с этим названием, первый трек
 type Top = { kind: 'artist', item: ArtistSummary } | { kind: 'track', item: Track } | { kind: 'album', item: AlbumSummary }
 const top = computed<Top | null>(() => {
   const r = results.value
   if (!r) return null
+  const sure = r.top
+  if (sure?.kind === 'artist') {
+    const item = r.artists.find(a => a.id === sure.id)
+    if (item) return { kind: 'artist', item }
+  }
+  else if (sure?.kind === 'album') {
+    const item = r.albums.find(a => a.id === sure.id)
+    if (item) return { kind: 'album', item }
+  }
   const needle = norm(q.value)
   const artist = r.artists.find(a => norm(a.name) === needle)
   if (artist) return { kind: 'artist', item: artist }
@@ -142,7 +152,8 @@ const descriptive = computed(() => {
   const r = results.value
   if (!r || scope.value === 'library' || words.value < 2) return false
   const needle = norm(q.value)
-  const strong = r.artists.some(a => norm(a.name) === needle)
+  const strong = !!r.top
+    || r.artists.some(a => norm(a.name) === needle)
     || r.albums.some(a => norm(a.title) === needle)
     || r.tracks.some((tr) => {
       const title = norm(tr.title)
@@ -153,6 +164,7 @@ const descriptive = computed(() => {
 // Запрос похож на строчку песни: в кавычках или от четырёх слов — «По словам песни»
 const lyricLike = computed(() => /^\s*["«“„']/.test(q.value) || q.value.split(/\s+/).filter(Boolean).length >= 4)
 const soundLink = computed(() => filterLink('sound'))
+const suggestionLink = computed(() => router.resolve({ query: { ...route.query, q: results.value?.suggestion ?? q.value } }).fullPath)
 const ctx = computed(() => ({ type: 'search' as const, id: q.value, title: t('resultsFor', { q: q.value }) }))
 const { playArtist, playAlbum, isPlayingContext } = usePlayActions()
 
@@ -340,6 +352,11 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
     </UiEmptyState>
 
     <div v-else-if="results" class="results" :class="{ 'is-stale': state === 'loading' }" @click.capture="onResultClick">
+      <!-- Нашлось только похожее: одна строка, без рамок -->
+      <p v-if="results.suggestion" class="hint">
+        {{ t('didYouMean') }}
+        <NuxtLink :to="suggestionLink" class="hint__link">{{ results.suggestion }}</NuxtLink>
+      </p>
       <!-- Всё -->
       <template v-if="type === 'all'">
         <template v-if="ui.isPhone">
@@ -469,6 +486,9 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
 .results.is-stale { opacity: 0.6; }
 .results__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 28px 24px; }
 .results__rows { display: flex; flex-direction: column; }
+.hint { margin: -12px 0 -16px; font-size: var(--fs-body); color: var(--text-2); }
+.hint__link { font-weight: 600; color: var(--text-1); }
+.hint__link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .lead { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.7fr); gap: 32px; }
 .lead .block__head { margin-bottom: 12px; }
@@ -547,6 +567,8 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
   .results :deep(.shelf__head) { align-items: center; }
   .results__rows { padding: 0 8px; }
   .results__list { padding: 0 6px; }
+  .hint { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-height: 44px; margin: -8px 0 -16px; padding: 0 16px; }
+  .hint__link { display: inline-flex; align-items: center; min-height: 44px; }
 }
 </style>
 
@@ -562,6 +584,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
     "nothingFor": "По запросу «{q}»",
     "searchEverywhere": "Искать везде",
     "top": "Лучшее совпадение",
+    "didYouMean": "Возможно, вы искали",
     "track": "Трек",
     "tracks": "Треки",
     "artists": "Артисты",
@@ -584,6 +607,7 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
     "nothingFor": "For “{q}”",
     "searchEverywhere": "Search everywhere",
     "top": "Top result",
+    "didYouMean": "Did you mean",
     "track": "Song",
     "tracks": "Songs",
     "artists": "Artists",

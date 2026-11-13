@@ -636,6 +636,7 @@ dependencies = [
  "chrono",
  "dalywave-protocol",
  "dalywave-taste",
+ "dalywave-textmatch",
  "dalywave-transitions",
  "dotenvy",
  "futures-util",
@@ -678,6 +679,13 @@ dependencies = [
  "base64 0.22.1",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "dalywave-textmatch"
+version = "0.1.0"
+dependencies = [
+ "unicode-normalization",
 ]
 
 [[package]]

@@ -14,7 +14,7 @@ use rusqlite::{OptionalExtension, Transaction, params};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{Store, StoreResult, normalize};
+use crate::{Store, StoreResult, normalize, text::search_columns};
 
 /// Что изменила страница.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -120,10 +120,13 @@ fn apply_rows(
     a: &mut Applied,
 ) -> StoreResult<()> {
     for r in &page.artists {
+        let (search, latin, sound) = search_columns(&r.name);
         a.rows += tx.execute(
-            "INSERT INTO artists (id, rev, deezer_id, name, image, search) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "INSERT INTO artists (id, rev, deezer_id, name, image, search, latin, sound)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
              ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, deezer_id = excluded.deezer_id,
-               name = excluded.name, image = excluded.image, search = excluded.search
+               name = excluded.name, image = excluded.image, search = excluded.search,
+               latin = excluded.latin, sound = excluded.sound
              WHERE excluded.rev >= artists.rev",
             params![
                 r.id.to_string(),
@@ -131,21 +134,24 @@ fn apply_rows(
                 r.deezer_id,
                 r.name,
                 r.image.as_ref().map(json).transpose()?,
-                normalize(&r.name)
+                search,
+                latin,
+                sound
             ],
         )?;
     }
     for r in &page.albums {
+        let (search, latin, sound) = search_columns(&r.title);
         a.rows += tx.execute(
             "INSERT INTO albums (id, rev, deezer_id, title, artist_id, record_type, release_date, label, genres,
-                                 explicit, tracks_count, duration_ms, image, palette, search)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+                                 explicit, tracks_count, duration_ms, image, palette, search, latin, sound)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
              ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, deezer_id = excluded.deezer_id,
                title = excluded.title, artist_id = excluded.artist_id, record_type = excluded.record_type,
                release_date = excluded.release_date, label = excluded.label, genres = excluded.genres,
                explicit = excluded.explicit, tracks_count = excluded.tracks_count,
                duration_ms = excluded.duration_ms, image = excluded.image, palette = excluded.palette,
-               search = excluded.search
+               search = excluded.search, latin = excluded.latin, sound = excluded.sound
              WHERE excluded.rev >= albums.rev",
             params![
                 r.id.to_string(),
@@ -162,20 +168,24 @@ fn apply_rows(
                 r.duration_ms,
                 r.image.as_ref().map(json).transpose()?,
                 r.palette.as_ref().map(json).transpose()?,
-                normalize(&r.title)
+                search,
+                latin,
+                sound
             ],
         )?;
     }
     for r in &page.tracks {
+        let (search, latin, sound) = search_columns(&format!("{} {}", r.title, r.version));
         let n = tx.execute(
             "INSERT INTO tracks (id, rev, deezer_id, title, version, album_id, disc_number, track_position,
-                                 duration_ms, explicit, isrc, recording_id, search)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+                                 duration_ms, explicit, isrc, recording_id, search, latin, sound)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
              ON CONFLICT (id) DO UPDATE SET rev = excluded.rev, deezer_id = excluded.deezer_id,
                title = excluded.title, version = excluded.version, album_id = excluded.album_id,
                disc_number = excluded.disc_number, track_position = excluded.track_position,
                duration_ms = excluded.duration_ms, explicit = excluded.explicit, isrc = excluded.isrc,
-               recording_id = excluded.recording_id, search = excluded.search
+               recording_id = excluded.recording_id, search = excluded.search, latin = excluded.latin,
+               sound = excluded.sound
              WHERE excluded.rev >= tracks.rev",
             params![
                 r.id.to_string(),
@@ -190,7 +200,9 @@ fn apply_rows(
                 r.explicit,
                 r.isrc,
                 r.recording_id.map(|i| i.to_string()),
-                normalize(&format!("{} {}", r.title, r.version))
+                search,
+                latin,
+                sound
             ],
         )?;
         if n > 0 {

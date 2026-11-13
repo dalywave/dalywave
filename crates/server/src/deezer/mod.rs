@@ -3,7 +3,11 @@
 
 pub mod types;
 
-use std::{collections::VecDeque, time::Duration};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Mutex as SyncMutex,
+    time::Duration,
+};
 
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -23,6 +27,9 @@ const CODE_QUOTA: i64 = 4;
 const CODE_BUSY: i64 = 700;
 /// Нет такого объекта.
 const CODE_NO_DATA: i64 = 800;
+/// Сколько живёт ответ поиска в памяти: набор запроса по буквам и повторы не тратят лимит Deezer.
+const SEARCH_TTL: Duration = Duration::from_secs(600);
+const SEARCH_CACHE_MAX: usize = 1000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DeezerError {
@@ -84,6 +91,8 @@ pub struct Deezer {
     quota_backoff: Duration,
     /// Первая пауза при перегрузке и сбое сети; дальше удваивается
     retry_backoff: Duration,
+    /// Ответы поиска для [`Self::search`]: путь запроса → когда получен и что пришло
+    searches: SyncMutex<HashMap<String, (Instant, Value)>>,
 }
 
 impl Deezer {
@@ -103,6 +112,7 @@ impl Deezer {
             },
             quota_backoff: WINDOW,
             retry_backoff: Duration::from_millis(500),
+            searches: SyncMutex::new(HashMap::new()),
         })
     }
 
@@ -259,6 +269,46 @@ impl Deezer {
 
     pub async fn search_artists(&self, q: &str, limit: u32) -> Result<Vec<Artist>, DeezerError> {
         let page: Page<Artist> = self.get(&search_path("artist", q, limit)).await?;
+        Ok(page.data)
+    }
+
+    /// Поиск для людей (`kind` — track, album, artist): ответ помнится [`SEARCH_TTL`]. «Не найдено» —
+    /// пустой список.
+    pub async fn search<T: DeserializeOwned>(
+        &self,
+        kind: &str,
+        q: &str,
+        limit: u32,
+    ) -> Result<Vec<T>, DeezerError> {
+        let path = search_path(kind, q, limit);
+        let cached = {
+            let cache = self.searches.lock().unwrap_or_else(|e| e.into_inner());
+            cache
+                .get(&path)
+                .filter(|(at, _)| at.elapsed() < SEARCH_TTL)
+                .map(|(_, v)| v.clone())
+        };
+        let value = match cached {
+            Some(v) => v,
+            None => {
+                let v = match self.get::<Value>(&path).await {
+                    Ok(v) => v,
+                    Err(DeezerError::NotFound) => serde_json::json!({ "data": [] }),
+                    Err(e) => return Err(e),
+                };
+                let mut cache = self.searches.lock().unwrap_or_else(|e| e.into_inner());
+                if cache.len() >= SEARCH_CACHE_MAX {
+                    cache.retain(|_, (at, _)| at.elapsed() < SEARCH_TTL);
+                    if cache.len() >= SEARCH_CACHE_MAX {
+                        cache.clear();
+                    }
+                }
+                cache.insert(path.clone(), (Instant::now(), v.clone()));
+                v
+            }
+        };
+        let page: Page<T> = serde_json::from_value(value)
+            .map_err(|e| DeezerError::Decode(format!("{path}: {e}")))?;
         Ok(page.data)
     }
 

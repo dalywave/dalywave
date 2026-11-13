@@ -273,6 +273,21 @@ pub struct SearchResults {
     pub tracks: Vec<Track>,
     pub albums: Vec<AlbumSummary>,
     pub artists: Vec<ArtistSummary>,
+    /// Лучшее совпадение, в котором поиск уверен: то же имя, та же запись другим алфавитом или
+    /// раскладкой, то же звучание («капсайз» — Capsize). Нет — интерфейс выбирает сам.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top: Option<SearchTop>,
+    /// «Возможно, вы искали …»: нашлось только похожее (опечатка), уверенного совпадения нет.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suggestion: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchTop {
+    /// `artist` или `album` — из тех, что в ответе.
+    pub kind: DeezerKind,
+    pub id: Uuid,
 }
 
 /// Что искать в Deezer по его id.

@@ -3841,6 +3841,11 @@ export interface components {
             plays: number;
         };
         /**
+         * @description Что искать в Deezer по его id.
+         * @enum {string}
+         */
+        DeezerKind: "artist" | "album" | "track";
+        /**
          * @description Что понято из описания: по этому собирается плейлист. Отдаётся в предпросмотре и приходит обратно
          *     в «Ещё в том же духе» и при сохранении — повторно запрос не разбирается.
          */
@@ -6635,10 +6640,19 @@ export interface components {
             albums: components["schemas"]["AlbumSummary"][];
             artists: components["schemas"]["ArtistSummary"][];
             scope: components["schemas"]["SearchScope"];
+            /** @description «Возможно, вы искали …»: нашлось только похожее (опечатка), уверенного совпадения нет. */
+            suggestion?: string | null;
+            top?: components["schemas"]["SearchTop"] | null;
             tracks: components["schemas"]["Track"][];
         };
         /** @enum {string} */
         SearchScope: "catalog" | "library";
+        SearchTop: {
+            /** Format: uuid */
+            id: string;
+            /** @description `artist` или `album` — из тех, что в ответе. */
+            kind: components["schemas"]["DeezerKind"];
+        };
         /**
          * @description От чего радио.
          * @enum {string}
@@ -8052,8 +8066,6 @@ export interface components {
         YoutubeImportRequest: {
             url: string;
         };
-        /** @description Схемы нет в OpenAPI сервера — заглушка scripts/api-types.mjs */
-        DeezerKind: string;
     };
     responses: never;
     parameters: never;
@@ -14675,7 +14687,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Найденное: треки, альбомы, артисты */
+            /** @description Найденное: треки, альбомы, артисты. Находит и по русской записи латинского имени, и в другой раскладке, и с опечаткой */
             200: {
                 headers: {
                     [name: string]: unknown;

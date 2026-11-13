@@ -139,15 +139,50 @@ ALTER TABLE playlist_items ADD COLUMN added_by TEXT;
 DELETE FROM meta WHERE key = 'sync.cursor';
 ";
 
-const MIGRATIONS: &[&str] = &[V1, V2, V3, V4];
+/// Поиск «как слышится» (как на сервере): латиница и ключ звучания названий. Уже синхронизированное
+/// заполняется сразу при обновлении ([`fill_search_keys`]), без новой синхронизации.
+const V5: &str = "
+ALTER TABLE artists ADD COLUMN latin TEXT NOT NULL DEFAULT '';
+ALTER TABLE artists ADD COLUMN sound TEXT NOT NULL DEFAULT '';
+ALTER TABLE albums ADD COLUMN latin TEXT NOT NULL DEFAULT '';
+ALTER TABLE albums ADD COLUMN sound TEXT NOT NULL DEFAULT '';
+ALTER TABLE tracks ADD COLUMN latin TEXT NOT NULL DEFAULT '';
+ALTER TABLE tracks ADD COLUMN sound TEXT NOT NULL DEFAULT '';
+";
+
+const MIGRATIONS: &[&str] = &[V1, V2, V3, V4, V5];
 
 pub fn migrate(conn: &Connection) -> rusqlite::Result<()> {
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     for (i, sql) in MIGRATIONS.iter().enumerate().skip(version as usize) {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch(sql)?;
+        if i + 1 == 5 {
+            fill_search_keys(&tx)?;
+        }
         tx.pragma_update(None, "user_version", (i + 1) as i64)?;
         tx.commit()?;
+    }
+    Ok(())
+}
+
+fn fill_search_keys(conn: &Connection) -> rusqlite::Result<()> {
+    for (table, text) in [
+        ("artists", "name"),
+        ("albums", "title"),
+        ("tracks", "title || ' ' || version"),
+    ] {
+        let rows = conn
+            .prepare(&format!("SELECT id, {text} FROM {table}"))?
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut update = conn.prepare(&format!(
+            "UPDATE {table} SET latin = ?2, sound = ?3 WHERE id = ?1"
+        ))?;
+        for (id, name) in rows {
+            let (_, latin, sound) = crate::text::search_columns(&name);
+            update.execute(rusqlite::params![id, latin, sound])?;
+        }
     }
     Ok(())
 }

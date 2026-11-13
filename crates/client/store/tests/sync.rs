@@ -206,6 +206,63 @@ fn applies_library_and_reads_it_back_in_api_types() {
         .unwrap();
     assert_eq!(s.tracks.len(), 2, "треки артиста находятся по его имени");
     assert_eq!(s.albums.len(), 1);
+
+    // Как слышится, не в той раскладке, с опечаткой — Lowborn в лучшем результате
+    for q in ["лоуборн", "дщцищкт", "lowbron"] {
+        let s = store.search(LocalSearch { q, limit: 10 }).unwrap();
+        assert_eq!(s.artists[0].name, "Lowborn", "{q}");
+        assert_eq!(s.tracks.len(), 2, "{q}");
+    }
+    let s = store
+        .search(LocalSearch {
+            q: "лоуборн",
+            limit: 10,
+        })
+        .unwrap();
+    let top = s.top.expect("лучший результат");
+    assert_eq!(top.id, s.artists[0].id);
+    assert!(s.suggestion.is_none());
+    // Опечатка — уверенности нет: подсказка вместо лучшего результата
+    let s = store
+        .search(LocalSearch {
+            q: "lowbron",
+            limit: 10,
+        })
+        .unwrap();
+    assert!(s.top.is_none());
+    assert_eq!(s.suggestion.as_deref(), Some("Lowborn"));
+    // Короткое и непохожее — ничего лишнего
+    let s = store.search(LocalSearch { q: "qz", limit: 10 }).unwrap();
+    assert!(s.tracks.is_empty() && s.artists.is_empty() && s.albums.is_empty());
+}
+
+#[test]
+fn search_keys_fill_on_upgrade() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    {
+        let mut store = Store::open(&path).unwrap();
+        store.apply(&base_page()).unwrap();
+    }
+    // База из прошлой версии приложения: колонок звучания ещё не было
+    {
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "ALTER TABLE artists DROP COLUMN latin; ALTER TABLE artists DROP COLUMN sound;
+             ALTER TABLE albums DROP COLUMN latin; ALTER TABLE albums DROP COLUMN sound;
+             ALTER TABLE tracks DROP COLUMN latin; ALTER TABLE tracks DROP COLUMN sound;
+             PRAGMA user_version = 4;",
+        )
+        .unwrap();
+    }
+    let store = Store::open(&path).unwrap();
+    let s = store
+        .search(LocalSearch {
+            q: "лоуборн",
+            limit: 10,
+        })
+        .unwrap();
+    assert_eq!(s.artists[0].name, "Lowborn");
 }
 
 #[test]

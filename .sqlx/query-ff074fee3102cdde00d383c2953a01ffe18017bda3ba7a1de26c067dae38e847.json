@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH docs AS (\n                   SELECT al.id, al.title, a.name AS artist,\n                          al.latin || ' ' || a.latin AS latin, al.sound || ' ' || a.sound AS sound\n                   FROM albums al JOIN artists a ON a.id = al.artist_id\n                   WHERE EXISTS (SELECT 1 FROM saved_albums s WHERE s.user_id = $1 AND s.album_id = al.id)\n                      OR EXISTS (SELECT 1 FROM tracks t JOIN recordings r ON r.id = t.recording_id\n                                 WHERE t.album_id = al.id AND r.audio_status = 'ready')\n               )\n               SELECT d.id AS \"id!\", d.title AS \"title!\", d.artist AS \"artist!\" FROM docs d\n               WHERE EXISTS (SELECT 1 FROM unnest($2::text[]) f\n                             WHERE (SELECT bool_and(strpos(d.latin, w) > 0 OR word_similarity(w, d.latin) >= 0.6)\n                                    FROM unnest(string_to_array(f, ' ')) w WHERE w <> ''))\n                  OR EXISTS (SELECT 1 FROM unnest($3::text[]) k WHERE strpos(' ' || d.sound, ' ' || k) > 0)\n               ORDER BY word_similarity($4, d.latin) DESC, d.id\n               LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "artist!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artists",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray",
+        "TextArray",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ff074fee3102cdde00d383c2953a01ffe18017bda3ba7a1de26c067dae38e847"
+}

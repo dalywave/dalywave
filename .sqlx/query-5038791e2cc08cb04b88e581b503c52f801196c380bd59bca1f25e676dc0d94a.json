@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH docs AS (\n                   SELECT t.id,\n                          t.title || CASE WHEN t.title_version <> '' THEN ' ' || t.title_version ELSE '' END AS title,\n                          t.latin || ' ' || COALESCE(string_agg(a.latin, ' '), '') AS latin,\n                          t.sound || ' ' || COALESCE(string_agg(a.sound, ' '), '') AS sound,\n                          COALESCE(array_agg(a.name ORDER BY ta.position) FILTER (WHERE a.id IS NOT NULL), '{}') AS artists\n                   FROM tracks t\n                   LEFT JOIN recordings r ON r.id = t.recording_id\n                   LEFT JOIN track_artists ta ON ta.track_id = t.id\n                   LEFT JOIN artists a ON a.id = ta.artist_id\n                   WHERE r.audio_status = 'ready'\n                      OR EXISTS (SELECT 1 FROM liked_tracks l WHERE l.user_id = $1 AND l.track_id = t.id)\n                      OR EXISTS (SELECT 1 FROM saved_albums s WHERE s.user_id = $1 AND s.album_id = t.album_id)\n                   GROUP BY t.id\n               )\n               SELECT d.id AS \"id!\", d.title AS \"title!\", d.artists AS \"artists!\" FROM docs d\n               WHERE EXISTS (SELECT 1 FROM unnest($2::text[]) f\n                             WHERE (SELECT bool_and(strpos(d.latin, w) > 0 OR word_similarity(w, d.latin) >= 0.6)\n                                    FROM unnest(string_to_array(f, ' ')) w WHERE w <> ''))\n                  OR EXISTS (SELECT 1 FROM unnest($3::text[]) k WHERE strpos(' ' || d.sound, ' ' || k) > 0)\n               ORDER BY word_similarity($4, d.latin) DESC, d.id\n               LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "artists!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray",
+        "TextArray",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "5038791e2cc08cb04b88e581b503c52f801196c380bd59bca1f25e676dc0d94a"
+}
