@@ -1935,7 +1935,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/party": {
     "/api/overlay": {
         parameters: {
             query?: never;
@@ -1943,7 +1942,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_party"];
         get: operations["info"];
         put?: never;
         post?: never;
@@ -1982,7 +1980,6 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_party"];
         patch?: never;
         trace?: never;
     };
@@ -2000,6 +1997,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/party": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_party"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_party"];
         trace?: never;
     };
     "/api/playlist-folders": {
@@ -3906,7 +3919,6 @@ export interface components {
          * @enum {string}
          */
         ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch" | "tv";
-        ConnectKind: "web" | "laptop" | "desktop" | "phone" | "tablet" | "watch";
         /** @description Устройство вывода звука, о котором сообщает `connect.signal`. */
         ConnectOutput: {
             /** @description `builtin`, `headphones`, `bluetooth`, `airplay`, `usb`, `hdmi`, `other`. */
@@ -13261,7 +13273,6 @@ export interface operations {
             };
         };
     };
-    get_party: {
     info: {
         parameters: {
             query?: never;
@@ -13271,20 +13282,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Идёт ли вечеринка и её настройки */
             /** @description Ссылка на оверлей; `link: null` — ещё не создана */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Party"];
                     "application/json": components["schemas"]["OverlayInfo"];
                 };
             };
         };
     };
-    update_party: {
     disable: {
         parameters: {
             query?: never;
@@ -13312,11 +13320,6 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PartyPatch"];
-            };
-        };
-        responses: {
-            /** @description Вечеринка с новыми настройками. Включение открывает «Слушать вместе» (QR для гостей) и продлевает вечеринку на 12 часов; всем устройствам — `party.changed` */
                 "application/json": components["schemas"]["OverlayPatch"];
             };
         };
@@ -13327,7 +13330,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Party"];
                     "application/json": components["schemas"]["OverlayInfo"];
                 };
             };
@@ -13422,6 +13424,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_party: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Идёт ли вечеринка и её настройки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Party"];
+                };
+            };
+        };
+    };
+    update_party: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartyPatch"];
+            };
+        };
+        responses: {
+            /** @description Вечеринка с новыми настройками. Включение открывает «Слушать вместе» (QR для гостей) и продлевает вечеринку на 12 часов; всем устройствам — `party.changed` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Party"];
                 };
             };
         };
