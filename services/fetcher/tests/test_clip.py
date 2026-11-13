@@ -17,6 +17,7 @@ from dalywave_fetcher.clip import (
     clip_start_ms,
     encode_small,
     error_code,
+    is_still,
     probe,
     search_queries,
 )
@@ -90,6 +91,22 @@ def test_cyrillic_artist_and_channel() -> None:
     assert best is not None
     assert search_queries("Мотылёк", ["Макс Корж"])[1].endswith("клип")
     assert search_queries("Blinding Lights", ["The Weeknd"])[1].endswith("music video")
+
+
+def test_fan_videos_are_not_clips() -> None:
+    # Живой прогон: на «ELA DANCA (Slowed)» нашёлся только AMV — это не официальный клип
+    items = [
+        item("a", "ELA DANCA (Slowed) - Sayfalse, 5opka, MellSher [AMV]", "Edits", 150, 50_000),
+        item("f", "Sayfalse - ELA DANCA (Slowed) fan made video", "Fan", 150, 50_000),
+    ]
+    best, _ = choose(items, "ELA DANCA (Slowed)", ["Sayfalse"], 148)
+    assert best is None
+
+
+def test_a_still_picture_is_not_a_clip() -> None:
+    # Живой прогон: «I Want Out» нашёлся роликом-обложкой — 23 КБ на 12 секунд
+    assert is_still(23_556, 12_000)
+    assert not is_still(629_119, 12_000)
 
 
 def test_a_live_song_title_keeps_live_videos() -> None:

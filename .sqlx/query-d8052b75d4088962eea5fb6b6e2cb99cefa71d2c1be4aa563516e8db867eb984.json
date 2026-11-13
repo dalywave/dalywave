@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO album_motion (album_id, state, apple_album_id, checked_at, error)\n         VALUES ($1, 'none', $2, now() - make_interval(days => $3), $4)\n         ON CONFLICT (album_id) DO UPDATE SET state = 'none', apple_album_id = EXCLUDED.apple_album_id,\n             square_key = NULL, tall_key = NULL, size_bytes = 0, checked_at = EXCLUDED.checked_at,\n             error = EXCLUDED.error",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d8052b75d4088962eea5fb6b6e2cb99cefa71d2c1be4aa563516e8db867eb984"
+}

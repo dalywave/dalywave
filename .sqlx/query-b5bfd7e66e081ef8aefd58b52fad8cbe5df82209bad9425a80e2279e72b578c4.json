@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, duration_ms,\n                                          clip_start_ms, video_duration_ms, width, height, checked_at, last_used_at)\n                 VALUES ($1, 'ready', $2, $3, $4, $5, $6, $7, $8, $9, now(), now())\n                 ON CONFLICT (track_id) DO UPDATE SET state = 'ready', video_id = EXCLUDED.video_id,\n                     storage_key = EXCLUDED.storage_key, size_bytes = EXCLUDED.size_bytes,\n                     duration_ms = EXCLUDED.duration_ms, clip_start_ms = EXCLUDED.clip_start_ms,\n                     video_duration_ms = EXCLUDED.video_duration_ms, width = EXCLUDED.width,\n                     height = EXCLUDED.height, checked_at = now(), last_used_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b5bfd7e66e081ef8aefd58b52fad8cbe5df82209bad9425a80e2279e72b578c4"
+}

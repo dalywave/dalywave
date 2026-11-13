@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM track_clips WHERE track_id IN (\n             SELECT track_id FROM (\n                 SELECT c.track_id, (sum(c.size_bytes) OVER (\n                     ORDER BY EXISTS (SELECT 1 FROM liked_tracks l WHERE l.track_id = c.track_id) DESC,\n                              c.last_used_at DESC, c.track_id DESC))::bigint AS kept\n                 FROM track_clips c WHERE c.state = 'ready') x\n             WHERE x.kept > $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b47e9e81f51699bffe6880b62170862d1dde23de88174fc80903a04ef43d6bfa"
+}

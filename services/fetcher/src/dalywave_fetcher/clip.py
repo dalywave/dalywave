@@ -59,12 +59,21 @@ CRF = 27
 CRF_STEP = 4
 TARGET_BYTES = 2 * 1024 * 1024
 MIN_TITLE_SIMILARITY = 0.82
+# Меньше стольких байт на секунду после сжатия — в кадре почти ничего не движется: это обложка
+# под звук, а не клип (живой клип 480p — 40–100 КБ/с, неподвижная картинка — 2–5 КБ/с).
+STILL_BYTES_PER_S = 12_000
+
+
+def is_still(size_bytes: int, length_ms: int) -> bool:
+    return size_bytes < STILL_BYTES_PER_S * max(1, length_ms) / 1000
+
 
 # Слова, которые выдают не клип: текст, звук, концерт, реакция… Мимо, если их нет в названии трека.
 _NOT_A_CLIP = re.compile(
     r"\b(?:lyrics?|lyric\s+video|letra|official\s+audio|audio|visuali[sz]er|teaser|trailer|"
     r"snippet|preview|reaction|react|karaoke|cover|live|remix|sped\s*up|slowed|nightcore|"
-    r"текст|слова|караоке|кавер|реакция|лайв|тизер|1\s+hour|10\s+hours?)\b"
+    r"amv|gmv|fan\s*made|fanmade|fan\s+video|edit|"
+    r"текст|слова|караоке|кавер|реакция|лайв|тизер|фан|1\s+hour|10\s+hours?)\b"
 )
 _OFFICIAL = re.compile(
     r"\b(?:official\s+(?:music\s+)?video|music\s+video|official\s+mv|mv|official\s+clip|"
@@ -437,6 +446,10 @@ class ClipMaker:
             info = probe(out)
             size = out.stat().st_size
             details["crf"] = crf
+            if is_still(size, length_ms):
+                # Неподвижная картинка под звук (обложка на канале артиста) — не клип
+                details["still"] = {"videoId": best.video_id, "sizeBytes": size}
+                return {"status": "none", "details": details}
             if keep is not None:
                 keep.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(out, keep)

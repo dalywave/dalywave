@@ -733,11 +733,13 @@ onBeforeUnmount(() => {
 /* Фон из живой обложки: приглушён и растворяется к управлению — строки читаются поверх */
 .pp__backdrop {
   position: absolute;
-  inset: 0;
+  /* С запасом: размытые края не темнеют */
+  inset: -16px;
   pointer-events: none;
-  opacity: 0.34;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 88%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 88%);
+  opacity: 0.3;
+  filter: blur(8px) saturate(1.15);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 70%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 70%);
 }
 .pp__backdrop :deep(.mc) { border-radius: 0; }
 .pp-backdrop-enter-active, .pp-backdrop-leave-active { transition: opacity var(--dur-4) var(--ease-out); }

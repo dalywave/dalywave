@@ -203,7 +203,7 @@ const language = computed({
       <SettingsRow :title="t('motion')" :description="t('motionDesc')">
         <UiSwitch v-model="prefs.motion" :label="t('motion')" hide-label />
       </SettingsRow>
-      <SettingsRow v-if="prefs.motion && (ui.isTouchUi || offline.available)" :title="t('motionWifi')" indent>
+      <SettingsRow v-if="prefs.motion && (ui.isTouchUi || offline.available)" :title="t('motionWifi')">
         <UiSwitch v-model="prefs.motionWifiOnly" :label="t('motionWifi')" hide-label />
       </SettingsRow>
       <!-- Планшет: «Сейчас играет» колонкой справа, когда лежит горизонтально. Своя для устройства -->

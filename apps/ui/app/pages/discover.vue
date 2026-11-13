@@ -54,7 +54,8 @@ let loadingMore = false
 function push(items: { track: Track, reason: string }[]) {
   const seen = new Set(cards.value.map(c => c.track.id))
   for (const it of items) {
-    if (seen.has(it.track.id)) continue
+    // Лента — о новом: любимое сюда не попадает, даже если волна его подмешала
+    if (seen.has(it.track.id) || library.isLiked(it.track)) continue
     seen.add(it.track.id)
     cards.value.push({ track: it.track, reason: it.reason, clip: null, asked: 0 })
   }
@@ -352,7 +353,8 @@ const wavebox = ref<HTMLElement | null>(null)
 <template>
   <div class="dv-page">
   <Teleport to="body">
-  <div class="dv" :class="{ 'dv--touch': ui.isTouchUi }">
+  <!-- Лента всегда тёмная, как кадр кино: тёмный остров и в светлой теме -->
+  <div class="dv scheme-dark" :class="{ 'dv--touch': ui.isPhone }">
     <header class="dv__head">
       <UiIconButton :icon="ui.isTouchUi ? 'ph:caret-down' : 'ph:x'" :label="t('close')" :kbd="ui.isTouchUi ? undefined : ['Esc']" size="lg" tone="glass" side="right" @click="close" />
       <h1 class="dv__title">{{ t('title') }}</h1>
@@ -393,7 +395,7 @@ const wavebox = ref<HTMLElement | null>(null)
               <MusicLoopVideo :src="mediaOf(c).src" :active="i === index" />
             </div>
             <div v-else class="dc__cover">
-              <div v-if="i === index" class="dc__wave"><MusicWaveCanvas layout="stage-phone" :box="wavebox" /></div>
+              <div v-if="i === index" class="dc__wave"><MusicWaveCanvas layout="stage-phone" :box="wavebox" dark /></div>
               <div :ref="el => { if (i === index) wavebox = el as HTMLElement | null }" class="dc__art">
                 <MusicCoverArt :image="c.track.album?.image" size="large" :alt="c.track.album?.title ?? ''" />
               </div>
@@ -414,7 +416,8 @@ const wavebox = ref<HTMLElement | null>(null)
             <UiIconButton
               :icon="library.isLiked(c.track) ? 'ph:heart-fill' : 'ph:heart'"
               :label="library.isLiked(c.track) ? t('unlike') : t('like')"
-              :tone="library.isLiked(c.track) ? 'liked' : 'glass'"
+              tone="glass"
+              :class="{ dc__liked: library.isLiked(c.track) }"
               :pressed="library.isLiked(c.track)"
               size="xl"
               side="left"
@@ -488,7 +491,7 @@ const wavebox = ref<HTMLElement | null>(null)
   user-select: none;
   cursor: pointer;
 }
-/* Телефон и iPad — на весь экран; компьютер — карточка 9:16 посередине */
+/* Телефон — на весь экран; iPad и компьютер — карточка 9:16 посередине */
 .dc__frame {
   position: relative;
   width: 100%;
@@ -508,7 +511,8 @@ const wavebox = ref<HTMLElement | null>(null)
 .dc__backdrop img { width: 100%; height: 100%; object-fit: cover; filter: blur(48px) saturate(1.25) brightness(0.55); transform: scale(1.1); }
 
 .dc__media { position: absolute; z-index: 1; overflow: hidden; }
-.dc__media--clip { left: 0; right: 0; top: 50%; aspect-ratio: 16 / 9; transform: translateY(-62%); }
+/* Клип 16:9 — кадрирован до 4:5: крупнее, но без потери половины кадра */
+.dc__media--clip { left: 0; right: 0; top: 50%; aspect-ratio: 4 / 5; transform: translateY(-56%); }
 .dc__media--tall { inset: 0; }
 .dc__media--square { left: 8%; right: 8%; top: 50%; aspect-ratio: 1; transform: translateY(-58%); border-radius: var(--r-3); }
 .dc__poster { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: inherit; }
@@ -551,6 +555,7 @@ const wavebox = ref<HTMLElement | null>(null)
   flex-direction: column;
   gap: 14px;
 }
+.dc__rail :deep(.dc__liked) { color: var(--accent); }
 .dc__progress {
   position: absolute;
   left: 18px;
