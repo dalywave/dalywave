@@ -107,12 +107,8 @@ function pinSide() {
   void ui.collapsePlayer()
 }
 
-const quality = computed(() => {
-  if (player.source?.preview) return t('player.preview')
-  if (!player.source) return null
-  return qualityLabel(player.source) ?? t('player.quality')
-})
-const bpm = computed(() => (player.source?.bpm ? `${Math.round(player.source.bpm)} BPM` : null))
+// Кодек и битрейт — техническое: они в «⋯ → О треке» и в админке. В плеере — только «превью»: трек оборвётся
+const preview = computed(() => (player.source?.preview ? t('player.preview') : null))
 
 const mood = computed({
   get: () => player.wave.mood,
@@ -311,8 +307,7 @@ onBeforeUnmount(() => {
           <MusicConnectChip class="fp__connect" />
           <FriendsPrivateChip class="fp__connect" />
           <div class="fp__chips">
-            <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
-            <UiBadge v-if="bpm" variant="meta">{{ bpm }}</UiBadge>
+            <UiBadge v-if="preview" variant="quality" icon="ph:waveform">{{ preview }}</UiBadge>
           </div>
         </div>
         <div v-if="player.waveActive" class="fp__reactions">
@@ -404,7 +399,7 @@ onBeforeUnmount(() => {
                         <MusicVersionSwitch size="md" />
                       </div>
                     </div>
-                    <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
+                    <UiBadge v-if="preview" variant="quality" icon="ph:waveform">{{ preview }}</UiBadge>
                     <span class="pp__like">
                       <UiIconButton v-if="!player.modesAvailable" icon="ph:thumbs-down" :label="t('player.dislike')" size="lg" tone="solid" :tooltip="false" @click="player.dislike()" />
                       <UiIconButton :icon="liked ? 'ph:heart-fill' : 'ph:heart'" :label="liked ? t('player.unlike') : t('player.like')" size="lg" :tone="liked ? 'liked' : 'solid'" :pressed="liked" :tooltip="false" @click="player.toggleLike()" />
@@ -485,7 +480,7 @@ onBeforeUnmount(() => {
                     <MusicVersionSwitch size="md" />
                   </div>
                 </div>
-                <UiBadge v-if="quality" variant="quality" icon="ph:waveform">{{ quality }}</UiBadge>
+                <UiBadge v-if="preview" variant="quality" icon="ph:waveform">{{ preview }}</UiBadge>
                 <!-- Сердце у названия, как в Spotify; в волне рядом — «не нравится». В ряду кнопок — перемешивание и повтор -->
                 <span class="pp__like">
                   <UiIconButton v-if="!player.modesAvailable" icon="ph:thumbs-down" :label="t('player.dislike')" size="lg" tone="solid" :tooltip="false" @click="player.dislike()" />

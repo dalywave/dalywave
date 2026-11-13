@@ -7,11 +7,11 @@
 //! (50 запросов за 5 секунд на весь сервер).
 //!
 //! Чарт собирается при обращении, если его нет или он старше [`TTL`]: показывается прежний, а новый
-//! собирается в фоне (один раз на процесс).
+//! собирается в фоне (один сбор на сервер: отметки «собирается» — в его состоянии, [`Refreshing`]).
 
 use std::{
     collections::{HashMap, HashSet},
-    sync::{LazyLock, Mutex},
+    sync::Mutex,
     time::Duration,
 };
 
@@ -295,14 +295,19 @@ pub async fn refresh(
     Ok(tracks.len())
 }
 
-/// Чарты, которые собираются прямо сейчас.
-static REFRESHING: LazyLock<Mutex<HashSet<&'static str>>> = LazyLock::new(Default::default);
+/// Чарты, которые собираются прямо сейчас. Живёт в состоянии сервера, а не в глобальной
+/// переменной: у каждого сервера (и у каждого теста с своей базой) свои отметки.
+#[derive(Default)]
+pub struct Refreshing(Mutex<HashSet<&'static str>>);
 
-pub fn is_refreshing(id: &str) -> bool {
-    REFRESHING
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .contains(id)
+impl Refreshing {
+    fn set(&self) -> std::sync::MutexGuard<'_, HashSet<&'static str>> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    pub fn contains(&self, id: &str) -> bool {
+        self.set().contains(id)
+    }
 }
 
 fn stale(fetched_at: Option<DateTime<Utc>>) -> bool {
@@ -316,13 +321,9 @@ pub fn refresh_if_stale(
     fetched_at: Option<DateTime<Utc>>,
 ) -> bool {
     if !stale(fetched_at) {
-        return is_refreshing(def.id);
+        return st.info.charts.contains(def.id);
     }
-    if !REFRESHING
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .insert(def.id)
-    {
+    if !st.info.charts.set().insert(def.id) {
         return true;
     }
     let st = st.clone();
@@ -331,10 +332,7 @@ pub fn refresh_if_stale(
             Ok(n) => tracing::info!(chart = def.id, tracks = n, "chart refreshed"),
             Err(e) => tracing::warn!(chart = def.id, error = %e, "could not refresh a chart"),
         }
-        REFRESHING
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(def.id);
+        st.info.charts.set().remove(def.id);
     });
     true
 }
@@ -415,7 +413,8 @@ pub async fn detail(
     user: Uuid,
 ) -> Result<ChartDetail, RefreshError> {
     let mut row = rows(&st.db).await?.remove(def.id);
-    if row.is_none() && !matches!(def.source, Source::Apple(_)) && !is_refreshing(def.id) {
+    if row.is_none() && !matches!(def.source, Source::Apple(_)) && !st.info.charts.contains(def.id)
+    {
         refresh(&st.db, &st.deezer, &st.info.apple, def).await?;
         row = rows(&st.db).await?.remove(def.id);
     }

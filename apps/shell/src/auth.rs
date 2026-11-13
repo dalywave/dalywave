@@ -92,7 +92,8 @@ impl Pending {
 pub struct Auth {
     pending: Mutex<Option<Pending>>,
     next_id: AtomicU64,
-    http: reqwest::Client,
+    /// Запросы к серверу с токеном устройства (вход, выход, выгрузка медиатеки)
+    pub(crate) http: reqwest::Client,
 }
 
 impl Auth {

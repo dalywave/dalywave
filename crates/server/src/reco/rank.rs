@@ -9,8 +9,8 @@ use chrono::{DateTime, Duration, Utc};
 use dalywave_protocol::{
     catalog::AudioStatus,
     wave::{
-        Reason, ReasonKind, WaveActivity, WaveCharacter, WaveFeedbackKind, WaveLanguage, WaveMood,
-        WaveSettings,
+        Reason, ReasonKind, SeedKind, WaveActivity, WaveCharacter, WaveFeedbackKind, WaveLanguage,
+        WaveMood, WaveSettings,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,9 @@ const SOUNDTRACK_PENALTY: f32 = 0.5;
 const DAMPER_PENALTY: f32 = 0.6;
 /// Сумма вероятностей «Stage & Screen», при которой трек — точно саундтрек.
 const SCREEN_SURE: f32 = 0.3;
+/// Радио артиста: его собственные треки — плюс столько. Не меньше случайной добавки [`score`]:
+/// иначе при близком звучании соседей (у артиста похожих много) радио могло начаться без него самого.
+const SEED_ARTIST_BONUS: f32 = 0.12;
 
 /// Откуда кандидат: от этого зависит подпись.
 #[derive(Debug, Clone, PartialEq)]
@@ -642,6 +645,18 @@ pub fn score(e: &Entry, ctx: &RankContext, rng: &mut Rng) -> f32 {
     // Радио держится затравки: соседи вкуса — только подмешиваются
     if ctx.seeded() && !e.origin.seeded() {
         s -= 0.5;
+    }
+    if let Origin::Seed {
+        artist: Some(a), ..
+    } = &e.origin
+        && ctx
+            .settings
+            .seed
+            .as_ref()
+            .is_some_and(|seed| seed.kind == SeedKind::Artist)
+        && c.artist_ids.contains(a)
+    {
+        s += SEED_ARTIST_BONUS;
     }
     match ctx.settings.character {
         WaveCharacter::Fav if familiar => s += 0.3,
@@ -1337,6 +1352,45 @@ mod tests {
             ..entry(cand(6, 9), 0.9)
         };
         assert_eq!(reason(&radio, &ctx).text, "Ещё artist 9");
+    }
+
+    #[test]
+    fn artist_radio_keeps_the_artist_above_equal_neighbours() {
+        let radio = |kind| WaveSettings {
+            seed: Some(dalywave_protocol::wave::WaveSeed {
+                kind,
+                id: Some(Uuid::from_u128(9)),
+                text: None,
+            }),
+            ..Default::default()
+        };
+        let seeded = |c: Cand| Entry {
+            origin: Origin::Seed {
+                label: "artist 9".into(),
+                artist: Some(Uuid::from_u128(9)),
+            },
+            ..entry(c, 0.9)
+        };
+        let state = SessionState::default();
+        let artist = radio(SeedKind::Artist);
+        let track = radio(SeedKind::Track);
+        let (own, other) = (seeded(cand(1, 9)), seeded(cand(2, 2)));
+        // Случайная добавка не опускает его трек ниже соседа с тем же сходством — ни при каком зерне
+        for n in 0..200 {
+            let mut a = Rng::new(n);
+            let mut b = Rng::new(n + 1000);
+            assert!(
+                score(&own, &ctx(&artist, &state), &mut a)
+                    > score(&other, &ctx(&artist, &state), &mut b)
+            );
+        }
+        // Радио от трека артиста не перекашивает
+        let mut a = Rng::new(1);
+        let mut b = Rng::new(1);
+        assert_eq!(
+            score(&own, &ctx(&track, &state), &mut a),
+            score(&other, &ctx(&track, &state), &mut b)
+        );
     }
 
     #[test]

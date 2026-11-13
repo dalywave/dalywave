@@ -28,7 +28,10 @@ const toast = useToast()
 const { t } = useI18n({ useScope: 'local' })
 useHead({ title: () => t('title') })
 
-const SETTINGS: WaveSettings = { activity: 'any', character: 'new', mood: 'any', language: 'any' }
+const NEW: WaveSettings = { activity: 'any', character: 'new', mood: 'any', language: 'any' }
+/** «Незнакомое» кончилось (всё недавно показано) — лента продолжается волной «Знакомое и новое» без любимого */
+const MIX: WaveSettings = { ...NEW, character: 'mix' }
+let settings = NEW
 /** Заранее готовим видео стольких карточек вперёд */
 const AHEAD = 8
 /** Дозагрузка ленты, когда до конца осталось меньше */
@@ -65,10 +68,14 @@ async function start() {
   loading.value = true
   failed.value = false
   try {
-    const s = await bridge.wave.start(SETTINGS)
-    session = s.id
-    push(s.queue)
-    if (cards.value.length < 10) await more()
+    for (const next of [NEW, MIX]) {
+      settings = next
+      const s = await bridge.wave.start(settings)
+      session = s.id
+      push(s.queue)
+      if (cards.value.length < 10) await more()
+      if (cards.value.length >= 5) break
+    }
     void refreshVideos()
   }
   catch {
@@ -83,7 +90,14 @@ async function more() {
   if (!session || loadingMore) return
   loadingMore = true
   try {
-    push(await bridge.wave.next(session, SETTINGS, 10, cards.value.map(c => c.track.id)))
+    const before = cards.value.length
+    push(await bridge.wave.next(session, settings, 10, cards.value.map(c => c.track.id)))
+    if (cards.value.length === before && settings === NEW) {
+      settings = MIX
+      const s = await bridge.wave.start(settings)
+      session = s.id
+      push(s.queue)
+    }
   }
   catch {
     // Следующая попытка — при следующем смахивании

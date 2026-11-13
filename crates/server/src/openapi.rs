@@ -7,11 +7,11 @@ use utoipa::{
 };
 
 use crate::routes::{
-    acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe, events,
-    fetcher, friends, home, images, imports, info, jam, library, lyrics, notifications, offline,
-    overlay, playlist_folders, playlist_set, playlists, queue, reco, recognize, rewind, settings,
-    share, sources, stream, sync, system, taste, tv, updates, versions, video, wave, wave_presets,
-    ws,
+    acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe, embed,
+    events, export, fetcher, friends, home, images, imports, info, jam, library, lyrics,
+    notifications, offline, overlay, playlist_folders, playlist_set, playlists, queue, reco,
+    recognize, rewind, settings, share, sources, stream, sync, system, taste, tv, updates,
+    versions, video, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -69,6 +69,12 @@ use crate::routes::{
         catalog::resolve_deezer,
         share::card,
         share::resolve_link,
+        export::export_library,
+        export::export_liked,
+        export::export_playlist,
+        embed::embed_clip,
+        embed::embed_settings,
+        embed::update_embed_settings,
         lyrics::track_lyrics,
         lyrics::search_lyrics,
         info::list_charts,
@@ -280,6 +286,8 @@ use crate::routes::{
         dalywave_protocol::stream::AudioContainer,
         dalywave_protocol::stream::NetworkKind,
         dalywave_protocol::stream::StreamQuality,
+        dalywave_protocol::export::ExportFormat,
+        dalywave_protocol::jobs::EmbedClipPayload,
     )),
     modifiers(&Security),
     tags(

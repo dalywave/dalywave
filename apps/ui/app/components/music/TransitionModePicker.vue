@@ -15,6 +15,8 @@ withDefaults(defineProps<{
   icon?: boolean
   /** Размер значка: sm — нижняя панель большого экрана (с подсказкой), lg — плеер на телефоне */
   size?: 'sm' | 'lg'
+  /** Значок с подписью режима (нижняя панель компьютера) */
+  labeled?: boolean
   /** Галерея: панель раскрыта без всплытия */
   inline?: boolean
   side?: 'top' | 'bottom'
@@ -36,7 +38,7 @@ const { t } = useI18n()
   </div>
   <UiSheet v-else-if="sheet" v-model:open="open" :title="t('transition.title')" :show-title="false" inset>
     <template #trigger>
-      <MusicTransitionModeTrigger :mode="mode" :icon="icon" :size="size" :compact="compact" />
+      <MusicTransitionModeTrigger :mode="mode" :icon="icon" :size="size" :compact="compact" :labeled="labeled" />
     </template>
     <template #head>
       <header class="mode-sheet__head">
@@ -49,7 +51,7 @@ const { t } = useI18n()
   </UiSheet>
   <UiPopover v-else v-model:open="open" :side="side" align="end" :title="t('transition.title')" :width="340">
     <template #trigger>
-      <MusicTransitionModeTrigger :mode="mode" :icon="icon" :size="size" :compact="compact" tooltip />
+      <MusicTransitionModeTrigger :mode="mode" :icon="icon" :size="size" :compact="compact" :labeled="labeled" tooltip />
     </template>
     <MusicTransitionModeOptions v-model:mode="mode" v-model:expressiveness="expressiveness" :web="web" :next-at="nextAt" />
   </UiPopover>
@@ -77,23 +79,52 @@ const { t } = useI18n()
 .mode-chip__icon { font-size: 16px; color: var(--accent); }
 .mode-ib {
   position: relative;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: none;
   width: 44px;
   height: 44px;
   border: 0;
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--text-2);
   transition: color var(--dur-1), background-color var(--dur-1), transform var(--dur-1) var(--ease-out);
 }
+.mode-ib__glyph { position: relative; display: grid; place-items: center; }
 .mode-ib__icon { font-size: 24px; }
+/* Метка режима в углу значка: что сейчас выбрано, не меняя сам значок */
+.mode-ib__mode {
+  position: absolute;
+  right: -8px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  /* Зазор цвета фона отделяет метку от значка */
+  box-shadow: 0 0 0 2px var(--bg);
+  color: var(--bg);
+  font-size: 9px;
+}
 /* Как .ib--sm у соседних кнопок нижней панели: 32 px, значок 18 px */
 .mode-ib--sm { width: 32px; height: 32px; }
 .mode-ib--sm .mode-ib__icon { font-size: 18px; }
-.mode-ib--sm /* data-state у кнопки делят подсказка и панель — открытость берём из aria-expanded */
+.mode-ib--sm .mode-ib__mode { right: -6px; bottom: -5px; width: 11px; height: 11px; font-size: 7px; box-shadow: 0 0 0 1.5px var(--bg); }
+/* С подписью режима: метка не нужна */
+.mode-ib--labeled { width: auto; padding: 0 11px 0 8px; }
+.mode-ib--labeled .mode-ib__mode { display: none; }
+.mode-ib__label { font-size: var(--fs-caption); font-weight: 650; white-space: nowrap; }
+@media (max-width: 1279px) {
+  .mode-ib--labeled { width: 32px; padding: 0; }
+  .mode-ib--labeled .mode-ib__label { display: none; }
+  .mode-ib--labeled .mode-ib__mode { display: grid; }
+}
+/* data-state у кнопки делят подсказка и панель — открытость берём из aria-expanded */
 .mode-ib:hover, .mode-ib[aria-expanded='true'] { color: var(--text-1); background: var(--fill-2); }
 .mode-ib:active { transform: scale(0.92); background: var(--fill-3); }
 .mode-ib:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

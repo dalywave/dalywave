@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT storage_key, length_ms FROM embed_clips WHERE track_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "storage_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "embed_clips",
+            "name": "storage_key"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "length_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "embed_clips",
+            "name": "length_ms"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "fc5f88d867fa9d55f59b85c5fa2105b64eacb3bde0918f86d25f5a8da822e634"
+}

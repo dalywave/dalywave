@@ -416,6 +416,65 @@ pub async fn transcode_aac(input: &Path, output: &Path, kbps: u32) -> Result<(),
     Ok(())
 }
 
+/// Отрывок для встраиваемого плеера: `length_ms` с `start_ms`, AAC 128 кбит/с в MP4 (играет в любом
+/// браузере), с короткими нарастанием и затуханием по краям.
+pub async fn clip_aac(
+    input: &Path,
+    output: &Path,
+    start_ms: i64,
+    length_ms: i64,
+) -> Result<(), AudioError> {
+    let start = format!("{:.3}", start_ms.max(0) as f64 / 1000.0);
+    let length = length_ms.max(1000) as f64 / 1000.0;
+    let fades = format!(
+        "afade=t=in:st=0:d=0.4,afade=t=out:st={:.3}:d=1.2",
+        (length - 1.2).max(0.0)
+    );
+    let length = format!("{length:.3}");
+    let out = run(
+        "ffmpeg",
+        &[
+            "-nostdin".as_ref(),
+            "-hide_banner".as_ref(),
+            "-v".as_ref(),
+            "error".as_ref(),
+            "-y".as_ref(),
+            "-ss".as_ref(),
+            start.as_ref(),
+            "-t".as_ref(),
+            length.as_ref(),
+            "-i".as_ref(),
+            input.as_os_str(),
+            "-map".as_ref(),
+            "0:a:0".as_ref(),
+            "-map_metadata".as_ref(),
+            "-1".as_ref(),
+            "-af".as_ref(),
+            fades.as_ref(),
+            "-c:a".as_ref(),
+            "aac".as_ref(),
+            "-b:a".as_ref(),
+            "128k".as_ref(),
+            "-ar".as_ref(),
+            "44100".as_ref(),
+            "-movflags".as_ref(),
+            "+faststart".as_ref(),
+            "-f".as_ref(),
+            "mp4".as_ref(),
+            output.as_os_str(),
+        ],
+    )
+    .await?;
+    if !out.status.success() {
+        let err = tail(&out.stderr);
+        if err.contains("Invalid data") {
+            return Err(AudioError::Unreadable(err));
+        }
+        return Err(AudioError::Failed(format!("ffmpeg: {err}")));
+    }
+    Ok(())
+}
+
 /// Громкость, истинный пик и огибающая.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Loudness {

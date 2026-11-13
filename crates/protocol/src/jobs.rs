@@ -46,6 +46,8 @@ pub mod kind {
     pub const LYRICS: &str = "lyrics";
     /// Облегчённая копия файла для сотовой сети: Opus 64 кбит/с (полоса «Сжатие для сотовой»).
     pub const TRANSCODE: &str = "transcode";
+    /// Отрывок 30 с с припева для встраиваемого плеера (полоса «Сжатие для сотовой»).
+    pub const EMBED_CLIP: &str = "embed_clip";
     /// Разослать уведомление: окно приложения по WebSocket, push — задачами `notify_push` (полоса «Уведомления»).
     pub const NOTIFY_SEND: &str = "notify_send";
     /// Доставить push одного уведомления на одно устройство (APNs, Web Push), с повторами.
@@ -293,6 +295,13 @@ pub struct TranscodePayload {
     /// Вид копии: `opus64` («Экономия», по умолчанию) или `aac256` (AVPlayer на Apple TV).
     #[serde(default)]
     pub kind: Option<String>,
+}
+
+/// Нарезать отрывок трека для встраиваемого плеера.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbedClipPayload {
+    pub track_id: Uuid,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

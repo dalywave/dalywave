@@ -1,0 +1,119 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.title, t.title_version AS version, al.title AS \"album?\", t.isrc,\n                      t.duration_ms, t.deezer_id, l.created_at AS \"added_at?\",\n                      ARRAY(SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                            WHERE ta.track_id = t.id ORDER BY ta.position, ta.artist_id) AS \"artists!\"\n               FROM liked_tracks l JOIN tracks t ON t.id = l.track_id\n               LEFT JOIN albums al ON al.id = t.album_id\n               WHERE l.user_id = $1\n               ORDER BY l.created_at DESC, t.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title_version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "album?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "added_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "liked_tracks",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "artists!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "f80e0940bced9df6225005af592c6e38b0d343cf9ad8adcb78b8b7907ddfb713"
+}

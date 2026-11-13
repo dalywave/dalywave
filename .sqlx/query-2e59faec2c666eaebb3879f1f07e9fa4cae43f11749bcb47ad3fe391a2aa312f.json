@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO embed_clips (track_id, source_file_id, storage_key, start_ms, length_ms, size_bytes)\n         VALUES ($1, $2, $3, $4, $5, $6)\n         ON CONFLICT (track_id) DO NOTHING\n         RETURNING track_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "embed_clips",
+            "name": "track_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2e59faec2c666eaebb3879f1f07e9fa4cae43f11749bcb47ad3fe391a2aa312f"
+}

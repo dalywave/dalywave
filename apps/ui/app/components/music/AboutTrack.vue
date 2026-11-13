@@ -15,10 +15,9 @@ const rows = computed(() => {
   if (tr.trackPosition) out.push({ label: t('about.position'), value: tr.discNumber > 1 ? `${tr.discNumber}–${tr.trackPosition}` : String(tr.trackPosition) })
   out.push({ label: t('about.duration'), value: formatDuration(tr.durationMs) })
   if (now?.bpm) out.push({ label: t('about.tempo'), value: `${Math.round(now.bpm)} BPM` })
-  if (now && !now.preview) {
-    const q = qualityLabel(now)
-    if (q) out.push({ label: t('about.quality'), value: q })
-  }
+  // Кодек и битрейт — только здесь (и в админке): в плеере их нет
+  const q = now && (now.preview ? t('player.preview') : qualityLabel(now))
+  if (q) out.push({ label: t('about.quality'), value: q })
   return out
 })
 </script>

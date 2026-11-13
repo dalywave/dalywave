@@ -501,6 +501,10 @@ export interface JamBridge {
   guest(token: string): JamGuestClient
 }
 
+/** Чем кончилось сохранение файла: `saved` — на диске (или ушло в загрузки браузера), `shared` —
+ *  отдано в системное «Поделиться», `cancelled` — человек передумал */
+export type SaveResult = 'saved' | 'shared' | 'cancelled'
+
 export interface Bridge {
   readonly kind: 'web' | 'tauri'
   readonly platform: Platform
@@ -561,6 +565,13 @@ export interface Bridge {
 
   /** Тактильный отклик (iPhone); на остальных — ничего */
   haptic(kind: HapticKind): void
+
+  /** Выгрузка медиатеки в файл: сайт — загрузка браузера (файл пишется потоком), приложение для
+   *  компьютера — окно «Сохранить как», iPhone и iPad — системное «Поделиться» с файлом */
+  exports: {
+    /** `path` — адрес выгрузки на сервере (`/api/export/…`), `name` — имя файла по умолчанию */
+    save(path: string, name: string): Promise<SaveResult>
+  }
 
   /** Push приложения на iPhone и iPad (APNs); на сайте и компьютерах — null (сайт — Web Push сам) */
   readonly appPush: AppPush | null
@@ -764,6 +775,9 @@ export interface Bridge {
     setCollaborative(id: string, on: boolean): Promise<PlaylistSummary>
     /** Видят ли друзья плейлист на странице владельца */
     setVisibility(id: string, friendsCanSee: boolean): Promise<PlaylistSummary>
+    /** «Можно встраивать»: плейлист открывается во встраиваемом плеере на чужих сайтах */
+    embed(id: string): Promise<boolean>
+    setEmbed(id: string, embeddable: boolean): Promise<boolean>
     /** Ссылка-приглашение в совместный; `reset` — новая, прежняя перестаёт работать */
     invite(id: string, reset?: boolean): Promise<InviteLink>
     /** Позвать друзей (плейлист становится совместным) */

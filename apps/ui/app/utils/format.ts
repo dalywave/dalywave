@@ -62,6 +62,21 @@ export function formatCount(n: number, noun: Noun, locale: Locale = 'ru'): strin
   return `${formatNumber(n)}${NBSP}${plural(n, forms.ru as unknown as [string, string, string])}`
 }
 
+/** Коротко для карточек: «2,5 млн слушателей», «18,2 тыс. слушателей», «2.5M listeners»; меньше 10 000 — целиком */
+export function formatCompactCount(n: number, noun: Noun, locale: Locale = 'ru'): string {
+  // Перед словом — обычный пробел: в узкой карточке слово уходит на вторую строку, а число не разрывается
+  const forms = NOUNS[noun]
+  if (Math.abs(n) < 10_000) {
+    const word = locale === 'en' ? forms.en[n === 1 ? 0 : 1] : plural(n, forms.ru as unknown as [string, string, string])
+    return `${formatNumber(n, locale)} ${word}`
+  }
+  const short = new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', { notation: 'compact', maximumFractionDigits: 1 })
+    .format(n)
+    .replace(/\s/g, NBSP)
+  // После «тыс.» и «млн» — всегда родительный множественного: «2 млн слушателей»
+  return `${short} ${locale === 'en' ? forms.en[1] : forms.ru[2]}`
+}
+
 const MONTHS_RU = ['янв.', 'февр.', 'марта', 'апр.', 'мая', 'июня', 'июля', 'авг.', 'сент.', 'окт.', 'нояб.', 'дек.']
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 

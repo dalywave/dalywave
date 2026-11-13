@@ -1,0 +1,143 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT e.started_at, e.played_ms, e.end_reason,\n                      t.id, t.title, t.title_version, al.title AS \"album?\", t.isrc, t.duration_ms, t.deezer_id,\n                      ARRAY(SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id\n                            WHERE ta.track_id = t.id ORDER BY ta.position, ta.artist_id) AS \"artists!\"\n               FROM play_events e JOIN tracks t ON t.id = e.track_id\n               LEFT JOIN albums al ON al.id = t.album_id\n               WHERE e.user_id = $1 AND e.hidden_at IS NULL\n               ORDER BY e.started_at DESC, e.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "played_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "played_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "end_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "play_events",
+            "name": "end_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "title_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "title_version"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "album?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "isrc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "isrc"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "duration_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "artists!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "94607becd6bd30096231b2c2900eb91dfffd358f59c2e9f4f669b1cef8a4db93"
+}

@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.title, p.cover_key,\n                          (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS \"count!\",\n                          (SELECT al.id FROM playlist_items i JOIN tracks t ON t.id = i.track_id\n                           JOIN albums al ON al.id = t.album_id\n                           WHERE i.playlist_id = p.id ORDER BY i.position LIMIT 1) AS first_album\n                   FROM playlists p WHERE p.id = $1 AND p.embeddable",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "cover_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "cover_key"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "first_album",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "17ff826392073f22697ecdb52cfa4f647fb2a9c522f7064b767b1d016973eb60"
+}

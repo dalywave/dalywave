@@ -5,12 +5,16 @@ export type ShareKind = 'track' | 'album' | 'artist' | 'playlist'
 /** Публичный адрес сервиса: ссылки уходят наружу, поэтому не адрес окна приложения (tauri://…) */
 const PUBLIC_URL = 'https://wave.daly.rest'
 
-/** Адрес страницы на сайте: на самом сайте — его же origin (в разработке — localhost) */
-export function shareUrl(kind: ShareKind, id: string): string {
-  const site = typeof location !== 'undefined' && /^https?:$/.test(location.protocol) && !('__TAURI_INTERNALS__' in window)
+/** Адрес сайта для ссылок наружу: на самом сайте — его же origin (в разработке — localhost) */
+export function siteOrigin(): string {
+  return typeof location !== 'undefined' && /^https?:$/.test(location.protocol) && !('__TAURI_INTERNALS__' in window)
     ? location.origin
     : PUBLIC_URL
-  return `${site}/${kind}/${id}`
+}
+
+/** Адрес страницы на сайте */
+export function shareUrl(kind: ShareKind, id: string): string {
+  return `${siteOrigin()}/${kind}/${id}`
 }
 
 /** «Поделиться»: на телефоне — системное меню, на компьютере — ссылка в буфер обмена и уведомление */
@@ -19,6 +23,7 @@ export function useShare() {
   const toast = useToast()
   const ui = useUiStore()
   const t = useNuxtApp().$i18n.t
+  const embed = useEmbed()
 
   async function copy(text: string) {
     // Приложение для компьютера: буфер обмена из Rust — WebView требует жеста, а пункт меню
@@ -55,10 +60,18 @@ export function useShare() {
     }
   }
 
-  /** Пункт «Поделиться» для меню ⋯ трека, альбома, плейлиста, артиста */
-  function entry(kind: ShareKind, id: string, title?: string): MenuAction {
-    return { label: t('share.action'), icon: 'ph:export', onSelect: () => void share(kind, id, title) }
+  /** Пункт «Поделиться» для меню ⋯ трека, альбома, плейлиста, артиста: ссылка или код для сайта.
+   *  `owner` — плейлист свой: в окне встраивания можно разрешить встраивание */
+  function entry(kind: ShareKind, id: string, title?: string, opts: { owner?: boolean } = {}): MenuAction {
+    return {
+      label: t('share.action'),
+      icon: 'ph:export',
+      children: [
+        { label: t('share.link'), icon: 'ph:link', onSelect: () => void share(kind, id, title) },
+        { label: t('share.embed'), icon: 'ph:code', onSelect: () => embed.show({ kind, id, title: title ?? '', owner: !!opts.owner }) },
+      ],
+    }
   }
 
-  return { share, entry, url: shareUrl }
+  return { share, entry, copy, url: shareUrl }
 }

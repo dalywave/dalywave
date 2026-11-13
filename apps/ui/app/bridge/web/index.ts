@@ -2,14 +2,14 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, Section, SourceResult, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
 import { createDevTrainer, lazyTrainer } from '../tauri/trainer'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
-import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
+import { createHttp, done, query, toApiError, unwrap, type Http, type HttpOptions } from './http'
 import { createJam } from './jam'
 import { createLive } from './live'
 import { createParty } from './party'
@@ -71,6 +71,40 @@ export interface WebBridgeOptions extends HttpOptions {
   appPush?: AppPush | null
   /** Системные уведомления приложения для компьютера */
   systemNotify?: SystemNotify | null
+  /** Сохранить выгрузку (приложение): окно «Сохранить как» или «Поделиться»; по умолчанию — загрузка браузера */
+  saveFile?: (path: string, name: string, http: Http) => Promise<SaveResult>
+}
+
+/** Сайт: загрузка браузера по прямой ссылке — файл пишется на диск потоком, большая медиатека не
+ *  держится в памяти страницы. Имя файла даёт сервер (`Content-Disposition`) */
+function browserDownload(href: string, name: string): SaveResult {
+  const a = document.createElement('a')
+  a.href = href
+  a.download = name
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  return 'saved'
+}
+
+/** Готовый файл: системное «Поделиться» (iPhone и iPad — «Сохранить в Файлы», отправить), где его нет —
+ *  загрузка браузера */
+export async function shareOrSaveBlob(blob: Blob, name: string): Promise<SaveResult> {
+  const file = new File([blob], name, { type: blob.type || 'application/octet-stream' })
+  if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] })
+      return 'shared'
+    }
+    catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled'
+    }
+  }
+  const url = URL.createObjectURL(blob)
+  browserDownload(url, name)
+  setTimeout(() => URL.revokeObjectURL(url), 30_000)
+  return 'saved'
 }
 
 /** Только разработка: обучение на компьютере изображает мок — `?trainer=idle|active|kept|on-battery|…` */
@@ -326,6 +360,9 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
     offline: opts.offline !== undefined ? opts.offline : devOffline(),
     haptic: opts.haptic ?? (() => {}),
+    exports: {
+      save: (path, name) => (opts.saveFile ? opts.saveFile(path, name, http) : Promise.resolve(browserDownload(http.url(path), name))),
+    },
     appPush: opts.appPush ?? null,
     systemNotify: opts.systemNotify ?? null,
 
@@ -522,6 +559,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         ? unwrap(api.PUT('/api/playlists/{id}/collaborative', { params: { path: { id } } }))
         : unwrap(api.DELETE('/api/playlists/{id}/collaborative', { params: { path: { id } } }))),
       setVisibility: (id, friendsCanSee) => unwrap(api.PUT('/api/playlists/{id}/visibility', { params: { path: { id } }, body: { friendsCanSee } })),
+      embed: async id => (await unwrap(api.GET('/api/playlists/{id}/embed', { params: { path: { id } } }))).embeddable,
+      setEmbed: async (id, embeddable) => (await unwrap(api.PUT('/api/playlists/{id}/embed', { params: { path: { id } }, body: { embeddable } }))).embeddable,
       invite: (id, reset) => (reset
         ? unwrap(api.POST('/api/playlists/{id}/invite', { params: { path: { id } } }))
         : unwrap(api.GET('/api/playlists/{id}/invite', { params: { path: { id } } }))),

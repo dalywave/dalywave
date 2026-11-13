@@ -109,7 +109,7 @@ const moreItems = computed<MenuEntry[]>(() => {
       <FriendsPrivateChip variant="icon" />
       <!-- Таймер сна стоит: луна с остатком -->
       <MusicSleepTimerButton v-if="sound.sleepActive" size="sm" />
-      <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" :web="!connect.djAvailable" :next-at="nextAt" icon size="sm" />
+      <MusicTransitionModePicker v-model:mode="connect.transition" v-model:expressiveness="player.expressiveness" :web="!connect.djAvailable" :next-at="nextAt" icon size="sm" labeled />
       <UiIconButton icon="ph:microphone-stage" :label="t('player.lyrics')" size="sm" :active="lyricsActive" :pressed="lyricsActive" @click="toggleLyrics" />
       <UiIconButton icon="ph:queue" :label="t('player.queue')" size="sm" :active="ui.panelOpen && ui.panelTab === 'queue'" @click="ui.togglePanel('queue')" />
       <MusicDevicePicker :devices="player.devices" :playing="player.playing" @open="player.loadDevices()" @select="player.selectDevice" />

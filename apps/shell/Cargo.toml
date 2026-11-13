@@ -46,7 +46,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.11"
 thiserror = "2"
-tokio = { version = "1.54", features = ["macros", "net", "io-util", "sync", "time"] }
+tokio = { version = "1.54", features = ["macros", "net", "io-util", "sync", "time", "fs"] }
 url = "2"
 
 # Только компьютеры: один экземпляр, место окна, автообновление, связка ключей через keyring,
@@ -58,6 +58,8 @@ tauri-plugin-shell = "2.6.0"
 discord-rich-presence = "1.1"
 # «Поделиться»: ссылка в буфер обмена из Rust — без жеста пользователя, которого ждёт WebView
 tauri-plugin-clipboard-manager = "2.5.0"
+# «Экспорт»: системное окно «Сохранить как» для выгрузки медиатеки (export.rs; права для JS не нужны)
+tauri-plugin-dialog = "2.8.4"
 tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }
 # TLS — системный (Security.framework, SChannel): доверие из ОС и никакой сборки C-криптографии
 tauri-plugin-updater = { version = "2.14.1", default-features = false, features = ["native-tls", "system-proxy", "zip"] }

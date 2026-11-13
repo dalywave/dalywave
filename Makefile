@@ -135,8 +135,8 @@ api-types: ## TypeScript-типы интерфейса из OpenAPI сервер
 sqlx-prepare: ## офлайн-данные запросов sqlx для сборки без базы
 	cargo sqlx prepare --workspace -- --all-targets
 
-test: ## все тесты
-	cargo test --workspace
+test: ## все тесты (у сервера — свой Postgres этой копии: tools/test-pg.sh)
+	tools/test-pg.sh cargo test --workspace
 	@if [ -d apps/ui ]; then cd apps/ui && bun run typecheck; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run pytest -q; fi
 

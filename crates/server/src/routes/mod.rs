@@ -7,7 +7,9 @@ pub mod catalog;
 pub mod collab;
 pub mod connect;
 pub mod describe;
+pub mod embed;
 pub mod events;
+pub mod export;
 pub mod fetcher;
 pub mod friends;
 pub mod home;
@@ -110,6 +112,8 @@ pub fn router(state: AppState) -> Router {
         .merge(settings::routes())
         .merge(imports::routes())
         .merge(notifications::routes())
+        .merge(export::routes())
+        .merge(embed::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Library)));
     let play = events::routes()
         .merge(stream::routes())
@@ -132,6 +136,8 @@ pub fn router(state: AppState) -> Router {
         .merge(images::routes())
         // Оверлей для стрима: по секретной ссылке `dwo_…`, без входа
         .merge(overlay::public_routes())
+        // Отрывки встраиваемого плеера — без входа, как картинки
+        .merge(embed::public_routes())
         .merge(ws::routes())
         // «Слушать вместе»: гости без аккаунта — свой токен `dwj_…`, проверка в каждом обработчике
         .merge(jam::guest_routes())
@@ -149,7 +155,8 @@ pub fn router(state: AppState) -> Router {
         // Снаружи защитного слоя: preflight отвечается сразу, а заголовки CORS есть и у ошибок
         .layer(security::cors(&state.config));
 
-    let app = Router::new().nest("/api", api);
+    // Встраиваемый плеер для чужих сайтов — без входа и без собранного интерфейса
+    let app = Router::new().nest("/api", api).merge(embed::pages());
     let app = match &state.config.static_dir {
         // Страницы трека, альбома, артиста и плейлиста — с тегами превью для мессенджеров
         Some(dir) => app.merge(share::pages()).fallback_service(spa::router(dir)),
