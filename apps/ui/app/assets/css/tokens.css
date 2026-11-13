@@ -125,6 +125,9 @@
   /* Полосы прокрутки (классические, Windows и Linux): над областью и под указателем */
   --scroll-thumb: rgba(255, 255, 255, 0.16);
   --scroll-thumb-hover: rgba(255, 255, 255, 0.3);
+  /* Накладная полоса поверх содержимого (Windows, plugins/scrollbars.client.ts) — заметнее системной */
+  --scroll-overlay: rgba(255, 255, 255, 0.26);
+  --scroll-overlay-hover: rgba(255, 255, 255, 0.46);
 
   /* Полупрозрачные оттенки «от текста» для дорожек, разделителей и нажатий: rgba(var(--fg-rgb), a)
      (--hi-rgb — от чистого белого). На светлой теме оба — от почти чёрного */
@@ -212,6 +215,8 @@
   --veil: rgba(16, 18, 24, 0.42);
   --scroll-thumb: rgba(16, 18, 24, 0.18);
   --scroll-thumb-hover: rgba(16, 18, 24, 0.36);
+  --scroll-overlay: rgba(16, 18, 24, 0.24);
+  --scroll-overlay-hover: rgba(16, 18, 24, 0.44);
 
   --fg-rgb: 16, 18, 24;
   --hi-rgb: 16, 18, 24;

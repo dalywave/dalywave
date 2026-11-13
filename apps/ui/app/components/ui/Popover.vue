@@ -56,6 +56,10 @@ const open = defineModel<boolean>('open', { default: false })
   animation: pop-in var(--dur-2) var(--ease-out);
   scrollbar-width: none;
 }
+/* Классические полосы (Windows): системная спрятана в main.css, длинный список получает накладную */
+@supports selector(::-webkit-scrollbar) {
+  :root[data-scrollbars='classic'] .pop { scrollbar-width: auto; }
+}
 .pop--static { position: relative; z-index: auto; animation: none; max-height: none; }
 .pop__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 10px; }
 .pop__title { font-size: var(--fs-small); font-weight: 650; color: var(--text-1); }
