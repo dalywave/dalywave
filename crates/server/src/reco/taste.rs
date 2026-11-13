@@ -122,6 +122,32 @@ async fn listened(db: &PgPool, user_id: Uuid) -> Result<Vec<Listened>, sqlx::Err
     Ok(out)
 }
 
+/// Грани без подписей — центры и доли веса — тем же способом, что и [`rebuild`]: для набора сети
+/// вкуса на момент в прошлом (`model::dataset`).
+pub fn centroids(points: &[Vec<f32>], weights: &[f32], user_id: Uuid) -> Vec<(Vec<f32>, f32)> {
+    if points.len() < MIN_TRACKS {
+        return Vec::new();
+    }
+    let mut rng = Rng::from_uuid(user_id, 1);
+    let mut clusters = kmeans(points, weights, facet_count(points.len()), 30, &mut rng);
+    merge_close(&mut clusters, points, weights, MERGE_COSINE);
+    drop_small(&mut clusters, points, weights, MIN_TRACKS);
+    let total: f32 = weights.iter().sum::<f32>().max(1e-6);
+    clusters
+        .centroids
+        .iter()
+        .enumerate()
+        .map(|(c, centroid)| {
+            let w: f32 = (0..points.len())
+                .filter(|i| clusters.assignment[*i] == c)
+                .map(|i| weights[i])
+                .sum();
+            (centroid.clone(), w / total)
+        })
+        .filter(|(_, w)| *w > 0.0)
+        .collect()
+}
+
 /// Сколько граней: корень из половины числа треков, от 1 до 6, и не меньше трёх треков на грань.
 pub fn facet_count(tracks: usize) -> usize {
     let k = ((tracks as f32 / 2.0).sqrt().round() as usize).clamp(1, MAX_FACETS);

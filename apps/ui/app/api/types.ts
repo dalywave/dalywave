@@ -248,6 +248,11 @@ export type WaveSessionView = Schemas['WaveSessionView']
 export type WavePoolView = Schemas['WavePoolView']
 export type MixView = Schemas['MixView']
 export type RecoRunResult = Schemas['RecoRunResult']
+export type ModelVersionView = Schemas['ModelVersionView']
+export type TrainTaskView = Schemas['TrainTaskView']
+export type WhyTrack = Schemas['WhyTrack']
+export type WhyLine = Schemas['WhyLine']
+export type WhyKind = Schemas['WhyKind']
 
 // «Поделиться»: карточка ссылки и разбор чужих ссылок
 export type ShareKind = Schemas['ShareKind']

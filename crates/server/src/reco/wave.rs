@@ -756,6 +756,7 @@ pub async fn select(
         db,
         &mut admitted,
         &super::model::Live {
+            user,
             at: now,
             utc_offset_min: settings.utc_offset_min,
             platform,
@@ -859,8 +860,10 @@ pub async fn persist(
     let reasons: Vec<String> = out
         .iter()
         .map(|(s, r)| {
-            json!({ "kind": r.kind, "text": r.text, "sim": (s.entry.sim * 1000.0).round() / 1000.0 })
-                .to_string()
+            let mut v = json!({ "kind": r.kind, "text": r.text, "sim": (s.entry.sim * 1000.0).round() / 1000.0 });
+            // Что повлияло на выбор — для «Почему этот трек» (`reco::why`)
+            v["why"] = super::why::record(&s.entry, s.score);
+            v.to_string()
         })
         .collect();
     let positions: Vec<i32> = (0..out.len())

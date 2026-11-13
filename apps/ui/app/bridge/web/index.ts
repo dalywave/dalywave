@@ -2,10 +2,11 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, SystemNotify, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, Section, SourceResult, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
+import { createDevTrainer, lazyTrainer } from '../tauri/trainer'
 import { WebAudioEngine } from './audio'
 import { EventQueue } from './events'
 import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
@@ -57,6 +58,8 @@ export interface WebBridgeOptions extends HttpOptions {
   audio?: () => AudioEngine
   /** Загрузчик на компьютере (приложение); у сайта его нет */
   downloader?: Downloader | null
+  /** Обучение рекомендаций на компьютере (приложение); у сайта его нет */
+  trainer?: Trainer | null
   /** Вывод звука приложения; на сайте — окно AirPlay Safari, если оно есть */
   outputs?: AudioRoutes | null
   /** Загрузки на устройство (приложение) */
@@ -67,6 +70,15 @@ export interface WebBridgeOptions extends HttpOptions {
   appPush?: AppPush | null
   /** Системные уведомления приложения для компьютера */
   systemNotify?: SystemNotify | null
+}
+
+/** Только разработка: обучение на компьютере изображает мок — `?trainer=idle|active|kept|on-battery|…` */
+function devTrainer(): Trainer | null {
+  if (import.meta.dev) {
+    const scenario = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('trainer') : null
+    if (scenario) return lazyTrainer(async () => createDevTrainer(scenario))
+  }
+  return null
 }
 
 /** Только разработка: загрузчик изображает мок — `?downloader=idle|working|paused|offline|…` */
@@ -308,6 +320,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     updates: opts.updates ?? devUpdates() ?? { onAvailable: () => () => {}, state: async () => null, onState: () => () => {}, check: noWindow, install: noWindow },
     setLocale: opts.setLocale ?? (() => {}),
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
+    trainer: opts.trainer !== undefined ? opts.trainer : devTrainer(),
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
     offline: opts.offline !== undefined ? opts.offline : devOffline(),
     haptic: opts.haptic ?? (() => {}),
@@ -499,6 +512,10 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
           params: { path: { id: session } },
           body: { trackId, kind, positionMs: Math.max(0, Math.round(positionMs)) },
         }))
+      },
+      async why(trackId, session) {
+        await ready()
+        return unwrap(api.GET('/api/wave/why', { params: { query: { trackId, sessionId: session ?? undefined } } }))
       },
       presets: {
         list: async () => (await unwrap(api.GET('/api/wave/presets'))).items,

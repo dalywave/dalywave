@@ -277,6 +277,18 @@ export interface DownloaderStatus {
   pot: { state: 'starting' | 'ready' | 'failed' | 'off', version?: string, message?: string }
 }
 
+/** Обучение сети вкуса на этом компьютере (apps/shell/src/trainer.rs) */
+export type TrainerPhase = 'off' | 'idle' | 'on-battery' | 'busy' | 'signed-out' | 'fetching' | 'training' | 'sending'
+
+export interface TrainerSnapshot {
+  /** «Помогать учить рекомендации»: null — по умолчанию (учат только компьютеры администраторов) */
+  enabled: boolean | null
+  phase: TrainerPhase
+  /** Последний раз: `active` — сеть с этого компьютера теперь подбирает музыку, `kept` — проверку
+   *  сервера не прошла, `failed` — обучение не удалось */
+  last: { atMs: number, outcome: 'active' | 'kept' | 'failed', rows: number, tookMs: number, note: string } | null
+}
+
 export interface DownloaderSnapshot {
   /** «Скачивать на этом Mac» */
   enabled: boolean
@@ -347,6 +359,8 @@ export interface ShellEvents {
   'deep-link:open': { url: string }
   /** macOS: загрузчик на этом Mac — при каждой перемене, ход задания — до 4 раз в секунду */
   'downloader:state': DownloaderSnapshot
+  /** Компьютеры: обучение сети вкуса — при каждой перемене */
+  'trainer:state': TrainerSnapshot
   /** Открыть экран «Распознать»: пункт трея macOS, быстрое действие на значке iPhone. Просьбу забрать
    *  `recognize.takePending()` — и при запуске (приложение открыли этим действием) */
   'recognize:open': null
@@ -502,6 +516,12 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       recreateToken: () => call<DownloaderSnapshot>('downloader_recreate_token'),
       /** Журнал загрузчика — в «Консоли» */
       openLog: () => call<void>('downloader_open_log'),
+    },
+    /** Обучение сети вкуса на этом компьютере (macOS и Windows) */
+    trainer: {
+      state: () => call<TrainerSnapshot>('trainer_state'),
+      /** null — по умолчанию (только компьютеры администраторов) */
+      setEnabled: (enabled: boolean | null) => call<TrainerSnapshot>('trainer_set_enabled', { enabled }),
     },
     on<E extends keyof ShellEvents>(event: E, handler: (payload: ShellEvents[E]) => void): Promise<() => void> {
       return tauri.listen<ShellEvents[E]>(event, e => handler(e.payload))

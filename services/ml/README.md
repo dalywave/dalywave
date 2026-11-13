@@ -171,7 +171,6 @@ Mytch (стили Metalcore, Post-Hardcore), «house music» → Sayfalse (Elect
 |---|---|---|
 | `POST /v1/analyze` | `{"url": "https://…", "mode": "preview" \| "full"}` или `{"path": "…", "mode": …}` | строка `track_analysis` (см. ниже) + `extra`, `timingsMs` |
 | `POST /v1/embed-text` | `{"text": "спокойный инструментал для работы"}` | `{"semantic": "<base64 f16, 512>", "dim": 512, "query": "calm instrumental music for focus and work", "translated": true, "unknownWords": [], "model": "…"}` |
-| `POST /v1/taste/train` | набор сети вкуса (ниже) | `{"onnx": "<base64>", "inputDim": 1828, "heads": ["skip", "complete", "like"], "params", "epochs", "reduced", "metrics", "tookMs"}` |
 | `GET /v1/healthz` | — | `ok`, загружены ли модели, занят ли сервис, версии python / onnxruntime / ffmpeg, настройки |
 | `GET /v1/models` | — | версии моделей (их же пишет `models` в ответе анализа), лицензии, адреса, sha256 файлов, проблемы проверки |
 
@@ -217,18 +216,9 @@ Mytch (стили Metalcore, Post-Hardcore), «house music» → Sayfalse (Elect
 | `undecodable` 422, `too_short` 422 | ffmpeg не прочитал файл; звука меньше 2 с |
 | `busy` 409 | уже идёт анализ |
 | `models_missing` 503 | модели не загрузились — причина в `/v1/healthz` |
-| `too_little_data` 422, `invalid_dataset` 422 | сеть вкуса: меньше 300 строк (60 на проверку) или у головы один исход; массивы не той длины |
 
-**Сеть вкуса** (`src/dalywave_ml/taste_model.py`) — numpy без torch: строки по времени,
-`vectors` (base64 float16, как `halfvec`; уникальные треки × (`soundDim` + `semanticDim`)), `rowVector` (int32:
-строка → трек), `scalars` (float32, строки × `scalarDim`), `labels` (float32, строки × 3:
-пропуск, дослушивание, лайк), `baseline` (оценка правил), `holdoutFrom` (с этой строки — проверка).
-PCA с выбеливанием по трекам обучающей части (звучание → 32, CLAP → 16), MLP 384 → 256 → 64 → 3
-(~150 тысяч параметров), Adam, ранняя остановка по последним 15 % обучающей части. Сжатие и
-нормировка вшиты в ONNX (opset 17, IR 9): сервер подаёт сырые признаки. Метрики — AUC и logloss по
-головам на отложенной части у сети и у правил (их оценка откалибрована логистической регрессией на
-обучающей). Обучение под своим замком (второе — `409 busy`), анализ не ждёт. Включать ли сеть,
-решает сервер. Крошечная сеть для тестов сервера — `scripts/make_taste_fixture.py`.
+**Сеть вкуса** здесь больше не учится: её учит сервер в воркере и компьютеры с приложением одной
+реализацией на Rust (`crates/taste`), чтобы веса с компьютера и сервера давали одинаковый вывод.
 
 ## Запуск
 

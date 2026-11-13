@@ -1,5 +1,6 @@
 //! Настройки оболочки: адрес сервера, язык системных меню, тема окна, загрузчик на Mac (включён ли,
-//! на паузе ли), выбранное устройство вывода звука на компьютере и эквалайзер этого устройства.
+//! на паузе ли), выбранное устройство вывода звука на компьютере, эквалайзер этого устройства и
+//! помощь в обучении рекомендаций на компьютере.
 //! Лежат в `settings.json` в папке настроек приложения; секреты сюда не попадают — токены живут
 //! в связке ключей.
 
@@ -62,6 +63,9 @@ struct Stored {
     /// Эквалайзер этого устройства: пресет и полосы «Своего»; нет — выключен
     #[serde(default, skip_serializing_if = "Option::is_none")]
     eq: Option<StoredEq>,
+    /// «Помогать учить рекомендации на этом компьютере» (trainer.rs); нет — только у администраторов
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    taste_training: Option<bool>,
 }
 
 /// Эквалайзер в настройках: `preset` — id пресета (`off`, `bass-boost`… или `custom`), `gains` —
@@ -175,6 +179,18 @@ impl Settings {
     pub fn set_downloader_paused(&self, paused: bool) -> ShellResult<()> {
         let mut stored = self.lock();
         stored.downloader_paused = Some(paused);
+        self.save(&stored)
+    }
+
+    #[cfg(desktop)]
+    pub fn taste_training(&self) -> Option<bool> {
+        self.lock().taste_training
+    }
+
+    #[cfg(desktop)]
+    pub fn set_taste_training(&self, enabled: Option<bool>) -> ShellResult<()> {
+        let mut stored = self.lock();
+        stored.taste_training = enabled;
         self.save(&stored)
     }
 

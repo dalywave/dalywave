@@ -8,6 +8,7 @@ import type { AppUpdateState, Bridge, Platform, WindowChrome, WindowState } from
 import { createWebBridge } from '../web'
 import { NativeAudioEngine } from './audio'
 import { createTauriDownloader } from './downloader'
+import { createTauriTrainer } from './trainer'
 import { appPush, createOfflineBridge, haptic, systemNotify, withOffline } from './offline'
 import { createTauriOutputs } from './outputs'
 import { createTauriRecognizer } from './recognize'
@@ -149,6 +150,8 @@ export function createTauriBridge(): Bridge {
     audio: () => new NativeAudioEngine(loadShell),
     // Загрузчик музыки — только в приложении для компьютера (apps/shell/src/downloader.rs)
     downloader: platform === 'macos' || platform === 'windows' ? createTauriDownloader(loadShell) : null,
+    // Обучение рекомендаций на этом компьютере (apps/shell/src/trainer.rs)
+    trainer: platform === 'macos' || platform === 'windows' ? createTauriTrainer(loadShell) : null,
     outputs: createTauriOutputs(platform, loadShell),
     baseUrl,
     token: getToken,

@@ -12,6 +12,7 @@ export function useTrackActions() {
   const pui = usePlaylistUi()
   const share = useShare()
   const report = useReportRecording()
+  const why = useWhyTrack()
   const t = useNuxtApp().$i18n.t
 
   /** «Не рекомендовать» трек или исполнителя — в список, который ведёт сам человек («Мой вкус»), с отменой */
@@ -53,6 +54,11 @@ export function useTrackActions() {
     // Переходы: плеер на телефоне сначала сворачивается, иначе страница откроется под ним
     if (artist) entries.push({ label: t('track.goArtist'), icon: 'ph:user', onSelect: () => void ui.navigate(`/artist/${artist.id}`) })
     if (track.album) entries.push({ label: t('track.goAlbum'), icon: 'ph:disc', onSelect: () => void ui.navigate(`/album/${track.album!.id}`) })
+    // «Почему этот трек» — только у того, что подобрала волна (у записи очереди есть подпись)
+    const entry = opts.nowPlaying ? player.current : opts.inQueue ? player.upcoming.find(e => e.uid === opts.inQueue) : null
+    if (entry?.source === 'wave' && entry.reason && entry.track.id === track.id) {
+      entries.push({ label: t('track.why'), icon: 'ph:question', onSelect: () => why.show(track, player.waveSessionId) })
+    }
     if (opts.inQueue) entries.push({ label: t('track.removeFromQueue'), icon: 'ph:minus-circle', danger: true, onSelect: () => player.remove(opts.inQueue!) })
     // Играющий трек — «Слушать вместе»: позвать друзей добавлять треки в эту очередь
     if (opts.nowPlaying) entries.push({ label: t('jam.title'), icon: 'ph:users-three', onSelect: () => void useJamStore().open() })

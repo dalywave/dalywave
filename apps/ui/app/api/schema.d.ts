@@ -2207,6 +2207,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/taste/training/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["train_claim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/taste/training/{id}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["train_fail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/taste/training/{id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["train_result"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tracks/lookup": {
         parameters: {
             query?: never;
@@ -2455,6 +2503,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["next"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/wave/why": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["why"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4380,6 +4444,8 @@ export interface components {
         };
         /** @description Последнее обучение сети вкуса (задача `taste_model`). */
         ModelTraining: {
+            /** @description Последние задания компьютерам, новые первыми. */
+            deviceTasks: components["schemas"]["TrainTaskView"][];
             /** Format: date-time */
             lastRunAt: string | null;
             /** @description Что вышло: «Мало данных: 120 прослушиваний из 300», текст ошибки. */
@@ -4409,10 +4475,26 @@ export interface components {
             baselineAuc: number | null;
             /** Format: double */
             baselineLogloss: number | null;
+            /** Format: double */
+            baselineNdcg: number | null;
+            /** Format: double */
+            baselineSessionAuc: number | null;
+            beatsCurrent: boolean | null;
             /** @description Точнее ли правил на отложенных данных — то есть включена ли при обучении. */
             beatsRules: boolean | null;
             /** Format: date-time */
             createdAt: string;
+            /** Format: double */
+            currentAuc: number | null;
+            /** @description Версия, которая была включена при проверке, и её AUC на той же отложенной части. */
+            currentVersion: string | null;
+            /** @description Компьютер, на котором обучена. */
+            deviceName: string | null;
+            /**
+             * Format: int64
+             * @description Лучшая эпоха.
+             */
+            epochs: number | null;
             heads: components["schemas"]["HeadMetrics"][];
             /** Format: int64 */
             holdoutRows: number | null;
@@ -4422,18 +4504,35 @@ export interface components {
             learned: boolean;
             /** Format: double */
             logloss: number | null;
-            /** @description Почему не включена или выключена: «правила точнее», «новая версия». */
+            /** Format: double */
+            ndcg: number | null;
+            /** @description Почему включена или не включена: «точнее правил и текущей», «правила не хуже». */
             note: string | null;
+            /** @description Где обучена: `server`, `device` (компьютер с приложением) или `rules`. */
+            origin: string;
+            /**
+             * Format: double
+             * @description Доля бутстреп-выборок по сессиям, где сеть точнее правил.
+             */
+            pBetter: number | null;
             /**
              * Format: int64
              * @description Обучаемых параметров.
              */
             params: number | null;
             /**
+             * Format: double
+             * @description Порядок внутри сессии на отложенной части: доля верных пар «пропустил — дослушал» и NDCG@10,
+             *     у сети и у правил.
+             */
+            sessionAuc: number | null;
+            /**
              * Format: int64
              * @description Строк на обучение и на проверку.
              */
             trainRows: number | null;
+            /** @description Своя сеть слушателя; `null` — общая. */
+            userName: string | null;
             version: string;
         };
         /**
@@ -6580,6 +6679,66 @@ export interface components {
             status: "waiting_for_downloader";
         });
         /**
+         * @description Задание компьютеру: набор и описание обучения (`dalywave-taste`, `wire::Package`). Отложенной части
+         *     в наборе нет — её проверяет сервер.
+         */
+        TrainClaim: {
+            package: Record<string, never>;
+            /** Format: int64 */
+            rows: number;
+            /** @description `global` или `personal`. */
+            scope: components["schemas"]["TrainScope"];
+            /** Format: uuid */
+            taskId: string;
+        };
+        TrainClaimBody: {
+            scope?: components["schemas"]["TrainScope"];
+        };
+        /** @description Обучение на компьютере не удалось. */
+        TrainFailure: {
+            message: string;
+        };
+        /** @description Что сервер решил о присланных весах. */
+        TrainOutcome: {
+            /** @description Собирает ли поток теперь эта версия. */
+            active: boolean;
+            note: string;
+            version: string;
+        };
+        /**
+         * @description Чью сеть учить на этом компьютере.
+         * @enum {string}
+         */
+        TrainScope: "auto" | "global" | "personal";
+        /** @description Веса и как шло обучение (`dalywave-taste`: `wire::WireParams`, `TrainReport`). */
+        TrainSubmit: {
+            params: Record<string, never>;
+            report: Record<string, never>;
+        };
+        /** @description Задание «обучить сеть вкуса» компьютеру с приложением. */
+        TrainTaskView: {
+            deviceName: string;
+            /** Format: date-time */
+            finishedAt: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            leasedAt: string;
+            /** @description Решение сервера или ошибка компьютера. */
+            message: string | null;
+            /**
+             * Format: int64
+             * @description Строк обучающей части.
+             */
+            rows: number;
+            /** @description `leased`, `done`, `failed`, `expired`. */
+            status: string;
+            /** @description Своя сеть слушателя; `null` — общая. */
+            userName: string | null;
+            /** @description Версия из присланных весов. */
+            version: string | null;
+        };
+        /**
          * @description Режим переходов между треками.
          * @enum {string}
          */
@@ -6844,6 +7003,24 @@ export interface components {
         WebPushSubscription: {
             endpoint: string;
             keys: components["schemas"]["WebPushKeys"];
+        };
+        /**
+         * @description О чём строка объяснения — для значка.
+         * @enum {string}
+         */
+        WhyKind: "artist" | "recent" | "facet" | "familiar" | "new" | "moment" | "seed" | "release" | "explore" | "learned";
+        WhyLine: {
+            kind: components["schemas"]["WhyKind"];
+            /** @description Готовый текст по-русски: «Похоже на Rushex, которого ты часто слушаешь». */
+            text: string;
+        };
+        /** @description «Почему этот трек» — понятными словами, по тому, что на самом деле повлияло на выбор. */
+        WhyTrack: {
+            /** @description Только администратору: оценки и сходства, версия сети, грань — как в разделе «Рекомендации». */
+            details: Record<string, never> | null;
+            /** @description Главное — первым. */
+            lines: components["schemas"]["WhyLine"][];
+            track: components["schemas"]["Track"];
         };
         /**
          * @description Качество по Wi-Fi: «Высокое» — lossless, если он есть у записи, иначе лучший файл; «Обычное» — Opus
@@ -12703,6 +12880,161 @@ export interface operations {
             };
         };
     };
+    train_claim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainClaimBody"];
+            };
+        };
+        responses: {
+            /** @description Задание: обучающая часть набора и описание обучения. Отложенной части в нём нет — её проверяет сервер */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainClaim"];
+                };
+            };
+            /** @description Учить сейчас нечего: сеть недавно училась, мало данных или задание уже у другого компьютера */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Не приложение */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Не компьютер, или общую сеть просит не администратор */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    train_fail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id задания */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainFailure"];
+            };
+        };
+        responses: {
+            /** @description Задание закрыто; следующее компьютер получит позже */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого задания у этого компьютера */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Задание уже закрыто */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    train_result: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id задания */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainSubmit"];
+            };
+        };
+        responses: {
+            /** @description Веса проверены на отложенной части сервера; включены, только если сеть точнее правил и текущей версии */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainOutcome"];
+                };
+            };
+            /** @description Общую сеть присылает только администратор */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого задания у этого компьютера */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Задание закрыто или просрочено */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Веса не приняты: размеры, числа или ONNX не загружается */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     lookup_tracks: {
         parameters: {
             query?: never;
@@ -13395,6 +13727,39 @@ export interface operations {
                 };
             };
             /** @description Нет такой сессии */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    why: {
+        parameters: {
+            query: {
+                trackId: string;
+                /** @description Сессия волны, из которой трек; без неё — последний показ трека. */
+                sessionId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description «Почему этот трек»: что на самом деле повлияло на выбор, понятными словами. Администратору — ещё и оценки, сходства и версия сети (`details`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhyTrack"];
+                };
+            };
+            /** @description Волна не предлагала этот трек слушателю */
             404: {
                 headers: {
                     [name: string]: unknown;

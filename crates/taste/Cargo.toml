@@ -1,0 +1,17 @@
+[package]
+name = "dalywave-taste"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "Сеть вкуса: обучение, вывод, метрики на отложенных данных и экспорт в ONNX"
+
+# Чистый Rust без платформенных зависимостей: одна реализация для сервера (ночное обучение, проверка
+# присланных весов) и приложения на компьютере (обучение на железе пользователя, apps/shell подключает
+# путём). Поля пакета заданы явно, а не из workspace: приложение собирается в своём workspace.
+[dependencies]
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

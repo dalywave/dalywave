@@ -29,6 +29,7 @@ onMounted(() => {
     <MusicPlaylistPicker />
     <MusicPlaylistSet />
     <MusicReportRecording />
+    <MusicWhyTrack />
     <MusicSharedLink />
     <UiConfirm />
     <UiPrompt />

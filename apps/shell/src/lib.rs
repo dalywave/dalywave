@@ -35,6 +35,9 @@ mod settings;
 mod siri;
 #[cfg(windows)]
 mod snap;
+// Обучение сети вкуса на этом компьютере (задания сервера, `dalywave-taste`)
+#[cfg(desktop)]
+mod trainer;
 #[cfg(desktop)]
 mod tray;
 #[cfg(desktop)]
@@ -135,6 +138,8 @@ pub fn run() {
             // До трея: меню сразу показывает состояние загрузчика
             #[cfg(desktop)]
             downloader::init(handle);
+            #[cfg(desktop)]
+            trainer::init(handle);
             #[cfg(desktop)]
             tray::create(handle)?;
             #[cfg(windows)]
@@ -266,6 +271,10 @@ pub fn run() {
             downloader::downloader_recreate_token,
             #[cfg(desktop)]
             downloader::downloader_open_log,
+            #[cfg(desktop)]
+            trainer::trainer_state,
+            #[cfg(desktop)]
+            trainer::trainer_set_enabled,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build DalyWave");
@@ -341,6 +350,8 @@ fn server_url_set(app: AppHandle, url: Option<String>) -> ShellResult<String> {
     // Загрузчик переходит на новый сервер со своим токеном
     #[cfg(desktop)]
     downloader::changed(&app);
+    #[cfg(desktop)]
+    trainer::changed(&app);
     let _ = app.emit_to(
         MAIN,
         EVENT_SERVER,

@@ -11,7 +11,7 @@ use dalywave_protocol::{
     ErrorBody,
     wave::{
         NewWaveSession, NextQuery, SimilarQuery, SoundSearch, SoundSearchResults, SuggestRequest,
-        WaveFeedback, WaveItems, WaveSession,
+        WaveFeedback, WaveItems, WaveSession, WhyQuery, WhyTrack,
     },
 };
 use uuid::Uuid;
@@ -21,7 +21,7 @@ use crate::{
     cursor,
     error::AppResult,
     extract::{Json, Path, Query},
-    reco::{prep, suggest, wave},
+    reco::{prep, suggest, wave, why as explain},
     state::AppState,
 };
 
@@ -32,6 +32,7 @@ pub fn routes() -> Router<AppState> {
         .route("/wave/sessions/{id}", get(session))
         .route("/wave/sessions/{id}/next", get(next))
         .route("/wave/sessions/{id}/feedback", post(feedback))
+        .route("/wave/why", get(why))
 }
 
 /// Похожие и поиск по звучанию — часть каталога.
@@ -219,5 +220,28 @@ pub async fn sound_search(
     let limit = cursor::limit(body.limit, 20, 50)?;
     Ok(Json(
         wave::sound_search(&st, principal.user.id, &body.text, limit as usize).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/wave/why",
+    tag = "wave",
+    security(("session" = []), ("device" = [])),
+    params(WhyQuery),
+    responses(
+        (status = 200, description = "«Почему этот трек»: что на самом деле повлияло на выбор, понятными словами. \
+                                      Администратору — ещё и оценки, сходства и версия сети (`details`)", body = WhyTrack),
+        (status = 404, description = "Волна не предлагала этот трек слушателю", body = ErrorBody),
+    ),
+)]
+pub async fn why(
+    State(st): State<AppState>,
+    principal: Principal,
+    Query(q): Query<WhyQuery>,
+) -> AppResult<Json<WhyTrack>> {
+    let admin = principal.can(dalywave_protocol::auth::Permission::Admin);
+    Ok(Json(
+        explain::explain(&st.db, principal.user.id, q.track_id, q.session_id, admin).await?,
     ))
 }

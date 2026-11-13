@@ -411,6 +411,75 @@ pub struct WavePresetOrder {
     pub ids: Vec<Uuid>,
 }
 
+/// `GET /api/wave/why`: какой трек объяснить.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+#[into_params(parameter_in = Query)]
+pub struct WhyQuery {
+    pub track_id: Uuid,
+    /// Сессия волны, из которой трек; без неё — последний показ трека.
+    pub session_id: Option<Uuid>,
+}
+
+/// О чём строка объяснения — для значка.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WhyKind {
+    /// Похоже на артиста, которого слушатель любит.
+    Artist,
+    /// Похоже на то, что зашло в этой сессии или недавно.
+    Recent,
+    /// В духе грани вкуса.
+    Facet,
+    /// Знакомый трек: лайк, часто слушает, давно не слушал.
+    Familiar,
+    /// Новое для слушателя.
+    New,
+    /// Время суток или устройство.
+    Moment,
+    /// Затравка радио или описание словами.
+    Seed,
+    /// Новинка из подписок.
+    Release,
+    /// Разведка: волна пробует новое, чтобы не ходить по кругу.
+    Explore,
+    /// Сеть вкуса: похожее обычно дослушивают.
+    Learned,
+}
+
+names!(WhyKind {
+    Artist => "artist",
+    Recent => "recent",
+    Facet => "facet",
+    Familiar => "familiar",
+    New => "new",
+    Moment => "moment",
+    Seed => "seed",
+    Release => "release",
+    Explore => "explore",
+    Learned => "learned",
+});
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WhyLine {
+    pub kind: WhyKind,
+    /// Готовый текст по-русски: «Похоже на Rushex, которого ты часто слушаешь».
+    pub text: String,
+}
+
+/// «Почему этот трек» — понятными словами, по тому, что на самом деле повлияло на выбор.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WhyTrack {
+    pub track: Track,
+    /// Главное — первым.
+    pub lines: Vec<WhyLine>,
+    /// Только администратору: оценки и сходства, версия сети, грань — как в разделе «Рекомендации».
+    #[schema(value_type = Option<Object>, required = true)]
+    pub details: Option<serde_json::Value>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

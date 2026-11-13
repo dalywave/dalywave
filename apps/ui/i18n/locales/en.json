@@ -362,6 +362,7 @@
   },
   "track": {
     "wrongRecording": "Wrong recording",
+    "why": "Why this track",
     "playNext": "Play next",
     "enqueue": "Add to queue",
     "toPlaylist": "Add to playlist",

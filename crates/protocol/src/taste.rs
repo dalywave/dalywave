@@ -129,3 +129,66 @@ pub struct TasteOverview {
 pub struct TasteReset {
     pub confirm: bool,
 }
+
+/// Чью сеть учить на этом компьютере.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TrainScope {
+    /// Решит сервер: администратору — общую, остальным — ничего (они помогают, только включив это в
+    /// настройках, и учат свою).
+    #[default]
+    Auto,
+    /// Общая сеть всех слушателей — только администратору.
+    Global,
+    /// Своя сеть того, кто вошёл.
+    Personal,
+}
+
+names!(TrainScope { Auto => "auto", Global => "global", Personal => "personal" });
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TrainClaimBody {
+    #[serde(default)]
+    pub scope: TrainScope,
+}
+
+/// Задание компьютеру: набор и описание обучения (`dalywave-taste`, `wire::Package`). Отложенной части
+/// в наборе нет — её проверяет сервер.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TrainClaim {
+    pub task_id: Uuid,
+    /// `global` или `personal`.
+    pub scope: TrainScope,
+    pub rows: i64,
+    #[schema(value_type = Object)]
+    pub package: serde_json::Value,
+}
+
+/// Веса и как шло обучение (`dalywave-taste`: `wire::WireParams`, `TrainReport`).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TrainSubmit {
+    #[schema(value_type = Object)]
+    pub params: serde_json::Value,
+    #[schema(value_type = Object)]
+    pub report: serde_json::Value,
+}
+
+/// Что сервер решил о присланных весах.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TrainOutcome {
+    pub version: String,
+    /// Собирает ли поток теперь эта версия.
+    pub active: bool,
+    pub note: String,
+}
+
+/// Обучение на компьютере не удалось.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TrainFailure {
+    pub message: String,
+}

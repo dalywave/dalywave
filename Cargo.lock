@@ -635,6 +635,7 @@ dependencies = [
  "bytes",
  "chrono",
  "dalywave-protocol",
+ "dalywave-taste",
  "dalywave-transitions",
  "dotenvy",
  "futures-util",
@@ -668,6 +669,15 @@ dependencies = [
  "utoipa",
  "uuid",
  "zip",
+]
+
+[[package]]
+name = "dalywave-taste"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

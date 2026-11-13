@@ -14,8 +14,10 @@ pub mod repeat;
 pub mod scout;
 pub mod suggest;
 pub mod taste;
+pub mod training;
 pub mod vectors;
 pub mod wave;
+pub mod why;
 
 use std::{future::Future, time::Duration};
 
@@ -355,6 +357,8 @@ pub struct Cand {
     pub plays_30d: i64,
     /// Дослушиваний за всё время.
     pub completed: i64,
+    /// Ранних пропусков за всё время (как метка пропуска у сети вкуса).
+    pub skips: i64,
     pub last_played: Option<DateTime<Utc>>,
     /// «Не рекомендовать» или «не нравится» — трек или артист.
     pub excluded: bool,
@@ -374,6 +378,8 @@ pub struct Cand {
     pub damped: f32,
     /// Оценка сети вкуса относительно остальных кандидатов ([`model::annotate`]); сеть выключена — `None`.
     pub model: Option<f32>,
+    /// Версия сети, которая дала оценку.
+    pub model_version: Option<String>,
 }
 
 impl Cand {
@@ -473,6 +479,10 @@ pub async fn candidates(
                      AND p.started_at > now() - interval '30 days') AS "plays_30d!",
                   (SELECT count(*) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id
                      AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)) AS "completed!",
+                  (SELECT count(*) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id
+                     AND p.played_ms < 0.5 * p.duration_ms AND p.end_reason <> 'completed'
+                     AND (p.end_reason IN ('skipped', 'previous') OR (p.source = 'import' AND p.end_reason = 'stopped')))
+                     AS "skips!",
                   (SELECT max(p.started_at) FROM play_events p WHERE p.user_id = $2 AND p.track_id = t.id) AS last_played,
                   (EXISTS (SELECT 1 FROM blocked_items b WHERE b.user_id = $2 AND b.kind = 'track' AND b.ref_id = t.id)
                    OR EXISTS (SELECT 1 FROM blocked_items b JOIN track_artists ta ON ta.artist_id = b.ref_id
@@ -544,6 +554,7 @@ pub async fn candidates(
             liked: r.liked,
             plays_30d: r.plays_30d,
             completed: r.completed,
+            skips: r.skips,
             last_played: r.last_played,
             excluded: r.excluded,
             artist_familiar: r.artist_familiar,
@@ -555,6 +566,7 @@ pub async fn candidates(
             screen: r.screen,
             damped: r.damped,
             model: None,
+            model_version: None,
         })
         .collect())
 }

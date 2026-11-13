@@ -1163,6 +1163,7 @@ dependencies = [
  "dalywave-protocol",
  "dalywave-store",
  "dalywave-sync",
+ "dalywave-taste",
  "discord-rich-presence",
  "getrandom 0.4.3",
  "keyring",
@@ -1228,6 +1229,14 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.21",
  "uuid 1.29.2",
+]
+
+[[package]]
+name = "dalywave-taste"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
 ]
 
 [[package]]

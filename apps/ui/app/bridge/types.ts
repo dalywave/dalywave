@@ -20,10 +20,11 @@ import type {
   Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
+  WhyTrack,
 } from '~/api/types'
-import type { DownloaderSnapshot } from './tauri/shell'
+import type { DownloaderSnapshot, TrainerSnapshot } from './tauri/shell'
 
-export type { DownloaderPhase, DownloaderSnapshot, DownloaderStage, DownloaderStatus } from './tauri/shell'
+export type { DownloaderPhase, DownloaderSnapshot, DownloaderStage, DownloaderStatus, TrainerPhase, TrainerSnapshot } from './tauri/shell'
 
 export type Platform = 'web' | 'macos' | 'windows' | 'linux' | 'ios' | 'ipados' | 'android'
 
@@ -342,6 +343,15 @@ export interface Downloader {
   openLog(): Promise<void>
 }
 
+/** Обучение сети вкуса на этом компьютере (macOS, Windows): приложение берёт задание сервера, учит
+ *  на своём железе (на питании и без нагрузки) и отправляет веса — apps/shell/src/trainer.rs */
+export interface Trainer {
+  state(): Promise<TrainerSnapshot>
+  onState(cb: (state: TrainerSnapshot) => void): () => void
+  /** «Помогать учить рекомендации на этом компьютере»; null — по умолчанию */
+  setEnabled(enabled: boolean | null): Promise<TrainerSnapshot>
+}
+
 /** Что можно закрепить на устройстве */
 export type DownloadKind = 'track' | 'album' | 'playlist' | 'artist' | 'liked'
 
@@ -518,6 +528,9 @@ export interface Bridge {
 
   /** Загрузчик на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
   readonly downloader: Downloader | null
+
+  /** Обучение рекомендаций на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
+  readonly trainer: Trainer | null
 
   /** Куда идёт звук (AirPlay, Bluetooth, динамики); null — платформа не умеет, строки нет */
   readonly outputs: AudioRoutes | null
@@ -723,6 +736,8 @@ export interface Bridge {
     next(session: string, settings: WaveSettings, count: number, exclude: string[]): Promise<WaveTrack[]>
     /** Реакция на трек волны: лайк, «не нравится», пропуск, «не сейчас», «больше такого», дослушан */
     feedback(session: string, trackId: string, kind: WaveFeedbackKind, positionMs: number): Promise<void>
+    /** «Почему этот трек»: что повлияло на выбор, понятными словами (админу — и подробности) */
+    why(trackId: string, session: string | null): Promise<WhyTrack>
     /** Сохранённые сочетания настроек: карточки под волной, по порядку */
     presets: {
       list(): Promise<WavePreset[]>

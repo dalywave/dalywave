@@ -198,6 +198,9 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/taste/dampers/{id}",
         "/api/taste/facets/{id}/less",
         "/api/taste/reset",
+        "/api/taste/training/claim",
+        "/api/taste/training/{id}/fail",
+        "/api/taste/training/{id}/result",
         "/api/tracks/lookup",
         "/api/tracks/suggest",
         "/api/tracks/{id}",
@@ -214,6 +217,7 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/wave/sessions/{id}",
         "/api/wave/sessions/{id}/feedback",
         "/api/wave/sessions/{id}/next",
+        "/api/wave/why",
         "/api/ws",
     ];
     let mut sorted = paths.clone();

@@ -1,11 +1,15 @@
-//! Своя сеть вкуса: по треку, контексту и граням вкуса предсказывает три вероятности — пропустит,
-//! дослушает, лайкнет. Учится ночью в сервисе ml (numpy, ~150 тысяч параметров) на прослушиваниях
-//! с отложенной по времени проверкой; включается сама, только если на отложенных данных точнее правил
-//! (`rules-1`). До этого и при любом сбое поток собирают правила.
+//! Своя сеть вкуса: по треку, контексту и ходу сессии предсказывает три вероятности — пропустит,
+//! дослушает, лайкнет. Учится ночью здесь же, в воркере (`dalywave-taste` — та же реализация, что в
+//! приложении на компьютере), на всей истории прослушиваний: свежее весит больше старого. Проверка —
+//! на самых поздних прослушиваниях, которых сеть не видела; включается сама, только если точнее правил
+//! (`rules-1`) и текущей версии. До этого и при любом сбое поток собирают правила.
 //!
 //! Признаки строки — сырые: звучание (Discogs-EffNet, 1280), «смысл» (CLAP, 512) и [`SCALARS`]. Сжатие
-//! векторов (PCA с выбеливанием по трекам обучающей части) и нормировка вшиты в ONNX, поэтому сервер
-//! считает признаки одной функцией ([`scalars`]) и при обучении, и при подборе.
+//! векторов, нормировка и ограничение выбросов вшиты в веса и в ONNX, поэтому сервер считает признаки
+//! одной функцией ([`scalars`]) и при обучении, и при подборе.
+//!
+//! Веса, присланные компьютером ([`super::training`]), проверяются здесь же тем же [`evaluate`] —
+//! через onnxruntime, которым потом подбирается волна.
 
 use std::{
     collections::{HashMap, HashSet},
@@ -13,13 +17,18 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc};
 use dalywave_protocol::{
     jobs::kind,
     reco::{HeadMetrics, ModelTraining, ModelVersionView},
 };
+use dalywave_taste::{
+    Params, Spec, TrainReport, TrainSet,
+    metrics::{self, Calibration, Comparison, Scores},
+    onnx,
+};
 use ort::{environment::Environment, session::Session, value::Tensor};
+use serde::Serialize;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -27,23 +36,23 @@ use uuid::Uuid;
 use super::{
     Cand, MODEL_VERSION, Settings,
     rank::{self, Entry},
-    taste::Facet,
-    vectors::{SEMANTIC_DIM, SOUND_DIM, camelot, cosine},
+    taste::{self, Facet},
+    vectors::{SEMANTIC_DIM, SOUND_DIM, blend, camelot, cosine},
 };
 use crate::{
     jobs::{
         self, JobRow, NewJob, lanes,
         worker::{Context, JobError, JobResult},
     },
-    ml::MlError,
+    storage::Storage,
 };
 
 /// Головы сети в порядке выхода `probs`.
-pub const HEADS: [&str; 3] = ["skip", "complete", "like"];
+pub const HEADS: [&str; 3] = dalywave_taste::HEADS;
 
-/// Числовые признаки строки в порядке входа сети (после векторов). Новый признак — только в конец:
-/// иначе старая версия получит не те числа (сервер проверяет лишь ширину входа).
-pub const SCALARS: [&str; 36] = [
+/// Числовые признаки строки в порядке входа сети (после векторов). Новый признак — только в конец;
+/// версия с другой шириной входа не загружается, и поток собирают правила до следующего обучения.
+pub const SCALARS: [&str; 43] = [
     // Трек
     "bpm",
     "bpm_known",
@@ -83,6 +92,14 @@ pub const SCALARS: [&str; 36] = [
     "completed",
     "artist_familiar",
     "plays_30d",
+    // История трека и ход сессии
+    "track_skips",
+    "days_since_play",
+    "heard_before",
+    "hit_sim",
+    "miss_sim",
+    "has_hits",
+    "has_misses",
 ];
 
 /// Ширина входа сети.
@@ -91,23 +108,36 @@ pub const FEATURE_DIM: usize = SOUND_DIM + SEMANTIC_DIM + SCALARS.len();
 pub const MIN_ROWS: usize = 300;
 /// Сколько строк, самое меньшее, уходит на проверку.
 pub const MIN_HOLDOUT: usize = 60;
-/// Самые поздние 20 % строк — отложенная проверка (запасной размер, когда истории по времени мало).
-const HOLDOUT_SHARE: f64 = 0.2;
-/// Отложенная проверка — последние недели истории: в неё попадает и импорт за эти недели, а не только
-/// горстка свежих прослушиваний в DalyWave, на которых правила и сеть ведут себя иначе.
+/// Отложенная проверка — последние недели истории, но не меньше этой доли строк: на четырёх неделях
+/// импортированной истории сотня строк и два десятка пропусков, разница AUC тонет в шуме.
 const HOLDOUT_WEEKS: i64 = 4;
+const MIN_HOLDOUT_SHARE: f64 = 0.2;
 /// Больше этой доли на проверку не уходит: иначе учить не на чем.
 const MAX_HOLDOUT_SHARE: f64 = 0.4;
-/// Последние прослушивания за год, не больше стольких.
-const MAX_ROWS: i64 = 30_000;
-/// Чтобы включиться, сеть должна обогнать правила по средней AUC хотя бы на столько (и не уступить в logloss).
+/// Последние прослушивания, не больше стольких.
+const MAX_ROWS: i64 = 60_000;
+/// Вес строки падает вдвое за столько дней: вкус меняется, свежее важнее.
+const HALF_LIFE_DAYS: f32 = 365.0;
+/// Ниже этого вес строки не падает: старая история всё ещё говорит о вкусе.
+const MIN_WEIGHT: f32 = 0.1;
+/// Чтобы включиться, сеть должна обогнать правила по средней AUC хотя бы на столько…
 const AUC_MARGIN: f64 = 0.005;
+/// …и быть лучше в стольких бутстреп-выборках по сессиям: не случайность отложенной части.
+const P_BETTER: f64 = 0.9;
+/// На сколько logloss новой версии может быть хуже текущей при лучшей AUC.
+const LOGLOSS_SLACK: f64 = 0.002;
+const BOOTSTRAP: usize = 200;
 /// Вес оценки сети в общей оценке волны (относительно среднего по кандидатам).
 const MODEL_WEIGHT: f32 = 0.35;
-/// Копии ONNX в базе держатся у активной и стольких последних версий.
+/// Копии ONNX в базе держатся у активных и стольких последних версий.
 const KEEP_ARTIFACTS: i64 = 5;
 /// Версии сети называются `nn-ГГГГММДД-ччммсс`.
 pub const PREFIX: &str = "nn-";
+
+/// Как учит сервер. Компьютеры учат так же, но со своим зерном.
+pub fn spec() -> Spec {
+    Spec::default()
+}
 
 // ───────────── Признаки ─────────────
 
@@ -179,6 +209,13 @@ pub struct Familiarity {
     pub artist_familiar: bool,
     /// Прослушиваний трека за 30 дней до этого.
     pub plays_30d: i64,
+    /// Ранних пропусков трека до этого.
+    pub skips: i64,
+    /// Сколько дней назад трек играл последний раз; не играл — `None`.
+    pub days_since: Option<f32>,
+    /// Сходство с «что сейчас заходит» и «что пропускается» сессии.
+    pub hit_sim: Option<f32>,
+    pub miss_sim: Option<f32>,
 }
 
 /// Ближайшая грань: сходство и её вес. Граней нет — `None`.
@@ -268,6 +305,14 @@ pub fn scalars(
         log_scaled(f.completed),
         b(f.artist_familiar),
         log_scaled(f.plays_30d),
+        log_scaled(f.skips),
+        f.days_since
+            .map_or(0.0, |d| (d.max(0.0).ln_1p() / 366f32.ln()).min(1.0)),
+        b(f.days_since.is_some()),
+        f.hit_sim.unwrap_or(0.0),
+        f.miss_sim.unwrap_or(0.0),
+        b(f.hit_sim.is_some()),
+        b(f.miss_sim.is_some()),
     ]
 }
 
@@ -284,18 +329,32 @@ pub fn rules_prior(t: &TrackFeat, f: &Familiarity, at: DateTime<Utc>) -> f32 {
     s
 }
 
+/// Ранний пропуск: переключил в первой половине. У импорта Spotify «остановлено» — это `endplay`
+/// (включил другое) и выход из приложения; в первой половине трека это почти всегда пропуск
+/// (медиана — 5 % трека), поэтому для импорта оно тоже пропуск.
+pub fn early_skip(end_reason: &str, played: f32, import: bool) -> bool {
+    played < 0.5
+        && (matches!(end_reason, "skipped" | "previous") || (import && end_reason == "stopped"))
+}
+
 /// Метки прослушивания: пропуск, дослушивание, лайк. Сбой, обрыв, передача на другое устройство и
-/// остановка посреди трека ничего не говорят о вкусе — без метки.
-pub fn label(end_reason: &str, played_ms: i32, duration_ms: i32, liked: bool) -> Option<[f32; 3]> {
+/// остановка посреди трека в DalyWave ничего не говорят о вкусе — без метки.
+pub fn label(
+    end_reason: &str,
+    played_ms: i32,
+    duration_ms: i32,
+    liked: bool,
+    import: bool,
+) -> Option<[f32; 3]> {
     if duration_ms <= 0 {
         return None;
     }
     let played = played_ms.max(0) as f32 / duration_ms as f32;
     let complete = end_reason == "completed" || played >= 0.8;
-    let skip = !complete && matches!(end_reason, "skipped" | "previous") && played < 0.5;
+    let skip = !complete && early_skip(end_reason, played, import);
     match end_reason {
         "error" | "interrupted" | "transferred" => return None,
-        "stopped" if !complete => return None,
+        "stopped" if !complete && !skip => return None,
         _ => {}
     }
     let b = |x: bool| if x { 1.0 } else { 0.0 };
@@ -316,127 +375,112 @@ fn row(sound: &[f32], semantic: Option<&[f32]>, scalars: &[f32]) -> Vec<f32> {
 
 // ───────────── Набор для обучения ─────────────
 
-/// Размеченные прослушивания по времени: векторы треков отдельно (трек слушают много раз).
-#[derive(Debug, Default)]
+/// Из чего собирается набор. [`Recipe::default`] — как учит сервер; [`Recipe::legacy`] — как было до
+/// разбора «почему сеть плохо учится» (для сравнения «до/после» на одной базе).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Recipe {
+    /// Только последние столько дней истории; `None` — вся.
+    pub since_days: Option<i64>,
+    /// Импорт: «остановлено» в первой половине трека — пропуск ([`early_skip`]).
+    pub import_stops_skip: bool,
+    /// Лайк — трек в медиатеке (у импортированных лайков даты нет), а не только лайк рядом с
+    /// прослушиванием.
+    pub library_likes: bool,
+    /// Вес строки падает вдвое за столько дней; `None` — все строки равны.
+    pub half_life_days: Option<f32>,
+    /// Грани вкуса для признаков — собранные по истории до отложенной части, а не нынешние: нынешние
+    /// знают исходы отложенных прослушиваний.
+    pub cut_facets: bool,
+    /// Отложенная часть — не меньше этой доли строк.
+    pub min_holdout_share: f64,
+}
+
+impl Default for Recipe {
+    fn default() -> Self {
+        Self {
+            since_days: None,
+            import_stops_skip: true,
+            library_likes: true,
+            half_life_days: Some(HALF_LIFE_DAYS),
+            cut_facets: true,
+            min_holdout_share: MIN_HOLDOUT_SHARE,
+        }
+    }
+}
+
+impl Recipe {
+    pub fn legacy() -> Self {
+        Self {
+            since_days: Some(365),
+            import_stops_skip: false,
+            library_likes: false,
+            half_life_days: None,
+            cut_facets: false,
+            min_holdout_share: 0.0,
+        }
+    }
+}
+
+/// Размеченные прослушивания по времени и всё, что нужно для проверки.
+#[derive(Debug, Default, Clone)]
 pub struct Dataset {
-    /// Строки `SOUND_DIM + SEMANTIC_DIM`.
-    pub vectors: Vec<f32>,
-    pub vector_rows: usize,
-    pub row_vector: Vec<i32>,
-    pub scalars: Vec<f32>,
-    pub labels: Vec<f32>,
+    /// Все строки по времени: признаки, метки, веса, сессии.
+    pub set: TrainSet,
+    /// Оценка правил строки.
     pub baseline: Vec<f32>,
-    pub rows: usize,
+    pub times: Vec<DateTime<Utc>>,
+    pub users: Vec<Uuid>,
+    /// С этой строки — отложенная проверка.
     pub holdout_from: usize,
 }
 
 impl Dataset {
-    fn push_vector(&mut self, sound: &[f32], semantic: Option<&[f32]>) -> i32 {
-        self.vectors.extend_from_slice(sound);
-        match semantic {
-            Some(s) => self.vectors.extend_from_slice(s),
-            None => self.vectors.extend(std::iter::repeat_n(0.0, SEMANTIC_DIM)),
-        }
-        self.vector_rows += 1;
-        (self.vector_rows - 1) as i32
+    pub fn rows(&self) -> usize {
+        self.set.rows()
     }
 
     /// Хватит ли строк для обучения и честной проверки.
     pub fn enough(&self) -> bool {
-        self.rows >= MIN_ROWS && self.rows - self.holdout_from >= MIN_HOLDOUT
+        self.rows() >= MIN_ROWS && self.rows() - self.holdout_from >= MIN_HOLDOUT
     }
 
-    /// Тело `POST /v1/taste/train`.
-    pub fn request(&self) -> Value {
-        fn f32s(v: &[f32]) -> String {
-            STANDARD.encode(v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>())
-        }
-        // Векторы — в float16, как их хранит `halfvec`: набор вдвое меньше
-        let f16s = |v: &[f32]| {
-            STANDARD.encode(
-                v.iter()
-                    .flat_map(|x| f16_bits(*x).to_le_bytes())
-                    .collect::<Vec<u8>>(),
-            )
-        };
-        json!({
-            "vectors": f16s(&self.vectors),
-            "vectorRows": self.vector_rows,
-            "soundDim": SOUND_DIM,
-            "semanticDim": SEMANTIC_DIM,
-            "rowVector": STANDARD.encode(self.row_vector.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()),
-            "scalars": f32s(&self.scalars),
-            "scalarDim": SCALARS.len(),
-            "rows": self.rows,
-            "labels": f32s(&self.labels),
-            "baseline": f32s(&self.baseline),
-            "holdoutFrom": self.holdout_from,
-            "featureNames": SCALARS.as_slice(),
-        })
+    /// Когда начинается отложенная часть (время первой её строки).
+    pub fn holdout_cut(&self) -> Option<DateTime<Utc>> {
+        self.times.get(self.holdout_from).copied()
     }
-}
 
-/// float32 → биты float16 с округлением к ближайшему чётному (обратное `vectors::f16_to_f32`).
-pub fn f16_bits(x: f32) -> u16 {
-    let b = x.to_bits();
-    let sign = ((b >> 16) & 0x8000) as u16;
-    let exp = ((b >> 23) & 0xff) as i32;
-    let man = b & 0x7f_ffff;
-    if exp == 0xff {
-        return sign | 0x7c00 | if man != 0 { 0x200 } else { 0 };
+    /// Обучающая часть — то, что получает компьютер и на чём учится сервер.
+    pub fn train_part(&self) -> TrainSet {
+        self.set.head(self.holdout_from)
     }
-    let e = exp - 127 + 15;
-    if e >= 0x1f {
-        return sign | 0x7c00;
-    }
-    if e <= 0 {
-        // Субнормальные числа half
-        if e < -10 {
-            return sign;
-        }
-        let m = man | 0x80_0000;
-        let shift = (14 - e) as u32;
-        let half = 1u32 << (shift - 1);
-        let mut r = m >> shift;
-        let rem = m & ((1 << shift) - 1);
-        if rem > half || (rem == half && r & 1 == 1) {
-            r += 1;
-        }
-        return sign | r as u16;
-    }
-    let mut r = ((e as u32) << 10) | (man >> 13);
-    let rem = man & 0x1fff;
-    if rem > 0x1000 || (rem == 0x1000 && r & 1 == 1) {
-        r += 1;
-    }
-    sign | r as u16
 }
 
 /// С какой строки начинается проверка: строки идут по времени, на проверку — последние
-/// [`HOLDOUT_WEEKS`] недель истории, но не меньше [`MIN_HOLDOUT`] строк и не больше [`MAX_HOLDOUT_SHARE`].
-pub fn holdout_start(times: &[DateTime<Utc>]) -> usize {
+/// [`HOLDOUT_WEEKS`] недель истории, но не меньше `min_share` строк и [`MIN_HOLDOUT`] и не больше
+/// [`MAX_HOLDOUT_SHARE`].
+pub fn holdout_start(times: &[DateTime<Utc>], min_share: f64) -> usize {
     let rows = times.len();
     let Some(last) = times.last() else {
         return 0;
     };
     let cut = *last - Duration::weeks(HOLDOUT_WEEKS);
     let by_time = rows - times.partition_point(|t| *t < cut);
-    let floor = MIN_HOLDOUT.min(rows);
+    let floor = MIN_HOLDOUT
+        .max((rows as f64 * min_share).round() as usize)
+        .min(rows);
     let ceil = ((rows as f64 * MAX_HOLDOUT_SHARE).round() as usize).max(floor);
-    rows - by_time.clamp(floor, ceil)
-}
-
-/// Сколько строк уходит на проверку.
-pub fn holdout_size(rows: usize) -> usize {
-    ((rows as f64 * HOLDOUT_SHARE).round() as usize)
-        .max(MIN_HOLDOUT)
-        .min(rows)
+    let mut start = rows - by_time.clamp(floor, ceil);
+    // Строки одного момента не делятся между частями
+    while start > 0 && start < rows && times[start - 1] == times[start] {
+        start -= 1;
+    }
+    start
 }
 
 #[derive(Default)]
 struct History {
-    /// Прослушивания трека: когда и дослушан ли.
-    plays: HashMap<Uuid, Vec<(DateTime<Utc>, bool)>>,
+    /// Прослушивания трека: когда, дослушан ли, ранний ли пропуск.
+    plays: HashMap<Uuid, Vec<(DateTime<Utc>, bool, bool)>>,
     artists: HashSet<Uuid>,
     likes: Vec<(DateTime<Utc>, Option<Uuid>)>,
     next_like: usize,
@@ -444,6 +488,10 @@ struct History {
     last_session: Option<Uuid>,
     pos: u32,
     streak: u32,
+    group: u32,
+    /// Векторы сессии: «заходит» и «пропускается» с накопленным весом — как у волны.
+    hits: Option<(Vec<f32>, f32)>,
+    misses: Option<(Vec<f32>, f32)>,
 }
 
 struct Analysed {
@@ -458,14 +506,41 @@ const SESSION_GAP: Duration = Duration::minutes(30);
 const LIKE_BEFORE: Duration = Duration::minutes(1);
 const LIKE_AFTER: Duration = Duration::minutes(10);
 
-/// Набор из прослушиваний всех слушателей за год (последние [`MAX_ROWS`]), по времени. Признаки знакомства
-/// и хода сессии — на момент прослушивания; грани вкуса — нынешние.
-pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
+struct Event {
+    user_id: Uuid,
+    track_id: Uuid,
+    recording_id: Option<Uuid>,
+    started_at: DateTime<Utc>,
+    played_ms: i32,
+    duration_ms: i32,
+    end_reason: String,
+    context_type: Option<String>,
+    wave_session_id: Option<Uuid>,
+    listening_session: Option<Uuid>,
+    output: Option<String>,
+    platform: Option<String>,
+    main_artist: Option<Uuid>,
+    rank: Option<i32>,
+    release_date: Option<NaiveDate>,
+    import: bool,
+}
+
+/// Набор из прослушиваний всех слушателей или одного (`user`; последние [`MAX_ROWS`]), по времени.
+/// Признаки знакомства и хода сессии — на момент прослушивания; грани вкуса — по истории до отложенной
+/// части ([`Recipe::cut_facets`]) или нынешние. Отложенная часть — с момента `cut` (задание компьютеру,
+/// выданное раньше) или по [`holdout_start`].
+pub async fn dataset(
+    db: &PgPool,
+    recipe: &Recipe,
+    user: Option<Uuid>,
+    cut: Option<DateTime<Utc>>,
+) -> Result<Dataset, sqlx::Error> {
     let settings = Settings::load(db).await?;
-    let mut events = sqlx::query!(
+    let since_days = recipe.since_days.unwrap_or(365 * 50) as i32;
+    let mut events: Vec<Event> = sqlx::query!(
         r#"SELECT p.user_id, p.track_id, t.recording_id AS "recording_id?", p.started_at, p.played_ms,
                   p.duration_ms, p.end_reason, p.context_type, p.wave_session_id, p.listening_session, p.output,
-                  d.platform AS "platform?",
+                  COALESCE(d.platform, p.platform) AS "platform?", p.source,
                   (SELECT ta.artist_id FROM track_artists ta WHERE ta.track_id = p.track_id
                    ORDER BY ta.position, ta.artist_id LIMIT 1) AS main_artist,
                   t.rank, al.release_date AS "release_date?"
@@ -474,13 +549,37 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
            JOIN tracks t ON t.id = p.track_id
            LEFT JOIN albums al ON al.id = t.album_id
            LEFT JOIN devices d ON d.id = p.device_id
-           WHERE p.started_at > now() - interval '365 days'
+           WHERE p.started_at > now() - make_interval(days => $2)
+             AND p.started_at <= now() + interval '1 day'
+             AND ($3::uuid IS NULL OR p.user_id = $3)
            ORDER BY p.started_at DESC, p.id DESC
            LIMIT $1"#,
         MAX_ROWS,
+        since_days,
+        user,
     )
     .fetch_all(db)
-    .await?;
+    .await?
+    .into_iter()
+    .map(|r| Event {
+        user_id: r.user_id,
+        track_id: r.track_id,
+        recording_id: r.recording_id,
+        started_at: r.started_at,
+        played_ms: r.played_ms,
+        duration_ms: r.duration_ms,
+        end_reason: r.end_reason,
+        context_type: r.context_type,
+        wave_session_id: r.wave_session_id,
+        listening_session: r.listening_session,
+        output: r.output,
+        platform: r.platform,
+        main_artist: r.main_artist,
+        rank: r.rank,
+        release_date: r.release_date,
+        import: r.source == "import",
+    })
+    .collect();
     events.reverse();
 
     let recordings: Vec<Uuid> = events
@@ -564,24 +663,67 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
     .into_iter()
     .map(|r| (r.session, r.track_id))
     .collect();
-    let mut facets: HashMap<Uuid, Vec<Facet>> = HashMap::new();
-    for user in events.iter().map(|e| e.user_id).collect::<HashSet<_>>() {
-        facets.insert(user, super::taste::facets(db, user).await?);
+
+    // Где кончится обучающая часть: по меткам строк, которые войдут в набор (анализ есть, метка есть)
+    let labelled_times: Vec<DateTime<Utc>> = events
+        .iter()
+        .filter(|e| {
+            e.recording_id.is_some_and(|r| analysed.contains_key(&r))
+                && label(
+                    &e.end_reason,
+                    e.played_ms,
+                    e.duration_ms,
+                    false,
+                    e.import && recipe.import_stops_skip,
+                )
+                .is_some()
+        })
+        .map(|e| e.started_at)
+        .collect();
+    let cut = cut.or_else(|| {
+        labelled_times
+            .get(holdout_start(&labelled_times, recipe.min_holdout_share))
+            .copied()
+    });
+
+    let users: HashSet<Uuid> = events.iter().map(|e| e.user_id).collect();
+    let mut facets: HashMap<Uuid, Vec<(Vec<f32>, f32)>> = HashMap::new();
+    for user in users {
+        let fs = match (recipe.cut_facets, cut) {
+            (true, Some(cut)) => facets_at(&events, &analysed, &liked_at, user, cut, recipe),
+            _ => taste::facets(db, user)
+                .await?
+                .into_iter()
+                .map(|f| (f.centroid, f.weight))
+                .collect(),
+        };
+        facets.insert(user, fs);
     }
 
-    let mut data = Dataset::default();
-    // Время каждой строки — для отложенной проверки по неделям, а не по числу строк
-    let mut row_at: Vec<DateTime<Utc>> = Vec::new();
-    let mut vector_of: HashMap<Uuid, i32> = HashMap::new();
+    let mut data = Dataset {
+        set: TrainSet {
+            sound_dim: SOUND_DIM,
+            semantic_dim: SEMANTIC_DIM,
+            scalar_dim: SCALARS.len(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let mut vector_of: HashMap<Uuid, u32> = HashMap::new();
+    let mut next_group = 0u32;
     for e in &events {
         let h = history.entry(e.user_id).or_default();
         let continued = match (e.listening_session, h.last_session) {
             (Some(s), Some(last)) => s == last,
             _ => h.last_at.is_some_and(|t| e.started_at - t < SESSION_GAP),
         };
-        if !continued {
+        if !continued || h.last_at.is_none() {
             h.pos = 0;
             h.streak = 0;
+            h.hits = None;
+            h.misses = None;
+            h.group = next_group;
+            next_group += 1;
         }
         while let Some((at, artist)) = h.likes.get(h.next_like).copied()
             && at < e.started_at
@@ -593,39 +735,53 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
         }
         let window_end =
             e.started_at + Duration::milliseconds(i64::from(e.duration_ms.max(0))) + LIKE_AFTER;
+        let liked_before = liked_at
+            .get(&(e.user_id, e.track_id))
+            .is_some_and(|t| *t < e.started_at - LIKE_BEFORE);
         let liked_now = like_events.get(&(e.user_id, e.track_id)).is_some_and(|ts| {
             ts.iter()
                 .any(|t| *t >= e.started_at - LIKE_BEFORE && *t <= window_end)
         }) || e
             .wave_session_id
-            .is_some_and(|s| impression_likes.contains(&(s, e.track_id)));
-        let labels = label(&e.end_reason, e.played_ms, e.duration_ms, liked_now);
+            .is_some_and(|s| impression_likes.contains(&(s, e.track_id)))
+            || (recipe.library_likes && liked_at.contains_key(&(e.user_id, e.track_id)));
+        let import_skip = e.import && recipe.import_stops_skip;
+        let labels = label(
+            &e.end_reason,
+            e.played_ms,
+            e.duration_ms,
+            liked_now,
+            import_skip,
+        );
         let plays = h.plays.get(&e.track_id);
-        let completed = plays.map_or(0, |p| p.iter().filter(|(_, c)| *c).count() as i64);
+        let completed = plays.map_or(0, |p| p.iter().filter(|(_, c, _)| *c).count() as i64);
+        let skips = plays.map_or(0, |p| p.iter().filter(|(_, _, s)| *s).count() as i64);
         let plays_30d = plays.map_or(0, |p| {
             p.iter()
-                .filter(|(t, _)| *t > e.started_at - Duration::days(30))
+                .filter(|(t, _, _)| *t > e.started_at - Duration::days(30))
                 .count() as i64
         });
-        if let (Some(y), Some(a)) = (labels, e.recording_id.and_then(|r| analysed.get(&r))) {
+        let days_since = plays
+            .and_then(|p| p.last())
+            .map(|(t, _, _)| (e.started_at - *t).num_minutes() as f32 / 1440.0);
+        let analysed_track = e.recording_id.and_then(|r| analysed.get(&r));
+        if let (Some(y), Some(a)) = (labels, analysed_track) {
             let user_facets: Vec<(&[f32], f32)> = facets
                 .get(&e.user_id)
-                .map(|fs| {
-                    fs.iter()
-                        .map(|f| (f.centroid.as_slice(), f.weight))
-                        .collect()
-                })
+                .map(|fs| fs.iter().map(|(c, w)| (c.as_slice(), *w)).collect())
                 .unwrap_or_default();
             let (taste_sim, facet_weight) = nearest_facet(&a.sound, &user_facets);
             let fam = Familiarity {
                 taste_sim,
                 facet_weight,
-                liked: liked_at
-                    .get(&(e.user_id, e.track_id))
-                    .is_some_and(|t| *t < e.started_at - LIKE_BEFORE),
+                liked: liked_before,
                 completed,
                 artist_familiar: e.main_artist.is_some_and(|x| h.artists.contains(&x)),
                 plays_30d,
+                skips,
+                days_since,
+                hit_sim: h.hits.as_ref().map(|(v, _)| cosine(&a.sound, v)),
+                miss_sim: h.misses.as_ref().map(|(v, _)| cosine(&a.sound, v)),
             };
             let feat = TrackFeat {
                 rank: e.rank,
@@ -642,79 +798,308 @@ pub async fn dataset(db: &PgPool) -> Result<Dataset, sqlx::Error> {
                 in_wave: matches!(e.context_type.as_deref(), Some("wave" | "radio")),
             };
             let recording = e.recording_id.unwrap_or(e.track_id);
-            let idx = match vector_of.get(&recording) {
-                Some(i) => *i,
-                None => {
-                    let i = data.push_vector(&a.sound, a.semantic.as_deref());
-                    vector_of.insert(recording, i);
-                    i
+            let idx = *vector_of.entry(recording).or_insert_with(|| {
+                data.set.vectors.extend_from_slice(&a.sound);
+                match &a.semantic {
+                    Some(s) => data.set.vectors.extend_from_slice(s),
+                    None => data
+                        .set
+                        .vectors
+                        .extend(std::iter::repeat_n(0.0, SEMANTIC_DIM)),
                 }
-            };
-            data.row_vector.push(idx);
-            data.scalars
-                .extend_from_slice(&scalars(&feat, a.semantic.is_some(), &moment, &fam));
-            data.labels.extend_from_slice(&y);
+                (data.set.vector_rows() - 1) as u32
+            });
+            data.set.row_vector.push(idx);
+            data.set.scalars.extend_from_slice(&scalars(
+                &feat,
+                a.semantic.is_some(),
+                &moment,
+                &fam,
+            ));
+            data.set.labels.extend_from_slice(&y);
+            data.set.groups.push(h.group);
             data.baseline.push(rules_prior(&feat, &fam, e.started_at));
-            data.rows += 1;
-            row_at.push(e.started_at);
+            data.times.push(e.started_at);
+            data.users.push(e.user_id);
         }
         // История — после строки: признаки видят только прошлое
         let complete = labels.is_some_and(|y| y[1] > 0.5);
+        let skipped = labels.is_some_and(|y| y[0] > 0.5);
         h.plays
             .entry(e.track_id)
             .or_default()
-            .push((e.started_at, complete));
+            .push((e.started_at, complete, skipped));
         if let Some(a) = e.main_artist {
             h.artists.insert(a);
         }
         if let Some(y) = labels {
             h.streak = if y[0] > 0.5 { h.streak + 1 } else { 0 };
         }
+        // Векторы сессии — как у волны (`rank::effect`): дослушал — 0,5 в «заходит», лайк — 1,
+        // ранний пропуск — 1 в «пропускается», поздний — 0,4
+        if let (Some(y), Some(a)) = (labels, analysed_track) {
+            let hit = 0.5 * y[1] + y[2];
+            let early = e.played_ms < 30_000;
+            let miss = if y[0] > 0.5 {
+                if early { 1.0 } else { 0.4 }
+            } else {
+                0.0
+            };
+            if hit > 0.0 {
+                let (old, w) = h.hits.take().map_or((None, 0.0), |(v, w)| (Some(v), w));
+                h.hits = Some((blend(old.as_deref(), w, &a.sound, hit), w + hit));
+            }
+            if miss > 0.0 {
+                let (old, w) = h.misses.take().map_or((None, 0.0), |(v, w)| (Some(v), w));
+                h.misses = Some((blend(old.as_deref(), w, &a.sound, miss), w + miss));
+            }
+        }
         h.pos += 1;
         h.last_at = Some(e.started_at);
         h.last_session = e.listening_session;
     }
-    data.holdout_from = holdout_start(&row_at);
+    let last = data.times.last().copied();
+    data.set.weights = data
+        .times
+        .iter()
+        .map(|t| match (recipe.half_life_days, last) {
+            (Some(half), Some(last)) => {
+                let age = (last - *t).num_minutes() as f32 / 1440.0;
+                0.5f32.powf(age / half).max(MIN_WEIGHT)
+            }
+            _ => 1.0,
+        })
+        .collect();
+    data.holdout_from = match cut {
+        Some(cut) => data.times.partition_point(|t| *t < cut),
+        None => holdout_start(&data.times, recipe.min_holdout_share),
+    };
     Ok(data)
 }
 
-// ───────────── Решение: включать ли ─────────────
+/// Грани слушателя, какими они были бы к моменту `cut`: те же веса треков, что у ночного пересчёта
+/// (`taste::listened_weight`), но только по прослушиваниям и лайкам до `cut`.
+fn facets_at(
+    events: &[Event],
+    analysed: &HashMap<Uuid, Analysed>,
+    liked_at: &HashMap<(Uuid, Uuid), DateTime<Utc>>,
+    user: Uuid,
+    cut: DateTime<Utc>,
+    recipe: &Recipe,
+) -> Vec<(Vec<f32>, f32)> {
+    let mut by_recording: HashMap<Uuid, (f32, f32, Option<f32>)> = HashMap::new();
+    for e in events
+        .iter()
+        .filter(|e| e.user_id == user && e.started_at < cut)
+    {
+        let Some(r) = e.recording_id.filter(|r| analysed.contains_key(r)) else {
+            continue;
+        };
+        if e.started_at < cut - Duration::days(365) {
+            continue;
+        }
+        let age = (cut - e.started_at).num_minutes() as f32 / 1440.0;
+        let Some(y) = label(
+            &e.end_reason,
+            e.played_ms,
+            e.duration_ms,
+            false,
+            e.import && recipe.import_stops_skip,
+        ) else {
+            continue;
+        };
+        let entry = by_recording.entry(r).or_default();
+        if y[1] > 0.5 {
+            entry.0 += (-age / 60.0).exp();
+        }
+        if y[0] > 0.5 && e.played_ms < 30_000 {
+            entry.1 += (-age / 30.0).exp();
+        }
+        if let Some(t) = liked_at.get(&(user, e.track_id)).filter(|t| **t < cut) {
+            entry.2 = Some((cut - *t).num_minutes() as f32 / 1440.0);
+        }
+    }
+    let mut items: Vec<(Uuid, f32)> = by_recording
+        .into_iter()
+        .map(|(r, (full, skips, liked))| (r, taste::listened_weight(liked, full, skips)))
+        .filter(|(_, w)| *w > 0.15)
+        .collect();
+    items.sort_by_key(|(r, _)| *r);
+    let points: Vec<Vec<f32>> = items
+        .iter()
+        .map(|(r, _)| analysed[r].sound.clone())
+        .collect();
+    let weights: Vec<f32> = items.iter().map(|(_, w)| *w).collect();
+    taste::centroids(&points, &weights, user)
+}
+
+// ───────────── Проверка и решение ─────────────
+
+/// Чем кончилась проверка версии на отложенной части.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Evaluation {
+    pub train: usize,
+    pub holdout: usize,
+    pub net: Scores,
+    pub rules: Scores,
+    pub vs_rules: Comparison,
+    /// Текущая включённая версия на той же отложенной части.
+    pub current: Option<(String, Scores)>,
+    pub vs_current: Option<Comparison>,
+    /// Текущая версия сама точнее правил на этой части.
+    pub current_beats_rules: Option<bool>,
+}
+
+/// Вероятности сети для строк `range` набора: onnxruntime, пачками.
+fn predict_rows(
+    model: &Loaded,
+    set: &TrainSet,
+    range: std::ops::Range<usize>,
+) -> Result<Vec<[f32; 3]>, String> {
+    let mut out = Vec::with_capacity(range.len());
+    let mut start = range.start;
+    while start < range.end {
+        let end = (start + 512).min(range.end);
+        out.extend(model.predict(set.features(start..end), end - start)?);
+        start = end;
+    }
+    Ok(out)
+}
+
+/// Правила как вероятности: оценка калибруется логистической регрессией на обучающей части.
+fn rules_probs(data: &Dataset) -> Vec<[f32; 3]> {
+    let h = data.holdout_from;
+    let cal: Vec<Calibration> = (0..3)
+        .map(|k| {
+            let y: Vec<f32> = (0..h).map(|i| data.set.labels[i * 3 + k]).collect();
+            Calibration::fit(&data.baseline[..h], &y)
+        })
+        .collect();
+    data.baseline[h..]
+        .iter()
+        .map(|x| [cal[0].apply(*x), cal[1].apply(*x), cal[2].apply(*x)])
+        .collect()
+}
+
+fn ranked(probs: &[[f32; 3]]) -> Vec<f32> {
+    probs.iter().map(metrics::wave_score).collect()
+}
+
+/// Проверка сети `net` на отложенной части набора — против правил и против включённой `current`.
+/// Синхронно: вызывать из `spawn_blocking`.
+pub fn evaluate(
+    data: &Dataset,
+    net: &Loaded,
+    current: Option<&Loaded>,
+) -> Result<Evaluation, String> {
+    let h = data.holdout_from;
+    let n = data.rows();
+    let labels = &data.set.labels[h * 3..];
+    let groups = &data.set.groups[h..];
+    let probs = predict_rows(net, &data.set, h..n)?;
+    let rules = rules_probs(data);
+    let rules_rank: Vec<f32> = data.baseline[h..].to_vec();
+    let mut eval = Evaluation {
+        train: h,
+        holdout: n - h,
+        net: metrics::scores(&probs, labels, groups, &ranked(&probs)),
+        rules: metrics::scores(&rules, labels, groups, &rules_rank),
+        vs_rules: metrics::compare(&probs, &rules, labels, groups, BOOTSTRAP, 7),
+        ..Default::default()
+    };
+    if let Some(cur) = current {
+        match predict_rows(cur, &data.set, h..n) {
+            Ok(cp) => {
+                let vs_rules = metrics::compare(&cp, &rules, labels, groups, BOOTSTRAP, 7);
+                let scores = metrics::scores(&cp, labels, groups, &ranked(&cp));
+                eval.current_beats_rules = Some(beats(&vs_rules, &scores, &eval.rules));
+                eval.vs_current =
+                    Some(metrics::compare(&probs, &cp, labels, groups, BOOTSTRAP, 11));
+                eval.current = Some((cur.version.clone(), scores));
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "taste model: current version failed on the holdout")
+            }
+        }
+    }
+    Ok(eval)
+}
+
+fn beats(vs_rules: &Comparison, net: &Scores, rules: &Scores) -> bool {
+    match (
+        vs_rules.auc_gain,
+        vs_rules.p_better,
+        net.logloss,
+        rules.logloss,
+    ) {
+        (Some(gain), Some(p), Some(loss), Some(base)) => {
+            gain >= AUC_MARGIN && p >= P_BETTER && loss <= base
+        }
+        _ => false,
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Verdict {
-    pub beats: bool,
+    pub beats_rules: bool,
+    /// Лучше текущей включённой; текущей нет — `None`.
+    pub beats_current: Option<bool>,
+    /// Включить эту версию.
+    pub activate: bool,
+    /// Не включаем, но текущая остаётся (она сама точнее правил).
+    pub keep_current: bool,
     pub note: String,
 }
 
-fn metric(m: &Value, key: &str) -> Option<f64> {
-    m.get(key).and_then(Value::as_f64)
+fn pct(x: Option<f64>) -> String {
+    x.map_or("—".into(), |p| format!("{:.0} %", p * 100.0))
 }
 
-/// Сеть включается, только если на отложенных данных точнее правил: средняя AUC выше хотя бы на
-/// [`AUC_MARGIN`] и logloss не хуже.
-pub fn judge(metrics: &Value) -> Verdict {
-    let (Some(auc), Some(base_auc), Some(loss), Some(base_loss)) = (
-        metric(metrics, "auc"),
-        metric(metrics, "baselineAuc"),
-        metric(metrics, "logloss"),
-        metric(metrics, "baselineLogloss"),
-    ) else {
-        return Verdict {
-            beats: false,
-            note: "На отложенных данных не с чем сравнить: у голов один исход".into(),
-        };
+fn num(x: Option<f64>) -> String {
+    x.map_or("—".into(), |v| format!("{v:.3}"))
+}
+
+/// Включать ли: точнее правил (AUC выше на [`AUC_MARGIN`], уверенность бутстрепа не ниже [`P_BETTER`],
+/// logloss не хуже) и не хуже включённой сети на той же отложенной части.
+pub fn judge(e: &Evaluation) -> Verdict {
+    let beats_rules = beats(&e.vs_rules, &e.net, &e.rules);
+    let beats_current = e.vs_current.as_ref().map(|c| {
+        c.auc_gain.is_some_and(|g| g >= 0.0) && c.logloss_gain.is_some_and(|g| g >= -LOGLOSS_SLACK)
+    });
+    let activate = beats_rules && beats_current != Some(false);
+    let keep_current = !activate && e.current_beats_rules == Some(true);
+    let vs = format!(
+        "AUC {} против {} у правил, уверенность {}, logloss {} против {}",
+        num(e.net.auc),
+        num(e.rules.auc),
+        pct(e.vs_rules.p_better),
+        num(e.net.logloss),
+        num(e.rules.logloss),
+    );
+    let current = e.current.as_ref().map(|(v, s)| (v.as_str(), s.auc));
+    let note = match (activate, beats_rules, current) {
+        (true, _, Some((v, auc))) => {
+            format!("Включена: точнее правил ({vs}) и {v} (AUC {})", num(auc))
+        }
+        (true, _, None) => format!("Включена: точнее правил ({vs})"),
+        (false, true, Some((v, auc))) => format!(
+            "Не включена: {v} не хуже (AUC {} против {})",
+            num(auc),
+            num(e.net.auc)
+        ),
+        (false, _, _) if e.net.auc.is_none() => {
+            "Не включена: на отложенных данных не с чем сравнить — у голов один исход".into()
+        }
+        (false, _, _) => format!("Не включена: правила не хуже ({vs})"),
     };
-    let beats = auc >= base_auc + AUC_MARGIN && loss <= base_loss;
-    let note = if beats {
-        format!(
-            "Точнее правил: AUC {auc:.3} против {base_auc:.3}, logloss {loss:.3} против {base_loss:.3}"
-        )
-    } else {
-        format!(
-            "Правила точнее: AUC {auc:.3} против {base_auc:.3}, logloss {loss:.3} против {base_loss:.3}"
-        )
-    };
-    Verdict { beats, note }
+    Verdict {
+        beats_rules,
+        beats_current,
+        activate,
+        keep_current,
+        note,
+    }
 }
 
 // ───────────── Загрузка и применение ─────────────
@@ -784,63 +1169,82 @@ fn environment() -> Result<&'static Environment, String> {
     .map_err(Clone::clone)
 }
 
+/// Загруженные версии (общая и свои у слушателей) и те, что загрузить не удалось.
 struct Cache {
-    loaded: Option<Arc<Loaded>>,
-    /// Версия, которую не удалось загрузить: не пробовать на каждом подборе.
-    failed: Option<Uuid>,
+    loaded: HashMap<Uuid, Arc<Loaded>>,
+    failed: HashSet<Uuid>,
 }
 
-static CACHE: Mutex<Cache> = Mutex::new(Cache {
-    loaded: None,
-    failed: None,
-});
+static CACHE: OnceLock<Mutex<Cache>> = OnceLock::new();
 
-/// Активная сеть, если поток сейчас собирает она; правила или сбой загрузки — `None`.
-pub async fn active(db: &PgPool) -> Result<Option<Arc<Loaded>>, sqlx::Error> {
-    let Some(row) =
-        sqlx::query!("SELECT id, version FROM model_versions WHERE kind = 'taste' AND active")
-            .fetch_optional(db)
-            .await?
-    else {
-        return Ok(None);
-    };
-    if !row.version.starts_with(PREFIX) {
-        return Ok(None);
+fn cache() -> std::sync::MutexGuard<'static, Cache> {
+    let m = CACHE.get_or_init(|| {
+        Mutex::new(Cache {
+            loaded: HashMap::new(),
+            failed: HashSet::new(),
+        })
+    });
+    m.lock().unwrap_or_else(|p| p.into_inner())
+}
+
+/// Сеть, которая собирает поток слушателю: своя, если включена, иначе общая. Правила или сбой
+/// загрузки — `None`. `user = None` — только общая.
+pub async fn active(db: &PgPool, user: Option<Uuid>) -> Result<Option<Arc<Loaded>>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT id, version, user_id FROM model_versions
+           WHERE kind = 'taste' AND active AND (user_id IS NULL OR user_id = $1)
+           ORDER BY user_id IS NULL"#,
+        user,
+    )
+    .fetch_all(db)
+    .await?;
+    for row in rows {
+        if !row.version.starts_with(PREFIX) {
+            continue;
+        }
+        if let Some(l) = load(db, row.id, &row.version).await? {
+            return Ok(Some(l));
+        }
     }
-    if let Ok(cache) = CACHE.lock() {
-        if let Some(l) = cache.loaded.as_ref().filter(|l| l.id == row.id) {
+    Ok(None)
+}
+
+async fn load(db: &PgPool, id: Uuid, version: &str) -> Result<Option<Arc<Loaded>>, sqlx::Error> {
+    {
+        let c = cache();
+        if let Some(l) = c.loaded.get(&id) {
             return Ok(Some(l.clone()));
         }
-        if cache.failed == Some(row.id) {
+        if c.failed.contains(&id) {
             return Ok(None);
         }
     }
-    let artifact = sqlx::query_scalar!("SELECT artifact FROM model_versions WHERE id = $1", row.id)
+    let artifact = sqlx::query_scalar!("SELECT artifact FROM model_versions WHERE id = $1", id)
         .fetch_optional(db)
         .await?
         .flatten();
-    let (id, version) = (row.id, row.version);
+    let name = version.to_string();
     let built = match artifact {
-        Some(bytes) => tokio::task::spawn_blocking(move || Loaded::build(id, &version, &bytes))
+        Some(bytes) => tokio::task::spawn_blocking(move || Loaded::build(id, &name, &bytes))
             .await
             .unwrap_or_else(|e| Err(e.to_string())),
         None => Err("у версии нет ONNX".into()),
     };
-    let mut cache = match CACHE.lock() {
-        Ok(c) => c,
-        Err(p) => p.into_inner(),
-    };
+    let mut c = cache();
     match built {
         Ok(l) => {
             let l = Arc::new(l);
             tracing::info!(version = %l.version, "taste model loaded");
-            cache.loaded = Some(l.clone());
-            cache.failed = None;
+            // Выключенные версии из памяти уходят: держим немного
+            if c.loaded.len() >= 16 {
+                c.loaded.clear();
+            }
+            c.loaded.insert(id, l.clone());
             Ok(Some(l))
         }
         Err(e) => {
             tracing::warn!(model = %id, error = %e, "taste model failed to load, ranking stays on rules");
-            cache.failed = Some(id);
+            c.failed.insert(id);
             Ok(None)
         }
     }
@@ -848,17 +1252,15 @@ pub async fn active(db: &PgPool) -> Result<Option<Arc<Loaded>>, sqlx::Error> {
 
 /// Версия, которая пишется в показы: сеть, если она оценила выдачу, иначе правила.
 pub fn version_of(entries: &[&Cand]) -> String {
-    if entries.iter().any(|c| c.model.is_some())
-        && let Ok(cache) = CACHE.lock()
-        && let Some(l) = &cache.loaded
-    {
-        return l.version.clone();
-    }
-    MODEL_VERSION.to_string()
+    entries
+        .iter()
+        .find_map(|c| c.model_version.clone())
+        .unwrap_or_else(|| MODEL_VERSION.to_string())
 }
 
 /// Подбор волны прямо сейчас: время, устройство, ход сессии, грани вкуса.
 pub struct Live<'a> {
+    pub user: Uuid,
     pub at: DateTime<Utc>,
     pub utc_offset_min: i16,
     pub platform: Option<&'a str>,
@@ -867,43 +1269,28 @@ pub struct Live<'a> {
     pub facets: &'a [Facet],
 }
 
-/// Оценка сети каждому кандидату с анализом (`Cand::model`) — относительно среднего по кандидатам:
-/// сеть двигает порядок, а не общий уровень. Сети нет или она дала сбой — ничего не меняется.
-pub async fn annotate(db: &PgPool, entries: &mut [Entry], live: &Live<'_>) -> Option<String> {
-    let loaded = match active(db).await {
-        Ok(Some(l)) => l,
-        Ok(None) => return None,
-        Err(e) => {
-            tracing::warn!(error = %e, "taste model lookup failed");
-            return None;
-        }
-    };
-    let recordings: Vec<Uuid> = entries
+/// Признаки кандидатов для сети: строки и номера кандидатов, у которых есть анализ.
+async fn live_features(
+    db: &PgPool,
+    cands: &[&Cand],
+    live: &Live<'_>,
+) -> Result<(Vec<f32>, Vec<usize>), sqlx::Error> {
+    let recordings: Vec<Uuid> = cands
         .iter()
-        .filter_map(|e| e.cand.recording_id)
+        .filter_map(|c| c.recording_id)
         .collect::<HashSet<_>>()
         .into_iter()
         .collect();
-    if recordings.is_empty() {
-        return None;
-    }
-    let vectors: HashMap<Uuid, (Vec<f32>, Option<Vec<f32>>)> = match sqlx::query!(
+    let vectors: HashMap<Uuid, (Vec<f32>, Option<Vec<f32>>)> = sqlx::query!(
         r#"SELECT recording_id, sound::real[] AS "sound!", semantic::real[] AS semantic
            FROM track_analysis WHERE recording_id = ANY($1) AND sound IS NOT NULL"#,
         &recordings,
     )
     .fetch_all(db)
-    .await
-    {
-        Ok(rows) => rows
-            .into_iter()
-            .map(|r| (r.recording_id, (r.sound, r.semantic)))
-            .collect(),
-        Err(e) => {
-            tracing::warn!(error = %e, "taste model: vectors unavailable");
-            return None;
-        }
-    };
+    .await?
+    .into_iter()
+    .map(|r| (r.recording_id, (r.sound, r.semantic)))
+    .collect();
     let facets: Vec<(&[f32], f32)> = live
         .facets
         .iter()
@@ -920,8 +1307,7 @@ pub async fn annotate(db: &PgPool, entries: &mut [Entry], live: &Live<'_>) -> Op
     };
     let mut idx = Vec::new();
     let mut features = Vec::new();
-    for (i, e) in entries.iter().enumerate() {
-        let c = &e.cand;
+    for (i, c) in cands.iter().enumerate() {
         let Some((sound, semantic)) = c.recording_id.and_then(|r| vectors.get(&r)) else {
             continue;
         };
@@ -933,11 +1319,41 @@ pub async fn annotate(db: &PgPool, entries: &mut [Entry], live: &Live<'_>) -> Op
             completed: c.completed,
             artist_familiar: c.artist_familiar,
             plays_30d: c.plays_30d,
+            skips: c.skips,
+            days_since: c
+                .last_played
+                .map(|t| (live.at - t).num_minutes() as f32 / 1440.0),
+            hit_sim: c.hit_sim,
+            miss_sim: c.miss_sim,
         };
         let s = scalars(&TrackFeat::of(c), semantic.is_some(), &moment, &fam);
         features.extend(row(sound, semantic.as_deref(), &s));
         idx.push(i);
     }
+    Ok((features, idx))
+}
+
+/// Вероятности сети для кандидатов (по номерам); сети нет или сбой — пусто.
+pub async fn probabilities(
+    db: &PgPool,
+    cands: &[&Cand],
+    live: &Live<'_>,
+) -> Option<(String, HashMap<usize, [f32; 3]>)> {
+    let loaded = match active(db, Some(live.user)).await {
+        Ok(Some(l)) => l,
+        Ok(None) => return None,
+        Err(e) => {
+            tracing::warn!(error = %e, "taste model lookup failed");
+            return None;
+        }
+    };
+    let (features, idx) = match live_features(db, cands, live).await {
+        Ok(x) => x,
+        Err(e) => {
+            tracing::warn!(error = %e, "taste model: vectors unavailable");
+            return None;
+        }
+    };
     if idx.is_empty() {
         return None;
     }
@@ -954,15 +1370,238 @@ pub async fn annotate(db: &PgPool, entries: &mut [Entry], live: &Live<'_>) -> Op
             return None;
         }
     };
-    let raw: Vec<f32> = probs
-        .iter()
-        .map(|[skip, complete, like]| 0.5 * complete + like - 0.8 * skip)
+    Some((loaded.version.clone(), idx.into_iter().zip(probs).collect()))
+}
+
+/// Оценка сети каждому кандидату с анализом (`Cand::model`) — относительно среднего по кандидатам:
+/// сеть двигает порядок, а не общий уровень. Сети нет или она дала сбой — ничего не меняется.
+pub async fn annotate(db: &PgPool, entries: &mut [Entry], live: &Live<'_>) -> Option<String> {
+    let cands: Vec<&Cand> = entries.iter().map(|e| &e.cand).collect();
+    let (version, probs) = probabilities(db, &cands, live).await?;
+    let n = probs.len();
+    let raw: Vec<(usize, f32)> = probs
+        .into_iter()
+        .map(|(i, p)| (i, metrics::wave_score(&p)))
         .collect();
-    let mean = raw.iter().sum::<f32>() / n as f32;
-    for (i, r) in idx.into_iter().zip(raw) {
+    let mean = raw.iter().map(|(_, r)| r).sum::<f32>() / n as f32;
+    for (i, r) in raw {
         entries[i].cand.model = Some(MODEL_WEIGHT * (r - mean));
+        entries[i].cand.model_version = Some(version.clone());
     }
-    Some(loaded.version.clone())
+    Some(version)
+}
+
+// ───────────── Версии: запись и включение ─────────────
+
+/// Новая обученная версия: где обучена и для кого.
+pub struct NewVersion<'a> {
+    pub params: &'a Params,
+    pub report: &'a TrainReport,
+    pub spec: &'a Spec,
+    pub eval: &'a Evaluation,
+    pub verdict: &'a Verdict,
+    /// Своя сеть слушателя; `None` — общая.
+    pub user_id: Option<Uuid>,
+    /// Обучена на компьютере: устройство и его имя.
+    pub device: Option<(Uuid, String)>,
+    pub onnx: Vec<u8>,
+}
+
+/// Записанная версия.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Stored {
+    pub id: Uuid,
+    pub version: String,
+    pub active: bool,
+    pub note: String,
+}
+
+fn metrics_json(v: &NewVersion<'_>) -> Value {
+    let e = v.eval;
+    let head = |k: usize| {
+        json!({
+            "positives": e.net.heads.get(k).map_or(0, |h| h.positives),
+            "auc": e.net.heads.get(k).and_then(|h| h.auc),
+            "logloss": e.net.heads.get(k).map(|h| h.logloss),
+            "baselineAuc": e.rules.heads.get(k).and_then(|h| h.auc),
+            "baselineLogloss": e.rules.heads.get(k).map(|h| h.logloss),
+        })
+    };
+    json!({
+        "train": e.train,
+        "holdout": e.holdout,
+        "rows": e.train + e.holdout,
+        "heads": { "skip": head(0), "complete": head(1), "like": head(2) },
+        "auc": e.net.auc,
+        "logloss": e.net.logloss,
+        "baselineAuc": e.rules.auc,
+        "baselineLogloss": e.rules.logloss,
+        "sessionAuc": e.net.session_auc,
+        "baselineSessionAuc": e.rules.session_auc,
+        "ndcg": e.net.ndcg,
+        "baselineNdcg": e.rules.ndcg,
+        "sessions": e.net.sessions,
+        "pBetter": e.vs_rules.p_better,
+        "current": e.current.as_ref().map(|(version, s)| json!({
+            "version": version, "auc": s.auc, "logloss": s.logloss, "sessionAuc": s.session_auc, "ndcg": s.ndcg,
+            "pBetter": e.vs_current.as_ref().and_then(|c| c.p_better),
+        })),
+        "beatsRules": v.verdict.beats_rules,
+        "beatsCurrent": v.verdict.beats_current,
+        "note": v.verdict.note,
+        "params": v.params.trainable(),
+        "epochs": v.report.best_epoch,
+        "tookMs": v.report.took_ms,
+        "curve": { "fit": v.report.fit_loss, "val": v.report.val_loss },
+        "reduced": { "sound": v.params.sound_k, "semantic": v.params.semantic_k },
+        "spec": v.spec,
+        "features": SCALARS.as_slice(),
+    })
+}
+
+/// Записать версию (ONNX — в хранилище и копией в базе) и решить, что собирает поток: эта версия,
+/// прежняя или правила.
+pub async fn store(
+    db: &PgPool,
+    storage: &Storage,
+    v: NewVersion<'_>,
+) -> Result<Stored, sqlx::Error> {
+    let stamp = format!("{PREFIX}{}", Utc::now().format("%Y%m%d-%H%M%S"));
+    // Два обучения в одну секунду (ручное «Обучить» сразу за ночным) — суффикс
+    let same = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM model_versions WHERE kind = 'taste' AND version LIKE $1 || '%'"#,
+        stamp,
+    )
+    .fetch_one(db)
+    .await?;
+    let version = if same == 0 {
+        stamp
+    } else {
+        format!("{stamp}-{}", same + 1)
+    };
+    let key = format!("models/taste/{version}.onnx");
+    let artifact_key = match storage
+        .put(&key, v.onnx.clone(), "application/octet-stream", None)
+        .await
+    {
+        Ok(()) => Some(key),
+        Err(e) => {
+            tracing::warn!(error = %e, "taste model: storage upload failed, kept in the database only");
+            None
+        }
+    };
+    let metrics = metrics_json(&v);
+    let (device_id, device_name) = v.device.clone().unzip();
+    let origin = if v.device.is_some() {
+        "device"
+    } else {
+        "server"
+    };
+
+    let mut tx = db.begin().await?;
+    let id = sqlx::query_scalar!(
+        "INSERT INTO model_versions (kind, version, metrics, artifact_key, artifact, active, user_id, origin,
+                                     device_id, device_name)
+         VALUES ('taste', $1, $2, $3, $4, false, $5, $6, $7, $8) RETURNING id",
+        version,
+        metrics,
+        artifact_key,
+        v.onnx,
+        v.user_id,
+        origin,
+        device_id,
+        device_name,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    if !v.verdict.keep_current {
+        sqlx::query!(
+            "UPDATE model_versions SET active = false
+             WHERE kind = 'taste' AND active AND user_id IS NOT DISTINCT FROM $1",
+            v.user_id,
+        )
+        .execute(&mut *tx)
+        .await?;
+        if v.verdict.activate {
+            sqlx::query!("UPDATE model_versions SET active = true WHERE id = $1", id)
+                .execute(&mut *tx)
+                .await?;
+        } else if v.user_id.is_none() {
+            // Свежая проверка говорит, что правила точнее: прежняя общая сеть тоже выключается.
+            // Своя сеть слушателя просто выключается — дальше его поток собирает общая
+            sqlx::query!(
+                "INSERT INTO model_versions (kind, version, active) VALUES ('taste', $1, true)
+                 ON CONFLICT (kind, version) DO UPDATE SET active = true",
+                MODEL_VERSION,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+    sqlx::query!(
+        "UPDATE model_versions SET artifact = NULL
+         WHERE kind = 'taste' AND NOT active AND artifact IS NOT NULL
+           AND id NOT IN (SELECT id FROM model_versions WHERE kind = 'taste' AND artifact IS NOT NULL
+                          ORDER BY created_at DESC LIMIT $1)",
+        KEEP_ARTIFACTS,
+    )
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    tracing::info!(%version, origin, active = v.verdict.activate, note = %v.verdict.note, "taste model stored");
+    Ok(Stored {
+        id,
+        version,
+        active: v.verdict.activate,
+        note: v.verdict.note.clone(),
+    })
+}
+
+/// Веса → ONNX → загрузка → проверка на отложенной части набора против правил и включённой версии.
+/// Одна дорога и для своего обучения, и для весов с компьютера.
+pub async fn check(
+    db: &PgPool,
+    data: Arc<Dataset>,
+    params: &Params,
+    user: Option<Uuid>,
+) -> Result<(Vec<u8>, Evaluation, Verdict), String> {
+    if params.input_dim() != FEATURE_DIM || params.scalar_dim != SCALARS.len() {
+        return Err(format!(
+            "ширина входа {} вместо {FEATURE_DIM}",
+            params.input_dim()
+        ));
+    }
+    let onnx = onnx::export(params);
+    let current = match user {
+        Some(u) => personal_active(db, u).await,
+        None => active(db, None).await,
+    }
+    .map_err(|e| e.to_string())?;
+    let bytes = onnx.clone();
+    let eval = tokio::task::spawn_blocking(move || {
+        let net = Loaded::build(Uuid::nil(), "candidate", &bytes)
+            .map_err(|e| format!("сервер не загружает ONNX: {e}"))?;
+        evaluate(&data, &net, current.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    let verdict = judge(&eval);
+    Ok((onnx, eval, verdict))
+}
+
+/// Своя включённая сеть слушателя (без общей).
+async fn personal_active(db: &PgPool, user: Uuid) -> Result<Option<Arc<Loaded>>, sqlx::Error> {
+    let Some(row) = sqlx::query!(
+        "SELECT id, version FROM model_versions WHERE kind = 'taste' AND active AND user_id = $1",
+        user,
+    )
+    .fetch_optional(db)
+    .await?
+    else {
+        return Ok(None);
+    };
+    load(db, row.id, &row.version).await
 }
 
 // ───────────── Обучение: задача и расписание ─────────────
@@ -987,7 +1626,7 @@ pub async fn schedule(db: &PgPool, settings: &Settings) -> Result<bool, sqlx::Er
         r#"SELECT NOT EXISTS (SELECT 1 FROM jobs WHERE kind = 'taste_model'
                                 AND (status IN ('queued', 'running')
                                      OR (status IN ('done', 'failed') AND finished_at > now() - make_interval(hours => $1))))
-                  AND (SELECT count(*) FROM play_events WHERE started_at > now() - interval '365 days') >= $2
+                  AND (SELECT count(*) FROM play_events) >= $2
                   AS "due!""#,
         hours,
         MIN_ROWS as i64,
@@ -1009,132 +1648,69 @@ fn too_little(rows: usize) -> Value {
     })
 }
 
-/// Задача `taste_model`: набор → обучение в ml → проверка, что ONNX загружается → версия в
-/// `model_versions` (ONNX — в хранилище и копией в базе) → включение, если точнее правил; иначе — правила.
+/// Задача `taste_model`: набор → обучение здесь же → проверка через onnxruntime на отложенной части →
+/// версия в `model_versions` → включение, если точнее правил и текущей; иначе — прежняя или правила.
 pub async fn run(ctx: Arc<Context>, _job: JobRow) -> JobResult {
-    let data = dataset(&ctx.db).await?;
+    let data = Arc::new(dataset(&ctx.db, &Recipe::default(), None, None).await?);
     if !data.enough() {
-        return Ok(too_little(data.rows).into());
+        return Ok(too_little(data.rows()).into());
     }
-    let trained = match ctx.ml.train_taste(&data.request()).await {
-        Ok(t) => t,
-        Err(MlError::Api { code, .. }) if code == "too_little_data" => {
-            return Ok(too_little(data.rows).into());
-        }
-        Err(e) if e.is_temporary() => return Err(JobError::retry(e)),
-        Err(e) => return Err(JobError::permanent(e)),
-    };
-    if trained.input_dim != FEATURE_DIM {
-        return Err(JobError::permanent(format!(
-            "ширина входа сети {} вместо {FEATURE_DIM}",
-            trained.input_dim
-        )));
-    }
-    let onnx = STANDARD
-        .decode(&trained.onnx)
-        .map_err(|e| JobError::permanent(format!("ONNX не в base64: {e}")))?;
-    let probe = onnx.clone();
-    tokio::task::spawn_blocking(move || Loaded::build(Uuid::nil(), "probe", &probe).map(|_| ()))
+    let spec = spec();
+    let train_set = data.train_part();
+    let s = spec.clone();
+    let (params, report) =
+        tokio::task::spawn_blocking(move || dalywave_taste::train(&train_set, &s))
+            .await
+            .map_err(|e| JobError::retry(e.to_string()))?
+            .map_err(JobError::permanent)?;
+    let (onnx, eval, verdict) = check(&ctx.db, data.clone(), &params, None)
         .await
-        .map_err(|e| JobError::retry(e.to_string()))?
-        .map_err(|e| JobError::permanent(format!("сервер не загружает ONNX: {e}")))?;
-
-    let verdict = judge(&trained.metrics);
-    let stamp = format!("{PREFIX}{}", Utc::now().format("%Y%m%d-%H%M%S"));
-    // Два обучения в одну секунду (ручное «Обучить» сразу за ночным) — суффикс
-    let same = sqlx::query_scalar!(
-        r#"SELECT count(*) AS "n!" FROM model_versions WHERE kind = 'taste' AND version LIKE $1 || '%'"#,
-        stamp,
+        .map_err(JobError::permanent)?;
+    let stored = store(
+        &ctx.db,
+        &ctx.storage,
+        NewVersion {
+            params: &params,
+            report: &report,
+            spec: &spec,
+            eval: &eval,
+            verdict: &verdict,
+            user_id: None,
+            device: None,
+            onnx,
+        },
     )
-    .fetch_one(&ctx.db)
     .await?;
-    let version = if same == 0 {
-        stamp
-    } else {
-        format!("{stamp}-{}", same + 1)
-    };
-    let key = format!("models/taste/{version}.onnx");
-    let artifact_key = match ctx
-        .storage
-        .put(&key, onnx.clone(), "application/octet-stream", None)
-        .await
-    {
-        Ok(()) => Some(key),
-        Err(e) => {
-            tracing::warn!(error = %e, "taste model: storage upload failed, kept in the database only");
-            None
-        }
-    };
-    let mut metrics = trained.metrics.clone();
-    if let Some(m) = metrics.as_object_mut() {
-        m.insert("rows".into(), json!(data.rows));
-        m.insert("params".into(), json!(trained.params));
-        m.insert("epochs".into(), json!(trained.epochs));
-        m.insert("reduced".into(), trained.reduced.clone());
-        m.insert("features".into(), json!(SCALARS.as_slice()));
-        m.insert("beatsRules".into(), json!(verdict.beats));
-        m.insert("note".into(), json!(verdict.note));
-    }
-
-    let mut tx = ctx.db.begin().await?;
-    let id = sqlx::query_scalar!(
-        "INSERT INTO model_versions (kind, version, metrics, artifact_key, artifact, active)
-         VALUES ('taste', $1, $2, $3, $4, false) RETURNING id",
-        version,
-        metrics,
-        artifact_key,
-        onnx,
-    )
-    .fetch_one(&mut *tx)
-    .await?;
-    sqlx::query!("UPDATE model_versions SET active = false WHERE kind = 'taste' AND active")
-        .execute(&mut *tx)
-        .await?;
-    if verdict.beats {
-        sqlx::query!("UPDATE model_versions SET active = true WHERE id = $1", id)
-            .execute(&mut *tx)
-            .await?;
-    } else {
-        // Свежая проверка говорит, что правила точнее: прежняя сеть тоже выключается
-        sqlx::query!(
-            "INSERT INTO model_versions (kind, version, active) VALUES ('taste', $1, true)
-             ON CONFLICT (kind, version) DO UPDATE SET active = true",
-            MODEL_VERSION,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
-    sqlx::query!(
-        "UPDATE model_versions SET artifact = NULL
-         WHERE kind = 'taste' AND NOT active AND artifact IS NOT NULL
-           AND id NOT IN (SELECT id FROM model_versions WHERE kind = 'taste' AND artifact IS NOT NULL
-                          ORDER BY created_at DESC LIMIT $1)",
-        KEEP_ARTIFACTS,
-    )
-    .execute(&mut *tx)
-    .await?;
-    tx.commit().await?;
-    tracing::info!(%version, active = verdict.beats, note = %verdict.note, "taste model trained");
     Ok(json!({
         "outcome": "trained",
-        "version": version,
-        "active": verdict.beats,
-        "rows": data.rows,
-        "message": verdict.note,
+        "version": stored.version,
+        "active": stored.active,
+        "rows": data.rows(),
+        "message": stored.note,
     })
     .into())
 }
 
 // ───────────── Админка ─────────────
 
-fn view(
+struct VersionRow {
     id: Uuid,
     version: String,
     active: bool,
     created_at: DateTime<Utc>,
-    m: &Value,
-) -> ModelVersionView {
-    let learned = version.starts_with(PREFIX);
+    metrics: Value,
+    origin: String,
+    device_name: Option<String>,
+    user_name: Option<String>,
+}
+
+fn metric(m: &Value, key: &str) -> Option<f64> {
+    m.get(key).and_then(Value::as_f64)
+}
+
+fn view(r: VersionRow) -> ModelVersionView {
+    let m = &r.metrics;
+    let learned = r.version.starts_with(PREFIX);
     let heads = HEADS
         .iter()
         .filter_map(|h| {
@@ -1149,39 +1725,68 @@ fn view(
             })
         })
         .collect();
+    let current = m.get("current").filter(|c| c.is_object());
     ModelVersionView {
-        id,
+        id: r.id,
         learned,
-        active,
-        created_at,
+        active: r.active,
+        created_at: r.created_at,
         auc: metric(m, "auc"),
         logloss: metric(m, "logloss"),
         baseline_auc: metric(m, "baselineAuc"),
         baseline_logloss: metric(m, "baselineLogloss"),
+        session_auc: metric(m, "sessionAuc"),
+        baseline_session_auc: metric(m, "baselineSessionAuc"),
+        ndcg: metric(m, "ndcg"),
+        baseline_ndcg: metric(m, "baselineNdcg"),
+        p_better: metric(m, "pBetter"),
+        current_version: current
+            .and_then(|c| c.get("version"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        current_auc: current.and_then(|c| metric(c, "auc")),
+        beats_current: m.get("beatsCurrent").and_then(Value::as_bool),
         heads,
         train_rows: m.get("train").and_then(Value::as_i64),
         holdout_rows: m.get("holdout").and_then(Value::as_i64),
         params: m.get("params").and_then(Value::as_i64),
+        epochs: m.get("epochs").and_then(Value::as_i64),
         beats_rules: m.get("beatsRules").and_then(Value::as_bool),
         note: m.get("note").and_then(Value::as_str).map(str::to_string),
-        version,
+        origin: if learned { r.origin } else { "rules".into() },
+        device_name: r.device_name,
+        user_name: r.user_name,
+        version: r.version,
     }
 }
 
-/// Версии модели вкуса, новые первыми (последние 20).
+/// Версии модели вкуса, новые первыми (последние 30): общие и свои у слушателей.
 pub async fn versions(db: &PgPool) -> Result<Vec<ModelVersionView>, sqlx::Error> {
     Ok(sqlx::query!(
-        "SELECT id, version, active, created_at, metrics FROM model_versions
-         WHERE kind = 'taste' ORDER BY created_at DESC, id DESC LIMIT 20"
+        r#"SELECT m.id, m.version, m.active, m.created_at, m.metrics, m.origin, m.device_name,
+                  u.name AS "user_name?"
+           FROM model_versions m LEFT JOIN users u ON u.id = m.user_id
+           WHERE m.kind = 'taste' ORDER BY m.created_at DESC, m.id DESC LIMIT 30"#
     )
     .fetch_all(db)
     .await?
     .into_iter()
-    .map(|r| view(r.id, r.version, r.active, r.created_at, &r.metrics))
+    .map(|r| {
+        view(VersionRow {
+            id: r.id,
+            version: r.version,
+            active: r.active,
+            created_at: r.created_at,
+            metrics: r.metrics,
+            origin: r.origin,
+            device_name: r.device_name,
+            user_name: r.user_name,
+        })
+    })
     .collect())
 }
 
-/// Последнее обучение и сколько данных есть сейчас.
+/// Последнее обучение, сколько данных есть сейчас и последние задания компьютерам.
 pub async fn training(db: &PgPool) -> Result<ModelTraining, sqlx::Error> {
     let last = sqlx::query!(
         "SELECT status, result, last_error, COALESCE(finished_at, updated_at) AS at FROM jobs
@@ -1192,17 +1797,19 @@ pub async fn training(db: &PgPool) -> Result<ModelTraining, sqlx::Error> {
     let rows = sqlx::query_scalar!(
         r#"SELECT count(*) AS "n!" FROM play_events p JOIN tracks t ON t.id = p.track_id
            JOIN track_analysis a ON a.recording_id = t.recording_id AND a.sound IS NOT NULL
-           WHERE p.started_at > now() - interval '365 days'
-             AND p.end_reason NOT IN ('error', 'interrupted', 'transferred')"#
+           WHERE p.end_reason NOT IN ('error', 'interrupted', 'transferred')"#
     )
     .fetch_one(db)
     .await?;
+    let tasks = super::training::recent(db).await?;
+    let mut out = ModelTraining {
+        rows,
+        min_rows: MIN_ROWS as i64,
+        device_tasks: tasks,
+        ..Default::default()
+    };
     let Some(last) = last else {
-        return Ok(ModelTraining {
-            rows,
-            min_rows: MIN_ROWS as i64,
-            ..Default::default()
-        });
+        return Ok(out);
     };
     let result = last.result.unwrap_or(Value::Null);
     let (outcome, message) = match last.status.as_str() {
@@ -1219,14 +1826,11 @@ pub async fn training(db: &PgPool) -> Result<ModelTraining, sqlx::Error> {
         ),
         _ => (None, None),
     };
-    Ok(ModelTraining {
-        running: matches!(last.status.as_str(), "queued" | "running"),
-        last_run_at: last.at,
-        outcome,
-        message,
-        rows,
-        min_rows: MIN_ROWS as i64,
-    })
+    out.running = matches!(last.status.as_str(), "queued" | "running");
+    out.last_run_at = last.at;
+    out.outcome = outcome;
+    out.message = message;
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -1269,6 +1873,10 @@ mod tests {
             completed: 3,
             artist_familiar: true,
             plays_30d: 0,
+            skips: 2,
+            days_since: Some(10.0),
+            hit_sim: Some(0.7),
+            miss_sim: None,
         };
         // 18:00 UTC — 21:00 в Москве, суббота
         let s = scalars(&t, true, &moment(18), &f);
@@ -1285,6 +1893,11 @@ mod tests {
         assert_eq!(s[idx("taste_sim")], 0.8);
         assert_eq!(s[idx("has_facets")], 1.0);
         assert!(s[idx("completed")] > 0.0 && s[idx("plays_30d")] == 0.0);
+        assert!(s[idx("track_skips")] > 0.0);
+        assert!(s[idx("days_since_play")] > 0.0 && s[idx("days_since_play")] < 1.0);
+        assert_eq!(s[idx("heard_before")], 1.0);
+        assert_eq!(s[idx("hit_sim")], 0.7);
+        assert_eq!((s[idx("has_hits")], s[idx("has_misses")]), (1.0, 0.0));
         assert!(s.iter().all(|x| x.is_finite()));
 
         // Неизвестное — середина шкалы и флаги «неизвестно»
@@ -1298,6 +1911,7 @@ mod tests {
         assert_eq!(empty[idx("key_known")], 0.0);
         assert_eq!(empty[idx("energy")], 0.6);
         assert_eq!(empty[idx("has_facets")], 0.0);
+        assert_eq!(empty[idx("heard_before")], 0.0);
         assert_eq!(
             empty[idx("device_mobile")] + empty[idx("device_desktop")],
             0.0,
@@ -1308,27 +1922,37 @@ mod tests {
     #[test]
     fn labels_say_nothing_about_errors_and_stops() {
         assert_eq!(
-            label("completed", 180_000, 180_000, true),
+            label("completed", 180_000, 180_000, true, false),
             Some([0.0, 1.0, 1.0])
         );
         assert_eq!(
-            label("skipped", 5_000, 180_000, false),
+            label("skipped", 5_000, 180_000, false, false),
             Some([1.0, 0.0, 0.0])
         );
         // Поздний пропуск — не пропуск и не дослушивание
         assert_eq!(
-            label("skipped", 120_000, 180_000, false),
+            label("skipped", 120_000, 180_000, false, false),
             Some([0.0, 0.0, 0.0])
         );
         // Дослушал почти до конца и переключил — дослушал
         assert_eq!(
-            label("skipped", 170_000, 180_000, false),
+            label("skipped", 170_000, 180_000, false, false),
             Some([0.0, 1.0, 0.0])
         );
-        assert_eq!(label("error", 1_000, 180_000, false), None);
-        assert_eq!(label("transferred", 60_000, 180_000, false), None);
-        assert_eq!(label("stopped", 60_000, 180_000, false), None);
-        assert_eq!(label("completed", 1, 0, false), None);
+        assert_eq!(label("error", 1_000, 180_000, false, false), None);
+        assert_eq!(label("transferred", 60_000, 180_000, false, false), None);
+        assert_eq!(label("stopped", 60_000, 180_000, false, false), None);
+        assert_eq!(label("completed", 1, 0, false, false), None);
+        // Импорт Spotify: «остановлено» в начале трека (endplay) — пропуск; в середине — без метки
+        assert_eq!(
+            label("stopped", 9_000, 180_000, false, true),
+            Some([1.0, 0.0, 0.0])
+        );
+        assert_eq!(label("stopped", 120_000, 180_000, false, true), None);
+        assert_eq!(
+            label("stopped", 179_000, 180_000, true, true),
+            Some([0.0, 1.0, 1.0])
+        );
     }
 
     #[test]
@@ -1348,42 +1972,85 @@ mod tests {
         assert!((rules_prior(&TrackFeat::default(), &f, Utc::now()) - 0.38).abs() < 1e-6);
     }
 
-    #[test]
-    fn half_precision_round_trips() {
-        use crate::reco::vectors::f16_to_f32;
-        for x in [
-            0.0f32, 1.0, -1.0, 0.5, 0.1, -0.333, 1e-5, 6.1e-5, 65504.0, 0.0312,
-        ] {
-            let back = f16_to_f32(f16_bits(x));
-            assert!((back - x).abs() <= x.abs() * 1e-3 + 1e-7, "{x} → {back}");
+    fn eval(auc: f64, base: f64, p: f64, loss: f64, base_loss: f64) -> Evaluation {
+        let s = |a: f64, l: f64| Scores {
+            auc: Some(a),
+            logloss: Some(l),
+            ..Default::default()
+        };
+        Evaluation {
+            net: s(auc, loss),
+            rules: s(base, base_loss),
+            vs_rules: Comparison {
+                auc_gain: Some(auc - base),
+                logloss_gain: Some(base_loss - loss),
+                p_better: Some(p),
+            },
+            ..Default::default()
         }
-        assert_eq!(f16_bits(1.0), 0x3c00);
-        assert_eq!(f16_bits(-2.0), 0xc000);
-        assert_eq!(f16_bits(1e9), 0x7c00);
     }
 
     #[test]
-    fn verdict_needs_better_auc_and_no_worse_logloss() {
-        let m = |auc: f64, base: f64, loss: f64, base_loss: f64| json!({ "auc": auc, "baselineAuc": base, "logloss": loss, "baselineLogloss": base_loss });
-        assert!(judge(&m(0.72, 0.65, 0.50, 0.55)).beats);
-        assert!(!judge(&m(0.652, 0.65, 0.50, 0.55)).beats, "в пределах шума");
-        assert!(!judge(&m(0.72, 0.65, 0.60, 0.55)).beats, "logloss хуже");
-        let none = judge(&json!({ "auc": null, "baselineAuc": null }));
-        assert!(!none.beats);
-        assert_eq!(holdout_size(300), 60);
+    fn verdict_needs_better_auc_confidence_and_no_worse_logloss() {
+        assert!(judge(&eval(0.72, 0.65, 0.99, 0.50, 0.55)).activate);
+        assert!(
+            !judge(&eval(0.652, 0.65, 0.99, 0.50, 0.55)).activate,
+            "в пределах шума"
+        );
+        assert!(
+            !judge(&eval(0.72, 0.65, 0.7, 0.50, 0.55)).activate,
+            "неуверенно"
+        );
+        assert!(
+            !judge(&eval(0.72, 0.65, 0.99, 0.60, 0.55)).activate,
+            "logloss хуже"
+        );
+        let none = judge(&Evaluation::default());
+        assert!(!none.activate && none.note.contains("не с чем сравнить"));
+
+        // Лучше правил, но хуже включённой — остаётся включённая
+        let mut e = eval(0.72, 0.65, 0.99, 0.50, 0.55);
+        e.current = Some((
+            "nn-old".into(),
+            Scores {
+                auc: Some(0.74),
+                ..Default::default()
+            },
+        ));
+        e.vs_current = Some(Comparison {
+            auc_gain: Some(-0.02),
+            logloss_gain: Some(0.0),
+            p_better: Some(0.1),
+        });
+        e.current_beats_rules = Some(true);
+        let v = judge(&e);
+        assert!(v.beats_rules && !v.activate && v.keep_current);
+        assert!(v.note.contains("nn-old"), "{}", v.note);
+    }
+
+    #[test]
+    fn holdout_is_recent_weeks_but_not_too_small() {
         let day = |d: i64| DateTime::<Utc>::from_timestamp(0, 0).unwrap() + Duration::days(d);
-        // Год истории по строке в день: на проверку — последние четыре недели
+        // Год истории по строке в день: последние четыре недели — 29 строк, меньше 20 % — уходит 73
         let year: Vec<_> = (0..365).map(day).collect();
-        // Последние четыре недели — 29 строк, меньше нижней границы: на проверку уходит 60
-        assert_eq!(365 - holdout_start(&year), 60);
+        assert_eq!(365 - holdout_start(&year, 0.2), 73);
+        assert_eq!(
+            365 - holdout_start(&year, 0.0),
+            60,
+            "без доли — не меньше 60"
+        );
         // Вся история за неделю: последние недели — это всё, но больше 40 % на проверку не уходит
-        let week: Vec<_> = (0..300).map(|i| day(i / 50)).collect();
-        assert_eq!(300 - holdout_start(&week), 120);
+        let week: Vec<_> = (0..300)
+            .map(|i| day(i / 50) + Duration::minutes(i))
+            .collect();
+        assert_eq!(300 - holdout_start(&week, 0.2), 120);
         // Плотный хвост свежих строк: всё из последних четырёх недель
         let mut tail: Vec<_> = (0..300).map(day).collect();
-        tail.extend((0..80).map(|_| day(300)));
-        assert_eq!(380 - holdout_start(&tail), 80 + 28);
-        assert_eq!(holdout_start(&[]), 0);
-        assert_eq!(holdout_size(1000), 200);
+        tail.extend((0..80).map(|i| day(300) + Duration::minutes(i)));
+        assert_eq!(380 - holdout_start(&tail, 0.2), 80 + 27);
+        assert_eq!(holdout_start(&[], 0.2), 0);
+        // Строки одного момента — в одной части
+        let same = vec![day(0); 100];
+        assert_eq!(holdout_start(&same, 0.2), 0);
     }
 }

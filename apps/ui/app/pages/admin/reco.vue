@@ -127,8 +127,17 @@ const dataShare = computed(() => {
 function modelState(m: RecoOverview['models'][number]) {
   if (m.active) return { text: t('nn.state.active'), tone: 'ap-ok' }
   if (!m.learned) return { text: t('nn.state.rulesOff'), tone: 'ap-muted' }
+  if (m.beatsRules && m.beatsCurrent === false) return { text: t('nn.state.notBetter'), tone: 'ap-muted' }
   return m.beatsRules ? { text: t('nn.state.replaced'), tone: 'ap-muted' } : { text: t('nn.state.worse'), tone: 'ap-warn' }
 }
+/** Где и для кого обучена: «Сервер · общая», «Mac Zakhar · своя: Аня» */
+function modelOrigin(m: RecoOverview['models'][number]) {
+  const where = m.origin === 'device' ? (m.deviceName ?? t('nn.device')) : t('nn.server')
+  const whom = m.userName ? t('nn.personal', { name: m.userName }) : t('nn.global')
+  return `${where} · ${whom}`
+}
+const tasks = computed(() => training.value?.deviceTasks ?? [])
+const TASK_TONE: Record<string, string> = { done: 'ap-ok', failed: 'ap-bad', expired: 'ap-muted', leased: '' }
 const ml = computed(() => data.value?.ml)
 const mlVersion = computed(() => (ml.value?.health as { version?: string } | null)?.version ?? null)
 const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } | null)?.modelsLoaded)
@@ -309,16 +318,47 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
             <div class="ap-tr ap-tr--head">
               <span>{{ t('nn.version') }}</span>
               <span class="ap-num">{{ t('nn.auc') }}</span>
+              <span class="ap-num ap-hide-phone">{{ t('nn.session') }}</span>
               <span class="ap-num ap-hide-phone">{{ t('nn.logloss') }}</span>
               <span class="ap-num">{{ t('nn.state.title') }}</span>
             </div>
             <div v-for="m in models" :key="m.id" class="ap-tr">
-              <span class="ap-cell"><b class="ap-mono">{{ m.version }}</b><small>{{ m.learned ? (m.note ?? formatRelative(m.createdAt, lang)) : t('nn.rules') }}</small></span>
-              <span class="ap-cell rc__end"><b class="tnum">{{ metric(m.auc) }}</b><small v-if="m.learned" class="tnum">{{ t('nn.vs', { v: metric(m.baselineAuc) }) }}</small></span>
-              <span class="ap-cell rc__end ap-hide-phone"><b class="tnum">{{ metric(m.logloss) }}</b><small v-if="m.learned" class="tnum">{{ t('nn.vs', { v: metric(m.baselineLogloss) }) }}</small></span>
-              <span class="ap-num" :class="modelState(m).tone">{{ modelState(m).text }}</span>
+              <span class="ap-cell">
+                <b class="ap-mono">{{ m.version }}</b>
+                <small v-if="m.learned">{{ modelOrigin(m) }} · {{ formatRelative(m.createdAt, lang) }}</small>
+                <small v-if="m.learned && m.note" class="rc__note">{{ m.note }}</small>
+                <small v-if="!m.learned">{{ t('nn.rules') }}</small>
+              </span>
+              <span class="ap-cell rc__end">
+                <b class="tnum">{{ metric(m.auc) }}</b>
+                <small v-if="m.learned" class="tnum">{{ t('nn.vs', { v: metric(m.baselineAuc) }) }}</small>
+                <small v-if="m.currentVersion" class="tnum">{{ t('nn.vsCurrent', { v: metric(m.currentAuc) }) }}</small>
+              </span>
+              <span class="ap-cell rc__end ap-hide-phone">
+                <b class="tnum">{{ metric(m.sessionAuc) }}</b>
+                <small v-if="m.learned && m.sessionAuc != null" class="tnum">{{ t('nn.vs', { v: metric(m.baselineSessionAuc) }) }}</small>
+              </span>
+              <span class="ap-cell rc__end ap-hide-phone">
+                <b class="tnum">{{ metric(m.logloss) }}</b>
+                <small v-if="m.learned" class="tnum">{{ t('nn.vs', { v: metric(m.baselineLogloss) }) }}</small>
+              </span>
+              <span class="ap-cell rc__end">
+                <b :class="modelState(m).tone">{{ modelState(m).text }}</b>
+                <small v-if="m.pBetter != null" class="tnum">{{ t('nn.confidence', { p: Math.round(m.pBetter * 100) }) }}</small>
+              </span>
             </div>
           </div>
+          <template v-if="tasks.length">
+            <h3 class="rc__sub">{{ t('nn.devices') }}</h3>
+            <p class="ap-hint">{{ t('nn.devicesHint') }}</p>
+            <div class="ap-table rc__tasks">
+              <div v-for="task in tasks" :key="task.id" class="ap-tr">
+                <span class="ap-cell"><b>{{ task.deviceName }}</b><small>{{ task.userName ? t('nn.personal', { name: task.userName }) : t('nn.global') }} · {{ t('nn.rows', { n: n(task.rows) }) }}</small></span>
+                <span class="ap-cell ap-hide-phone"><b class="ap-mono">{{ task.version ?? '—' }}</b><small>{{ task.message ?? '' }}</small></span>
+                <span class="ap-cell rc__end"><b :class="TASK_TONE[task.status]">{{ t(`nn.task.${task.status}`) }}</b><small class="tnum">{{ formatRelative(task.finishedAt ?? task.leasedAt, lang) }}</small></span>
+              </div>
+            </div>
+          </template>
         </AdminSection>
 
         <AdminSection :title="t('ml.title')">
@@ -361,8 +401,11 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
 .rc__nn-label { font-size: var(--fs-small); color: var(--text-2); }
 .rc__nn-meter { flex: 1; max-width: 240px; }
 .rc__nn-count { font-size: var(--fs-small); font-weight: 600; }
-.rc__nn { --cols: minmax(0, 1fr) 96px 96px 120px; }
+.rc__nn { --cols: minmax(0, 1fr) 104px 96px 96px 132px; }
 .rc__nn .ap-tr { min-height: 52px; }
+.rc__note { white-space: normal !important; }
+.rc__sub { margin: 20px 0 0; font-size: var(--fs-body); font-weight: 650; }
+.rc__tasks { --cols: minmax(0, 1fr) minmax(0, 1.4fr) 132px; }
 .rc__err { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 @media (max-width: 1099px) {
   .ap-stats[style*="--n: 5"] { --n: 3 !important; row-gap: 16px; }
@@ -380,7 +423,9 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
   .rc__sessions { --cols: minmax(0, 1fr) auto; }
   .rc__mixes { --cols: minmax(0, 1fr) auto; }
   .rc__src { --cols: minmax(0, 1fr) 64px 72px 64px; }
-  .rc__nn { --cols: minmax(0, 1fr) 72px 96px; }
+  .rc__nn { --cols: minmax(0, 1fr) 96px 112px; column-gap: 12px; }
+  .rc__nn .ap-tr > :last-child small { display: none; }
+  .rc__tasks { --cols: minmax(0, 1fr) auto; }
   .rc__nn-meter { max-width: none; }
 }
 </style>
@@ -457,7 +502,7 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
     "outcome": { "like": "Лайк", "dislike": "Не нравится", "skip": "Пропуск", "not_now": "Не сейчас", "more_like_this": "Ещё такого", "completed": "Дослушан" },
     "nn": {
       "title": "Сеть вкуса",
-      "hint": "Учится ночью на прослушиваниях и включается сама, только если на отложенных данных точнее правил",
+      "hint": "Учится ночью на сервере и на компьютерах с приложением; включается сама, только если на отложенных данных точнее правил и текущей версии",
       "data": "Данные",
       "of": "{n} из {m} прослушиваний",
       "enough": "{n} прослушиваний",
@@ -467,9 +512,20 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
       "auc": "AUC",
       "logloss": "Logloss",
       "vs": "правила {v}",
+      "vsCurrent": "прежняя {v}",
+      "session": "В сессии",
+      "confidence": "уверенность {p} %",
+      "server": "Сервер",
+      "device": "Компьютер",
+      "global": "общая",
+      "personal": "своя: {name}",
+      "rows": "{n} строк",
+      "devices": "Обучение на компьютерах",
+      "devicesHint": "Компьютеры с приложением учат сеть на своём железе; сервер сам проверяет присланное на своих отложенных данных",
+      "task": { "leased": "Учится", "done": "Проверена", "failed": "Не вышло", "expired": "Не дождались" },
       "rules": "Правила: пока сеть не точнее",
       "outcome": { "trained": "Обучена", "too_little_data": "Мало данных", "failed": "Не получилось", "none": "—" },
-      "state": { "title": "Состояние", "active": "Работает", "replaced": "Заменена", "worse": "Не включена", "rulesOff": "Выключены" }
+      "state": { "title": "Состояние", "active": "Работает", "replaced": "Заменена", "worse": "Не включена", "notBetter": "Не лучше прежней", "rulesOff": "Выключены" }
     },
     "ml": {
       "title": "Сервис анализа звука",
@@ -554,7 +610,7 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
     "outcome": { "like": "Like", "dislike": "Dislike", "skip": "Skip", "not_now": "Not now", "more_like_this": "More like this", "completed": "Finished" },
     "nn": {
       "title": "Taste network",
-      "hint": "Trains nightly on plays and switches itself on only when it beats the rules on held-out data",
+      "hint": "Trains nightly on the server and on computers with the app; switches itself on only when it beats the rules and the current version on held-out data",
       "data": "Data",
       "of": "{n} of {m} plays",
       "enough": "{n} plays",
@@ -564,9 +620,20 @@ const mlModels = computed(() => (ml.value?.health as { modelsLoaded?: boolean } 
       "auc": "AUC",
       "logloss": "Logloss",
       "vs": "rules {v}",
+      "vsCurrent": "previous {v}",
+      "session": "In session",
+      "confidence": "confidence {p} %",
+      "server": "Server",
+      "device": "Computer",
+      "global": "shared",
+      "personal": "own: {name}",
+      "rows": "{n} rows",
+      "devices": "Training on computers",
+      "devicesHint": "Computers with the app train the network on their own hardware; the server checks what they send on its own held-out data",
+      "task": { "leased": "Training", "done": "Checked", "failed": "Failed", "expired": "Timed out" },
       "rules": "Rules: until the network is better",
       "outcome": { "trained": "Trained", "too_little_data": "Too little data", "failed": "Failed", "none": "—" },
-      "state": { "title": "State", "active": "Active", "replaced": "Replaced", "worse": "Not enabled", "rulesOff": "Off" }
+      "state": { "title": "State", "active": "Active", "replaced": "Replaced", "worse": "Not enabled", "notBetter": "Not better than previous", "rulesOff": "Off" }
     },
     "ml": {
       "title": "Audio analysis service",

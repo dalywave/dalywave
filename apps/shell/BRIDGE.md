@@ -644,6 +644,25 @@ interface DownloaderSnapshot {
 до 10 %, скачивание — до 65 %, проверка — до 80 %, отправка — до 100 %. Токен загрузчика приложение
 заводит само (только администратору), хранит в связке ключей и интерфейсу не отдаёт.
 
+## Обучение рекомендаций
+
+Только macOS и Windows (`src/trainer.rs`): приложение берёт у сервера задание «обучить сеть вкуса»
+(`POST /api/taste/training/claim` с токеном устройства), учит её тем же `crates/taste`, что и сервер,
+в потоке с низким приоритетом и отправляет веса (`…/{id}/result`). Решает сервер: проверяет веса на
+своих отложенных данных. Учит только на питании от сети и когда загрузка процессора ниже трети ядер;
+первая попытка — через 5 минут после запуска, дальше — раз в час. В интерфейсе — `bridge.trainer`
+(`null` на сайте и телефонах), команды `trainer_state`, `trainer_set_enabled(enabled: bool | null)`,
+событие `trainer:state`:
+
+```ts
+interface TrainerSnapshot {
+  enabled: boolean | null   // «Помогать учить рекомендации»; null — по умолчанию: учат только компьютеры
+                            // администраторов (общую сеть), true — ещё и свою сеть слушателя
+  phase: 'off' | 'idle' | 'on-battery' | 'busy' | 'signed-out' | 'fetching' | 'training' | 'sending'
+  last: { atMs: number, outcome: 'active' | 'kept' | 'failed', rows: number, tookMs: number, note: string } | null
+}
+```
+
 ## Обновления
 
 Только macOS и Windows. Сервер отвечает на `GET /api/updates/{target}/{arch}/{current_version}`

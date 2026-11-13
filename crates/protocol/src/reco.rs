@@ -281,9 +281,64 @@ pub struct ModelVersionView {
     /// Точнее ли правил на отложенных данных — то есть включена ли при обучении.
     #[schema(required = true)]
     pub beats_rules: Option<bool>,
-    /// Почему не включена или выключена: «правила точнее», «новая версия».
+    /// Почему включена или не включена: «точнее правил и текущей», «правила не хуже».
     #[schema(required = true)]
     pub note: Option<String>,
+    /// Порядок внутри сессии на отложенной части: доля верных пар «пропустил — дослушал» и NDCG@10,
+    /// у сети и у правил.
+    #[schema(required = true)]
+    pub session_auc: Option<f64>,
+    #[schema(required = true)]
+    pub baseline_session_auc: Option<f64>,
+    #[schema(required = true)]
+    pub ndcg: Option<f64>,
+    #[schema(required = true)]
+    pub baseline_ndcg: Option<f64>,
+    /// Доля бутстреп-выборок по сессиям, где сеть точнее правил.
+    #[schema(required = true)]
+    pub p_better: Option<f64>,
+    /// Версия, которая была включена при проверке, и её AUC на той же отложенной части.
+    #[schema(required = true)]
+    pub current_version: Option<String>,
+    #[schema(required = true)]
+    pub current_auc: Option<f64>,
+    #[schema(required = true)]
+    pub beats_current: Option<bool>,
+    /// Лучшая эпоха.
+    #[schema(required = true)]
+    pub epochs: Option<i64>,
+    /// Где обучена: `server`, `device` (компьютер с приложением) или `rules`.
+    pub origin: String,
+    /// Компьютер, на котором обучена.
+    #[schema(required = true)]
+    pub device_name: Option<String>,
+    /// Своя сеть слушателя; `null` — общая.
+    #[schema(required = true)]
+    pub user_name: Option<String>,
+}
+
+/// Задание «обучить сеть вкуса» компьютеру с приложением.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TrainTaskView {
+    pub id: Uuid,
+    pub device_name: String,
+    /// Своя сеть слушателя; `null` — общая.
+    #[schema(required = true)]
+    pub user_name: Option<String>,
+    /// `leased`, `done`, `failed`, `expired`.
+    pub status: String,
+    /// Строк обучающей части.
+    pub rows: i64,
+    /// Версия из присланных весов.
+    #[schema(required = true)]
+    pub version: Option<String>,
+    /// Решение сервера или ошибка компьютера.
+    #[schema(required = true)]
+    pub message: Option<String>,
+    pub leased_at: DateTime<Utc>,
+    #[schema(required = true)]
+    pub finished_at: Option<DateTime<Utc>>,
 }
 
 /// Последнее обучение сети вкуса (задача `taste_model`).
@@ -303,6 +358,8 @@ pub struct ModelTraining {
     /// Размеченных прослушиваний для обучения сейчас и сколько нужно.
     pub rows: i64,
     pub min_rows: i64,
+    /// Последние задания компьютерам, новые первыми.
+    pub device_tasks: Vec<TrainTaskView>,
 }
 
 /// Что запустить сейчас, не дожидаясь расписания.

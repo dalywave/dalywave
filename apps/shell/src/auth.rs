@@ -671,6 +671,8 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
     // Загрузчик на компьютере работает, пока вход выполнен
     #[cfg(desktop)]
     crate::downloader::changed(&app);
+    #[cfg(desktop)]
+    crate::trainer::changed(&app);
     Ok(session)
 }
 

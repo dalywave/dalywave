@@ -203,6 +203,9 @@ const language = computed({
 
     <ShellDownloaderSettings />
 
+    <!-- Приложение для компьютера: помогать учить рекомендации на этом компьютере -->
+    <ShellTrainerSettings />
+
     <!-- Приложение для компьютера: статус «Слушает DalyWave» в Discord -->
     <SettingsDiscord />
 

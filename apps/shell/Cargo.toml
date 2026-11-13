@@ -27,6 +27,8 @@ dalywave-downloads = { path = "../../crates/client/downloads" }
 dalywave-protocol = { path = "../../crates/protocol" }
 dalywave-store = { path = "../../crates/client/store" }
 dalywave-sync = { path = "../../crates/client/sync" }
+# Сеть вкуса: обучение на этом компьютере тем же кодом, что и на сервере (trainer.rs)
+dalywave-taste = { path = "../../crates/taste" }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 uuid = { version = "1", features = ["v7", "serde"] }
 tauri = { version = "2.12.5", features = ["tray-icon", "image-png"] }
@@ -142,7 +144,9 @@ windows-sys = { version = "0.61", features = [
     "Wdk_System_SystemServices",
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
+    "Win32_System_Power",
     "Win32_System_SystemInformation",
+    "Win32_System_Threading",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
 ] }
