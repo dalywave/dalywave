@@ -108,7 +108,6 @@ function pinSide() {
 
 // Кодек и битрейт — техническое: они в «⋯ → О треке» и в админке. В плеере — только «превью»: трек оборвётся
 const preview = computed(() => (player.source?.preview ? t('player.preview') : null))
-const bpm = computed(() => (player.source?.bpm ? `${Math.round(player.source.bpm)} BPM` : null))
 
 const mood = computed({
   get: () => player.wave.mood,
@@ -307,7 +306,6 @@ onBeforeUnmount(() => {
           <FriendsPrivateChip class="fp__connect" />
           <div class="fp__chips">
             <UiBadge v-if="preview" variant="quality" icon="ph:waveform">{{ preview }}</UiBadge>
-            <UiBadge v-if="bpm" variant="meta">{{ bpm }}</UiBadge>
           </div>
         </div>
         <div v-if="player.waveActive" class="fp__reactions">
