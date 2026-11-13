@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT o.user_id, o.hide_private FROM overlay_links o JOIN users u ON u.id = o.user_id\n         WHERE o.token_hash = $1 AND NOT u.disabled AND cardinality(u.roles) > 0",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "overlay_links",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hide_private",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "overlay_links",
+            "name": "hide_private"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "aee34f019f3b184c162bab1f8a67a69f50dd38da0dc01fdc78b26b25ddb548fa"
+}

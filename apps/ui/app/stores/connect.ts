@@ -269,6 +269,8 @@ export const useConnectStore = defineStore('connect', () => {
   /** Маршрут действий плеера, пока он показывает другое устройство */
   function route(cmd: RemoteCommand, local?: () => unknown): boolean {
     if (!player.mirrored) return false
+    // «Играть» (с наушников, экрана блокировки), пока ждёт «Продолжить здесь?» — это «да»
+    if ((cmd.action === 'play' || (cmd.action === 'toggle' && !shown.value?.playing)) && useHandoffStore().takePending()) return true
     if (remote.value) return command(cmd)
     // Активного нет в сети. Новое (альбом, волна) — просто играем здесь
     if (cmd.action === 'playTracks' || cmd.action === 'startWave') {

@@ -19,6 +19,7 @@ pub mod library;
 pub mod lyrics;
 pub mod notifications;
 pub mod offline;
+pub mod overlay;
 pub mod playlist_folders;
 pub mod playlist_set;
 pub mod playlists;
@@ -119,11 +120,14 @@ pub fn router(state: AppState) -> Router {
         .merge(jam::host_routes())
         .merge(info::play_routes())
         .merge(versions::routes())
+        .merge(overlay::routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())
         .merge(updates::routes())
         .merge(images::routes())
+        // Оверлей для стрима: по секретной ссылке `dwo_…`, без входа
+        .merge(overlay::public_routes())
         .merge(ws::routes())
         // «Слушать вместе»: гости без аккаунта — свой токен `dwj_…`, проверка в каждом обработчике
         .merge(jam::guest_routes())

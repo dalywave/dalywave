@@ -734,5 +734,16 @@
       "ru": "Top Russia",
       "world": "Top Global"
     }
+  },
+  "handoff": {
+    "suggestHeadphones": "{output} are here now",
+    "suggestAway": "Continue here? Music is still on “{name}”",
+    "continue": "Continue",
+    "movedHere": "Music continued here",
+    "movedHereWith": "Music followed your {output}",
+    "movedTo": "Music moved to “{name}”"
+  },
+  "focus": {
+    "applied": "Wave set for Focus: “{name}”"
   }
 }

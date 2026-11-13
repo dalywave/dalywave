@@ -12,6 +12,8 @@ mod discord;
 #[cfg(desktop)]
 mod downloader;
 mod error;
+// Фокусирование iOS: сочетание волны из фильтра фокуса (Swift зовёт сюда)
+mod focus;
 mod haptics;
 #[cfg(target_os = "ios")]
 mod ios;
@@ -27,6 +29,8 @@ mod notify;
 mod offline;
 mod platform;
 mod player;
+// Экран компьютера заблокирован — для подхвата музыки на другом устройстве
+mod presence;
 // Push iPhone и iPad (APNs): разрешение, токен для сервера, значок, нажатие на уведомление
 mod push;
 mod recognize;
@@ -131,6 +135,8 @@ pub fn run() {
             // Звук — сразу, в фоновом потоке: к первой команде интерфейса движок готов
             player::init(handle);
             audio::init(handle);
+            presence::init(handle);
+            focus::install(handle);
             // Локальная база и загрузки: синхронизация и докачка идут в фоне
             offline::init(handle);
 
@@ -243,6 +249,7 @@ pub fn run() {
             recognize::recognize_cancel,
             recognize::recognize_take_pending,
             siri::siri_take,
+            focus::focus_wave,
             audio::audio_outputs,
             audio::audio_set_output,
             audio::audio_show_picker,

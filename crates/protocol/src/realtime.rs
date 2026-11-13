@@ -11,8 +11,8 @@ use uuid::Uuid;
 use crate::{
     catalog::AudioStatus,
     connect::{
-        ConnectAck, ConnectActive, ConnectCommand, ConnectDevices, ConnectEmpty, ConnectHello,
-        ConnectPublish, ConnectSend, ConnectState, ConnectTransfer,
+        ConnectAck, ConnectActive, ConnectCommand, ConnectDevices, ConnectEmpty, ConnectHandoff,
+        ConnectHello, ConnectPublish, ConnectSend, ConnectSignal, ConnectState, ConnectTransfer,
     },
     jam::{JamChanged, JamNowEvent, JamReaction},
     jobs::{AcquisitionStatus, JobStatus},
@@ -58,6 +58,9 @@ pub enum ServerEvent {
     /// Ответ устройства на команду этого пульта.
     #[serde(rename = "connect.ack")]
     ConnectAck(ConnectAck),
+    /// Подхват на другом устройстве: музыка перешла сюда (или отсюда) или предложение «Продолжить здесь?».
+    #[serde(rename = "connect.handoff")]
+    ConnectHandoff(ConnectHandoff),
     /// «Слушать вместе»: участники, настройки или треки гостей изменились (хозяину и гостям).
     #[serde(rename = "jam.changed")]
     JamChanged(JamChanged),
@@ -109,6 +112,10 @@ pub enum ClientMessage {
     /// Перенести воспроизведение на устройство `to`.
     #[serde(rename = "connect.transfer")]
     ConnectTransfer(ConnectTransfer),
+    /// Повод подхватить музыку на другом устройстве: наушники пропали или появились, экран
+    /// заблокирован, приложение открыли.
+    #[serde(rename = "connect.signal")]
+    ConnectSignal(ConnectSignal),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

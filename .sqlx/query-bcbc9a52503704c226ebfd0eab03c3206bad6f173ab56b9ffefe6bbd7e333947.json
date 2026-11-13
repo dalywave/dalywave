@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH prev AS (SELECT 1 FROM overlay_links WHERE user_id = $1)\n           INSERT INTO overlay_links (user_id, nonce, token_hash) VALUES ($1, $2, $3)\n           ON CONFLICT (user_id) DO UPDATE SET nonce = EXCLUDED.nonce, token_hash = EXCLUDED.token_hash,\n               created_at = now()\n           RETURNING EXISTS (SELECT 1 FROM prev) AS \"replaced!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "replaced!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "bcbc9a52503704c226ebfd0eab03c3206bad6f173ab56b9ffefe6bbd7e333947"
+}

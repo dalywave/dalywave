@@ -5,6 +5,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (isMiniWindow()) return to.path === '/mini' ? undefined : navigateTo('/mini')
   // «Слушать вместе»: страница гостя открыта без входа — у гостя свой токен этой сессии
   if (to.path.startsWith('/jam/')) return
+  // Оверлей для стрима (OBS): без входа — у ссылки свой секретный ключ
+  if (to.path === '/overlay') return
   const auth = useAuthStore()
   const bridge = useBridge()
   const isAuthPage = to.path === '/login' || to.path === '/waiting'

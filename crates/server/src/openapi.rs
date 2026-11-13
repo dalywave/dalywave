@@ -9,8 +9,8 @@ use utoipa::{
 use crate::routes::{
     acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe, events,
     fetcher, friends, home, images, imports, info, jam, library, lyrics, notifications, offline,
-    playlist_folders, playlist_set, playlists, queue, reco, recognize, rewind, settings, share,
-    sources, stream, sync, system, taste, updates, versions, wave, wave_presets, ws,
+    overlay, playlist_folders, playlist_set, playlists, queue, reco, recognize, rewind, settings,
+    share, sources, stream, sync, system, taste, updates, versions, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -240,6 +240,12 @@ use crate::routes::{
         versions::track_versions,
         versions::choose,
         versions::choices,
+        overlay::info,
+        overlay::rotate,
+        overlay::update,
+        overlay::disable,
+        overlay::now,
+        overlay::stream_now,
     ),
     components(schemas(
         dalywave_protocol::imports::ImportJobPayload,

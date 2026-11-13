@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT played_privately($1, now()) AS \"private!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "private!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5db8a22a857536578681cc33d9526cb7b7cd9f8f77129f0dbd9d89b05ada96a2"
+}

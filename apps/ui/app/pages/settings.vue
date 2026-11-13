@@ -12,6 +12,7 @@ const sound = useSoundStore()
 const account = useAccountSettings()
 const offline = useOfflineStore()
 const ui = useUiStore()
+const focus = useFocusStore()
 const bridge = useBridge()
 const toast = useToast()
 const { t } = useI18n({ useScope: 'local' })
@@ -168,9 +169,16 @@ const language = computed({
       </div>
     </SettingsGroup>
 
+    <!-- Приложения: наушники перешли на другое устройство — музыка за ними -->
+    <SettingsHandoff />
+
     <SettingsGroup :title="t('wave')">
       <SettingsRow as="button" :title="t('taste')" :description="t('tasteDesc')" @click="navigateTo('/taste')">
         <Icon name="ph:caret-right" class="set__chev" />
+      </SettingsRow>
+      <!-- iPhone и iPad: сочетание волны выбирается в настройках фокуса iOS -->
+      <SettingsRow v-if="focus.available" :title="t('focus')" :description="t('focusDesc')">
+        <UiSwitch :model-value="focus.enabled" :label="t('focus')" hide-label @update:model-value="focus.setEnabled" />
       </SettingsRow>
       <SettingsRow :title="t('waveRow')">
         <UiButton size="sm" :disabled="waveIsDefault" @click="resetWave">{{ t('waveResetBtn') }}</UiButton>
@@ -211,6 +219,9 @@ const language = computed({
 
     <!-- Приложение для компьютера: статус «Слушает DalyWave» в Discord -->
     <SettingsDiscord />
+
+    <!-- Плашка «Сейчас играет» для OBS: секретная ссылка, вид, предпросмотр -->
+    <SettingsOverlay />
 
     <SettingsGroup :title="t('about')">
       <!-- Приложение для компьютера: версия и «Обновление готово — Перезапустить» -->
@@ -293,6 +304,8 @@ const language = computed({
     "taste": "Мой вкус",
     "tasteDesc": "Что волна знает о вас и как это поправить",
     "waveRow": "Настройки волны",
+    "focus": "Фокусирование",
+    "focusDesc": "Волна под включённый режим фокусирования",
     "waveResetBtn": "Сбросить",
     "waveReset": "Настройки волны сброшены",
     "appearance": "Интерфейс",
@@ -332,6 +345,8 @@ const language = computed({
     "taste": "My taste",
     "tasteDesc": "What the wave knows about you and how to tune it",
     "waveRow": "Wave settings",
+    "focus": "Focus",
+    "focusDesc": "The wave follows the Focus you turn on",
     "waveResetBtn": "Reset",
     "waveReset": "Wave settings reset",
     "appearance": "Interface",

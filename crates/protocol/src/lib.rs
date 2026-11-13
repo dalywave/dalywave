@@ -53,6 +53,7 @@ pub mod library;
 pub mod lyrics;
 pub mod notifications;
 pub mod offline;
+pub mod overlay;
 pub mod realtime;
 pub mod reco;
 pub mod recognize;

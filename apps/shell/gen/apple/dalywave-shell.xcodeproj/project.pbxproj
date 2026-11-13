@@ -23,6 +23,7 @@
 		27CD3BD0450D79D2C614686E /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6C18721B1459AAA3822C5D /* ShareViewController.swift */; };
 		2BBE475EF6512BD0CBC946F5 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51D42D29EB38AED4AEBFFAAE /* libapp.a */; };
 		2BD83F6EA8D32A703800721E /* WidgetColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F18935882415C3AB7A43757 /* WidgetColor.swift */; };
+		2EEDAA7E4485F8B150A252E6 /* DalyWaveFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 497BDAEAD0CAFB60ED861D68 /* DalyWaveFocus.swift */; };
 		30C6D39129658D17C16862B0 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23AC2109AB9EA57AAE92D6E7 /* UserNotifications.framework */; };
 		324F940418CA3A1E7DE562F1 /* Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84263A8382F149B6EDD7B6C2 /* Snapshot.swift */; };
 		34680CA9D2759AE11324C23E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8939A14EB49E4F5DEA32F192 /* MetalKit.framework */; };
@@ -210,6 +211,7 @@
 		3EE6B323B57ACC668F4AD7CC /* dalywave-widgets_Tests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "dalywave-widgets_Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F18935882415C3AB7A43757 /* WidgetColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetColor.swift; sourceTree = "<group>"; };
 		41A69F9BFD45F2682F2AB713 /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
+		497BDAEAD0CAFB60ED861D68 /* DalyWaveFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DalyWaveFocus.swift; sourceTree = "<group>"; };
 		4DD55E8BAC864777E137F488 /* discord.rs */ = {isa = PBXFileReference; path = discord.rs; sourceTree = "<group>"; };
 		4E17D140406AB97E6D0CE46D /* PhoneLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneLink.swift; sourceTree = "<group>"; };
 		4FDDDDE7535BD1290D603C13 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -233,6 +235,7 @@
 		78F428E4B3B528B3EF4190E7 /* recognize.rs */ = {isa = PBXFileReference; path = recognize.rs; sourceTree = "<group>"; };
 		7D83F5EA2B1684EDBDFED036 /* WatchLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
 		7E940980C4193C05C04F336E /* AppShortcuts.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = AppShortcuts.strings; path = ru.lproj/AppShortcuts.strings; sourceTree = "<group>"; };
+		804B35A7CF0CF2BF26604591 /* trainer.rs */ = {isa = PBXFileReference; path = trainer.rs; sourceTree = "<group>"; };
 		81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		82E855B1FFBF5A66BB26A28E /* auth.rs */ = {isa = PBXFileReference; path = auth.rs; sourceTree = "<group>"; };
 		84263A8382F149B6EDD7B6C2 /* Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snapshot.swift; sourceTree = "<group>"; };
@@ -246,6 +249,7 @@
 		8F2DA7FA3A01AC4E6A8C9B87 /* push.rs */ = {isa = PBXFileReference; path = push.rs; sourceTree = "<group>"; };
 		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		994AECBA29B15044C466628E /* focus.rs */ = {isa = PBXFileReference; path = focus.rs; sourceTree = "<group>"; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
 		9F6C18721B1459AAA3822C5D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -270,6 +274,7 @@
 		BDAF17457D058E173A55F65C /* DalyWaveWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DalyWaveWidgets.swift; sourceTree = "<group>"; };
 		C0FCC0DDA051C860490DC013 /* media.rs */ = {isa = PBXFileReference; path = media.rs; sourceTree = "<group>"; };
 		C2FBF4DAD75FEA7A5E3B4D2F /* DalyWaveWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DalyWaveWatchApp.swift; sourceTree = "<group>"; };
+		CACBA222A62B8509E07E4FE4 /* presence.rs */ = {isa = PBXFileReference; path = presence.rs; sourceTree = "<group>"; };
 		CBA685D63A1B696AAA3F0582 /* DalyWave.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = DalyWave.icon; sourceTree = "<group>"; };
 		CFA224F3B3C52421C49FE531 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		D14A7554BF8965ADA9E26D94 /* WidgetRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetRenderTests.swift; sourceTree = "<group>"; };
@@ -405,6 +410,7 @@
 				4DD55E8BAC864777E137F488 /* discord.rs */,
 				5D23FE966015BD36E8390CBC /* downloader.rs */,
 				253DBBE975A202E6D5DF3810 /* error.rs */,
+				994AECBA29B15044C466628E /* focus.rs */,
 				DE1F407F37E3B60496B5DF7A /* haptics.rs */,
 				21915CE4038CA63D3585AB63 /* ios.rs */,
 				0144B38ADB9470106F94418D /* lib.rs */,
@@ -416,11 +422,13 @@
 				A462480DDBDB86390D4EC8A0 /* notify.rs */,
 				912A4D203E5A5DB0B2FF559B /* platform.rs */,
 				88A58456576E3E031E1A9E3E /* player.rs */,
+				CACBA222A62B8509E07E4FE4 /* presence.rs */,
 				8F2DA7FA3A01AC4E6A8C9B87 /* push.rs */,
 				78F428E4B3B528B3EF4190E7 /* recognize.rs */,
 				39AE223214B55ED7B90ABF77 /* settings.rs */,
 				5D9A41810C91F9D868EDDF83 /* siri.rs */,
 				3741B8EE0756D0F278CC21C7 /* snap.rs */,
+				804B35A7CF0CF2BF26604591 /* trainer.rs */,
 				15BF5CCB7F35C1D588A8384C /* tray.rs */,
 				73A56A10B0D7E0D2A07AAD02 /* updates.rs */,
 				68F662F72560F87EC259FDE0 /* watch.rs */,
@@ -534,6 +542,7 @@
 			isa = PBXGroup;
 			children = (
 				7E940980C4193C05C04F336E /* AppShortcuts.strings */,
+				497BDAEAD0CAFB60ED861D68 /* DalyWaveFocus.swift */,
 				D2DFBAE387F99376B9271CFE /* DalyWaveIntents.swift */,
 				BDAF17457D058E173A55F65C /* DalyWaveWidgets.swift */,
 				7308B27218CBD8E0512FE115 /* Localizable.strings */,
@@ -634,14 +643,14 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
-		"TEMP_4F8BB731-CB00-4A97-A66E-334FBD0BB33C" /* x86_64 */ = {
+		"TEMP_D2DEC73D-A265-4087-845C-8A013926C94C" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
 			sourceTree = "<group>";
 		};
-		"TEMP_62D56346-1B26-4A8B-8654-B048C7E79C5A" /* arm64 */ = {
+		"TEMP_E7B537C0-7967-429F-AFA2-6A61BE91631F" /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -955,6 +964,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2EEDAA7E4485F8B150A252E6 /* DalyWaveFocus.swift in Sources */,
 				4453EC8CDDA6393E3AA90D2E /* DalyWaveIntents.swift in Sources */,
 				6F41A88FFFF8C01323B3FF67 /* DalyWaveWidgets.swift in Sources */,
 				7D019E868FC4DCC16DD17B98 /* PushLink.swift in Sources */,

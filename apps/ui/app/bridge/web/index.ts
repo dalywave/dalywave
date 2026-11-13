@@ -474,6 +474,13 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       update: patch => unwrap(api.PATCH('/api/settings', { body: patch })),
     },
 
+    overlay: {
+      get: () => unwrap(api.GET('/api/overlay')),
+      rotate: () => unwrap(api.POST('/api/overlay/link')),
+      update: patch => unwrap(api.PATCH('/api/overlay', { body: patch })),
+      disable: () => done(api.DELETE('/api/overlay')),
+    },
+
     playlists: {
       list: () => unwrap(api.GET('/api/playlists')),
       get: id => unwrap(api.GET('/api/playlists/{id}', { params: { path: { id } } })),

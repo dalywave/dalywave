@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT hide_explicit, quality_wifi, quality_cellular, quality_download, playlist_sort, updated_at\n         FROM user_settings WHERE user_id = $1",
+  "query": "SELECT hide_explicit, quality_wifi, quality_cellular, quality_download, playlist_sort, handoff,\n                updated_at\n         FROM user_settings WHERE user_id = $1",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,17 @@
       },
       {
         "ordinal": 5,
+        "name": "handoff",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_settings",
+            "name": "handoff"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -81,8 +92,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "71825231cfcace456090fa495aed3e22e9ae34de122a40341c2f1871e7b40d87"
+  "hash": "694df38d04bbbffbdc5450a9a9d3e0a68151cb4b67b98ee1c70ec444f4ef20f3"
 }
