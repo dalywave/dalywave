@@ -529,6 +529,16 @@ interface TrackDownload { trackId: string, state: 'queued' | 'downloading' | 're
 **Тактильный отклик** — `haptic(kind)`: `light` | `medium` | `heavy` | `soft` | `rigid` (удар), `selection`,
 `success` | `warning` | `error`. Только iPhone (UIKit); на компьютерах ничего. Неизвестный `kind` — `invalid`.
 
+**«Почувствуй бит»** (iPhone, `src/beat.rs` + `DalyWaveBeat.swift`): удары Core Haptics на сильных долях
+того, что играет, по сетке из `/api/tracks/{id}/analysis`, с поправкой на задержку вывода; только пока
+приложение на экране. `beat_state()` и `beat_set(enabled)` → `{ supported, enabled }` (`supported` — есть
+Taptic Engine), `beat_check(trackId)` → `boolean` — есть ли у трека сетка. Выбор хранит интерфейс (`dw.beat`).
+
+**Заставка для Mac** (`src/screensaver.rs`, `apps/shell/saver`): `screensaver_state()` и `screensaver_install()`
+→ `{ available, installed }`; установка копирует `Contents/Resources/DalyWave.saver` в `~/Library/Screen Savers`
+и открывает настройки заставки. Что играет, заставка спрашивает у приложения: `GET http://127.0.0.1:47815/now-playing`
+→ `{ playing, title, artist, artworkUrl? }`.
+
 **Проверка без входа** — `DALYWAVE_OFFLINE_SMOKE=<тестовый сервер>`: своя база, файлы тестового сервера
 качаются тем же путём (iPhone — фоновой сессией), затем «Без сети», волна из скачанного и воспроизведение
 из файлов. В журнал — `offline smoke: …`.

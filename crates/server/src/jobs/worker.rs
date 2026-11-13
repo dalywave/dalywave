@@ -569,6 +569,19 @@ impl Worker {
                     }
                 }
                 _ = schedule.tick() => {
+                    // Раньше сверки подписок: уведомление о вышедшем «уже в медиатеке» точнее, чем «новый релиз»
+                    match crate::presave::deliver(&self.ctx.db, &self.ctx.deezer, chrono::Utc::now()).await {
+                        Ok(r) if r == crate::presave::Delivered::default() => {}
+                        Ok(r) => tracing::info!(
+                            delivered = r.delivered,
+                            waiting = r.waiting,
+                            postponed = r.postponed,
+                            cancelled = r.cancelled,
+                            failed = r.failed,
+                            "presaved releases"
+                        ),
+                        Err(e) => tracing::warn!(error = %e, "could not deliver presaved releases"),
+                    }
                     match schedule_discography(&self.ctx.db).await {
                         Ok(0) => {}
                         Ok(n) => tracing::info!(artists = n, "discography sync scheduled"),

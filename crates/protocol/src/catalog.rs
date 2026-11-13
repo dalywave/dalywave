@@ -225,6 +225,9 @@ pub struct ArtistDetail {
     /// Сколько треков дискографии уже на сервере («скачано 48 из 132»).
     pub tracks_on_server: i64,
     pub tracks_total: i64,
+    /// Анонсированные релизы («Скоро»), ближайшие первыми. В `releases` их нет.
+    #[serde(default)]
+    pub upcoming: Vec<crate::library::UpcomingRelease>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

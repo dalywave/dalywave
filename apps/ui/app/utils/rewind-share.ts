@@ -69,8 +69,8 @@ export async function cardPng(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 /** Системное «Поделиться» с файлом, где оно есть; иначе — скачать. `shared` — ушло в системное окно */
-export async function shareOrDownload(blob: Blob, name: string, title: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
-  const file = new File([blob], name, { type: 'image/png' })
+export async function shareOrDownload(blob: Blob, name: string, title: string, type = 'image/png'): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const file = new File([blob], name, { type })
   if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title })

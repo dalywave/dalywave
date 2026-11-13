@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT al.id,\n                  EXISTS (SELECT 1 FROM album_presaves p WHERE p.user_id = $2 AND p.album_id = al.id\n                          AND p.delivered_at IS NULL AND p.cancelled_at IS NULL) AS \"presaved!\",\n                  EXISTS (SELECT 1 FROM followed_artists f WHERE f.user_id = $2 AND f.artist_id = $1) AS \"followed!\"\n           FROM artist_releases r JOIN albums al ON al.id = r.album_id\n           WHERE r.artist_id = $1 AND al.release_date > $3\n           ORDER BY al.release_date, al.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "presaved!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "followed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "b028721044f13b803834c7b4718c7d48db44e961a3043c1bacc9532155c95810"
+}

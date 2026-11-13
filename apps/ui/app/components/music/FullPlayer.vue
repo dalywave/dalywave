@@ -35,7 +35,17 @@ const paneOptions = computed(() => [
   { value: 'lyrics' as const, label: t('player.lyrics') },
   { value: 'queue' as const, label: t('player.queue') },
 ])
-const menuItems = computed(() => (menuOpen.value && track.value ? menuFor(track.value, { nowPlaying: true }) : []))
+// «Почувствуй бит» (iPhone): выключатель в этом же меню
+const beat = useBeatStore()
+void beat.init()
+const menuItems = computed(() => {
+  if (!menuOpen.value || !track.value) return []
+  const items = menuFor(track.value, { nowPlaying: true })
+  // Выключатель — среди действий с тем, что играет, до переходов и «Поделиться»
+  const at = items.findIndex(e => e.kind === 'separator')
+  items.splice(at < 0 ? items.length : at, 0, ...beat.menuEntries())
+  return items
+})
 
 // ---------- Текст песни «сценой» ----------
 // Телефон: кнопка «Текст» — обложка уезжает в шапку (рядом название и исполнитель), текст занимает

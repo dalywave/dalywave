@@ -36,11 +36,28 @@ async fn artist_page_loads_once_and_stays_fresh(db: PgPool) {
     // Популярное приходит без ISRC: записи у таких треков пока нет
     assert!(page["topTracks"][0]["recordingId"].is_null());
     assert_eq!(page["topTracks"][0]["audioStatus"], "none");
-    assert_eq!(page["releases"]["eps"].as_array().unwrap().len(), 4);
+    // «melancholy» в записанном ответе — анонс (2027-01-15): он в «Скоро», а не среди вышедших
+    let upcoming = page["upcoming"].as_array().unwrap();
+    let announced = upcoming.len();
+    assert_eq!(
+        page["releases"]["eps"].as_array().unwrap().len() + announced,
+        4
+    );
     assert_eq!(page["releases"]["singles"].as_array().unwrap().len(), 50);
     assert!(page["releases"]["albums"].as_array().unwrap().is_empty());
+    if announced == 1 {
+        assert_eq!(upcoming[0]["album"]["title"], "melancholy");
+        assert_eq!(upcoming[0]["presaved"], false);
+    }
     // Новые релизы первыми
-    assert_eq!(page["releases"]["eps"][0]["title"], "melancholy");
+    assert_eq!(
+        page["releases"]["eps"][0]["title"],
+        if announced == 1 {
+            "Late Night Sessions"
+        } else {
+            "melancholy"
+        }
+    );
     assert_eq!(page["related"].as_array().unwrap().len(), 20);
     assert_eq!(page["related"][0]["name"], "Bohnes");
     assert!(page["follow"].is_null());

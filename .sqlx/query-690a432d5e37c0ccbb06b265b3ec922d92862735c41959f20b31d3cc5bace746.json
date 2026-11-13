@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT release_date FROM albums WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "release_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "release_date"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "690a432d5e37c0ccbb06b265b3ec922d92862735c41959f20b31d3cc5bace746"
+}

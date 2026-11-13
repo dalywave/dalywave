@@ -535,6 +535,8 @@ impl Store {
             follow,
             tracks_on_server: ready,
             tracks_total: total,
+            // Анонсы без сети не нужны: сохранить заранее можно только на сервере
+            upcoming: Vec::new(),
         }))
     }
 

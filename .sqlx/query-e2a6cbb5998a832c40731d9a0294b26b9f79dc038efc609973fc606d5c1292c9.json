@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.deezer_id, t.recording_id, r.audio_status AS \"audio_status?\"\n           FROM tracks t LEFT JOIN recordings r ON r.id = t.recording_id WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "deezer_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "deezer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "recording_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "audio_status?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "recordings",
+            "name": "audio_status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "e2a6cbb5998a832c40731d9a0294b26b9f79dc038efc609973fc606d5c1292c9"
+}

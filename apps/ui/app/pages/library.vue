@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FollowedArtist, PlaylistSummary, SavedAlbum, Track } from '~/api/types'
+import type { FollowedArtist, PlaylistSummary, SavedAlbum, Track, UpcomingRelease } from '~/api/types'
 import type { TreeNode } from '~/composables/usePlaylistTree'
 import type { LibraryItem } from '~/components/library/Entry.vue'
 import type { MenuEntry } from '~/types/ui'
@@ -89,6 +89,10 @@ const view = stored<View>('dw.library.view', ['grid', 'list'], () => (ui.isPhone
 const albums = ref<SavedAlbum[] | null>(null)
 const artists = ref<FollowedArtist[] | null>(null)
 const failed = ref(false)
+// «Скоро выйдет»: сохранённое заранее и анонсы подписок; не загрузилось — полки просто нет
+const upcoming = ref<UpcomingRelease[]>([])
+const allUpcoming = ref(false)
+const shownUpcoming = computed(() => (allUpcoming.value || upcoming.value.length <= 4 ? upcoming.value : upcoming.value.slice(0, 3)))
 
 async function load() {
   failed.value = false
@@ -98,6 +102,7 @@ async function load() {
       library.loadPlaylists(true),
       bridge.library.savedAlbums().then(p => (albums.value = p.items)),
       bridge.library.followed().then(p => (artists.value = p.items)),
+      bridge.library.upcoming().then(p => (upcoming.value = p.items)).catch(() => {}),
     ])
   }
   catch {
@@ -457,6 +462,14 @@ const friends = useFriendsStore()
       </div>
       <RewindCard v-if="filter === null && !openFolder" class="lib__rewind" />
 
+      <section v-if="upcoming.length && (filter === null || filter === 'albums') && !openFolder" class="soon" :aria-label="t('soon')">
+        <header class="soon__head">
+          <h2 class="soon__h2">{{ t('soon') }}</h2>
+          <UiButton v-if="upcoming.length > 4" variant="ghost" size="sm" @click="allUpcoming = !allUpcoming">{{ allUpcoming ? t('soonLess') : t('soonAll') }}</UiButton>
+        </header>
+        <MusicUpcomingRelease v-for="r in shownUpcoming" :key="r.album.id" :release="r" show-artist />
+      </section>
+
       <!-- Скачанное: сколько на устройстве, все лайки, отдельные треки -->
       <div v-if="filter === 'downloaded' && offline.status && !downloadedEmpty" class="dl">
         <p class="dl__sum">
@@ -598,6 +611,9 @@ const friends = useFriendsStore()
 .rsvrow:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .rsvrow__chev { flex: none; margin-left: auto; font-size: 14px; color: var(--text-3); }
 .dl__h2 { margin: 0; font-size: var(--fs-h4, 18px); font-weight: 700; }
+.soon { display: flex; flex-direction: column; }
+.soon__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.soon__h2 { margin: 0; font-size: var(--fs-h4, 18px); font-weight: 700; }
 
 .list { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 72px; }
 .list__bar { display: flex; align-items: center; gap: 12px; min-height: 40px; }
@@ -647,6 +663,9 @@ const friends = useFriendsStore()
     "waveListen": "Слушать",
     "wavePlaying": "Играет",
     "recent": "Недавно добавленные",
+    "soon": "Скоро выйдет",
+    "soonAll": "Все",
+    "soonLess": "Свернуть",
     "sortBy": "Сортировка",
     "sort": { "added": "Сначала новые", "title": "По названию" },
     "back": "Медиатека",
@@ -690,6 +709,9 @@ const friends = useFriendsStore()
     "waveListen": "Listen",
     "wavePlaying": "Playing",
     "recent": "Recently added",
+    "soon": "Coming soon",
+    "soonAll": "All",
+    "soonLess": "Show less",
     "sortBy": "Sort by",
     "sort": { "added": "Newest first", "title": "Title" },
     "back": "Library",
