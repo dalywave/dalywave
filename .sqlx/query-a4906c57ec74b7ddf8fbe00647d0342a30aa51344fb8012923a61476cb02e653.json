@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(sum(played_ms) FILTER (WHERE started_at > now() - interval '7 days'), 0)::bigint AS \"l7!\",\n                  COALESCE(sum(played_ms) FILTER (WHERE started_at > now() - interval '30 days'), 0)::bigint AS \"l30!\",\n                  count(*) FILTER (WHERE started_at > now() - interval '7 days') AS \"p7!\",\n                  count(*) FILTER (WHERE started_at > now() - interval '30 days') AS \"p30!\",\n                  count(*) AS \"total!\"\n           FROM play_events WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "l7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "l30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "p7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "p30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a4906c57ec74b7ddf8fbe00647d0342a30aa51344fb8012923a61476cb02e653"
+}

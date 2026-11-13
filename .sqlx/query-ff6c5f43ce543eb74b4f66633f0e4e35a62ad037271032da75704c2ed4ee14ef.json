@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (SELECT count(*) FROM play_events WHERE started_at > now() - interval '1 day') AS \"plays!\",\n                  (SELECT count(*) FROM users WHERE created_at > now() - interval '7 days') AS \"new_users!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plays!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "new_users!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "ff6c5f43ce543eb74b4f66633f0e4e35a62ad037271032da75704c2ed4ee14ef"
+}

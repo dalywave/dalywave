@@ -303,6 +303,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["live"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/overview": {
         parameters: {
             query?: never;
@@ -543,6 +559,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/users/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["directory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users/{id}": {
         parameters: {
             query?: never;
@@ -550,13 +582,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["detail"];
+        put?: never;
+        post?: never;
+        delete: operations["delete_user"];
+        options?: never;
+        head?: never;
+        patch: operations["update_user"];
+        trace?: never;
+    };
+    "/api/admin/users/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["history"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_user"];
+        patch?: never;
         trace?: never;
     };
     "/api/admin/users/{id}/reset": {
@@ -570,6 +618,22 @@ export interface paths {
         put?: never;
         post: operations["reset_link"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_all"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2278,7 +2342,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["history"];
+        get: operations["history_get_me_history"];
         put?: never;
         post?: never;
         delete: operations["clear_history"];
@@ -2582,7 +2646,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["detail"];
+        get: operations["detail_get_playlists_id_"];
         put?: never;
         post?: never;
         delete: operations["remove_delete_playlists_id_"];
@@ -3971,6 +4035,11 @@ export interface components {
             /** @description Записи по состоянию аудио; `none` тоже здесь. */
             recordingsByStatus: components["schemas"]["StatusCount"][];
             storage: components["schemas"]["StorageStats"];
+        };
+        /** @description Живое событие админке: у человека сменилось, что играет, или устройства. */
+        AdminPresence: {
+            /** Format: uuid */
+            userId: string;
         };
         /** @description Запись в разделе «Каталог». */
         AdminRecording: {
@@ -6520,6 +6589,68 @@ export interface components {
             /** Format: int64 */
             tracks: number;
         };
+        /** @description Устройство человека на связи. */
+        LiveDevice: {
+            /** @description Звук играет здесь. */
+            active: boolean;
+            appVersion: string | null;
+            id: string;
+            kind: components["schemas"]["ConnectKind"];
+            name: string;
+            platform: components["schemas"]["Platform"];
+        };
+        /** @description Что играет у человека. */
+        LiveNow: {
+            /** Format: date-time */
+            at: string;
+            context: components["schemas"]["PlayContext"] | null;
+            /** @description Устройство, на котором играет. */
+            deviceId: string | null;
+            /** Format: int32 */
+            durationMs: number;
+            playing: boolean;
+            /**
+             * Format: int32
+             * @description Позиция на момент `at`; пока играет, время идёт.
+             */
+            positionMs: number;
+            /** @description Идёт приватная сессия: трек и источник не показываются. */
+            private: boolean;
+            track: components["schemas"]["Track"] | null;
+        };
+        /** @description «Сейчас»: кто в сети и что слушает. */
+        LiveOverview: {
+            /** @description Слушающие — первыми. */
+            people: components["schemas"]["LivePerson"][];
+            summary: components["schemas"]["LiveSummary"];
+        };
+        LivePerson: {
+            devices: components["schemas"]["LiveDevice"][];
+            now: components["schemas"]["LiveNow"] | null;
+            user: components["schemas"]["PersonBrief"];
+        };
+        LiveSummary: {
+            /**
+             * Format: int64
+             * @description Из них слушают (играет, не на паузе).
+             */
+            listening: number;
+            /**
+             * Format: int64
+             * @description Новых людей за неделю.
+             */
+            newUsers7d: number;
+            /**
+             * Format: int64
+             * @description Людей в сети.
+             */
+            online: number;
+            /**
+             * Format: int64
+             * @description Прослушиваний за сутки.
+             */
+            plays24h: number;
+        };
         /** @description Вход своим аккаунтом. */
         LocalLogin: {
             /** @description Вход приложения, начатый в этом браузере: вместо сессии сайта — код для приложения. */
@@ -6990,6 +7121,13 @@ export interface components {
         };
         /** @enum {string} */
         Permission: "play" | "library" | "admin" | "downloader";
+        /** @description Человек коротко: для «Сейчас», приглашений и истории. */
+        PersonBrief: {
+            avatarUrl: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         /** @description Человек в поиске и в приглашении: кем приходится. */
         PersonCard: {
             person: components["schemas"]["PersonRef"];
@@ -7764,6 +7902,10 @@ export interface components {
             /** @description Почему: `lagged` — клиент не успевал читать события. */
             reason: string;
         };
+        RevokedSessions: {
+            /** Format: int64 */
+            revoked: number;
+        };
         /** @description `GET /api/rewind/{year}`. */
         Rewind: {
             /** Format: int64 */
@@ -8253,6 +8395,9 @@ export interface components {
         }) | (components["schemas"]["Party"] & {
             /** @enum {string} */
             type: "party.changed";
+        }) | (components["schemas"]["AdminPresence"] & {
+            /** @enum {string} */
+            type: "admin.presence";
         });
         /** @description Серверный fetcher — второй исполнитель (`DALYWAVE_FETCHER_MODE` с `server`). */
         ServerFetcher: {
@@ -8494,6 +8639,32 @@ export interface components {
             daily: components["schemas"]["SourceDay"][];
             downloaders: components["schemas"]["Downloader"][];
             server: components["schemas"]["ServerFetcher"];
+        };
+        StatArtist: {
+            /** Format: uuid */
+            id: string;
+            image: components["schemas"]["ImageSet"] | null;
+            name: string;
+            /** Format: int64 */
+            plays: number;
+        };
+        StatDay: {
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            listenedMs: number;
+            /** Format: int64 */
+            plays: number;
+        };
+        StatGenre: {
+            name: string;
+            /** Format: int64 */
+            plays: number;
+        };
+        StatTrack: {
+            /** Format: int64 */
+            plays: number;
+            track: components["schemas"]["Track"];
         };
         StatusCount: {
             /** Format: int64 */
@@ -9412,6 +9583,125 @@ export interface components {
             id: string;
             name: string;
         };
+        /** @description Скачивание, которое вызвал человек (лайк, плейлист, воспроизведение…). */
+        UserAcquisition: {
+            artist: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            reason: string;
+            status: string;
+            title: string;
+            /** Format: uuid */
+            trackId: string;
+        };
+        UserAcquisitions: {
+            /** Format: int64 */
+            active: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            ready: number;
+            recent: components["schemas"]["UserAcquisition"][];
+            /** Format: int64 */
+            total: number;
+        };
+        UserCounts: {
+            /** Format: int64 */
+            followedArtists: number;
+            /** Format: int64 */
+            friends: number;
+            /** Format: int64 */
+            imports: number;
+            /** Format: int64 */
+            likedTracks: number;
+            /** Format: int64 */
+            playlists: number;
+            /** Format: int64 */
+            savedAlbums: number;
+        };
+        /** @description Удаление аккаунта: имя человека для подтверждения. */
+        UserDeletion: {
+            confirmName: string;
+        };
+        /** @description Страница человека в админке. */
+        UserDetail: {
+            acquisitions: components["schemas"]["UserAcquisitions"];
+            counts: components["schemas"]["UserCounts"];
+            /**
+             * Format: date-time
+             * @description Когда заблокирован.
+             */
+            disabledAt: string | null;
+            /** @description Первые подписки на артистов (всего — в `counts`). */
+            followed: components["schemas"]["UserFollowedArtist"][];
+            identities: components["schemas"]["UserIdentityInfo"][];
+            invitedBy: components["schemas"]["UserInvite"] | null;
+            invitesSent: components["schemas"]["UserInvite"][];
+            /** @description Единственный незаблокированный администратор: заблокировать, удалить и снять admin нельзя. */
+            lastAdmin: boolean;
+            live: components["schemas"]["LivePerson"] | null;
+            /** @description Имя задано вручную: провайдер при входе его не меняет. */
+            nameLocked: boolean;
+            stats: components["schemas"]["UserStats"];
+            summary: components["schemas"]["UserSummary"];
+        };
+        UserDirectory: {
+            items: components["schemas"]["UserSummary"][];
+        };
+        UserFollowedArtist: {
+            /** Format: uuid */
+            id: string;
+            image: components["schemas"]["ImageSet"] | null;
+            name: string;
+        };
+        /** @description Прослушивание в истории. В приватной сессии трек не показывается. */
+        UserHistoryItem: {
+            contextType: components["schemas"]["ContextType"] | null;
+            deviceName: string | null;
+            /** Format: int32 */
+            durationMs: number;
+            endReason: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            playedMs: number;
+            private: boolean;
+            /** Format: date-time */
+            startedAt: string;
+            track: components["schemas"]["Track"] | null;
+        };
+        UserHistoryPage: {
+            items: components["schemas"]["UserHistoryItem"][];
+            nextCursor: string | null;
+        };
+        /** @description Вход через провайдера. */
+        UserIdentityInfo: {
+            /** Format: date-time */
+            createdAt: string;
+            email: string | null;
+            /** Format: uuid */
+            id: string;
+            issuer: string;
+            /** Format: date-time */
+            lastLoginAt: string | null;
+            /** @description Название провайдера из настроек (или адрес отключённого). */
+            provider: string;
+        };
+        /** @description Приглашение, связанное с человеком. */
+        UserInvite: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            note: string | null;
+            person: components["schemas"]["PersonBrief"] | null;
+            roles: components["schemas"]["Role"][];
+            status: components["schemas"]["InviteStatus"];
+            /** Format: date-time */
+            usedAt: string | null;
+        };
         UserList: {
             items: components["schemas"]["AdminUser"][];
             nextCursor: string | null;
@@ -9419,6 +9709,8 @@ export interface components {
         /** @description Изменение пользователя: только переданные поля. */
         UserPatch: {
             disabled?: boolean | null;
+            /** @description Новое имя: задано вручную, провайдер при входе его больше не меняет. */
+            name?: string | null;
             /** @description Полный новый список ролей. */
             roles?: components["schemas"]["Role"][] | null;
         };
@@ -9448,6 +9740,43 @@ export interface components {
             qualityCellular?: components["schemas"]["CellularQuality"] | null;
             qualityDownload?: components["schemas"]["DownloadQuality"] | null;
             qualityWifi?: components["schemas"]["WifiQuality"] | null;
+        };
+        /** @description Статистика человека. Топы — без приватных сессий. */
+        UserStats: {
+            /** @description 30 дней по порядку, пустые дни — нулями. */
+            days: components["schemas"]["StatDay"][];
+            genres: components["schemas"]["StatGenre"][];
+            /** Format: int64 */
+            listenedMs30d: number;
+            /** Format: int64 */
+            listenedMs7d: number;
+            /** Format: int64 */
+            plays30d: number;
+            /** Format: int64 */
+            plays7d: number;
+            /** Format: int64 */
+            playsTotal: number;
+            /** @description За 30 дней. */
+            topArtists: components["schemas"]["StatArtist"][];
+            topTracks: components["schemas"]["StatTrack"][];
+        };
+        /** @description Строка списка пользователей. */
+        UserSummary: {
+            /**
+             * Format: date-time
+             * @description Последний признак жизни: устройство, сессия или вход.
+             */
+            lastSeenAt: string | null;
+            /**
+             * Format: int64
+             * @description Сколько слушал за 30 дней.
+             */
+            listenedMs30d: number;
+            /** @description Хотя бы одно устройство на связи прямо сейчас. */
+            online: boolean;
+            /** Format: int64 */
+            plays30d: number;
+            user: components["schemas"]["AdminUser"];
         };
         /** @description Исполнитель, у которого человек выбрал не оригинал. */
         VersionChoice: {
@@ -10472,6 +10801,35 @@ export interface operations {
             };
         };
     };
+    live: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Кто в сети и что слушает; обновления — событием `admin.presence` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveOverview"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     overview: {
         parameters: {
             query?: never;
@@ -11129,6 +11487,119 @@ export interface operations {
             };
         };
     };
+    directory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Все люди с активностью: в сети, когда был, часы за 30 дней */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDirectory"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id пользователя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Профиль, входы, «сейчас слушает», статистика, приглашения, подписки, скачивания */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDetail"];
+                };
+            };
+            /** @description Нет такого пользователя */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id пользователя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserDeletion"];
+            };
+        };
+        responses: {
+            /** @description Аккаунт удалён со всеми данными: медиатекой, историей, сессиями */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого пользователя */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нельзя удалить себя (`cannot_delete_self`) или последнего администратора (`last_admin`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Имя для подтверждения не совпало (`confirm_mismatch`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     update_user: {
         parameters: {
             query?: never;
@@ -11154,6 +11625,15 @@ export interface operations {
                     "application/json": components["schemas"]["AdminUser"];
                 };
             };
+            /** @description Пустое имя */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Нет такого пользователя */
             404: {
                 headers: {
@@ -11163,8 +11643,44 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Нельзя снять admin с себя (`cannot_demote_self`) или заблокировать себя (`cannot_disable_self`) */
+            /** @description Нельзя снять admin с себя (`cannot_demote_self`), заблокировать себя (`cannot_disable_self`) или последнего администратора (`last_admin`) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    history: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                /** @description 1…200, по умолчанию 50. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description id пользователя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Прослушивания, новые первыми; в приватной сессии — без трека */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserHistoryPage"];
+                };
+            };
+            /** @description Неверный cursor или limit */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11206,6 +11722,47 @@ export interface operations {
             };
             /** @description Нет такого пользователя */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    revoke_all: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id пользователя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Все сессии и устройства человека отозваны («выйти везде») */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokedSessions"];
+                };
+            };
+            /** @description Нет такого пользователя */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Свои сессии так не закрываются (`cannot_revoke_self`) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15656,7 +16213,7 @@ export interface operations {
             };
         };
     };
-    history: {
+    history_get_me_history: {
         parameters: {
             query?: {
                 /** @description `nextCursor` из предыдущей страницы. */
@@ -16498,7 +17055,7 @@ export interface operations {
             };
         };
     };
-    detail: {
+    detail_get_playlists_id_: {
         parameters: {
             query?: never;
             header?: never;

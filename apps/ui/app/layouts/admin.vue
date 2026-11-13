@@ -9,24 +9,29 @@ const { counts, refresh } = useAdminCounts()
 const { win, titlebar, titlebarStyle } = useTitlebar()
 
 interface NavItem { to: string, key: string, icon: string, count?: 'disputed' | 'waiting', needs?: 'downloader' }
-const ALL_GROUPS: { key: string | null, items: NavItem[] }[] = [
-  { key: null, items: [{ to: '/admin', key: 'overview', icon: 'ph:gauge' }] },
-  { key: 'groupWork', items: [
+// Разделы по задачам: люди, музыка, система
+const ALL_GROUPS: { key: string, title?: string, items: NavItem[] }[] = [
+  { key: 'top', items: [
+    { to: '/admin', key: 'overview', icon: 'ph:gauge' },
+    { to: '/admin/live', key: 'live', icon: 'ph:broadcast' },
+  ] },
+  { key: 'people', title: 'groupPeople', items: [
+    { to: '/admin/users', key: 'users', icon: 'ph:users-three', count: 'waiting' },
+    { to: '/admin/access', key: 'access', icon: 'ph:envelope-simple' },
+  ] },
+  { key: 'music', title: 'groupMusic', items: [
+    { to: '/admin/catalog', key: 'catalog', icon: 'ph:vinyl-record' },
+    { to: '/admin/library', key: 'library', icon: 'ph:folder-open' },
     { to: '/admin/downloads', key: 'downloads', icon: 'ph:download-simple', needs: 'downloader' },
     { to: '/admin/disputed', key: 'disputed', icon: 'ph:scales', count: 'disputed', needs: 'downloader' },
     { to: '/admin/sources', key: 'sources', icon: 'ph:plugs-connected', needs: 'downloader' },
-  ] },
-  { key: 'groupMusic', items: [
-    { to: '/admin/library', key: 'library', icon: 'ph:folder-open' },
-    { to: '/admin/catalog', key: 'catalog', icon: 'ph:vinyl-record' },
-    { to: '/admin/storage', key: 'storage', icon: 'ph:hard-drives' },
-    { to: '/admin/reco', key: 'reco', icon: 'ph:sparkle' },
     { to: '/admin/import', key: 'import', icon: 'ph:tray-arrow-down' },
+    { to: '/admin/reco', key: 'reco', icon: 'ph:sparkle' },
   ] },
-  { key: 'groupSystem', items: [
-    { to: '/admin/access', key: 'access', icon: 'ph:users-three', count: 'waiting' },
-    { to: '/admin/settings', key: 'settings', icon: 'ph:sliders-horizontal' },
+  { key: 'system', title: 'groupSystem', items: [
+    { to: '/admin/storage', key: 'storage', icon: 'ph:hard-drives' },
     { to: '/admin/log', key: 'log', icon: 'ph:scroll' },
+    { to: '/admin/settings', key: 'settings', icon: 'ph:sliders-horizontal' },
   ] },
 ]
 // Разделы загрузчика — только если он включён на сервере; пустая группа не показывается
@@ -36,9 +41,10 @@ const GROUPS = computed(() => ALL_GROUPS
   .filter(g => g.items.length))
 const ITEMS = computed(() => GROUPS.value.flatMap(g => g.items))
 
+// Вложенные страницы (человек в «Пользователях») подсвечивают свой раздел
 const current = computed(() => {
   const path = route.path.replace(/\/+$/, '') || '/admin'
-  return ITEMS.value.find(i => i.to === path)?.to ?? '/admin'
+  return ITEMS.value.find(i => i.to === path)?.to ?? ITEMS.value.find(i => i.to !== '/admin' && path.startsWith(`${i.to}/`))?.to ?? '/admin'
 })
 const countOf = (i: NavItem) => (i.count ? counts.value[i.count] : 0)
 
@@ -71,8 +77,8 @@ onMounted(() => void nextTick(revealTab))
         <span class="adm__brand-sub">{{ t('admin.title') }}</span>
       </div>
       <nav class="adm__nav" :aria-label="t('admin.sections')">
-        <div v-for="g in GROUPS" :key="g.key ?? 'top'" class="adm__group">
-          <span v-if="g.key" class="adm__group-title">{{ t(`admin.nav.${g.key}`) }}</span>
+        <div v-for="g in GROUPS" :key="g.key" class="adm__group">
+          <span v-if="g.title" class="adm__group-title">{{ t(`admin.nav.${g.title}`) }}</span>
           <NuxtLink
             v-for="s in g.items"
             :key="s.to"

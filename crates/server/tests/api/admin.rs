@@ -116,7 +116,7 @@ async fn roles_are_granted_by_admin(db: PgPool) {
         .call(
             Method::PATCH,
             &format!("/api/admin/users/{ann_id}"),
-            Some(json!({ "name": "x" })),
+            Some(json!({ "email": "x@example.com" })),
             &admin,
         )
         .await;

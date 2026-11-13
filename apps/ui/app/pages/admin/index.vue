@@ -31,6 +31,9 @@ function loadAll() {
   void refreshCounts()
 }
 onMounted(loadAll)
+// «Сейчас»: кто в сети и что слушает — живьём
+const liveFeed = useAdminLiveFeed()
+const tick = useTicker()
 const refreshSoon = useDebounced(() => void loadOverview())
 useAdminLive({ 'job.updated': refreshSoon, 'acquisition.updated': refreshSoon }, loadAll)
 
@@ -59,7 +62,7 @@ async function resume(l: Lane) {
 const problems = computed<Problem[]>(() => {
   const out: Problem[] = []
   if (counts.value.disputed) out.push({ key: 'disputed', icon: 'ph:scales', tone: 'warn', text: t('problem.disputed', { n: counts.value.disputed }), action: t('problem.review'), to: '/admin/disputed' })
-  if (counts.value.waiting) out.push({ key: 'waiting', icon: 'ph:user-plus', tone: 'warn', text: t('problem.waiting', { n: counts.value.waiting }), action: t('problem.open'), to: '/admin/access' })
+  if (counts.value.waiting) out.push({ key: 'waiting', icon: 'ph:user-plus', tone: 'warn', text: t('problem.waiting', { n: counts.value.waiting }), action: t('problem.open'), to: '/admin/users?view=waiting' })
   if (sources.value && !online.value && !sources.value.server.enabled && queuedDownloads.value) {
     out.push({ key: 'nobody', icon: 'ph:plugs', tone: 'bad', text: t('problem.nobody', { n: formatNumber(queuedDownloads.value, lang.value) }), action: t('problem.sources'), to: '/admin/sources' })
   }
@@ -146,6 +149,20 @@ const fetcherVersion = computed(() => {
       </AdminState>
     </AdminSection>
 
+    <AdminSection :title="t('now.title')">
+      <template v-if="liveFeed.data.value" #badge>
+        <span class="ov__now-sum">{{ t('now.summary', { online: liveFeed.data.value.summary.online, listening: liveFeed.data.value.summary.listening }) }}</span>
+      </template>
+      <template #tools>
+        <UiButton size="sm" variant="ghost" icon-right="ph:arrow-right" to="/admin/live">{{ t('now.all') }}</UiButton>
+      </template>
+      <AdminState :loading="!liveFeed.data.value && !liveFeed.failed.value" :error="liveFeed.failed.value && !liveFeed.data.value" :empty="!!liveFeed.data.value && !liveFeed.data.value.people.length" empty-icon="ph:moon-stars" :empty-title="t('now.empty')" :rows="2" @retry="liveFeed.load">
+        <div class="ov__now">
+          <AdminLivePerson v-for="p in liveFeed.data.value?.people.slice(0, 6)" :key="p.user.id" :person="p" :now="tick" compact />
+        </div>
+      </AdminState>
+    </AdminSection>
+
     <AdminSection :title="t('stats.title')">
       <div v-if="stats.length" class="ap-stats">
         <div v-for="s in stats" :key="s.key" class="ap-stat" :class="s.tone">
@@ -215,6 +232,8 @@ const fetcherVersion = computed(() => {
 .ov__fine { display: flex; align-items: center; gap: 10px; margin: 0; min-height: 44px; color: var(--text-2); }
 .ov__fine :deep(.iconify) { font-size: 20px; }
 .ov__total { font-size: var(--fs-h4); font-weight: 700; }
+.ov__now { display: flex; flex-direction: column; }
+.ov__now-sum { font-size: var(--fs-small); font-weight: 500; color: var(--text-3); }
 @media (max-width: 1099px) {
   .ap-stats { --n: 3; row-gap: 20px; }
   .ap-stat:nth-child(4) { padding-left: 0; border-left: 0; }
@@ -233,6 +252,7 @@ const fetcherVersion = computed(() => {
 {
   "ru": {
     "title": "Обзор",
+    "now": { "title": "Сейчас", "summary": "в сети {online}, слушают {listening}", "all": "Все", "empty": "Сейчас никого нет" },
     "health": { "ok": "Сервер работает · {version} · {uptime}", "down": "Сервер не отвечает" },
     "uptime": { "min": "{n} мин", "h": "{n} ч", "d": "{n} дн." },
     "live": { "on": "Живые события", "off": "Без живых событий" },
@@ -283,6 +303,7 @@ const fetcherVersion = computed(() => {
   },
   "en": {
     "title": "Overview",
+    "now": { "title": "Now", "summary": "online {online}, listening {listening}", "all": "All", "empty": "Nobody is here right now" },
     "health": { "ok": "Server running · {version} · {uptime}", "down": "Server not responding" },
     "uptime": { "min": "{n} min", "h": "{n} h", "d": "{n} d" },
     "live": { "on": "Live events", "off": "No live events" },

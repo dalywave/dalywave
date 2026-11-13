@@ -333,6 +333,8 @@ pub async fn activity(db: &PgPool, viewer: Uuid, user: Uuid) -> AppResult<Option
 /// Человек начал слушать другое (или перестал, или скрыл): его друзьям — живое событие. Друзей
 /// немного, у каждого свой взгляд (лайки, видимые плейлисты), поэтому считается на каждого.
 pub async fn announce_activity(st: &AppState, user: Uuid) {
+    // Админке «Сейчас» — тоже, без оглядки на друзей и приватность (она скрывает трек сама)
+    crate::admin_live::notify(&st.hub, user);
     let run = async {
         for friend in friend_ids(&st.db, user).await? {
             let activity = activity(&st.db, friend, user).await?;

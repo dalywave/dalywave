@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
+    admin_users::AdminPresence,
     catalog::AudioStatus,
     connect::{
         ConnectAck, ConnectActive, ConnectCommand, ConnectDevices, ConnectEmpty, ConnectHandoff,
@@ -93,6 +94,9 @@ pub enum ServerEvent {
     /// Режим вечеринки включён, выключен или сменились его настройки.
     #[serde(rename = "party.changed")]
     PartyChanged(Party),
+    /// У человека сменилось, что играет, или устройства на связи. Только администраторам.
+    #[serde(rename = "admin.presence")]
+    AdminPresence(AdminPresence),
 }
 
 /// Сообщение клиента.

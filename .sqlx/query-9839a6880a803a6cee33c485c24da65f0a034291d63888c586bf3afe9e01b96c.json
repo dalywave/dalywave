@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT g AS \"genre!\", count(*) AS \"n!\"\n           FROM play_events e\n           JOIN tracks t ON t.id = e.track_id\n           JOIN albums al ON al.id = t.album_id\n           CROSS JOIN LATERAL unnest(al.genres) AS g\n           WHERE e.user_id = $1 AND e.started_at > now() - interval '30 days'\n             AND e.played_ms >= $2 AND NOT played_privately(e.user_id, e.started_at)\n           GROUP BY g ORDER BY 2 DESC, g LIMIT 8",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "genre!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "9839a6880a803a6cee33c485c24da65f0a034291d63888c586bf3afe9e01b96c"
+}
