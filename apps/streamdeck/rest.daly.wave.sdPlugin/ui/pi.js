@@ -181,6 +181,12 @@
 
   function translate(root = document) {
     root.querySelectorAll('[data-t]').forEach((el) => { el.textContent = s(el.dataset.t) })
+    // sdpi-select следит только за составом <option>, смену текста не видит — без перевставки
+    // варианты в списке остаются пустыми
+    root.querySelectorAll('sdpi-select').forEach((sel) => {
+      const opts = [...sel.querySelectorAll(':scope > option[data-t], :scope > optgroup')]
+      if (opts.length) sel.replaceChildren(...[...sel.children].map(o => o.cloneNode(true)))
+    })
     root.querySelectorAll('[data-t-label]').forEach((el) => { el.setAttribute('label', s(el.dataset.tLabel)) })
     root.querySelectorAll('[data-t-placeholder]').forEach((el) => { el.setAttribute('placeholder', s(el.dataset.tPlaceholder)) })
   }
