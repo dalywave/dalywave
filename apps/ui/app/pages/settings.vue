@@ -191,6 +191,13 @@ const language = computed({
       <SettingsRow :title="t('language')">
         <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
       </SettingsRow>
+      <!-- Живые обложки и видео «Открытий» — свои для устройства; «только по Wi-Fi» — где бывает сотовая -->
+      <SettingsRow :title="t('motion')" :description="t('motionDesc')">
+        <UiSwitch v-model="prefs.motion" :label="t('motion')" hide-label />
+      </SettingsRow>
+      <SettingsRow v-if="prefs.motion && (ui.isTouchUi || offline.available)" :title="t('motionWifi')" indent>
+        <UiSwitch v-model="prefs.motionWifiOnly" :label="t('motionWifi')" hide-label />
+      </SettingsRow>
       <!-- Планшет: «Сейчас играет» колонкой справа, когда лежит горизонтально. Своя для устройства -->
       <SettingsRow v-if="ui.isTouch" :title="t('sidePlayer')" :description="t('sidePlayerDesc')">
         <UiSwitch v-model="prefs.sidePlayer" :label="t('sidePlayer')" hide-label />
@@ -303,6 +310,9 @@ const language = computed({
     "language": "Язык",
     "sidePlayer": "Плеер сбоку",
     "sidePlayerDesc": "Горизонтально «Сейчас играет» — колонкой справа",
+    "motion": "Анимированные обложки",
+    "motionDesc": "Видео вместо обложки в плеере и в «Открытиях»",
+    "motionWifi": "Только по Wi-Fi",
     "about": "О приложении",
     "server": "Сервер",
     "serverDown": "Не отвечает",
@@ -342,6 +352,9 @@ const language = computed({
     "language": "Language",
     "sidePlayer": "Side player",
     "sidePlayerDesc": "In landscape, Now Playing stays on the right",
+    "motion": "Animated artwork",
+    "motionDesc": "Video instead of the cover in the player and in Discover",
+    "motionWifi": "Wi-Fi only",
     "about": "About",
     "server": "Server",
     "serverDown": "Not responding",

@@ -75,6 +75,8 @@ pub async fn claim(
     }
     downloaders::seen(&st.db, downloader.id, ip, Some(&req)).await?;
     let kinds = &req.capabilities.kinds;
+    // Загрузчик умеет клипы: пока они ждут, ответ — сразу, и он спросит клип (`/fetcher/clips/claim`)
+    let clips = kinds.iter().any(|k| k == kind::CLIP);
     if kinds.is_empty() || kinds.iter().any(|k| k == kind::ACQUIRE) {
         let executor = downloader.executor();
         // Кончившиеся аренды — снова в очередь, не дожидаясь сборщика воркера
@@ -100,6 +102,9 @@ pub async fn claim(
                 }
                 Claimed::Nothing(soonest) => soonest,
             };
+            if clips && crate::video::clips::ready_to_claim(&st.db).await? {
+                return Ok((StatusCode::NO_CONTENT, [(header::RETRY_AFTER, "0")]).into_response());
+            }
             let now = Instant::now();
             if now >= deadline || *stopping.borrow() {
                 break;
@@ -114,6 +119,9 @@ pub async fn claim(
                 _ = stopping.changed() => break,
             }
         }
+    }
+    if clips && crate::video::clips::ready_to_claim(&st.db).await? {
+        return Ok((StatusCode::NO_CONTENT, [(header::RETRY_AFTER, "0")]).into_response());
     }
     Ok((
         StatusCode::NO_CONTENT,

@@ -36,7 +36,7 @@ fn exe(name: &'static str) -> String {
         .unwrap_or_else(|_| name.to_string())
 }
 
-async fn run(
+pub(crate) async fn run(
     name: &'static str,
     args: &[&std::ffi::OsStr],
 ) -> Result<std::process::Output, AudioError> {
@@ -57,7 +57,7 @@ async fn run(
     }
 }
 
-fn tail(bytes: &[u8]) -> String {
+pub(crate) fn tail(bytes: &[u8]) -> String {
     let s = String::from_utf8_lossy(bytes);
     let s = s.trim();
     s.chars()

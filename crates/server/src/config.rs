@@ -179,6 +179,20 @@ pub struct InfoConfig {
     pub wikidata_url: String,
     /// Шаблон адреса Википедии с `{lang}`: `https://{lang}.wikipedia.org`.
     pub wikipedia_url: String,
+    /// Apple Music API (живые обложки). `None` — ключа MusicKit нет, живые обложки не ищутся.
+    pub musickit: Option<MusicKitConfig>,
+}
+
+/// Apple Music API по ключу MusicKit (.p8): токен разработчика (JWT, ES256) подписывает сервер.
+#[derive(Clone, Debug)]
+pub struct MusicKitConfig {
+    pub key_path: PathBuf,
+    pub key_id: String,
+    pub team_id: String,
+    /// Витрина каталога: `us` — там больше всего релизов.
+    pub storefront: String,
+    /// `https://api.music.apple.com`; меняется в тестах.
+    pub url: String,
 }
 
 impl Default for InfoConfig {
@@ -188,6 +202,7 @@ impl Default for InfoConfig {
             musicbrainz_url: "https://musicbrainz.org/ws/2".into(),
             wikidata_url: "https://www.wikidata.org".into(),
             wikipedia_url: "https://{lang}.wikipedia.org".into(),
+            musickit: None,
         }
     }
 }
@@ -507,7 +522,10 @@ impl Config {
             ml,
             lrclib,
             yandex_music,
-            info: InfoConfig::default(),
+            info: InfoConfig {
+                musickit: parse_musickit(&var),
+                ..InfoConfig::default()
+            },
             release_token,
             push,
         })
@@ -547,6 +565,36 @@ impl Config {
             url.extend(url::form_urlencoded::byte_serialize(next.as_bytes()));
         }
         url
+    }
+}
+
+/// Ключ MusicKit: путь к .p8, Key ID и Team ID вместе; без них живые обложки выключены.
+fn parse_musickit(var: &dyn Fn(&str) -> Option<String>) -> Option<MusicKitConfig> {
+    match (
+        var("MUSICKIT_KEY_PATH"),
+        var("MUSICKIT_KEY_ID"),
+        var("MUSICKIT_TEAM_ID"),
+    ) {
+        (Some(key_path), Some(key_id), Some(team_id)) => Some(MusicKitConfig {
+            key_path: PathBuf::from(key_path),
+            key_id,
+            team_id,
+            storefront: var("MUSICKIT_STOREFRONT")
+                .map(|s| s.to_ascii_lowercase())
+                .filter(|s| s.len() == 2 && s.chars().all(|c| c.is_ascii_alphabetic()))
+                .unwrap_or_else(|| "us".into()),
+            url: var("MUSICKIT_URL")
+                .unwrap_or_else(|| "https://api.music.apple.com".into())
+                .trim_end_matches('/')
+                .to_string(),
+        }),
+        (None, None, None) => None,
+        _ => {
+            tracing::warn!(
+                "DALYWAVE_MUSICKIT_KEY_PATH, DALYWAVE_MUSICKIT_KEY_ID and DALYWAVE_MUSICKIT_TEAM_ID go together: animated covers are off"
+            );
+            None
+        }
     }
 }
 

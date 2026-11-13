@@ -17,13 +17,17 @@ export interface Preferences {
   sidePlayer: boolean
   /** Настройка устройства: у телефона и компьютера тема может быть своя */
   theme: ThemePref
+  /** Живые обложки и видео ленты «Открытия»: зацикленное видео без звука вместо обложки */
+  motion: boolean
+  /** …только по Wi-Fi: на сотовой — обычная обложка */
+  motionWifiOnly: boolean
   updatedAt: string | null
 }
 
 export type PreferencesPatch = Partial<Omit<Preferences, 'updatedAt'>>
 
 const STORAGE_KEY = 'dw.prefs'
-const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', updatedAt: null }
+const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', motion: true, motionWifiOnly: false, updatedAt: null }
 
 // По умолчанию — тёмная: «Полночь» задумана тёмной; светлую и «как в системе»
 // выбирают в настройках. Ключ и значения читает и скрипт в <head> (utils/theme.ts) — до отрисовки
@@ -35,6 +39,8 @@ function sanitize(raw: unknown): Preferences {
     scrubber: r.scrubber === 'line' ? 'line' : DEFAULTS.scrubber,
     sidePlayer: typeof r.sidePlayer === 'boolean' ? r.sidePlayer : DEFAULTS.sidePlayer,
     theme: THEMES.includes(r.theme as ThemePref) ? r.theme as ThemePref : DEFAULTS.theme,
+    motion: typeof r.motion === 'boolean' ? r.motion : DEFAULTS.motion,
+    motionWifiOnly: typeof r.motionWifiOnly === 'boolean' ? r.motionWifiOnly : DEFAULTS.motionWifiOnly,
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : null,
   }
 }
@@ -82,6 +88,16 @@ export const usePrefsStore = defineStore('prefs', () => {
     set: v => update({ theme: v }),
   })
 
+  const motion = computed<boolean>({
+    get: () => prefs.value.motion,
+    set: v => update({ motion: v }),
+  })
+
+  const motionWifiOnly = computed<boolean>({
+    get: () => prefs.value.motionWifiOnly,
+    set: v => update({ motionWifiOnly: v }),
+  })
+
   // Выбор в другой вкладке подхватывается сразу (key = null — там очистили хранилище)
   if (import.meta.client) {
     window.addEventListener('storage', (e) => {
@@ -89,5 +105,5 @@ export const usePrefsStore = defineStore('prefs', () => {
     })
   }
 
-  return { prefs, scrubber, sidePlayer, theme, update }
+  return { prefs, scrubber, sidePlayer, theme, motion, motionWifiOnly, update }
 })

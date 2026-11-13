@@ -65,6 +65,7 @@ pub mod sync;
 pub mod system;
 pub mod taste;
 pub mod versions;
+pub mod video;
 pub mod wave;
 
 pub use error::{ErrorBody, ErrorInfo};

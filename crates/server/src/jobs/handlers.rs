@@ -49,7 +49,10 @@ pub fn registry(fetcher: &FetcherConfig) -> Registry {
         .register(kind::LYRICS, crate::lyrics::run)
         .register(kind::TRANSCODE, crate::renditions::run)
         .register(kind::NOTIFY_SEND, crate::notify::run_send)
-        .register(kind::NOTIFY_PUSH, crate::notify::run_push);
+        .register(kind::NOTIFY_PUSH, crate::notify::run_push)
+        .register(kind::ALBUM_MOTION, crate::video::motion::run)
+        // Клипы ищет и нарезает загрузчик на Mac: YouTube не отдаёт видео адресу дата-центра
+        .elsewhere(kind::CLIP);
     if fetcher.server {
         registry.register(kind::ACQUIRE, acquire::server::run);
     } else {

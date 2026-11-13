@@ -66,3 +66,20 @@ class Job(AcquireRequest):
     id: str
     kind: Literal["acquire"] = "acquire"
     lease_expires_at: datetime | None = None
+
+
+class ClipJob(_Model):
+    """Задание «клип» (`POST /api/fetcher/clips/claim`): найти официальный клип трека, вырезать
+    отрывок вокруг припева и положить MP4 по подписанной ссылке."""
+
+    id: str
+    track_id: str
+    title: str
+    artists: list[str] = Field(default_factory=list)
+    duration_ms: int = Field(gt=0)
+    hook_start_ms: int = Field(default=0, ge=0)
+    length_ms: int = Field(default=12_000, ge=3_000, le=30_000)
+    isrc: str | None = None
+    exclude_video_ids: list[str] = Field(default_factory=list)
+    upload: UploadSpec
+    lease_expires_at: datetime | None = None

@@ -63,6 +63,7 @@ pub fn config() -> Config {
             musicbrainz_url: "http://127.0.0.1:9".into(),
             wikidata_url: "http://127.0.0.1:9".into(),
             wikipedia_url: "http://127.0.0.1:9/{lang}".into(),
+            musickit: None,
         },
         release_token: None,
         // push — без каналов: тесты уведомлений ставят свои поддельные APNs и службу Web Push

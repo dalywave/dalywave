@@ -44,6 +44,7 @@ pub mod state;
 pub mod storage;
 pub mod users;
 pub mod versions;
+pub mod video;
 
 pub use config::Config;
 pub use state::AppState;

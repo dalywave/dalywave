@@ -379,6 +379,14 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
 
     home: () => unwrap(api.GET('/api/home')),
 
+    video: {
+      albumMotion: id => unwrap(api.GET('/api/albums/{id}/motion', { params: { path: { id } } })),
+      clips: async (trackIds) => {
+        if (!trackIds.length) return []
+        return (await unwrap(api.POST('/api/clips', { body: { trackIds: trackIds.slice(0, 20) } }))).items
+      },
+    },
+
     taste: {
       overview: () => unwrap(api.GET('/api/taste')),
       less: facetId => unwrap(api.POST('/api/taste/facets/{id}/less', { params: { path: { id: facetId } } })),
