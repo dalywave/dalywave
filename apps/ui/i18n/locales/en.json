@@ -631,6 +631,12 @@
     "running": "On — no guests yet",
     "withGuests": "On · guests: {n}"
   },
+  "party": {
+    "title": "Party mode",
+    "hint": "A stage for the TV, guests add tracks by QR",
+    "running": "On",
+    "failed": "Something went wrong — try again"
+  },
   "folder": {
     "new": "New folder",
     "newName": "Folder name",

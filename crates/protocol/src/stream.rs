@@ -40,6 +40,9 @@ pub struct StreamQuery {
     pub quality: Option<StreamQuality>,
     /// Сеть устройства; без неё — Wi-Fi (сайт).
     pub network: Option<NetworkKind>,
+    /// Плеер без Opus и Vorbis (AVPlayer на Apple TV): отдать AAC, ALAC или MP3, а если у записи только
+    /// такие файлы — копию AAC 256 кбит/с (пока её делают — ответ `preparing`).
+    pub aac: Option<bool>,
 }
 
 /// Кодек аудиофайла. Хранится в `audio_files.codec`.
@@ -173,6 +176,16 @@ pub enum TrackStream {
     Acquiring(StreamPending),
     /// 202: в очереди, но качать некому — загрузчик на Mac не на связи, серверный fetcher выключен.
     WaitingForDownloader(StreamPending),
+    /// 202: файл есть, но в нужном формате его ещё делают (`aac=true`) — спросить снова через пару секунд.
+    Preparing(StreamPreparing),
+}
+
+/// Копию в нужном формате делают.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct StreamPreparing {
+    /// Спросить снова не раньше, мс.
+    pub retry_after_ms: u32,
 }
 
 #[cfg(test)]

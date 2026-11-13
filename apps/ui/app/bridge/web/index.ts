@@ -12,6 +12,7 @@ import { EventQueue } from './events'
 import { createHttp, done, query, toApiError, unwrap, type HttpOptions } from './http'
 import { createJam } from './jam'
 import { createLive } from './live'
+import { createParty } from './party'
 import { devOutputs, safariOutputs } from './outputs'
 import { devRecognizer } from '../mock/recognize'
 
@@ -635,6 +636,8 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     },
 
     jam: createJam(http),
+
+    party: createParty(http),
 
     admin: {
       health: () => unwrap(api.GET('/api/healthz')),

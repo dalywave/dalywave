@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tv_logins SET used_at = now() WHERE user_code = $1 AND used_at IS NULL AND expires_at < now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b7cda69ee6fdfb13af72c9a6a230724c5fe1d5822de20f7ac09b77843b23d119"
+}

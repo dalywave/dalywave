@@ -48,6 +48,7 @@ mod synth;
 mod system;
 mod taste;
 mod taste_model;
+mod tv;
 mod updates;
 mod versions;
 mod watch;

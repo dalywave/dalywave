@@ -18,7 +18,7 @@ import type {
   Recognition, RecognitionPage, RecognizeRequest,
   ResolvedLink,
   MovePlaylist, MovePlaylistFolder, SetApplied, SetOptions, SetPreview, NetworkKind, NewPlaylistFolder, PlaylistFolder, PlaylistFolderPatch, UserSettings, UserSettingsPatch,
-  Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack,
+  Jam, JamGuestView, JamInvite, JamJoined, JamPatch, JamRequest, JamSkip, JamStream, JamTrack, Party, PartyPatch, TvCode, TvLogin, TvToken,
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
   WhyTrack,
@@ -123,7 +123,7 @@ export type SourceResult =
 export interface PlaybackDevice {
   id: string
   name: string
-  kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web' | 'watch'
+  kind: 'laptop' | 'desktop' | 'phone' | 'tablet' | 'web' | 'watch' | 'tv'
   /** Это устройство */
   current: boolean
   online: boolean
@@ -471,6 +471,20 @@ export interface JamGuestClient {
 }
 
 /** «Слушать вместе», как Jam у Spotify: сессия хозяина, гости по ссылке без аккаунта */
+/** Большой экран: режим вечеринки и вход на телевизоре кодом с экрана */
+export interface PartyBridge {
+  get(): Promise<Party>
+  /** Включение открывает «Слушать вместе» (QR для гостей) */
+  update(patch: PartyPatch): Promise<Party>
+  /** Телевизор (этот браузер) просит код для экрана */
+  code(): Promise<TvCode>
+  /** Подтверждён ли вход: `signed_in` — cookie сайта уже стоит */
+  token(deviceCode: string): Promise<TvToken>
+  /** Что подтверждает вошедший: код с экрана телевизора */
+  lookup(code: string): Promise<TvLogin>
+  approve(code: string): Promise<void>
+}
+
 export interface JamBridge {
   get(): Promise<Jam | null>
   start(): Promise<Jam>
@@ -847,6 +861,8 @@ export interface Bridge {
 
   /** «Слушать вместе» */
   jam: JamBridge
+
+  party: PartyBridge
 
   admin: {
     health(): Promise<Health>

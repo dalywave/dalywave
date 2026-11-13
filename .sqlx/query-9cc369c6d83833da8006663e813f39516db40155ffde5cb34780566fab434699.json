@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT active_until, energetic, no_artist_repeat, dj, coalesce(active_until > now(), false) AS \"active!\"\n           FROM parties WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "active_until",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "parties",
+            "name": "active_until"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "energetic",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "parties",
+            "name": "energetic"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "no_artist_repeat",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "parties",
+            "name": "no_artist_repeat"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "dj",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "parties",
+            "name": "dj"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "active!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "9cc369c6d83833da8006663e813f39516db40155ffde5cb34780566fab434699"
+}

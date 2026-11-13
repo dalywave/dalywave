@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO tv_logins (device_code_hash, user_code, platform, device_name, expires_at)\n             VALUES ($1, $2, $3, $4, now() + make_interval(secs => $5))\n             ON CONFLICT (user_code) WHERE used_at IS NULL DO NOTHING\n             RETURNING expires_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tv_logins",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Text",
+        "Text",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0a937d6d851fc66201ca4c7b5105471f79a0e0684e0d5b28a3b78589eb9df544"
+}

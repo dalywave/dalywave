@@ -204,6 +204,14 @@ export type JamSkip = Schemas['JamSkip']
 export type JamStream = Schemas['JamStream']
 export type JamReaction = Schemas['JamReaction']
 
+// Большой экран: вход на телевизоре кодом и режим вечеринки
+export type Party = Schemas['Party']
+export type PartyPatch = Schemas['PartyPatch']
+export type PartySettings = Schemas['PartySettings']
+export type TvCode = Schemas['TvCode']
+export type TvToken = Schemas['TvToken']
+export type TvLogin = Schemas['TvLogin']
+
 // Админка
 export type Health = Schemas['Health']
 export type AdminUser = Schemas['AdminUser']

@@ -911,14 +911,23 @@ pub async fn next(
 ) -> AppResult<Vec<WaveItem>> {
     let user = principal.user.id;
     let count = count.clamp(1, MAX_COUNT);
-    let session = load(&st.db, user, id).await?;
+    let mut session = load(&st.db, user, id).await?;
     let env = Env::of(st).await?;
     let platform = platform_of(st, principal).await?;
     let opts = Options {
         only_ready: !env.can_acquire,
         ..Default::default()
     };
-    let picked = select(&env, &session, Some(&platform), count, opts).await?;
+    // Вечеринка (crate::party): «только энергичное» и «без повторов артистов»
+    let party = crate::party::active(&st.db, user).await?;
+    if let Some(p) = &party {
+        crate::party::tune(&mut session.settings, p);
+    }
+    let mut picked = select(&env, &session, Some(&platform), count, opts).await?;
+    if party.is_some_and(|p| p.no_artist_repeat) {
+        let heard = crate::party::heard_artists(&st.db, &session.state.served).await?;
+        picked = crate::party::spread(picked, |(s, _)| &s.entry.cand.artist_ids, &heard);
+    }
     let out = take(&env, user, picked, count, 0).await;
     let mut state = session.state.clone();
     let first_position = state.step;

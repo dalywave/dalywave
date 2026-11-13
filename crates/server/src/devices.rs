@@ -41,6 +41,7 @@ pub fn default_name(platform: Platform) -> &'static str {
         Platform::Ipados => "iPad",
         Platform::Android => "Android",
         Platform::Watchos => "Apple Watch",
+        Platform::Tvos => "Apple TV",
     }
 }
 

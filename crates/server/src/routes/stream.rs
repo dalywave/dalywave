@@ -13,7 +13,7 @@ use dalywave_protocol::{
     ErrorBody,
     catalog::AudioStatus,
     jobs::{AcquireReason, Acquisition},
-    stream::{StreamPending, StreamQuery, StreamReady, TrackStream},
+    stream::{StreamPending, StreamPreparing, StreamQuery, StreamReady, TrackStream},
 };
 use uuid::Uuid;
 
@@ -23,7 +23,7 @@ use crate::{
     error::{AppError, AppResult},
     extract::{Json, Path, Query},
     jobs::lanes,
-    renditions::{self, Picked},
+    renditions::{self, ApplePick, Picked},
     routes::settings,
     state::AppState,
     storage::AUDIO_GET_TTL,
@@ -106,7 +106,8 @@ async fn not_playable(st: &AppState, track_id: Uuid) -> AppResult<AppError> {
                                       Файл — под качество: явное `quality` или по `network` и настройкам слушателя; \
                                       «Экономия» до готовности копии отдаёт обычный файл (`quality: normal`)", body = TrackStream),
         (status = 202, description = "`status: acquiring` — трек скачивается вне очереди; `waiting_for_downloader` — \
-                                      в очереди, но качать некому: загрузчик на Mac не на связи", body = TrackStream),
+                                      в очереди, но качать некому: загрузчик на Mac не на связи; `preparing` (`aac=true`) — \
+                                      делается копия AAC, спросить снова через 2 с", body = TrackStream),
         (status = 404, description = "Нет такого трека", body = ErrorBody),
         (status = 409, description = "Запись ждёт решения в «Спорных» (`audio_disputed`) или её нет в источниках (`audio_unavailable`)", body = ErrorBody),
         (status = 503, description = "Deezer не ответил (запись трека ещё неизвестна) или хранилище недоступно", body = ErrorBody),
@@ -124,6 +125,23 @@ pub async fn stream(
         .ok_or(AppError::NotFound)?;
     let user_settings = settings::of(&st.db, principal.user.id).await?;
     let quality = renditions::quality_for(q.quality, q.network, &user_settings);
+    // AVPlayer (Apple TV): только то, что он играет, иначе копия AAC
+    if q.aac == Some(true)
+        && let Some(recording) = recording
+        && let Some(pick) = renditions::pick_apple(&st.db, recording, quality).await?
+    {
+        return match pick {
+            ApplePick::Ready(picked) => ready(&st, picked).await,
+            ApplePick::Preparing => Ok((
+                StatusCode::ACCEPTED,
+                [(header::RETRY_AFTER, "2")],
+                Json(TrackStream::Preparing(StreamPreparing {
+                    retry_after_ms: 2000,
+                })),
+            )
+                .into_response()),
+        };
+    }
     if let Some(recording) = recording
         && let Some(picked) = renditions::pick(&st.db, recording, quality).await?
     {

@@ -19,6 +19,7 @@ use crate::{
     notifications::{Notification, NotificationsRead},
     social::{FriendActivityEvent, FriendsChange},
     sync::SyncEntity,
+    tv::Party,
 };
 
 /// Сообщение сервера.
@@ -79,6 +80,9 @@ pub enum ServerEvent {
     /// Друг начал слушать другое или перестал.
     #[serde(rename = "friends.activity")]
     FriendActivity(FriendActivityEvent),
+    /// Режим вечеринки включён, выключен или сменились его настройки.
+    #[serde(rename = "party.changed")]
+    PartyChanged(Party),
 }
 
 /// Сообщение клиента.

@@ -71,6 +71,8 @@ pub enum Platform {
     Android,
     /// Apple Watch: пульт, вход — от сопряжённого iPhone.
     Watchos,
+    /// Apple TV: вход кодом с экрана, подтверждение на телефоне или сайте (`/api/auth/tv/*`).
+    Tvos,
 }
 
 names!(Platform {
@@ -82,6 +84,7 @@ names!(Platform {
     Ipados => "ipados",
     Android => "android",
     Watchos => "watchos",
+    Tvos => "tvos",
 });
 
 impl Platform {

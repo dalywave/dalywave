@@ -64,7 +64,9 @@ pub async fn create_session(
     principal: Principal,
     Json(body): Json<NewWaveSession>,
 ) -> AppResult<(StatusCode, Json<WaveSession>)> {
-    let mut session = wave::create(&st, &principal, body.settings).await?;
+    // Вечеринка: «только энергичное» — и у волны, и у автопродолжения
+    let settings = crate::party::tuned(&st.db, principal.user.id, body.settings).await?;
+    let mut session = wave::create(&st, &principal, settings).await?;
     let env = wave::Env::of(&st).await?;
     let platform = wave::platform_of(&st, &principal).await?;
     prep::start(&env, &mut session, Some(&platform)).await?;

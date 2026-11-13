@@ -64,6 +64,7 @@ pub mod stream;
 pub mod sync;
 pub mod system;
 pub mod taste;
+pub mod tv;
 pub mod versions;
 pub mod wave;
 

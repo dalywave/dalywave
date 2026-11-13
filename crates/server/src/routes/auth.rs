@@ -446,7 +446,7 @@ async fn sign_in(
 }
 
 /// Новая сессия сайта. Прежняя сессия этого браузера закрывается.
-async fn open_web_session(
+pub(crate) async fn open_web_session(
     st: &AppState,
     jar: CookieJar,
     headers: &HeaderMap,

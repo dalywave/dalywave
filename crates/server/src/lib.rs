@@ -29,6 +29,7 @@ pub mod ml;
 pub mod notify;
 pub mod oidc;
 pub mod openapi;
+pub mod party;
 pub mod ratelimit;
 pub mod realtime;
 pub mod reco;

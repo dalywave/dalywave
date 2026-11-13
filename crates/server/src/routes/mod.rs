@@ -33,6 +33,7 @@ pub mod stream;
 pub mod sync;
 pub mod system;
 pub mod taste;
+pub mod tv;
 pub mod updates;
 pub mod versions;
 pub mod wave;
@@ -119,6 +120,7 @@ pub fn router(state: AppState) -> Router {
         .merge(jam::host_routes())
         .merge(info::play_routes())
         .merge(versions::routes())
+        .merge(tv::party_routes())
         .route_layer(from_fn_with_state(state.clone(), need(Permission::Play)));
     let api = Router::new()
         .merge(system::routes())
@@ -131,7 +133,7 @@ pub fn router(state: AppState) -> Router {
         .merge(library)
         .merge(play)
         .merge(fetcher::routes())
-        .nest("/auth", auth::routes())
+        .nest("/auth", auth::routes().merge(tv::auth_routes()))
         .nest("/admin", admin)
         .method_not_allowed_fallback(method_not_allowed)
         .fallback(not_found)

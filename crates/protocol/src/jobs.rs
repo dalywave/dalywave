@@ -286,6 +286,9 @@ pub struct LyricsPayload {
 #[serde(rename_all = "camelCase")]
 pub struct TranscodePayload {
     pub file_id: Uuid,
+    /// Вид копии: `opus64` («Экономия», по умолчанию) или `aac256` (AVPlayer на Apple TV).
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

@@ -32,6 +32,8 @@ pub enum ConnectKind {
     Tablet,
     /// Часы: пульт на запястье.
     Watch,
+    /// Телевизор: Apple TV или браузер на большом экране.
+    Tv,
 }
 
 names!(ConnectKind {
@@ -41,6 +43,7 @@ names!(ConnectKind {
     Phone => "phone",
     Tablet => "tablet",
     Watch => "watch",
+    Tv => "tv",
 });
 
 /// Что устройство умеет — пульт прячет то, чего нет.
