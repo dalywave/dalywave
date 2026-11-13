@@ -78,7 +78,7 @@ const shell = createShell({ invoke, listen })
 **iPhone и iPad.** Окна нет: WebView во весь экран, под вырезом и полоской «домой». Отступы —
 `env(safe-area-inset-*)` (в интерфейсе `--safe-top`, `--safe-bottom`; в `<meta name="viewport">`
 нужен `viewport-fit=cover`). Строка состояния и системные окна — в теме приложения (см. «Тема»).
-Из команд `window_*` там есть только `window_set_theme`; `update_*` нет.
+Из команд `window_*` там есть только `window_set_theme` и `window_set_back_swipe`; `update_*` нет.
 
 **macOS (`mac-inset`).** Кнопки 14×14 с шагом 23: x 18–78, по центру строки высотой 48
 (как `.sidebar__chrome` в макете «Полночь»). Левее x = 90 ничего интерактивного не ставить.
@@ -139,6 +139,7 @@ const shell = createShell({ invoke, listen })
 | `window.startDragging()` | `window_start_dragging` | — |
 | `window.isMaximized()` | `window_is_maximized` | `boolean` |
 | `window.setTheme(theme)` | `window_set_theme { theme }` | — `'dark'`, `'light'` или `null` (как в системе); все окна, запоминается. Есть и на iPhone, iPad |
+| `window.setBackSwipe(enabled)` | `window_set_back_swipe { enabled }` | — iPhone, iPad: «назад» смахиванием от левого края (штатный жест WKWebView со снимком предыдущей страницы). Интерфейс включает его на вложенных страницах с историей позади; на корневых вкладках, под листом и полным плеером — выключает. «Вперёд» от правого края выключен всегда. На других системах — ничего |
 | `window.setSnapArea(rect)` | `window_set_snap_area { rect }` | — (только Windows; `trackSnapArea` вызывает сам) |
 | `auth.login()` | `auth_login` | `Session` — ждёт возврата из браузера до 10 минут |
 | `auth.cancel()` | `auth_cancel` | `boolean` — был ли незаконченный вход |

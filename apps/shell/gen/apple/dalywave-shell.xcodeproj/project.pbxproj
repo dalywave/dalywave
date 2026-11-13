@@ -94,6 +94,7 @@
 		C2CC44C1F9BD43438A5A5617 /* TopShelfSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98BCA9E22B41CE0E444DCF1 /* TopShelfSnapshot.swift */; };
 		C33D15A5BD2889BD23B6E03E /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A69F9BFD45F2682F2AB713 /* Credentials.swift */; };
 		C506CA7BDA21DD0F689E9C1D /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2C8A783C57BE78FA072601 /* Store.swift */; };
+		C53CA41D0DD81E9387969779 /* BackSwipeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */; };
 		C66D69EAD3DD94DBCED00FA3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F04A250DEDD01BC9EB862FFB /* AVFoundation.framework */; };
 		C8008CAFBAC257752E260EB5 /* dalywave-share.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D9C094241682F36FAFC622E9 /* dalywave-share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C9C09914F010D0BEAB60BF4C /* DalyWave.icon in Resources */ = {isa = PBXBuildFile; fileRef = CBA685D63A1B696AAA3F0582 /* DalyWave.icon */; };
@@ -306,6 +307,7 @@
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		994AECBA29B15044C466628E /* focus.rs */ = {isa = PBXFileReference; path = focus.rs; sourceTree = "<group>"; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
+		9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackSwipeTests.swift; sourceTree = "<group>"; };
 		9F6C18721B1459AAA3822C5D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushLink.swift; sourceTree = "<group>"; };
@@ -769,6 +771,7 @@
 		F4A32B8C22E604101EBA527B /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */,
 				A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */,
 				A03ED3BF81A7DD119B85A122 /* ShareExtensionTests.swift */,
 				6FF71152266545FD5E1C1F0E /* SiriShortcutsTests.swift */,
@@ -788,18 +791,18 @@
 			path = TVApp;
 			sourceTree = "<group>";
 		};
-		"TEMP_13CA7513-4010-4EBC-8911-7CBFC47E3959" /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = arm64;
-			sourceTree = "<group>";
-		};
-		"TEMP_41847AE1-2FDF-4A6D-8CEA-98A9632A85E2" /* x86_64 */ = {
+		"TEMP_6F2ABD5B-5E4A-4416-B3BB-EA76E508B863" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
+			sourceTree = "<group>";
+		};
+		"TEMP_8234AECB-8BAC-458E-B48D-6E785AF549A7" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1282,6 +1285,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C53CA41D0DD81E9387969779 /* BackSwipeTests.swift in Sources */,
 				A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */,
 				2236D45F40E31DACD49256A1 /* ShareExtensionTests.swift in Sources */,
 				97B0289A53433337BAB14FC2 /* SiriShortcutsTests.swift in Sources */,

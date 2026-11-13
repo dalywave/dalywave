@@ -2,8 +2,9 @@
 import { ApiError } from '~/api/types'
 import { ShellLoginError } from '~/bridge/tauri'
 
-// Вход: через daly.rest (Google, Discord, Telegram, Twitch, ключ доступа — всё там).
-// Аварийный вход паролем из .env — для владельца, когда daly.rest недоступен
+// Вход: через daly.rest (Google, Discord, Telegram, Twitch, ключ доступа — всё там). Одна главная
+// кнопка; если вход сорвался — тот же экран говорит, что случилось и что делать. Аварийный вход
+// паролем из .env — для владельца, когда daly.rest недоступен: только на сайте и неприметной ссылкой
 definePageMeta({ layout: 'bare' })
 
 const route = useRoute()
@@ -18,13 +19,6 @@ const next = computed(() => {
   const n = route.query.next
   return typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') ? n : '/'
 })
-const errorCode = computed(() => (typeof route.query.error === 'string' ? route.query.error : null))
-const KNOWN = ['cancelled', 'expired', 'state', 'disabled', 'provider'] as const
-const errorText = computed(() => {
-  const c = errorCode.value
-  if (!c) return null
-  return (KNOWN as readonly string[]).includes(c) ? t(`errors.${c}`) : t('errors.unknown')
-})
 
 const providers = ref<{ oidc: { title: string } | null, password: boolean } | null>(null)
 const serverDown = ref(false)
@@ -37,18 +31,41 @@ onMounted(async () => {
     providers.value = { oidc: { title: 'daly.rest' }, password: true }
   }
 })
-
-const showEmergency = ref(false)
-const password = ref('')
-const busy = ref(false)
-const formError = ref<string | null>(null)
-const input = ref<HTMLInputElement | null>(null)
-const loginHref = computed(() => (bridge.kind === 'web' ? auth.loginUrl(next.value) : undefined))
+const provider = computed(() => providers.value?.oidc?.title ?? 'daly.rest')
 const signingIn = ref(false)
+function reload() {
+  window.location.reload()
+}
 
-// Приложение: вход в системном браузере, токен остаётся в связке ключей
-const APP_ERRORS = ['timeout', 'expired', 'state', 'provider', 'disabled', 'invalid_request', 'invalid_grant', 'forbidden', 'too_many_requests', 'network', 'server', 'keychain']
+// Ошибка возврата с daly.rest (сайт: ?error=…) или входа в приложении
+const WEB_ERRORS = ['cancelled', 'expired', 'state', 'disabled', 'provider']
+const APP_ERRORS = ['cancelled', 'timeout', 'expired', 'state', 'provider', 'disabled', 'invalid_request', 'invalid_grant', 'forbidden', 'too_many_requests', 'network', 'server', 'keychain']
 const appError = ref<string | null>(null)
+const failure = computed<string | null>(() => {
+  if (appError.value) return appError.value
+  const c = route.query.error
+  if (typeof c !== 'string' || !c) return null
+  return WEB_ERRORS.includes(c) ? c : 'unknown'
+})
+
+const heading = computed(() => {
+  const f = failure.value
+  if (f === 'cancelled') return t('cancelled.title')
+  if (f === 'disabled') return t('disabled.title')
+  if (f) return t('failed')
+  if (serverDown.value) return t('down.title')
+  return 'DalyWave'
+})
+const text = computed(() => {
+  const f = failure.value
+  if (signingIn.value) return t('app.wait', { title: provider.value })
+  if (f) return t(`errors.${f}`)
+  if (serverDown.value) return t('down.text')
+  return t('lead')
+})
+
+// Приложение: вход в системном окне браузера, токен остаётся в связке ключей
+const loginHref = computed(() => (bridge.kind === 'web' ? auth.loginUrl(next.value) : undefined))
 async function appLogin() {
   if (bridge.kind === 'web') return
   signingIn.value = true
@@ -59,19 +76,28 @@ async function appLogin() {
   }
   catch (e) {
     const code = e instanceof ShellLoginError ? e.code : 'unknown'
-    appError.value = APP_ERRORS.includes(code) ? t(`app.${code}`) : t('errors.unknown')
+    appError.value = APP_ERRORS.includes(code) ? code : 'unknown'
   }
   finally {
     signingIn.value = false
   }
 }
-
 function cancelAppLogin() {
   void bridge.auth.cancelLogin()
 }
 
-watch(showEmergency, (v) => {
-  if (v) void nextTick(() => input.value?.focus())
+// ---------- Аварийный вход ----------
+const canPassword = computed(() => !!providers.value?.password && bridge.auth.passwordAllowed)
+const showPassword = ref(false)
+const password = ref('')
+const busy = ref(false)
+const formError = ref<string | null>(null)
+const input = ref<HTMLInputElement | null>(null)
+
+watch(showPassword, (v) => {
+  formError.value = null
+  // Лист сначала выезжает: фокус — после, иначе клавиатура дёргает его на полпути
+  if (v) setTimeout(() => input.value?.focus(), ui.isTouchUi ? 450 : 0)
 })
 
 async function submit() {
@@ -81,12 +107,13 @@ async function submit() {
   try {
     await auth.passwordLogin(password.value)
     password.value = ''
+    showPassword.value = false
     await navigateTo(auth.status === 'no-access' ? '/waiting' : next.value)
   }
   catch (e) {
     if (e instanceof ApiError && e.status === 429) formError.value = t('form.rateLimited')
     else if (e instanceof ApiError && (e.status === 401 || e.status === 403)) formError.value = t('form.wrong')
-    else formError.value = e instanceof ApiError ? e.message : t('form.failed')
+    else formError.value = t('form.failed')
   }
   finally {
     busy.value = false
@@ -95,98 +122,75 @@ async function submit() {
 </script>
 
 <template>
-  <div class="login">
-    <div class="login__wave"><MusicWaveCanvas :layout="ui.isPhone ? 'full-phone' : 'full'" /></div>
-    <main class="login__card">
-      <img src="/favicon.svg" alt="" class="login__icon" width="72" height="72">
-      <h1 class="login__title">DalyWave</h1>
-      <p class="login__lead">{{ t('lead') }}</p>
+  <AuthStage :title="heading" :text="text">
+    <template v-if="serverDown && !failure">
+      <UiButton variant="primary" size="lg" block @click="reload">{{ t('down.reload') }}</UiButton>
+    </template>
+    <template v-else-if="providers?.oidc !== null">
+      <UiButton variant="primary" size="lg" block :href="loginHref" :loading="signingIn" @click="appLogin">
+        {{ failure ? t('retry') : t('oidc', { title: provider }) }}
+      </UiButton>
+      <UiButton v-if="signingIn && bridge.kind === 'tauri'" variant="ghost" size="lg" block @click="cancelAppLogin">{{ t('app.cancel') }}</UiButton>
+    </template>
 
-      <div v-if="appError || errorText" class="login__error" role="alert">
-        <Icon name="ph:warning-circle-fill" />
-        <span>{{ appError ?? errorText }}</span>
-      </div>
-      <div v-else-if="serverDown" class="login__error" role="alert">
-        <Icon name="ph:wifi-slash" />
-        <span>{{ t('serverDown') }}</span>
-      </div>
+    <template v-if="canPassword && !signingIn" #foot>
+      <!-- Компьютер: поле прямо здесь; под пальцем — нижний лист -->
+      <form v-if="showPassword && !ui.isTouchUi" class="pw pw--inline" @submit.prevent="submit">
+        <div class="pw__row">
+          <input
+            ref="input"
+            v-model="password"
+            class="pw__input"
+            type="password"
+            autocomplete="current-password"
+            :aria-label="t('form.title')"
+            :aria-invalid="!!formError || undefined"
+            :aria-describedby="formError ? 'pw-error' : undefined"
+            :placeholder="t('form.placeholder')"
+            @keydown.esc="showPassword = false"
+          >
+          <UiButton type="submit" variant="secondary" :loading="busy" :disabled="!password">{{ t('form.submit') }}</UiButton>
+        </div>
+        <p v-if="formError" id="pw-error" class="pw__error" role="alert">{{ formError }}</p>
+      </form>
+      <button v-else type="button" class="pw-link" @click="showPassword = true">{{ t('password') }}</button>
+    </template>
 
-      <div v-if="signingIn && bridge.kind === 'tauri'" class="login__browser" role="status">
-        <Icon name="ph:browser" class="login__browser-icon" />
-        <div class="login__browser-title">{{ t('app.waitTitle') }}</div>
-        <p class="login__browser-text">{{ t('app.waitText') }}</p>
-        <UiButton variant="secondary" icon="ph:x" @click="cancelAppLogin">{{ t('app.cancel') }}</UiButton>
-      </div>
-      <template v-else>
-        <UiButton v-if="providers?.oidc !== null" variant="primary" size="lg" block :href="loginHref" icon="ph:sign-in" class="login__main" @click="appLogin">
-          {{ t('oidc', { title: providers?.oidc?.title ?? 'daly.rest' }) }}
-        </UiButton>
-      </template>
-
-      <template v-if="providers?.password && bridge.auth.passwordAllowed">
-        <div class="login__sep"><span>{{ t('or') }}</span></div>
-        <UiButton v-if="!showEmergency" variant="ghost" icon="ph:key" @click="showEmergency = true">{{ t('emergency') }}</UiButton>
-        <form v-else class="login__form" @submit.prevent="submit">
-          <label class="login__label" for="pw">{{ t('form.label') }}</label>
-          <div class="login__row">
-            <input
-              id="pw"
-              ref="input"
-              v-model="password"
-              class="login__input"
-              type="password"
-              autocomplete="current-password"
-              :aria-invalid="!!formError || undefined"
-              :aria-describedby="formError ? 'pw-error' : undefined"
-              :placeholder="t('form.placeholder')"
-            >
-            <UiButton type="submit" variant="secondary" :loading="busy" :disabled="!password">{{ t('form.submit') }}</UiButton>
-          </div>
-          <p v-if="formError" id="pw-error" class="login__form-error" role="alert">{{ formError }}</p>
-        </form>
-      </template>
-    </main>
-  </div>
+    <!-- Лист аварийного входа под пальцем (уходит в портал — место в разметке не важно) -->
+    <template v-if="canPassword && ui.isTouchUi" #extra>
+    <UiSheet v-model:open="showPassword" :title="t('form.title')">
+      <form class="pw pw--sheet" @submit.prevent="submit">
+        <input
+          ref="input"
+          v-model="password"
+          class="pw__input"
+          type="password"
+          autocomplete="current-password"
+          :aria-label="t('form.title')"
+          :aria-invalid="!!formError || undefined"
+          :aria-describedby="formError ? 'pw-error-sheet' : undefined"
+          :placeholder="t('form.placeholder')"
+        >
+        <p v-if="formError" id="pw-error-sheet" class="pw__error" role="alert">{{ formError }}</p>
+        <UiButton type="submit" variant="primary" size="lg" block :loading="busy" :disabled="!password">{{ t('form.submit') }}</UiButton>
+      </form>
+    </UiSheet>
+    </template>
+  </AuthStage>
 </template>
 
 <style scoped>
-.login { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 32px 16px; overflow: hidden; background: var(--stage); }
-.login__wave { position: absolute; inset: 0; }
-.login__wave::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 55% at 50% 50%, color-mix(in srgb, var(--stage) 78%, transparent), color-mix(in srgb, var(--stage) 35%, transparent) 70%, color-mix(in srgb, var(--stage) 60%, transparent)); }
-.login__card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(420px, 100%);
-  padding: 40px 32px 28px;
-  border-radius: var(--r-6);
-  background: var(--card-glass);
-  -webkit-backdrop-filter: blur(30px) saturate(1.4);
-  backdrop-filter: blur(30px) saturate(1.4);
-  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
-  text-align: center;
-}
-.login__icon { width: 72px; height: 72px; }
-.login__title { margin: 18px 0 0; font-size: 32px; font-weight: 750; letter-spacing: var(--tr-display); line-height: 1.1; }
-.login__lead { max-width: 300px; margin: 8px 0 24px; color: var(--text-2); text-wrap: balance; }
-.login__error { display: flex; align-items: flex-start; gap: 10px; width: 100%; margin-bottom: 16px; padding: 10px 12px; border-radius: var(--r-3); background: color-mix(in oklab, var(--danger) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 30%, transparent); font-size: var(--fs-small); text-align: left; }
-.login__error :deep(.iconify) { flex: none; margin-top: 1px; font-size: 18px; color: var(--danger); }
-.login__main { width: 100%; }
-.login__sep { display: flex; align-items: center; gap: 12px; width: 100%; margin: 22px 0 10px; font-size: var(--fs-caption); color: var(--text-4); }
-.login__sep::before, .login__sep::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
-.login__browser { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 18px 16px; border-radius: var(--r-4); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); animation: fade-in var(--dur-2); }
-.login__browser-icon { font-size: 28px; color: var(--accent); }
-.login__browser-title { font-weight: 650; }
-.login__browser-text { margin: 0 0 6px; font-size: var(--fs-small); color: var(--text-2); text-wrap: balance; }
-.login__form { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; animation: fade-in var(--dur-2); }
-.login__label { font-size: var(--fs-small); font-weight: 600; }
-.login__row { display: flex; gap: 8px; }
-.login__input {
+/* Ссылка на аварийный вход: неприметная, но с полноценной зоной касания */
+.pw-link { min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--text-4); font: inherit; font-size: var(--fs-small); cursor: pointer; transition: color var(--dur-1); }
+.pw-link:hover { color: var(--text-2); }
+.pw-link:focus-visible { outline: none; border-radius: var(--r-2); box-shadow: 0 0 0 2px var(--focus); }
+.pw { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; animation: fade-in var(--dur-2); }
+.pw__row { display: flex; gap: 8px; }
+.pw__input {
   flex: 1;
   min-width: 0;
   height: 40px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 0;
   border-radius: var(--r-pill);
   background: var(--fill-1);
@@ -195,16 +199,14 @@ async function submit() {
   font: inherit;
   transition: box-shadow var(--dur-1), background-color var(--dur-1);
 }
-.login__input::placeholder { color: var(--text-4); }
-.login__input:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
-.login__input:focus-visible { outline: none; background: var(--fill-2); box-shadow: inset 0 0 0 1.5px var(--focus); }
-.login__input[aria-invalid='true'] { box-shadow: inset 0 0 0 1.5px var(--danger); }
-.login__form-error { margin: 0; font-size: var(--fs-caption); color: var(--danger); }
-@media (max-width: 699px) {
-  .login { align-items: end; padding: 16px 12px calc(16px + var(--safe-bottom)); }
-  .login__card { padding: 32px 20px 20px; border-radius: 28px; }
-  .login__input { height: 44px; }
-}
+.pw__input::placeholder { color: var(--text-4); }
+.pw__input:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.pw__input:focus-visible { outline: none; background: var(--fill-2); box-shadow: inset 0 0 0 1.5px var(--focus); }
+.pw__input[aria-invalid='true'] { box-shadow: inset 0 0 0 1.5px var(--danger); }
+.pw__error { margin: 0; padding: 0 16px; font-size: var(--fs-caption); color: var(--danger); }
+.pw--inline { margin-top: 4px; }
+.pw--sheet { gap: 12px; padding: 4px 20px 16px; }
+.pw--sheet .pw__input { flex: none; height: 48px; font-size: 16px; }
 </style>
 
 <i18n lang="json">
@@ -213,37 +215,39 @@ async function submit() {
     "title": "Вход",
     "lead": "Ваша музыка — и волна, которая знает, что вам нравится",
     "oidc": "Войти через {title}",
-    "or": "или",
-    "emergency": "Аварийный вход",
-    "serverDown": "Сервер не отвечает. Обновите страницу чуть позже",
+    "retry": "Попробовать снова",
+    "password": "Вход по паролю",
+    "failed": "Не получилось войти",
+    "cancelled": { "title": "Вход отменён" },
+    "disabled": { "title": "Доступ закрыт" },
+    "down": {
+      "title": "Сервер не отвечает",
+      "text": "Скорее всего, это ненадолго. Попробуйте через минуту",
+      "reload": "Обновить"
+    },
     "errors": {
-      "cancelled": "Вход отменён. Можно попробовать ещё раз",
-      "expired": "Ссылка для входа устарела — начните заново",
-      "state": "Не получилось проверить вход. Начните заново в этой же вкладке",
+      "cancelled": "Ничего страшного — можно попробовать ещё раз",
+      "expired": "Ссылка для входа устарела. Начните заново",
+      "state": "Вход начали в другой вкладке или браузере. Начните заново здесь",
       "disabled": "Аккаунт отключён. Напишите администратору",
       "provider": "daly.rest сейчас не отвечает. Попробуйте через минуту",
-      "unknown": "Не получилось войти. Попробуйте ещё раз"
+      "timeout": "Вход не завершили за 10 минут. Начните заново",
+      "invalid_request": "Сервер не принял вход. Начните заново",
+      "invalid_grant": "Код входа уже использован или устарел. Начните заново",
+      "forbidden": "Сервер не разрешил вход этому приложению. Напишите администратору",
+      "too_many_requests": "Слишком много попыток. Подождите минуту",
+      "network": "Нет связи с сервером. Проверьте интернет и попробуйте снова",
+      "server": "Сервер ответил неожиданно. Попробуйте чуть позже",
+      "keychain": "Связка ключей не сохранила вход. Проверьте доступ приложения к ней",
+      "unknown": "Что-то пошло не так. Попробуйте ещё раз"
     },
     "app": {
-      "waitTitle": "Завершите вход в браузере",
-      "waitText": "Мы открыли daly.rest в браузере. Войдите там — приложение продолжит само",
-      "cancel": "Отмена",
-      "timeout": "Вход не завершили за 10 минут — начните заново",
-      "expired": "Вход устарел — начните заново",
-      "state": "Вход начали в другом браузере или окне — начните заново",
-      "provider": "daly.rest сейчас не отвечает. Попробуйте через минуту",
-      "disabled": "Аккаунт отключён. Напишите администратору",
-      "invalid_request": "Сервер не принял вход — начните заново",
-      "invalid_grant": "Код входа уже использован или устарел — начните заново",
-      "forbidden": "Сервер не разрешил вход этому приложению",
-      "too_many_requests": "Слишком много попыток. Подождите минуту",
-      "network": "Нет связи с сервером. Проверьте сеть",
-      "server": "Сервер ответил неожиданно. Попробуйте позже",
-      "keychain": "Связка ключей не сохранила вход. Проверьте доступ приложения к ней"
+      "wait": "Завершите вход на {title} в открывшемся окне",
+      "cancel": "Отменить"
     },
     "form": {
-      "label": "Пароль владельца",
-      "placeholder": "Пароль",
+      "title": "Вход по паролю",
+      "placeholder": "Пароль владельца",
       "submit": "Войти",
       "wrong": "Пароль не подошёл",
       "rateLimited": "Слишком много попыток. Подождите минуту",
@@ -254,37 +258,39 @@ async function submit() {
     "title": "Sign in",
     "lead": "Your music — and a wave that knows what you like",
     "oidc": "Sign in with {title}",
-    "or": "or",
-    "emergency": "Emergency sign-in",
-    "serverDown": "The server isn't responding. Reload in a moment",
+    "retry": "Try again",
+    "password": "Sign in with password",
+    "failed": "Couldn't sign in",
+    "cancelled": { "title": "Sign-in cancelled" },
+    "disabled": { "title": "Access closed" },
+    "down": {
+      "title": "The server isn't responding",
+      "text": "It's probably brief. Try again in a minute",
+      "reload": "Reload"
+    },
     "errors": {
-      "cancelled": "Sign-in was cancelled. You can try again",
-      "expired": "The sign-in link expired — start over",
-      "state": "Couldn't verify the sign-in. Start over in this tab",
+      "cancelled": "No problem — you can try again",
+      "expired": "The sign-in link expired. Start over",
+      "state": "Sign-in started in another tab or browser. Start over here",
       "disabled": "This account is disabled. Contact the administrator",
       "provider": "daly.rest isn't responding. Try again in a minute",
-      "unknown": "Couldn't sign in. Try again"
+      "timeout": "Sign-in wasn't finished within 10 minutes. Start over",
+      "invalid_request": "The server rejected the sign-in. Start over",
+      "invalid_grant": "The sign-in code was used or expired. Start over",
+      "forbidden": "The server didn't allow this app to sign in. Contact the administrator",
+      "too_many_requests": "Too many attempts. Wait a minute",
+      "network": "No connection to the server. Check the internet and try again",
+      "server": "The server responded unexpectedly. Try a bit later",
+      "keychain": "The keychain didn't save the sign-in. Check the app's access to it",
+      "unknown": "Something went wrong. Try again"
     },
     "app": {
-      "waitTitle": "Finish signing in in your browser",
-      "waitText": "We opened daly.rest in your browser. Sign in there — the app continues by itself",
-      "cancel": "Cancel",
-      "timeout": "Sign-in wasn't finished within 10 minutes — start over",
-      "expired": "The sign-in expired — start over",
-      "state": "Sign-in started in another browser or window — start over",
-      "provider": "daly.rest isn't responding. Try again in a minute",
-      "disabled": "This account is disabled. Contact the administrator",
-      "invalid_request": "The server rejected the sign-in — start over",
-      "invalid_grant": "The sign-in code was used or expired — start over",
-      "forbidden": "The server didn't allow this app to sign in",
-      "too_many_requests": "Too many attempts. Wait a minute",
-      "network": "No connection to the server. Check your network",
-      "server": "The server responded unexpectedly. Try later",
-      "keychain": "The keychain didn't save the sign-in. Check the app's access to it"
+      "wait": "Finish signing in to {title} in the window that opened",
+      "cancel": "Cancel"
     },
     "form": {
-      "label": "Owner password",
-      "placeholder": "Password",
+      "title": "Sign in with password",
+      "placeholder": "Owner password",
       "submit": "Sign in",
       "wrong": "Wrong password",
       "rateLimited": "Too many attempts. Wait a minute",

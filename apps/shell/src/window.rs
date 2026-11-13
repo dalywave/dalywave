@@ -104,6 +104,8 @@ pub fn create_main(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     app.manage(Backdrop(backdrop));
     // Сохранённая тема — до показа окна: светлая открывается сразу светлой, без тёмной вспышки
     apply_theme(&window, app.state::<Settings>().theme());
+    #[cfg(target_os = "ios")]
+    crate::ios::install_back_swipe(&window);
     #[cfg(desktop)]
     {
         app.manage(Mutex::new(WindowFlags {
@@ -374,6 +376,17 @@ pub fn window_set_theme(app: AppHandle, theme: Option<String>) -> ShellResult<()
         apply_theme(window, choice);
     }
     saved
+}
+
+/// iPhone и iPad: можно ли сейчас вернуться назад смахиванием от левого края (ios.rs,
+/// `install_back_swipe`). Решает интерфейс: вложенная страница с историей позади — да; корневая
+/// вкладка, открытый лист или полный плеер — нет. На других системах ничего не делает.
+#[tauri::command]
+pub fn window_set_back_swipe(window: WebviewWindow, enabled: bool) {
+    #[cfg(target_os = "ios")]
+    crate::ios::set_back_swipe(&window, enabled);
+    #[cfg(not(target_os = "ios"))]
+    let _ = (window, enabled);
 }
 
 /// Windows 11: где интерфейс нарисовал кнопку «развернуть» (CSS-пиксели от левого верхнего

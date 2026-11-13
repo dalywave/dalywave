@@ -183,6 +183,12 @@ export function createTauriBridge(): Bridge {
       setTheme(theme) {
         void loadShell().then(shell => shell.window.setTheme(theme)).catch(() => {})
       },
+      // «Назад» смахиванием — только iPhone и iPad (plugins/back-swipe.client.ts)
+      setBackSwipe: platform === 'ios' || platform === 'ipados'
+        ? (enabled) => {
+            void loadShell().then(shell => shell.window.setBackSwipe(enabled)).catch(() => {})
+          }
+        : () => {},
       trackSnap(button) {
         let stop: (() => void) | null = null
         let stopped = false
