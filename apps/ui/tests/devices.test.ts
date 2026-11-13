@@ -18,9 +18,9 @@ describe('withoutStale', () => {
     expect(withoutStale(list).map(d => d.id)).toEqual(['new', 'mac'])
   })
 
-  test('оба не в сети — остаётся последний увиденный', () => {
-    const list = [dev('a', { lastSeenAt: '2026-11-10T10:00:00Z' }), dev('b', { lastSeenAt: '2026-11-12T10:00:00Z' })]
-    expect(withoutStale(list).map(d => d.id)).toEqual(['b'])
+  test('не в сети — не показываются', () => {
+    const list = [dev('a', { lastSeenAt: '2026-11-10T10:00:00Z' }), dev('deck', { name: 'Stream Deck MacBook', kind: 'laptop', lastSeenAt: '2026-11-12T10:00:00Z' }), dev('on', { name: 'iPad', online: true })]
+    expect(withoutStale(list).map(d => d.id)).toEqual(['on'])
   })
 
   test('это устройство и активное не прячутся', () => {
@@ -29,7 +29,7 @@ describe('withoutStale', () => {
   })
 
   test('разные имена — разные устройства', () => {
-    const list = [dev('a', { online: true }), dev('b', { name: 'iPad', online: false })]
+    const list = [dev('a', { online: true }), dev('b', { name: 'iPad', online: true })]
     expect(withoutStale(list).map(d => d.id)).toEqual(['a', 'b'])
   })
 })

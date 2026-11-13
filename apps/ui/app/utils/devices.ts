@@ -1,6 +1,7 @@
 // Список «Где играть» без старых записей: переустановленное приложение регистрируется заново, и
 // прежнее «iPhone · Не в сети» висит рядом с новым. Из записей с тем же именем и видом остаётся одна —
-// это устройство, иначе то, что в сети, иначе последнее увиденное. Активное не прячется никогда.
+// это устройство, иначе то, что в сети, иначе последнее увиденное. Устройства не в сети не показываются
+// вовсе — выключенный Mac или пульт Stream Deck только мешают. Это устройство и активное видны всегда.
 import type { PlaybackDevice } from '~/bridge/types'
 
 type DeviceLike = Pick<PlaybackDevice, 'id' | 'name' | 'kind' | 'current' | 'online' | 'lastSeenAt' | 'active'>
@@ -21,5 +22,5 @@ export function withoutStale<D extends DeviceLike>(devices: D[]): D[] {
     if (!prev || better(d, prev)) keep.set(key, d)
   }
   const kept = new Set(keep.values())
-  return devices.filter(d => kept.has(d) || d.active)
+  return devices.filter(d => d.current || d.active || (d.online && kept.has(d)))
 }
