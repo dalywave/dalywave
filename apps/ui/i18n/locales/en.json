@@ -27,7 +27,11 @@
     "create": "Create",
     "createFailed": "Couldn't create the playlist",
     "syncDone": "Follows loaded",
-    "syncTitle": "Downloading follows"
+    "syncTitle": "Downloading follows",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "resize": "Sidebar width",
+    "collapsed": "Sidebar collapsed"
   },
   "notify": {
     "title": "Notifications",

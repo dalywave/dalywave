@@ -1,4 +1,4 @@
-/** Горячие клавиши приложения: пробел, ⇧← ⇧→, L, S (перемешивание), R (повтор), ⌘K, ⌘⇧M (мини-плеер). Не мешают вводу текста */
+/** Горячие клавиши приложения: пробел, ⇧← ⇧→, L, S (перемешивание), R (повтор), ⌘K, ⌘⇧M (мини-плеер), ⌘⌥B (свернуть боковую панель). Не мешают вводу текста */
 export function useShortcuts() {
   const player = usePlayerStore()
   const ui = useUiStore()
@@ -15,6 +15,13 @@ export function useShortcuts() {
     if (mod && e.key.toLowerCase() === 'k') {
       e.preventDefault()
       ui.focusSearch()
+      return
+    }
+    // Боковая панель компьютера: свернуть в рейку и развернуть. По месту клавиши: ⌥B на Mac
+    // печатает «∫», а в русской раскладке это «и»
+    if (mod && e.altKey && !e.shiftKey && e.code === 'KeyB' && !ui.isTouchUi) {
+      e.preventDefault()
+      ui.toggleSidebar()
       return
     }
     // Мини-плеер: приложение для компьютера

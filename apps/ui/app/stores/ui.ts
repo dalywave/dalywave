@@ -2,6 +2,14 @@ import { defineStore } from 'pinia'
 
 export type PanelTab = 'queue' | 'lyrics' | 'devices' | 'about' | 'jam' | 'friends'
 
+/** Ширина развёрнутой боковой панели компьютера: пределы при перетаскивании края */
+export const SIDE_MIN = 200
+export const SIDE_MAX = 420
+/** Отпустили край уже этого — панель схлопывается в рейку */
+export const SIDE_SNAP = 150
+const SIDE_KEY = 'dw.sidebar'
+const clampSide = (w: number) => Math.round(Math.min(SIDE_MAX, Math.max(SIDE_MIN, w)))
+
 // Состояние оболочки: правая панель, полноэкранный плеер, ширина экрана
 export const useUiStore = defineStore('ui', () => {
   const panelOpen = ref(false)
@@ -38,8 +46,45 @@ export const useUiStore = defineStore('ui', () => {
   const isSideBar = computed(() => isPhone.value && safeRight.value >= 44)
   const isDesktop = useMediaQuery('(min-width: 1100px)')
   const isTablet = computed(() => !isPhone.value && !isDesktop.value)
+  /** Боковая панель компьютера, как у Spotify: свёрнута в полосу значков (рейку) или развёрнута
+   *  своей ширины. Выбор человека запоминается на устройстве; не выбрано — в узком окне (до 1100)
+   *  рейка, в широком — развёрнута. Совсем узкое окно (до 900) — всегда рейка: двум колонкам тесно */
+  const sideCollapsed = ref<boolean | null>(null)
+  const sideWidth = ref<number | null>(null)
+  /** Ширину тянут мышью: анимация ширины в это время выключена */
+  const sideResizing = ref(false)
+  if (import.meta.client) {
+    try {
+      const s = JSON.parse(localStorage.getItem(SIDE_KEY) ?? '{}') as { collapsed?: unknown, width?: unknown }
+      if (typeof s.collapsed === 'boolean') sideCollapsed.value = s.collapsed
+      if (typeof s.width === 'number') sideWidth.value = clampSide(s.width)
+    }
+    catch {
+      // Хранилище недоступно или запись испорчена — панель по умолчанию
+    }
+    watch([sideCollapsed, sideWidth], ([collapsed, width]) => {
+      try {
+        localStorage.setItem(SIDE_KEY, JSON.stringify({ collapsed, width }))
+      }
+      catch {
+        // Не запомнилось — не беда: в этот раз панель всё равно такая, как выбрали
+      }
+    })
+  }
+  const narrow = useMediaQuery('(max-width: 1099px)')
+  /** Рейка навязана окном: развернуть нельзя */
+  const sideCramped = useMediaQuery('(max-width: 899px)')
   /** Узкая боковая панель из значков */
-  const isRail = useMediaQuery('(min-width: 700px) and (max-width: 1023px)')
+  const isRail = computed(() => sideCramped.value || (sideCollapsed.value ?? narrow.value))
+
+  function toggleSidebar() {
+    if (sideCramped.value) return
+    sideCollapsed.value = !isRail.value
+  }
+  /** Ширина развёрнутой панели; null — по умолчанию */
+  function setSideWidth(w: number | null) {
+    sideWidth.value = w === null ? null : clampSide(w)
+  }
   /** Планшет под пальцем (iPad), как Spotify на iPad: без боковой панели и верхней строки — внизу
    *  плавающие вкладки и карточка плеера, плеер на весь экран, очередь и текст — листами.
    *  iPad с трекпадом — тоже он: главный указатель всё равно палец */
@@ -127,5 +172,5 @@ export const useUiStore = defineStore('ui', () => {
     searchFocus.value++
   }
 
-  return { panelOpen, panelTab, playerOpen, playerLyrics, sheetTab, searchFocus, isPhone, isFoldable, isSideBar, isDesktop, isTablet, isRail, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
+  return { panelOpen, panelTab, playerOpen, playerLyrics, sheetTab, searchFocus, isPhone, isFoldable, isSideBar, isDesktop, isTablet, isRail, sideCollapsed, sideWidth, sideResizing, sideCramped, toggleSidebar, setSideWidth, isTouch, isTouchUi, canSidePlayer, sidePlayer, reducedMotion, openPanel, togglePanel, focusSearch, onCollapsePlayer, collapsePlayer, navigate }
 })
