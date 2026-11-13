@@ -5,7 +5,10 @@
 // Телефон: документ прокручивается сам, внизу вкладки и мини-плеер, плеер и очередь — шторками.
 // Планшет под пальцем (iPad), как Spotify на iPad: то же, что на телефоне, но содержимое — в колонке
 // большого экрана, а внизу плавающие стеклянные вкладки и рядом карточка плеера; плеер — на весь экран.
-// Горизонтально с «Плеером сбоку» — карточки нет, «Сейчас играет» колонкой справа, содержимое уже
+// Горизонтально с «Плеером сбоку» — карточки нет, «Сейчас играет» колонкой справа, содержимое уже.
+// Раскрытый складной iPhone, как приложения Apple на нём: слева боковое меню (разделы, плейлисты,
+// артисты) во всю высоту, справа содержимое планшета под пальцем, мини-плеер — внизу колонки содержимого.
+// Сложенный — телефон; переход на лету: страница не пересоздаётся, музыка не прерывается
 const ui = useUiStore()
 const bridge = useBridge()
 const route = useRoute()
@@ -79,6 +82,8 @@ const phoneMain = ref<HTMLElement | null>(null)
     :class="{
       'is-panel': ui.panelOpen && !ui.isTouchUi,
       'is-touch': ui.isTouch,
+      'is-fold': ui.isFoldable,
+      'is-side-bar': ui.isSideBar,
       'is-side': ui.sidePlayer,
       'is-rail': ui.isRail,
       'is-player': ui.playerOpen,
@@ -104,12 +109,16 @@ const phoneMain = ref<HTMLElement | null>(null)
       <MusicNowPlayingBar class="app__bar" />
     </template>
     <template v-else>
+      <!-- Раскрытый складной iPhone: слева боковое меню, как у приложений Apple на нём -->
+      <ShellSidebar v-if="ui.isFoldable" touch class="app__fold-side" />
       <main ref="phoneMain" class="app__main app__main--phone">
-        <!-- Планшет: колонка большого экрана — страницы раскладываются по ней через @container main -->
-        <div v-if="ui.isTouch" class="page page--touch"><slot /></div>
-        <slot v-else />
+        <!-- Планшет: колонка большого экрана — страницы раскладываются по ней через @container main.
+             Телефон — та же обёртка без своей коробки: складной iPhone переходит из одной раскладки
+             в другую, не пересоздавая страницу (прокрутка и всё, что на ней набрано, остаются) -->
+        <div :class="ui.isTouch ? 'page page--touch' : 'page-phone'"><slot /></div>
       </main>
-      <template v-if="ui.isTouch">
+      <MusicMiniPlayer v-if="ui.isFoldable" fold />
+      <template v-else-if="ui.isTouch">
         <ShellDock />
         <MusicSidePlayer />
       </template>
@@ -169,9 +178,21 @@ const phoneMain = ref<HTMLElement | null>(null)
 /* Под строкой состояния содержимое не просвечивает: тихая полоса фона, как у Spotify */
 .app.is-touch::before { content: ''; position: fixed; inset: 0 0 auto; z-index: 25; height: var(--safe-top); background: color-mix(in srgb, var(--ink-1) 86%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); pointer-events: none; }
 
-/* Телефон: документ прокручивается сам */
+/* Телефон: документ прокручивается сам. Сложенный складной iPhone держит строку состояния сбоку —
+   отступы слева и справа тоже из безопасной зоны */
+.page-phone { display: contents; }
 @media (max-width: 699px) {
   .app { display: block; height: auto; min-height: 100dvh; padding-top: 0; }
-  .app__main--phone { display: block; overflow: visible; padding: var(--safe-top) 0 calc(var(--safe-bottom) + var(--tabbar-h) + var(--mini-h) + 32px); }
+  .app__main--phone { display: block; overflow: visible; padding: var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + var(--tabbar-h) + var(--mini-h) + 32px) var(--safe-left); }
+  /* Вкладки — в колонке справа (сложенный складной iPhone): снизу только мини-плеер */
+  .app.is-side-bar .app__main--phone { padding-bottom: calc(var(--safe-bottom) + var(--mini-h) + 32px); }
 }
+
+/* Раскрытый складной iPhone: боковое меню закреплено слева во всю высоту, документ прокручивается
+   справа от него; внизу — только мини-плеер (вкладки — в меню) */
+.app.is-fold { --fold-side-w: clamp(232px, 27vw, 268px); }
+.app.is-fold .app__main--phone { padding: var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + var(--mini-h) + 40px) calc(var(--fold-side-w) + var(--safe-left)); }
+.app.is-fold::before { left: calc(var(--fold-side-w) + var(--safe-left)); }
+.app__fold-side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: calc(var(--fold-side-w) + var(--safe-left)); height: auto; }
+.app.is-fold .page--touch { padding: 16px 24px 0; }
 </style>

@@ -5,8 +5,11 @@ import type { MenuEntry } from '~/types/ui'
 
 // Боковая панель: знак, разделы, закреплённое, подписки и состояние загрузки подписок.
 // rail — узкая полоса значков на планшете. Правый щелчок (долгое нажатие) по плейлисту — его
-// меню; треки из списков можно бросить на свой плейлист
-withDefaults(defineProps<{ rail?: boolean }>(), {})
+// меню; треки из списков можно бросить на свой плейлист.
+// touch — боковое меню раскрытого складного iPhone, как у приложений Apple на нём: строки под палец
+// (от 44 pt), без сочетаний клавиш и перетаскивания, меню и новый плейлист — листами снизу
+const props = withDefaults(defineProps<{ rail?: boolean, touch?: boolean }>(), {})
+const drag = computed(() => !props.rail && !props.touch)
 
 const route = useRoute()
 const library = useLibraryStore()
@@ -132,7 +135,7 @@ async function createPlaylist() {
 </script>
 
 <template>
-  <aside class="side" :class="{ 'side--rail': rail }" :aria-label="t('nav.aside')">
+  <aside class="side" :class="{ 'side--rail': rail, 'side--touch': touch }" :aria-label="t('nav.aside')">
     <div class="side__brand"><BrandLogo :compact="rail" /></div>
 
     <nav class="side__nav" :aria-label="t('nav.main')">
@@ -140,7 +143,7 @@ async function createPlaylist() {
         <NuxtLink :to="n.to" class="nav" :class="{ 'is-active': isActive(n.to) }" :aria-current="isActive(n.to) ? 'page' : undefined">
           <Icon :name="isActive(n.to) ? n.iconOn : n.icon" class="nav__icon" />
           <span class="nav__label">{{ t(n.key) }}</span>
-          <UiKbd v-if="n.kbd && !rail" :keys="[...n.kbd]" class="nav__kbd" />
+          <UiKbd v-if="n.kbd && !rail && !touch" :keys="[...n.kbd]" class="nav__kbd" />
         </NuxtLink>
       </UiTooltip>
     </nav>
@@ -151,9 +154,10 @@ async function createPlaylist() {
           <span class="sec__title">{{ t('nav.pinned') }}</span>
           <span v-if="!rail" class="sec__actions">
           <UiMenu :items="listMenu" align="start">
-            <UiIconButton icon="ph:sliders-horizontal" :label="t('plSort.options')" size="xs" />
+            <UiIconButton icon="ph:sliders-horizontal" :label="t('plSort.options')" :size="touch ? 'md' : 'xs'" :tooltip="touch ? false : undefined" />
           </UiMenu>
-          <UiPopover v-model:open="createOpen" :title="t('nav.newPlaylist')" side="right" align="start" :width="300">
+          <UiIconButton v-if="touch" icon="ph:plus" :label="t('nav.newPlaylist')" size="md" :tooltip="false" @click="createOpen = true" />
+          <UiPopover v-else v-model:open="createOpen" :title="t('nav.newPlaylist')" side="right" align="start" :width="300">
             <template #trigger>
               <UiIconButton icon="ph:plus" :label="t('nav.newPlaylist')" size="xs" />
             </template>
@@ -183,7 +187,7 @@ async function createPlaylist() {
                     :data-pl="`folder:${r.node.id}`"
                     class="item item--folder"
                     :class="tree.dropClass(r.node.id)"
-                    :draggable="!rail"
+                    :draggable="drag"
                     :aria-expanded="!r.node.folder.collapsed"
                     @click="tree.toggleFolder(r.node.folder)"
                     @dragstart="tree.onDragStart('folder', r.node.id, $event)"
@@ -206,7 +210,7 @@ async function createPlaylist() {
                     :data-pl="r.node.id"
                     class="item"
                     :class="[{ 'item--nested': r.depth === 1, 'is-active': route.path === `/playlist/${r.node.id}`, 'is-current': player.context?.type === 'playlist' && player.context.id === r.node.id, 'is-drop': dropOn === r.node.id }, tree.dropClass(r.node.id)]"
-                    :draggable="!rail"
+                    :draggable="drag"
                     @dragstart="tree.onDragStart('playlist', r.node.id, $event)"
                     @dragend="tree.onDragEnd()"
                     @dragover="onDragOver(r.node, $event)"
@@ -255,8 +259,14 @@ async function createPlaylist() {
           </span>
         </NuxtLink>
       </UiTooltip>
-      <ShellDownloaderIndicator :rail="rail" />
+      <ShellDownloaderIndicator v-if="!touch" :rail="rail" />
     </footer>
+    <UiSheet v-if="touch" v-model:open="createOpen" :title="t('nav.newPlaylist')">
+      <form class="newpl newpl--sheet" @submit.prevent="createPlaylist">
+        <input v-model="newTitle" class="newpl__input" :placeholder="t('nav.newPlaylistName')" :aria-label="t('nav.newPlaylist')" maxlength="120" enterkeyhint="done" autofocus>
+        <UiButton type="submit" variant="primary" size="lg" :loading="creating" :disabled="!newTitle.trim()" block>{{ t('nav.create') }}</UiButton>
+      </form>
+    </UiSheet>
   </aside>
 </template>
 
@@ -321,6 +331,30 @@ async function createPlaylist() {
 .sync__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .sync__title { font-size: var(--fs-small); font-weight: 600; white-space: nowrap; }
 .sync__meta { overflow: hidden; font-size: var(--fs-caption); color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
+
+/* Под палец (раскрытый складной iPhone): строки от 44 pt, текст крупнее, отклик на нажатие вместо
+   наведения. Строка состояния раскрытого — в правом верхнем углу, над содержимым (WKWebView отдаёт
+   её отступом сверху во всю ширину ≈81 pt): меню слева под ней не лежит и начинается почти сверху,
+   как боковая панель «Файлов» на нём */
+.side--touch { padding: min(var(--safe-top), 16px) 0 var(--safe-bottom) var(--safe-left); }
+.side--touch .side__brand { padding: 18px 20px 14px; }
+.side--touch .side__nav { gap: 2px; padding: 0 10px; }
+.side--touch .nav { height: 46px; font-size: var(--fs-h4); }
+.side--touch .nav__icon { font-size: 22px; }
+.side--touch .side__scroll { padding: 18px 10px 12px; }
+.side--touch .sec__head { height: 44px; padding-right: 0; }
+.side--touch .sec__actions { gap: 0; }
+.side--touch .item { min-height: 56px; }
+.side--touch .item__art { width: 40px; height: 40px; }
+.side--touch .item--artist { min-height: 48px; }
+.side--touch .item--artist .item__art { width: 32px; height: 32px; }
+.side--touch .side__foot { padding: 10px; }
+.newpl--sheet { gap: 12px; padding: 4px 16px 16px; }
+.newpl--sheet .newpl__input { height: 48px; padding: 0 16px; font-size: 16px; }
+@media (hover: none) {
+  .side--touch .nav:hover:not(.is-active), .side--touch .item:hover:not(.is-active) { background: transparent; }
+  .side--touch .nav:active, .side--touch .item:active { background: var(--side-hover); }
+}
 
 /* Узкая полоса значков */
 .side--rail .side__brand { display: flex; justify-content: center; padding: calc(22px - min(var(--titlebar-inset, 0px), 18px)) 0 18px; }
