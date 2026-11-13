@@ -256,6 +256,58 @@ async fn missing_clips_are_remembered_and_failures_retried(db: PgPool) {
 }
 
 #[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn a_downloader_without_video_does_not_spend_clip_attempts(db: PgPool) {
+    let app = TestApp::new(db).await;
+    no_intervals(&app.state.db).await;
+    let (_, admin) = app.admin("boss").await;
+    let (token, _) = new_downloader(&app, &admin, "Mac").await;
+    let me = app.listener("ann").await;
+    let track = app.resolve_id("track", LIGHT_ME_UP, &me).await;
+    clips_of(&app, &me, &[&track]).await;
+
+    // Нет кодировщика (новый загрузчик) и ffmpeg без https (старое приложение): задача ждёт час,
+    // попытки не тратятся, «клипа нет» не запоминается
+    for error in [
+        "no_encoder: нет видеокодировщика H.264 (h264_videotoolbox: Error while opening encoder)",
+        "unknown: ffmpeg exited with code 8",
+    ] {
+        let job = claim_clip(&app, &token).await.body["job"].clone();
+        let id = job["id"].as_str().unwrap();
+        let res = report_clip(
+            &app,
+            &token,
+            id,
+            json!({ "status": "error", "error": error }),
+        )
+        .await;
+        assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+        let (status, attempts, saved, later): (String, i16, Option<String>, bool) = sqlx::query_as(
+            "SELECT status, attempts, last_error, run_after > now() + interval '50 minutes'
+                 FROM jobs WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+        assert_eq!(status, "queued");
+        assert_eq!(attempts, 0, "{error}");
+        assert_eq!(saved.as_deref(), Some(error));
+        assert!(later);
+        sqlx::query("UPDATE jobs SET run_after = now() WHERE id = $1::uuid")
+            .bind(id)
+            .execute(&app.state.db)
+            .await
+            .unwrap();
+    }
+    let remembered: i64 = sqlx::query_scalar("SELECT count(*) FROM track_clips")
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    assert_eq!(remembered, 0);
+    assert_eq!(clips_of(&app, &me, &[&track]).await[0]["state"], "pending");
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
 async fn old_clips_leave_and_the_store_stays_under_the_limit(db: PgPool) {
     let app = TestApp::new(db).await;
     let me = app.listener("ann").await;

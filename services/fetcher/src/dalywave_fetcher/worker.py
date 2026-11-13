@@ -252,6 +252,7 @@ class Worker:
                 self.clips = ClipMaker(downloader)
         # До этого момента (time.time()) о клипах не спрашиваем: сервер их не знает
         self.clips_off_until = 0.0
+        self._clips_warned = False
         self.worker_id = worker_id or socket.gethostname()
         self.poll_s = poll_s
         self.cooldown_s = cooldown_s
@@ -282,7 +283,7 @@ class Worker:
             "workerId": self.worker_id,
             "version": __version__,
             "capabilities": {
-                "kinds": ["acquire", "clip"] if self.clips else ["acquire"],
+                "kinds": ["acquire", "clip"] if self._clips_ready() else ["acquire"],
                 "potProvider": s.pot_url is not None,
                 "cookies": s.cookies_file is not None,
                 "playerClients": list(s.player_clients),
@@ -367,10 +368,21 @@ class Worker:
 
     # ───────────── клипы ─────────────
 
+    def _clips_ready(self) -> bool:
+        """Клипы включены и ffmpeg умеет видео (https и рабочий кодировщик H.264). Не умеет —
+        клипы не берём вовсе: их сделает загрузчик с новым приложением."""
+        if self.clips is None:
+            return False
+        support = self.clips.support()
+        if support.encoder is None and not self._clips_warned:
+            self._clips_warned = True
+            self.log(f"клипы выключены: {support.problem}")
+        return support.encoder is not None
+
     def _clip_turn(self) -> str | None:
         """Взять и сделать один клип, если сервер его даёт. None — клипа не было; иначе код сбоя
         результата или пустая строка."""
-        if self.clips is None or self.control.stopped or time.time() < self.clips_off_until:
+        if self.control.stopped or time.time() < self.clips_off_until or not self._clips_ready():
             return None
         try:
             response = self.http.post(

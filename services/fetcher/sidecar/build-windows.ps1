@@ -3,7 +3,7 @@
 та же раскладка, что у build.sh для macOS (SIDECAR.md, «Windows x64»):
   dalywave-fetcher-x86_64-pc-windows-msvc.exe   Python 3.13 + yt-dlp (+ejs) + ytmusicapi + плагин bgutil (PyInstaller, один файл)
   deno-x86_64-pc-windows-msvc.exe               JS-задачи YouTube и сервис PO-токенов
-  ffmpeg-….exe, ffprobe-….exe                   FFmpeg только для звука, LGPL 2.1+ (ffmpeg-windows.sh, кросс-сборка на Linux)
+  ffmpeg-….exe, ffprobe-….exe                   FFmpeg для звука и клипов, LGPL 2.1+ (ffmpeg-windows.sh, кросс-сборка на Linux)
   fpcalc-….exe                                  chromaprint, официальная сборка
   resources/bgutil-server/                      сервер PO-токенов bgutil: TypeScript + node_modules, canvas для win32-x64
   licenses/, MANIFEST.json                      лицензии; версии, источники, sha256 и размеры

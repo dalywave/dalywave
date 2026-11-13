@@ -38,7 +38,8 @@ _ERROR_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("age_restricted", ("confirm your age", "age-restricted", "inappropriate for some users")),
     ("geo_blocked", ("available in your country", "blocked it in your country")),
     ("rate_limited", ("http error 429", "too many requests", "rate-limit")),
-    ("http_403", ("http error 403", "403: forbidden")),
+    # ffmpeg пишет «Server returned 403 Forbidden (access denied)»
+    ("http_403", ("http error 403", "403: forbidden", "403 forbidden")),
     ("po_token", ("po token", "po_token", "potoken")),
     ("drm", ("drm protected",)),
     ("format_unavailable", ("requested format is not available", "no video formats")),

@@ -2,7 +2,7 @@
 # Загрузчик DalyWave для приложения (sidecar Tauri) → services/fetcher/dist/sidecar/:
 #   dalywave-fetcher-<triple>          Python 3.13 + yt-dlp (+ejs) + ytmusicapi + плагин bgutil (PyInstaller, один файл)
 #   deno-<triple>                      JS-задачи YouTube (yt-dlp-ejs) и сервис PO-токенов
-#   ffmpeg-<triple>, ffprobe-<triple>  своя сборка FFmpeg только для звука, LGPL 2.1+
+#   ffmpeg-<triple>, ffprobe-<triple>  своя сборка FFmpeg для звука и клипов, LGPL 2.1+
 #   fpcalc-<triple>                    chromaprint, официальная статическая сборка
 #   resources/bgutil-server/           сервер PO-токенов bgutil: TypeScript + node_modules
 #   licenses/, MANIFEST.json           лицензии; версии, источники, sha256 и размеры
@@ -55,26 +55,34 @@ CHROMAPRINT_SRC_URL=https://github.com/acoustid/chromaprint/releases/download/v$
 BGUTIL_URL=https://github.com/Brainicism/bgutil-ytdlp-pot-provider/archive/refs/tags/$BGUTIL_VERSION.tar.gz
 CANVAS_URL=https://github.com/Automattic/node-canvas/releases/download/v$CANVAS_VERSION/canvas-v$CANVAS_VERSION-napi-v7-darwin-arm64.tar.gz
 
-# FFmpeg только для звука: перекладка в MP4 (-c copy), ffprobe, громкость EBU R128 и огибающая
-# (asplit, ebur128, aresample, вывод в null и s16le). Без --enable-gpl/--enable-nonfree и без
-# внешних библиотек — сборка остаётся под LGPL 2.1+. Сеть FFmpeg не нужна: качает yt-dlp.
+# FFmpeg для звука и клипов. Звук: перекладка в MP4 (-c copy), ffprobe, громкость EBU R128 и
+# огибающая (asplit, ebur128, aresample, вывод в null и s16le). Клипы ленты (clip.py): кусок видео
+# по ссылке YouTube (https через системный Secure Transport, mov/webm/HLS, копированием в mkv),
+# декодеры h264/hevc/vp9, фильтры scale/fps/crop, freezedetect (обложка под звук — не клип) и
+# аппаратный кодировщик h264_videotoolbox (системный VideoToolbox; rawvideo — для проверки
+# кодировщика при запуске). AV1 не декодируется: clip.py выбирает формат YouTube без него.
+# Без --enable-gpl/--enable-nonfree (никакого libx264) и без внешних библиотек — только системные
+# фреймворки macOS, сборка остаётся под LGPL 2.1+. Состав совпадает с ffmpeg-windows.sh (там
+# вместо Secure Transport и VideoToolbox — SChannel и Media Foundation, h264_mf).
 # shellcheck disable=SC2054 # запятые — списки компонентов configure, а не элементы массива
 FFMPEG_FLAGS=(
   --enable-static --disable-shared
-  --disable-autodetect --enable-zlib
-  --disable-doc --disable-debug --disable-network
+  --disable-autodetect --enable-zlib --enable-securetransport --enable-videotoolbox
+  --disable-doc --disable-debug
   --disable-programs --enable-ffmpeg --enable-ffprobe
-  --disable-avdevice --disable-swscale
+  --disable-avdevice
   --disable-everything
-  --enable-protocol=file,pipe
-  --enable-demuxer=aac,ac3,aiff,ape,asf,au,caf,dsf,dts,eac3,flac,loas,matroska,mlp,mov,mp3,mpegts,ogg,truehd,tta,w64,wav,wv,xwma
-  --enable-muxer=mp4,ipod,mp3,flac,ogg,null,pcm_s16le,adts,wav
+  --enable-protocol=file,pipe,http,https,tcp,tls,httpproxy,crypto
+  --enable-demuxer=aac,ac3,aiff,ape,asf,au,caf,dsf,dts,eac3,flac,loas,matroska,mlp,mov,mp3,mpegts,ogg,truehd,tta,w64,wav,wv,xwma,hls,rawvideo
+  --enable-muxer=mp4,ipod,mp3,flac,ogg,null,pcm_s16le,adts,wav,matroska
   --enable-decoder=aac,aac_fixed,aac_latm,ac3,eac3,alac,ape,flac,mp1,mp1float,mp2,mp2float,mp3,mp3float,opus,vorbis,wavpack,tta,wmav1,wmav2,wmapro,wmalossless,dca,mlp,truehd,dsd_lsbf,dsd_msbf,dsd_lsbf_planar,dsd_msbf_planar
   --enable-decoder='pcm_*'
-  --enable-encoder=pcm_s16le,wrapped_avframe
-  --enable-parser=aac,aac_latm,ac3,dca,flac,mlp,mpegaudio,opus,vorbis
+  --enable-decoder=h264,hevc,vp8,vp9,rawvideo
+  --enable-encoder=pcm_s16le,wrapped_avframe,h264_videotoolbox
+  --enable-parser=aac,aac_latm,ac3,dca,flac,mlp,mpegaudio,opus,vorbis,h264,hevc,vp8,vp9
   --enable-bsfs
   --enable-filter=aformat,anull,aresample,asplit,atrim,ebur128,format,null,trim
+  --enable-filter=scale,fps,crop,setpts,freezedetect
   "--extra-cflags=-mmacosx-version-min=$MACOS_MIN"
   "--extra-ldflags=-mmacosx-version-min=$MACOS_MIN"
 )
@@ -157,6 +165,11 @@ build_ffmpeg() {
   install -m 755 "$src/ffprobe" "$OUT/ffprobe-$TRIPLE"
   "$OUT/ffmpeg-$TRIPLE" -hide_banner -L | grep -q "Lesser General Public License" ||
     die "FFmpeg собрался не под LGPL"
+  # Клипы: без https и аппаратного кодировщика загрузчик их не возьмёт (clip.video_support)
+  "$OUT/ffmpeg-$TRIPLE" -hide_banner -encoders 2>/dev/null | grep -q h264_videotoolbox ||
+    die "в FFmpeg нет h264_videotoolbox"
+  "$OUT/ffmpeg-$TRIPLE" -hide_banner -protocols 2>/dev/null | grep -qx "  https" ||
+    die "в FFmpeg нет https"
   mkdir -p "$OUT/licenses/ffmpeg"
   cp "$src/COPYING.LGPLv2.1" "$src/LICENSE.md" "$OUT/licenses/ffmpeg/"
 }
@@ -258,7 +271,9 @@ from pathlib import Path
 
 out, events, triple = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 hello = next(json.loads(l) for l in events.read_text().splitlines() if '"hello"' in l)
-broken = [name for name, t in hello["tools"].items() if not t["version"] or str(out) not in (t["path"] or "")]
+# resolve(): dist/ бывает ссылкой на папку вне репозитория
+broken = [name for name, t in hello["tools"].items()
+          if not t["version"] or not t["path"] or Path(t["path"]).resolve().parent != out.resolve()]
 if broken:
     sys.exit(f"не найдены или не запускаются свои программы: {broken} — {hello['tools']}")
 

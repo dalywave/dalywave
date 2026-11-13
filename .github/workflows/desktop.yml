@@ -35,7 +35,7 @@ permissions:
   contents: write
 
 jobs:
-  # FFmpeg и ffprobe для Windows: только звук, LGPL, статически — те же флаги, что у macOS
+  # FFmpeg и ffprobe для Windows: звук и клипы, LGPL, статически — тот же состав, что у macOS
   ffmpeg-windows:
     name: FFmpeg для Windows
     runs-on: ubuntu-24.04

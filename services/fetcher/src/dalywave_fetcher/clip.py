@@ -3,18 +3,25 @@
 
 Путь: поиск yt-dlp («артист название official video») → отбор официального клипа (название,
 артист или канал, длительность, без lyric/live/cover…) → место припева в клипе (у клипа бывает
-вступление) → скачивание только нужного куска видео без звука → точная нарезка и сжатие ffmpeg →
-PUT по подписанной ссылке. Настройки YouTube (PO-токены, cookies, клиенты плеера) — те же, что у
-скачивания аудио (`Downloader.options`).
+вступление) → ссылка на поток видео (yt-dlp) и скачивание только нужного куска своим ffmpeg →
+точная нарезка и сжатие ffmpeg → PUT по подписанной ссылке. Настройки YouTube (PO-токены,
+cookies, клиенты плеера) — те же, что у скачивания аудио (`Downloader.options`).
+
+Кодировщик H.264 — системный: в приложении для macOS `h264_videotoolbox`, для Windows `h264_mf`
+(своя сборка ffmpeg под LGPL, без libx264); в Docker и разработке — libx264 полного ffmpeg.
+Какой работает, проверяется один раз при запуске (`video_support`): без https в ffmpeg или без
+рабочего кодировщика загрузчик клипы не берёт.
 """
 
 from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -23,7 +30,7 @@ from typing import Any
 
 import httpx
 import yt_dlp
-from yt_dlp.utils import YoutubeDLError, download_range_func
+from yt_dlp.utils import YoutubeDLError
 
 from . import tools
 from .download import (
@@ -44,8 +51,13 @@ from .normalize import (
     text_similarity,
 )
 
-# Видео без звука, H.264 — его играют все браузеры и AVPlayer; 480p хватает телефону.
-VIDEO_FORMAT = "bv*[height<=480][vcodec^=avc1]/bv*[height<=480]"
+# Поток видео до 480p: H.264, затем VP9. AV1 не берём — ffmpeg приложения его не декодирует.
+# Сначала прямая ссылка (https), затем HLS; DASH по кусочкам ffmpeg не читает.
+_CODECS = ("avc1", "vp09", "vp9")
+VIDEO_FORMAT = "/".join(
+    [f"bv*[height<=480][vcodec^={c}][protocol=https]" for c in _CODECS]
+    + [f"bv*[height<=480][vcodec^={c}][protocol^=m3u8]" for c in _CODECS]
+)
 SEARCH_LIMIT = 8
 # Ролик заметно короче трека — нарезка или тизер; длиннее больше чем на 2 минуты — фильм.
 MIN_SHARE = 0.9
@@ -55,17 +67,61 @@ INTRO_MAX_S = 60.0
 SAME_LENGTH_S = 3.0
 # Запас скачивания с каждой стороны: ffmpeg режет поток копированием по ключевым кадрам.
 MARGIN_S = 1.0
+# Скачивание куска: ffmpeg ждёт сеть не дольше READ_TIMEOUT_S, весь кусок — не дольше FETCH_TIMEOUT_S.
+READ_TIMEOUT_S = 30
+FETCH_TIMEOUT_S = 180
+ENCODE_TIMEOUT_S = 180
+MAX_AVAILABLE_WAIT_S = 30.0
+# libx264: качество; аппаратные кодировщики: средний битрейт (800 кбит/с × 12 с ≈ 1,2 МБ)
 CRF = 27
 CRF_STEP = 4
+BITRATE_K = 800
+SMALLER_BITRATE_K = 550
 TARGET_BYTES = 2 * 1024 * 1024
+# Сколько последних строк stderr ffmpeg попадает в ошибку задачи (её видно в админке)
+STDERR_LINES = 3
 MIN_TITLE_SIMILARITY = 0.82
-# Меньше стольких байт на секунду после сжатия — в кадре почти ничего не движется: это обложка
-# под звук, а не клип (живой клип 480p — 40–100 КБ/с, неподвижная картинка — 2–5 КБ/с).
+# Меньше стольких байт на секунду после сжатия libx264 — в кадре почти ничего не движется: это
+# обложка под звук, а не клип (живой клип 480p — 40–100 КБ/с, неподвижная картинка — 2–5 КБ/с).
+# Аппаратные кодировщики держат битрейт и на неподвижной картинке — для них `is_frozen`.
 STILL_BYTES_PER_S = 12_000
+# Кадр стоит (freezedetect: средняя разница кадров не больше FREEZE_NOISE) такую долю отрывка
+FREEZE_SHARE = 0.8
+FREEZE_NOISE = 0.003
 
 
 def is_still(size_bytes: int, length_ms: int) -> bool:
     return size_bytes < STILL_BYTES_PER_S * max(1, length_ms) / 1000
+
+
+def is_frozen(src: Path, offset_s: float, length_s: float) -> bool:
+    """Картинка в отрывке почти не меняется (обложка под звук) — по кадрам, а не по размеру
+    файла. Не вышло проверить — считаем, что движется."""
+    cmd = [
+        tools.exe("ffmpeg"),
+        "-nostdin",
+        "-hide_banner",
+        "-loglevel",
+        "info",
+        "-ss",
+        f"{max(0.0, offset_s):.3f}",
+        "-t",
+        f"{length_s:.3f}",
+        "-i",
+        str(src),
+        "-map",
+        "0:v:0",
+        "-vf",
+        f"scale=-2:240,freezedetect=n={FREEZE_NOISE}:d={length_s * FREEZE_SHARE:.2f}",
+        "-f",
+        "null",
+        "-",
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0 and "freezedetect.freeze_start" in proc.stderr
 
 
 # Слова, которые выдают не клип: текст, звук, концерт, реакция… Мимо, если их нет в названии трека.
@@ -247,8 +303,137 @@ def probe(path: Path) -> dict[str, Any]:
     }
 
 
-def encode(src: Path, dst: Path, offset_s: float, length_s: float, crf: int = CRF) -> None:
-    """Точная нарезка и сжатие: без звука, до 480p, не больше 30 кадров/с, H.264 high, faststart."""
+_FFMPEG_PREFIX = re.compile(r"^\[[^\]]* @ 0x[0-9a-f]+\]\s*")
+_URL = re.compile(r"(https?://[^/\s]+)/\S*")
+
+
+def stderr_tail(text: str, lines: int = STDERR_LINES) -> str:
+    """Последние строки stderr ffmpeg одной строкой — для ошибки задачи. Без адресов в памяти
+    и без хвостов ссылок (в ссылке потока — IP загрузчика и подписи)."""
+    tail = [line.strip() for line in text.strip().splitlines() if line.strip()][-lines:]
+    return " | ".join(_URL.sub(r"\1/…", _FFMPEG_PREFIX.sub("", line)) for line in tail)
+
+
+# ───────────── кодировщик ─────────────
+
+
+def encoder_candidates(platform: str = sys.platform) -> list[str]:
+    """Кодировщики H.264 по порядку: системный аппаратный (без GPL), затем libx264 полного
+    ffmpeg (Docker, разработка). `-allow_sw 1` / программный MFT Windows — запас, если нет железа."""
+    system = {"darwin": ["h264_videotoolbox"], "win32": ["h264_mf"]}.get(platform, [])
+    return [*system, "libx264"]
+
+
+def encoder_args(encoder: str, smaller: bool = False) -> list[str]:
+    """Параметры кодировщика: main/high, yuv420p — играют все браузеры и AVPlayer."""
+    if encoder == "libx264":
+        crf = CRF + (CRF_STEP if smaller else 0)
+        return ["-c:v", "libx264", "-profile:v", "high", "-preset", "slow", "-crf", str(crf)]
+    rate = SMALLER_BITRATE_K if smaller else BITRATE_K
+    args = ["-c:v", encoder, "-b:v", f"{rate}k", "-profile:v", "main"]
+    if encoder == "h264_videotoolbox":
+        # Предел скорости — от всплесков на резких сменах кадра; без железа — программный VT
+        return [*args, "-maxrate", f"{rate * 3 // 2}k", "-allow_sw", "1", "-realtime", "0"]
+    if encoder == "h264_mf":
+        # Средний битрейт без набивки: неподвижная картинка остаётся маленькой (is_still)
+        return [*args, "-rate_control", "u_vbr"]
+    return args
+
+
+@dataclass(frozen=True)
+class VideoSupport:
+    """Может ли ffmpeg делать клипы: `encoder` — рабочий кодировщик, иначе `problem` — почему нет."""
+
+    encoder: str | None
+    problem: str | None = None
+    # Код ошибки задачи: no_encoder — нечем кодировать, no_https — ffmpeg не скачает кусок
+    code: str = "no_encoder"
+
+
+_support: dict[str, VideoSupport] = {}
+
+
+def video_support(refresh: bool = False) -> VideoSupport:
+    """Проверка ffmpeg один раз на процесс: https (кусок видео качает он) и кодировщик, который
+    действительно кодирует — аппаратный бывает в списке, но не работает (виртуалка, CI)."""
+    ffmpeg = tools.exe("ffmpeg")
+    if refresh or ffmpeg not in _support:
+        _support[ffmpeg] = _check_video(ffmpeg)
+    return _support[ffmpeg]
+
+
+def _check_video(ffmpeg: str) -> VideoSupport:
+    try:
+        protocols = _ffmpeg_list(ffmpeg, "-protocols")
+        encoders = _ffmpeg_list(ffmpeg, "-encoders")
+    except (OSError, subprocess.SubprocessError) as e:
+        return VideoSupport(None, f"ffmpeg не запускается: {e}")
+    if "https" not in protocols.split():
+        return VideoSupport(None, "в ffmpeg нет https — обновите приложение", "no_https")
+    listed = {parts[1] for line in encoders.splitlines() if len(parts := line.split()) > 1}
+    failed: list[str] = []
+    for encoder in encoder_candidates():
+        if encoder not in listed:
+            continue
+        problem = _try_encoder(ffmpeg, encoder)
+        if problem is None:
+            return VideoSupport(encoder)
+        failed.append(f"{encoder}: {problem}")
+    reason = "; ".join(failed) if failed else "обновите приложение"
+    return VideoSupport(None, f"нет видеокодировщика H.264 ({reason})")
+
+
+def _ffmpeg_list(ffmpeg: str, what: str) -> str:
+    out = subprocess.run(
+        [ffmpeg, "-hide_banner", what], capture_output=True, text=True, timeout=20, check=False
+    )
+    return out.stdout
+
+
+def _try_encoder(ffmpeg: str, encoder: str) -> str | None:
+    """Десять серых кадров 256×144 через кодировщик в никуда; None — работает."""
+    width, height, frames = 256, 144, 10
+    raw = bytes([128]) * (width * height * 3 // 2 * frames)
+    cmd = [
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "yuv420p",
+        "-s",
+        f"{width}x{height}",
+        "-r",
+        "30",
+        "-i",
+        "pipe:0",
+        *encoder_args(encoder),
+        "-pix_fmt",
+        "yuv420p",
+        "-f",
+        "null",
+        "-",
+    ]
+    try:
+        proc = subprocess.run(cmd, input=raw, capture_output=True, timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError) as e:
+        return str(e)
+    if proc.returncode == 0:
+        return None
+    return stderr_tail(proc.stderr.decode(errors="replace"), 2) or f"код {proc.returncode}"
+
+
+def encode(
+    src: Path,
+    dst: Path,
+    offset_s: float,
+    length_s: float,
+    encoder: str = "libx264",
+    smaller: bool = False,
+) -> None:
+    """Точная нарезка и сжатие: без звука, до 480p, не больше 30 кадров/с, H.264, faststart."""
     info = probe(src)
     filters = ["scale=-2:'min(480,ih)'"]
     if info.get("fps", 0) > 30.5:
@@ -273,16 +458,9 @@ def encode(src: Path, dst: Path, offset_s: float, length_s: float, crf: int = CR
         "-dn",
         "-vf",
         ",".join(filters),
-        "-c:v",
-        "libx264",
-        "-profile:v",
-        "high",
+        *encoder_args(encoder, smaller),
         "-pix_fmt",
         "yuv420p",
-        "-preset",
-        "slow",
-        "-crf",
-        str(crf),
         "-map_metadata",
         "-1",
         "-movflags",
@@ -291,19 +469,78 @@ def encode(src: Path, dst: Path, offset_s: float, length_s: float, crf: int = CR
         "mp4",
         str(dst),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=ENCODE_TIMEOUT_S, check=False
+        )
+    except subprocess.TimeoutExpired as e:
+        raise DownloadError(
+            "encode_failed", f"{encoder}: ffmpeg не уложился в {e.timeout} с"
+        ) from e
     if proc.returncode != 0 or not dst.is_file():
-        raise DownloadError("encode_failed", proc.stderr.strip()[-500:] or "ffmpeg упал")
+        tail = stderr_tail(proc.stderr) or f"код {proc.returncode}"
+        raise DownloadError("encode_failed", f"{encoder}: {tail}")
 
 
-def encode_small(src: Path, dst: Path, offset_s: float, length_s: float) -> int:
-    """Сжатие с CRF по умолчанию; больше ~2 МБ — ещё раз, заметнее. Возвращает CRF."""
-    crf = CRF
-    encode(src, dst, offset_s, length_s, crf)
-    if dst.stat().st_size > TARGET_BYTES:
-        crf += CRF_STEP
-        encode(src, dst, offset_s, length_s, crf)
-    return crf
+def encode_small(
+    src: Path, dst: Path, offset_s: float, length_s: float, encoder: str = "libx264"
+) -> str:
+    """Сжатие с обычными настройками; больше ~2 МБ — ещё раз, заметнее. Возвращает, с какими
+    настройками сжато: `crf27`, `800k`…"""
+    encode(src, dst, offset_s, length_s, encoder)
+    smaller = dst.stat().st_size > TARGET_BYTES
+    if smaller:
+        encode(src, dst, offset_s, length_s, encoder, smaller=True)
+    if encoder == "libx264":
+        return f"crf{CRF + (CRF_STEP if smaller else 0)}"
+    return f"{SMALLER_BITRATE_K if smaller else BITRATE_K}k"
+
+
+def fetch_args(
+    url: str,
+    start_s: float,
+    end_s: float,
+    out: Path,
+    headers: dict[str, str] | None = None,
+    cookies: str | None = None,
+) -> list[str]:
+    """ffmpeg: только кусок [start_s, end_s] потока по ссылке, копированием, без звука, в MKV
+    (в него ложатся и H.264, и VP9). Перед `-ss` ffmpeg начинает с ключевого кадра — лишнее
+    в начале отрезает `encode`."""
+    cmd = [
+        tools.exe("ffmpeg"),
+        "-nostdin",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-rw_timeout",
+        str(READ_TIMEOUT_S * 1_000_000),
+    ]
+    if cookies:
+        cmd += ["-cookies", cookies]
+    if headers:
+        # Каждый заголовок с \r\n в конце, иначе ffmpeg ругается (как делает yt-dlp)
+        cmd += ["-headers", "".join(f"{k}: {v}\r\n" for k, v in headers.items())]
+    cmd += [
+        "-ss",
+        f"{max(0.0, start_s):.3f}",
+        "-t",
+        f"{max(0.1, end_s - start_s):.3f}",
+        "-i",
+        url,
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-c",
+        "copy",
+        "-f",
+        "matroska",
+        str(out),
+    ]
+    return cmd
 
 
 class ClipMaker:
@@ -312,6 +549,9 @@ class ClipMaker:
 
     def __init__(self, downloader: Downloader) -> None:
         self.downloader = downloader
+
+    def support(self) -> VideoSupport:
+        return video_support()
 
     @property
     def work_root(self) -> Path:
@@ -354,33 +594,66 @@ class ClipMaker:
         out_dir: Path,
         clients: tuple[str, ...] | None,
     ) -> Path:
+        """Ссылку на поток даёт yt-dlp, кусок качает ffmpeg сам: так его ошибка (stderr) видна
+        в задаче, а 403 потока узнаётся и пробуется другим клиентом."""
         opts = self.downloader.options(out_dir, "raw", clients)
         collector = _Collector()
-        opts.update(
-            {
-                "format": VIDEO_FORMAT,
-                "logger": collector,
-                "download_ranges": download_range_func(None, [(start_s, end_s)]),
-                "force_keyframes_at_cuts": False,
-            }
-        )
-        try:
-            with self.downloader.paced(), yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(
-                    f"https://www.youtube.com/watch?v={video_id}", download=True
+        opts.update({"format": VIDEO_FORMAT, "logger": collector, "skip_download": True})
+        out = out_dir / "raw.mkv"
+        env = None
+        if proxy := self.downloader.settings.proxy:
+            # Как у yt-dlp: ffmpeg берёт http-прокси из окружения (SOCKS он не умеет)
+            env = {**os.environ, "http_proxy": proxy, "HTTP_PROXY": proxy}
+        with self.downloader.paced():
+            try:
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(
+                        f"https://www.youtube.com/watch?v={video_id}", download=False
+                    )
+                    fmt = ((info or {}).get("requested_formats") or [info or {}])[0]
+                    url = str(fmt.get("url") or "")
+                    cookies = (
+                        "".join(
+                            f"{c.name}={c.value}; path={c.path}; domain={c.domain};\r\n"
+                            for c in ydl.cookiejar.get_cookies_for_url(url)
+                        )
+                        if url
+                        else ""
+                    )
+            except YoutubeDLError as e:
+                message = str(e).removeprefix("ERROR: ")
+                text = " ".join([message, *collector.warnings])
+                raise DownloadError(classify_error(text), message, collector.warnings) from e
+            if not url:
+                raise DownloadError("format_unavailable", "yt-dlp не дал ссылку на видео")
+            # Ссылка YouTube оживает не сразу (`available_at`): раньше срока поток отвечает 403
+            wait = float(fmt.get("available_at") or 0) - time.time()
+            if wait > 0:
+                time.sleep(min(wait + 0.5, MAX_AVAILABLE_WAIT_S))
+            headers = fmt.get("http_headers") or (info or {}).get("http_headers") or {}
+            cmd = fetch_args(url, start_s, end_s, out, headers, cookies or None)
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=FETCH_TIMEOUT_S,
+                    env=env,
+                    check=False,
                 )
-        except YoutubeDLError as e:
-            message = str(e).removeprefix("ERROR: ")
-            text = " ".join([message, *collector.warnings])
-            raise DownloadError(classify_error(text), message, collector.warnings) from e
-        requested = ((info or {}).get("requested_downloads") or [info or {}])[0]
-        path = Path(requested.get("filepath") or requested.get("_filename") or "")
-        if not path.is_file():
-            found = sorted(out_dir.glob("raw*"))
-            if not found:
-                raise DownloadError("unknown", "yt-dlp не сохранил файл", collector.warnings)
-            path = found[0]
-        return path
+            except subprocess.TimeoutExpired as e:
+                raise DownloadError(
+                    "network", f"ffmpeg не скачал кусок за {e.timeout} с", collector.warnings
+                ) from e
+        if proc.returncode != 0 or not out.is_file() or out.stat().st_size == 0:
+            tail = stderr_tail(proc.stderr) or f"код {proc.returncode}"
+            code = classify_error(tail)
+            raise DownloadError(
+                "fetch_failed" if code == "unknown" else code,
+                f"ffmpeg ({fmt.get('format_id')}, {fmt.get('vcodec')}): {tail}",
+                collector.warnings,
+            )
+        return out
 
     def make(
         self,
@@ -400,6 +673,15 @@ class ClipMaker:
         (живая проверка без сервера)."""
         timings: dict[str, int] = {}
         details: dict[str, Any] = {"timingsMs": timings}
+        support = self.support()
+        details["encoder"] = support.encoder
+        if support.encoder is None:
+            # Не тратим запросы к YouTube: сделать клип всё равно нечем
+            return {
+                "status": "error",
+                "error": f"{support.code}: {support.problem}"[:300],
+                "details": details,
+            }
         started = time.monotonic()
         exclude = set(exclude_video_ids or [])
         duration_s = duration_ms / 1000
@@ -439,14 +721,14 @@ class ClipMaker:
             out = work / "clip.mp4"
             t = time.monotonic()
             try:
-                crf = encode_small(raw, out, offset, length_ms / 1000)
+                quality = encode_small(raw, out, offset, length_ms / 1000, support.encoder)
             except DownloadError as e:
                 return self._error(e, details, best.video_id)
             timings["encode"] = _ms(t)
             info = probe(out)
             size = out.stat().st_size
-            details["crf"] = crf
-            if is_still(size, length_ms):
+            details["quality"] = quality
+            if is_still(size, length_ms) or is_frozen(raw, offset, length_ms / 1000):
                 # Неподвижная картинка под звук (обложка на канале артиста) — не клип
                 details["still"] = {"videoId": best.video_id, "sizeBytes": size}
                 return {"status": "none", "details": details}

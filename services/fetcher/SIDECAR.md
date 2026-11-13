@@ -25,12 +25,12 @@ sha256, размеры).
 |---|---|---|---|---|
 | `dalywave-fetcher-aarch64-apple-darwin` | 29,9 МБ | сам загрузчик: Python 3.13.18 + yt-dlp 2026.10.26 с yt-dlp-ejs 0.8.0, ytmusicapi 1.12.3, плагин bgutil-ytdlp-pot-provider 2.0.2, numpy, httpx. PyInstaller 6.22.3, один файл | этот репозиторий, зависимости — из `uv.lock` (группа `sidecar`) | внутри: PSF, Unlicense, MIT, BSD, плагин bgutil — GPL-3.0 |
 | `deno-aarch64-apple-darwin` | 81,5 МБ | Deno 2.9.8: JS-задачи YouTube (yt-dlp-ejs) и сервер PO-токенов | `github.com/denoland/deno/releases/download/v2.9.8/deno-aarch64-apple-darwin.zip`, sha256 `9f0bf660393da2eaff044cdc7444cb08c73f235849b61d224d825a194ce7c98e` | MIT |
-| `ffmpeg-aarch64-apple-darwin`, `ffprobe-aarch64-apple-darwin` | 4,6 + 4,4 МБ | FFmpeg 9.0.2, своя сборка только для звука, статически, без внешних библиотек | `ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz`, sha256 `8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e` (совпадает с формулой Homebrew); флаги `configure` — в `build.sh` и `MANIFEST.json` | **LGPL-2.1+**: собран без `--enable-gpl`/`--enable-nonfree`, `ffmpeg -L` это подтверждает |
+| `ffmpeg-aarch64-apple-darwin`, `ffprobe-aarch64-apple-darwin` | 9,1 + 8,9 МБ | FFmpeg 9.0.2, своя сборка для звука и клипов ленты (https, h264/hevc/vp9, `h264_videotoolbox`), статически, без внешних библиотек — только системные фреймворки macOS | `ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz`, sha256 `8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e` (совпадает с формулой Homebrew); флаги `configure` — в `build.sh` и `MANIFEST.json` | **LGPL-2.1+**: собран без `--enable-gpl`/`--enable-nonfree`, `ffmpeg -L` это подтверждает |
 | `fpcalc-aarch64-apple-darwin` | 2,6 МБ | chromaprint 1.6.2, официальная статическая сборка | `github.com/acoustid/chromaprint/releases/download/v1.6.2/chromaprint-fpcalc-1.6.2-macos-arm64.tar.gz`, sha256 `f3bc56cb42d89a01237bb3f3629329e4ec75f7c1b0217acf6e9bf952ac47979b` | LGPL-2.1+ (chromaprint MIT + вшитый FFmpeg без GPL) |
 | `resources/bgutil-server/` | 48,3 МБ, 3 528 файлов | сервер PO-токенов bgutil 2.0.2 (TypeScript, запускается нашим Deno) + `node_modules` по `package-lock.json` без install-скриптов; `canvas` 3.2.3 — готовая сборка | `github.com/Brainicism/bgutil-ytdlp-pot-provider/archive/refs/tags/2.0.2.tar.gz`, sha256 `1f2ae9ec39405b8e80397dfc2551f58deed09d8dff4b2b8fbc314df8e091c0a1`; canvas — `canvas-v3.2.3-napi-v7-darwin-arm64.tar.gz`, sha256 `38c296c9d81c05598db849fb8103543d6649fec7246c35197d9be8199c75116f` | GPL-3.0 (bgutil); MIT/ISC/BSD (`node_modules`); cairo/pango в canvas — LGPL/MPL |
 | `licenses/`, `MANIFEST.json` | — | тексты лицензий FFmpeg, chromaprint, bgutil, Python; паспорт сборки | | |
 
-Всего 171 МБ. Все программы зависят только от системных библиотек macOS (`otool -L`),
+Всего 180 МБ. Все программы зависят только от системных библиотек macOS (`otool -L`),
 минимальная macOS — 11.
 
 Лицензии: проект личный и не распространяется — обязательств нет. Если приложение когда-нибудь
@@ -50,7 +50,11 @@ sha256, размеры).
 - **FFmpeg из исходников.** Готовых LGPL-сборок `ffmpeg`/`ffprobe` для macOS arm64 нет
   (evermeet, osxexperts, Martin Riedl, Homebrew — GPL; у acoustid/ffmpeg-build нет фильтров
   `ebur128`/`asplit` и формата `null`). Сборка — 1–2 минуты, громкость, истинный пик и
-  огибающая совпадают с полным ffmpeg из Homebrew до последней цифры.
+  огибающая совпадают с полным ffmpeg из Homebrew до последней цифры. Для клипов ленты в нём
+  https (системный Secure Transport — кусок видео качает сам ffmpeg), декодеры h264/hevc/vp9 и
+  аппаратный `h264_videotoolbox` вместо libx264 (GPL): 12 с 480p при 800 кбит/с — ~1,2 МБ.
+  Загрузчик при запуске проверяет, что https есть и кодировщик действительно кодирует; нет —
+  клипы не берёт (`clip.video_support`).
 
 ## Подключение к Tauri
 
@@ -371,8 +375,8 @@ Windows — PyInstaller не собирает накрест):
 - загрузчик — тот же PyInstaller onefile → `dalywave-fetcher-x86_64-pc-windows-msvc.exe`;
 - Deno — `deno-x86_64-pc-windows-msvc.zip` 2.9.8, sha256 `cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf`;
 - fpcalc — `chromaprint-fpcalc-1.6.2-windows-x86_64.zip`, sha256 `b74369726676670af3ab0eadff45f960cf969fdf4a87a971ba37eaf8d530e874`;
-- FFmpeg — LGPL-сборка BtbN (`ffmpeg-n…-win64-lgpl-…`, в ней все нужные фильтры) или та же
-  конфигурация через MSYS2;
+- FFmpeg — та же конфигурация, кросс-сборка на Linux (`sidecar/ffmpeg-windows.sh`, задание
+  `ffmpeg-windows` в CI): TLS — SChannel, кодировщик клипов — `h264_mf` (Media Foundation);
 - canvas — `canvas-v3.2.3-napi-v7-win32-x64.tar.gz`, sha256 `ba953cc8c38303ab94cc83461c7561506a5a3af37d6c678de4a47914d2d0bb48`;
 - папки по умолчанию — `%LOCALAPPDATA%\rest.daly.wave\fetcher` и `…\logs`;
 - SIGTERM в Windows нет: останавливать командой `stop` или закрытием stdin (работает так же).

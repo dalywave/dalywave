@@ -42,6 +42,18 @@ const KEEP_LIKED_DAYS: i32 = 60;
 const DEFAULT_LIMIT_GB: u64 = 3;
 /// Сбои загрузчика кончились попытками — не искать неделю.
 const FAILED_RECHECK_DAYS: i32 = 7;
+/// Сбой не трека, а загрузчика: в его ffmpeg нет видео (нет кодировщика H.264, нет https). Новый
+/// загрузчик такие клипы и не берёт; старый (приложение без видео в ffmpeg) падает на скачивании
+/// куска с «ffmpeg exited with code 8». Задача ждёт загрузчик, который сможет: попытка не
+/// тратится, «клипа нет» не запоминается.
+const TOOL_ERRORS: &[&str] = &["no_encoder", "no_https"];
+const OLD_FFMPEG_ERROR: &str = "ffmpeg exited with code";
+const TOOL_RETRY: Duration = Duration::from_secs(60 * 60);
+
+fn tool_failure(error: &str) -> bool {
+    let code = error.split(':').next().unwrap_or_default().trim();
+    TOOL_ERRORS.contains(&code) || error.contains(OLD_FFMPEG_ERROR)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -309,6 +321,10 @@ pub async fn settle(
                 .chars()
                 .take(300)
                 .collect();
+            if tool_failure(&message) {
+                let postponed = jobs::postpone(db, job.id, executor, &message, TOOL_RETRY).await?;
+                return Ok(postponed.is_some());
+            }
             let mut tx = db.begin().await?;
             let Some(row) = jobs::fail_in(&mut tx, job.id, executor, &message, true).await? else {
                 return Ok(false);
