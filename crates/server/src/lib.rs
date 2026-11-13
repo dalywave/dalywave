@@ -2,6 +2,7 @@
 //! события в реальном времени, рекомендации и «Моя волна», админка и статика интерфейса.
 //! Второй бинарник — `dalywave-worker`.
 
+pub mod accounts;
 pub mod acquire;
 pub mod audit;
 pub mod auth;

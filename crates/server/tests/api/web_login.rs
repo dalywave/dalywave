@@ -15,9 +15,10 @@ async fn full_web_flow(db: PgPool) {
     let app = TestApp::new(db).await;
 
     let providers = app.get("/api/auth/providers", &Auth::None).await;
+    let dalyrest = json!({ "id": "dalyrest", "title": "daly.rest", "icon": null });
     assert_eq!(
         providers.body,
-        json!({ "oidc": { "title": "daly.rest" }, "password": false })
+        json!({ "oidc": dalyrest, "providers": [dalyrest], "password": false, "local": false, "setup": false })
     );
 
     let res = app

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { AdminUser, Role, SessionInfo } from '~/api/types'
+import type { AdminUser, AuthOverview, Role, SessionInfo } from '~/api/types'
+import { ApiError } from '~/api/types'
 import type { MenuEntry } from '~/types/ui'
 
-// Доступ: люди и роли (ждущие доступа — первыми, выдача в одно нажатие), отключение,
-// сессии сайта и приложения с завершением
+// Доступ: люди и роли (ждущие доступа — первыми, выдача в одно нажатие), отключение, свои аккаунты
+// (новый аккаунт, ссылка для нового пароля), приглашения, сессии сайта и приложения с завершением,
+// способы входа (только чтение — настраиваются переменными окружения)
 definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
@@ -19,10 +21,76 @@ const users = ref<AdminUser[] | null>(null)
 const sessions = ref<SessionInfo[] | null>(null)
 const loadUsers = () => attempt('users', () => bridge.admin.users(), l => (users.value = [...l.items].sort((a, b) => Number(a.roles.length > 0 || a.disabled) - Number(b.roles.length > 0 || b.disabled))))
 const loadSessions = () => attempt('sessions', () => bridge.admin.sessions(), l => (sessions.value = l.items))
+const overview = ref<AuthOverview | null>(null)
+const loadOverview = () => attempt('overview', () => bridge.admin.authOverview(), o => (overview.value = o))
 onMounted(() => {
   void loadUsers()
   void loadSessions()
+  void loadOverview()
 })
+
+/** Как человек входит: провайдеры и свой логин */
+function sources(u: AdminUser): string {
+  const list = [...u.providers]
+  if (u.username && u.hasPassword) list.push(t('login', { name: u.username }))
+  return list.length ? list.join(', ') : t('local')
+}
+
+// ---------- Свои аккаунты: новый аккаунт и ссылка для нового пароля ----------
+const link = ref<{ title: string, text: string, url: string } | null>(null)
+const linkOpen = ref(false)
+function showLink(title: string, text: string, url: string) {
+  link.value = { title, text, url }
+  linkOpen.value = true
+}
+
+const newOpen = ref(false)
+const newName = ref('')
+const newLogin = ref('')
+const newRole = ref<'listener' | 'admin' | 'none'>('listener')
+const newBusy = ref(false)
+const newError = ref<string | null>(null)
+const roleOptions = computed(() => [
+  { value: 'listener' as const, label: t('role.listener') },
+  { value: 'admin' as const, label: t('role.admin') },
+  { value: 'none' as const, label: t('noRole') },
+])
+watch(newOpen, (v) => {
+  if (!v) return
+  newName.value = ''
+  newLogin.value = ''
+  newRole.value = 'listener'
+  newError.value = null
+})
+async function createUser() {
+  if (!newLogin.value.trim() || newBusy.value) return
+  newBusy.value = true
+  newError.value = null
+  try {
+    const roles: Role[] = newRole.value === 'admin' ? ['admin', 'listener'] : newRole.value === 'listener' ? ['listener'] : []
+    const res = await bridge.admin.createUser({ name: newName.value.trim() || null, username: newLogin.value.trim(), roles })
+    newOpen.value = false
+    void loadUsers()
+    if (res.link) showLink(t('newUser.linkTitle'), t('newUser.linkText', { name: res.user.name }), res.link.url)
+  }
+  catch (e) {
+    newError.value = e instanceof ApiError && e.code === 'username_taken'
+      ? t('newUser.taken')
+      : e instanceof ApiError && e.code === 'bad_username' ? t('newUser.badUsername') : t('failed')
+  }
+  finally {
+    newBusy.value = false
+  }
+}
+async function resetLink(u: AdminUser) {
+  try {
+    const res = await bridge.admin.resetLink(u.id)
+    showLink(t('reset.title'), t('reset.text', { name: u.name }), res.url)
+  }
+  catch {
+    toast.error(t('failed'))
+  }
+}
 
 const waiting = computed(() => users.value?.filter(u => !u.roles.length && !u.disabled) ?? [])
 
@@ -64,6 +132,7 @@ function userMenu(u: AdminUser): MenuEntry[] {
     u.roles.includes('listener')
       ? { label: t('removeListener'), icon: 'ph:headphones', disabled: self, onSelect: () => setRoles(u, u.roles.filter(r => r !== 'listener'), t('listenerRemoved', { name: u.name })) }
       : { label: t('makeListener'), icon: 'ph:headphones', onSelect: () => setRoles(u, [...u.roles, 'listener'], t('listenerGiven', { name: u.name })) },
+    ...(overview.value?.local ? [{ label: u.hasPassword ? t('reset.action') : t('reset.actionNew'), icon: 'ph:key', onSelect: () => resetLink(u) }] : []),
     { kind: 'separator' },
     { label: u.disabled ? t('enable') : t('disable'), icon: u.disabled ? 'ph:user-plus' : 'ph:user-minus', danger: !u.disabled, disabled: self, onSelect: () => setDisabled(u, !u.disabled) },
   ]
@@ -93,7 +162,7 @@ const SESSIONS_SHOWN = 8
 const showAllSessions = ref(false)
 const orderedSessions = computed(() => [...(sessions.value ?? [])].sort((a, b) => Number(b.current) - Number(a.current)))
 const shownSessions = computed(() => (showAllSessions.value ? orderedSessions.value : orderedSessions.value.slice(0, SESSIONS_SHOWN)))
-const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword') : s.via === 'device' ? t('sessions.viaDevice') : 'daly.rest')
+const via = (s: SessionInfo) => t(`sessions.via.${s.via}`)
 </script>
 
 <template>
@@ -104,6 +173,9 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
 
     <AdminSection :title="t('people')" :hint="t('hint')">
       <template v-if="waiting.length" #badge><span class="ac__waiting tnum">{{ t('waiting', { n: waiting.length }) }}</span></template>
+      <template v-if="overview?.local" #tools>
+        <UiButton variant="secondary" size="sm" icon="ph:user-plus" @click="newOpen = true">{{ t('newUser.action') }}</UiButton>
+      </template>
       <AdminState :loading="!users && !failed.users" :error="failed.users && !users" :rows="3" @retry="loadUsers">
         <div class="ap-table">
           <div v-for="u in users" :key="u.id" class="ac__user" :class="{ 'is-waiting': !u.roles.length && !u.disabled, 'is-disabled': u.disabled }">
@@ -113,7 +185,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
             </span>
             <span class="ap-cell ac__main">
               <b class="ac__name">{{ u.name }}<span v-if="u.id === auth.user?.id" class="ac__tag">{{ t('you') }}</span></b>
-              <small>{{ [u.email, u.issuer ? 'daly.rest' : t('local'), u.lastLoginAt ? t('lastLogin', { when: formatRelative(u.lastLoginAt, lang) }) : null].filter(Boolean).join(' · ') }}</small>
+              <small>{{ [u.email, sources(u), u.lastLoginAt ? t('lastLogin', { when: formatRelative(u.lastLoginAt, lang) }) : null].filter(Boolean).join(' · ') }}</small>
             </span>
             <span class="ac__roles">
               <AdminStatus v-if="u.disabled" tone="bad">{{ t('disabled') }}</AdminStatus>
@@ -129,6 +201,8 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
         </div>
       </AdminState>
     </AdminSection>
+
+    <AdminInvites />
 
     <AdminSection :title="t('sessions.title')" :hint="t('sessions.hint')">
       <AdminState :loading="!sessions && !failed.sessions" :error="failed.sessions && !sessions" :empty="!!sessions && !sessions.length" empty-icon="ph:devices" :empty-title="t('sessions.empty')" :rows="3" @retry="loadSessions">
@@ -155,6 +229,24 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
         </div>
       </AdminState>
     </AdminSection>
+
+    <AdminSection :title="t('methods.title')" :hint="t('methods.hint')">
+      <AdminState :loading="!overview && !failed.overview" :error="failed.overview && !overview" :rows="2" @retry="loadOverview">
+        <AdminSignInMethods v-if="overview" :overview="overview" />
+      </AdminState>
+    </AdminSection>
+
+    <UiModal v-model:open="newOpen" :title="t('newUser.title')" :width="460">
+      <form class="ac__form" novalidate @submit.prevent="createUser">
+        <input v-model="newName" class="ac__input" type="text" maxlength="128" :placeholder="t('newUser.name')" :aria-label="t('newUser.name')">
+        <input v-model="newLogin" class="ac__input" type="text" maxlength="32" autocapitalize="none" spellcheck="false" :placeholder="t('newUser.username')" :aria-label="t('newUser.username')" :aria-invalid="!!newError || undefined">
+        <UiSegmentedControl v-model="newRole" :options="roleOptions" :label="t('newUser.role')" block />
+        <p v-if="newError" class="ac__error" role="alert">{{ newError }}</p>
+        <p v-else class="ac__note">{{ t('newUser.note') }}</p>
+        <UiButton type="submit" variant="primary" size="lg" block :loading="newBusy" :disabled="!newLogin.trim()">{{ t('newUser.submit') }}</UiButton>
+      </form>
+    </UiModal>
+    <AdminLinkModal v-if="link" v-model:open="linkOpen" :title="link.title" :text="link.text" :url="link.url" />
   </div>
 </template>
 
@@ -175,6 +267,24 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
 .ac__sessions { --cols: minmax(140px, 1fr) minmax(160px, 1.3fr) minmax(100px, 0.7fr) 120px 40px; }
 .ac__where { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; color: var(--text-2); text-overflow: ellipsis; white-space: nowrap; }
 .ac__where :deep(.iconify) { flex: none; font-size: 18px; color: var(--text-3); }
+.ac__form { display: flex; flex-direction: column; gap: 10px; padding: 0 20px 16px; }
+.ac__input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--fill-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text-1);
+  font: inherit;
+}
+.ac__input::placeholder { color: var(--text-4); }
+.ac__input:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--focus); }
+.ac__input[aria-invalid='true'] { box-shadow: inset 0 0 0 1.5px var(--danger); }
+.ac__error, .ac__note { margin: 0; padding: 0 16px; font-size: var(--fs-caption); line-height: 1.4; }
+.ac__error { color: var(--danger); }
+.ac__note { color: var(--text-3); }
 @media (max-width: 699px) {
   .ac__user { flex-wrap: wrap; }
   .ac__roles { order: 3; width: 100%; justify-content: flex-start; padding-left: 54px; }
@@ -187,10 +297,35 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
   "ru": {
     "title": "Доступ",
     "people": "Люди",
-    "hint": "Новые люди входят через daly.rest и ждут роль. Администраторы daly.rest — администраторы и здесь",
+    "hint": "Новые люди ждут роль, пока вы её не выдадите. Администраторы провайдера входа — администраторы и здесь",
     "waiting": "ждут: {n}",
     "you": "это вы",
-    "local": "локальный вход",
+    "local": "аварийный вход",
+    "login": "логин {name}",
+    "noRole": "Без роли",
+    "newUser": {
+      "action": "Новый аккаунт",
+      "title": "Новый аккаунт",
+      "name": "Имя",
+      "username": "Логин",
+      "role": "Роль",
+      "note": "Пароль человек задаст сам — по ссылке, которую вы ему передадите",
+      "submit": "Создать",
+      "taken": "Такой логин уже есть",
+      "badUsername": "Логин — 3–32 символа: буквы, цифры, точка, _ и -",
+      "linkTitle": "Ссылка для входа",
+      "linkText": "Передайте её: {name} задаст пароль и войдёт. Ссылка одноразовая, действует 48 часов"
+    },
+    "reset": {
+      "action": "Ссылка для нового пароля",
+      "actionNew": "Ссылка, чтобы задать пароль",
+      "title": "Ссылка для нового пароля",
+      "text": "Передайте её: {name} задаст новый пароль, прежние сессии закроются. Ссылка одноразовая, действует 48 часов"
+    },
+    "methods": {
+      "title": "Способы входа",
+      "hint": "Настраиваются переменными окружения сервера"
+    },
     "lastLogin": "входил {when}",
     "disabled": "Отключён",
     "give": "Выдать доступ",
@@ -198,7 +333,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
     "role": { "admin": "Администратор", "listener": "Слушатель" },
     "makeAdmin": "Сделать администратором",
     "removeAdmin": "Снять роль администратора",
-    "idpAdmin": "выдана daly.rest",
+    "idpAdmin": "выдана провайдером входа",
     "self": "это вы",
     "makeListener": "Выдать роль слушателя",
     "removeListener": "Снять роль слушателя",
@@ -221,8 +356,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
       "active": "Активна",
       "current": "эта сессия",
       "browser": "Браузер",
-      "viaPassword": "аварийный",
-      "viaDevice": "приложение",
+      "via": { "oidc": "провайдер", "password": "аварийный", "device": "приложение", "local": "логин и пароль" },
       "revoke": "Завершить сессию",
       "all": "Показать все {n}",
       "less": "Свернуть",
@@ -234,10 +368,35 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
   "en": {
     "title": "Access",
     "people": "People",
-    "hint": "New people sign in with daly.rest and wait for a role. daly.rest admins are admins here too",
+    "hint": "New people wait for a role until you give one. Sign-in provider admins are admins here too",
     "waiting": "waiting: {n}",
     "you": "you",
-    "local": "local sign-in",
+    "local": "emergency sign-in",
+    "login": "username {name}",
+    "noRole": "No role",
+    "newUser": {
+      "action": "New account",
+      "title": "New account",
+      "name": "Name",
+      "username": "Username",
+      "role": "Role",
+      "note": "The person sets the password themselves — with the link you pass on",
+      "submit": "Create",
+      "taken": "This username is taken",
+      "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+      "linkTitle": "Sign-in link",
+      "linkText": "Pass it on: {name} sets a password and signs in. One-time link, valid for 48 hours"
+    },
+    "reset": {
+      "action": "New password link",
+      "actionNew": "Link to set a password",
+      "title": "New password link",
+      "text": "Pass it on: {name} sets a new password, old sessions end. One-time link, valid for 48 hours"
+    },
+    "methods": {
+      "title": "Sign-in methods",
+      "hint": "Configured with the server's environment variables"
+    },
     "lastLogin": "signed in {when}",
     "disabled": "Disabled",
     "give": "Give access",
@@ -245,7 +404,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
     "role": { "admin": "Admin", "listener": "Listener" },
     "makeAdmin": "Make admin",
     "removeAdmin": "Remove admin role",
-    "idpAdmin": "granted by daly.rest",
+    "idpAdmin": "granted by the sign-in provider",
     "self": "that's you",
     "makeListener": "Give listener role",
     "removeListener": "Remove listener role",
@@ -268,8 +427,7 @@ const via = (s: SessionInfo) => (s.via === 'password' ? t('sessions.viaPassword'
       "active": "Active",
       "current": "this session",
       "browser": "Browser",
-      "viaPassword": "emergency",
-      "viaDevice": "app",
+      "via": { "oidc": "provider", "password": "emergency", "device": "app", "local": "username" },
       "revoke": "End session",
       "all": "Show all {n}",
       "less": "Collapse",

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET issuer = NULL, subject = NULL, updated_at = now()\n         WHERE id = $1 AND issuer = $2 AND subject = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7d7f234c2bb4b23b7c401112f1199701309d84e4c20a386b0726ec45535c955b"
+}

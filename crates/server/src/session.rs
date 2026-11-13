@@ -26,7 +26,10 @@ pub const DEVICE_TTL_DAYS: i32 = 365;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
     Oidc,
+    /// Аварийный пароль из `.env`
     Password,
+    /// Свой аккаунт: логин и пароль
+    Local,
 }
 
 impl Method {
@@ -34,6 +37,16 @@ impl Method {
         match self {
             Self::Oidc => "oidc",
             Self::Password => "password",
+            Self::Local => "local",
+        }
+    }
+
+    /// Из колонки `auth_method`; незнакомое — как вход через провайдера.
+    pub fn parse(value: &str) -> Self {
+        match value {
+            "password" => Self::Password,
+            "local" => Self::Local,
+            _ => Self::Oidc,
         }
     }
 }

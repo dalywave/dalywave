@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET issuer = $2, subject = $3, email = $4, email_verified = $5,\n                    name = COALESCE($6, name), avatar_url = COALESCE($7, avatar_url),\n                    roles = $8, idp_admin = $9, last_login_at = now(), updated_at = now()\n                 WHERE id = $1\n                 RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                  last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"\n           FROM users WHERE 'admin' = ANY(roles) AND NOT disabled ORDER BY created_at, id LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -123,20 +123,27 @@
             "name": "last_login_at"
           }
         }
+      },
+      {
+        "ordinal": 11,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "has_password!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid",
-        "Text",
-        "Text",
-        "Text",
-        "Bool",
-        "Text",
-        "Text",
-        "TextArray",
-        "Bool"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -149,8 +156,10 @@
       false,
       false,
       false,
-      true
+      true,
+      true,
+      null
     ]
   },
-  "hash": "1d8bdb764f9d496025bee6f377a3204bc37be0d4c0531d45f9c572522a2f7d54"
+  "hash": "74c97429a95c1f3ef0444d840418df74a239a3860ba41ebbac5bbda6f72816b1"
 }

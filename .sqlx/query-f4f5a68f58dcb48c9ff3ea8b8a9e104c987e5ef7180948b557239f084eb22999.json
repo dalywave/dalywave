@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT NOT EXISTS (SELECT 1 FROM users) AS \"empty!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "empty!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f4f5a68f58dcb48c9ff3ea8b8a9e104c987e5ef7180948b557239f084eb22999"
+}

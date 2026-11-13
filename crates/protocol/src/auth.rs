@@ -49,15 +49,17 @@ impl Permission {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthVia {
-    /// Вход через daly.rest на сайте.
+    /// Вход через провайдера OIDC на сайте.
     Oidc,
     /// Аварийный вход паролем из `.env`.
     Password,
     /// Токен приложения.
     Device,
+    /// Свой аккаунт: логин и пароль.
+    Local,
 }
 
-names!(AuthVia { Oidc => "oidc", Password => "password", Device => "device" });
+names!(AuthVia { Oidc => "oidc", Password => "password", Device => "device", Local => "local" });
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -112,18 +114,29 @@ names!(SessionKind { Web => "web", Device => "device" });
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthProviders {
-    /// Вход через daly.rest; `null`, если не настроен.
+    /// Первый провайдер из `providers` (для прежних версий приложений); `null`, если провайдеров нет.
     #[schema(required = true)]
     pub oidc: Option<OidcProvider>,
-    /// Включён ли аварийный вход паролем.
+    /// Провайдеры OIDC в порядке кнопок.
+    pub providers: Vec<OidcProvider>,
+    /// Включён ли аварийный вход паролем из `.env`.
     pub password: bool,
+    /// Свои аккаунты: форма логина и пароля.
+    pub local: bool,
+    /// Первый запуск: людей ещё нет, экран входа предлагает создать администратора.
+    pub setup: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OidcProvider {
+    /// Имя в адресах: `/api/auth/oidc/{id}/start`.
+    pub id: String,
     /// Подпись кнопки входа, например `daly.rest`.
     pub title: String,
+    /// Картинка на кнопке: адрес `https://…` или путь на сайте; `null` — без картинки.
+    #[schema(required = true)]
+    pub icon: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, IntoParams)]
@@ -131,12 +144,129 @@ pub struct OidcProvider {
 pub struct OidcStartQuery {
     /// Куда вернуть после входа: путь на этом же сайте, например `/library`.
     pub next: Option<String>,
+    /// `1` — вход приложения, начатый через `/api/auth/app/start` в этом браузере.
+    pub app: Option<String>,
+    /// `1` — привязать вход провайдера к своему аккаунту (нужна сессия сайта).
+    pub link: Option<String>,
+    /// Токен приглашения: новый человек получит его роли.
+    pub invite: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PasswordLogin {
     pub password: String,
+}
+
+/// Вход своим аккаунтом.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalLogin {
+    pub username: String,
+    pub password: String,
+    /// Вход приложения, начатый в этом браузере: вместо сессии сайта — код для приложения.
+    #[serde(default)]
+    pub app: bool,
+}
+
+/// Новый аккаунт: мастер первого запуска, приглашение.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NewAccount {
+    /// Как показывать человека; пусто — логин.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// 3–32 символа: буквы, цифры, `.`, `_`, `-`. Регистр не важен.
+    pub username: String,
+    /// Не короче 10 символов.
+    pub password: String,
+    #[serde(default)]
+    pub app: bool,
+}
+
+/// Итог входа без провайдера: сессия сайта (`me`) или адрес возврата в приложение с кодом.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SignInResult {
+    #[schema(required = true)]
+    pub me: Option<Me>,
+    /// Вход приложения: браузер переходит сюда, приложение меняет код на токен.
+    #[schema(required = true)]
+    pub redirect: Option<String>,
+}
+
+/// Приглашение по ссылке: что оно даст.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct InviteInfo {
+    pub roles: Vec<Role>,
+    pub expires_at: DateTime<Utc>,
+}
+
+/// Одноразовая ссылка сброса пароля: для кого она.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetInfo {
+    pub name: String,
+    /// `null` — логина ещё нет, его надо придумать.
+    #[schema(required = true)]
+    pub username: Option<String>,
+    pub expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetPassword {
+    pub password: String,
+    /// Только если логина ещё нет.
+    #[serde(default)]
+    pub username: Option<String>,
+}
+
+/// Свой аккаунт в настройках: логин, пароль, привязанные входы.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    #[schema(required = true)]
+    pub username: Option<String>,
+    pub has_password: bool,
+    /// Можно ли задать логин и пароль (свои аккаунты включены на сервере).
+    pub local: bool,
+    pub identities: Vec<LinkedIdentity>,
+    /// Провайдеры, которые ещё можно привязать.
+    pub linkable: Vec<OidcProvider>,
+}
+
+/// Вход через провайдера, привязанный к аккаунту.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkedIdentity {
+    pub id: Uuid,
+    /// id провайдера из настроек; `null` — провайдер больше не подключён.
+    #[schema(required = true)]
+    pub provider: Option<String>,
+    /// Название провайдера или его адрес, если он больше не подключён.
+    pub title: String,
+    #[schema(required = true)]
+    pub icon: Option<String>,
+    #[schema(required = true)]
+    pub email: Option<String>,
+    pub created_at: DateTime<Utc>,
+    #[schema(required = true)]
+    pub last_login_at: Option<DateTime<Utc>>,
+}
+
+/// Смена пароля своего аккаунта.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PasswordChange {
+    /// Нынешний пароль; не нужен, если пароля ещё нет.
+    #[serde(default)]
+    pub current: Option<String>,
+    pub password: String,
+    /// Логин, если его ещё нет.
+    #[serde(default)]
+    pub username: Option<String>,
 }
 
 /// Человек в DalyWave.

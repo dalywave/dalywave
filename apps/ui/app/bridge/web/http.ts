@@ -45,7 +45,7 @@ export interface HttpOptions {
 }
 
 // Эти пути отвечают 401 штатно — это не «сессия кончилась»
-const AUTH_PATHS = ['/api/auth/me', '/api/auth/password', '/api/auth/providers']
+const AUTH_PATHS = ['/api/auth/me', '/api/auth/password', '/api/auth/providers', '/api/auth/local/login', '/api/auth/account/password']
 
 export function query(params: Record<string, string | number | boolean | null | undefined>): string {
   const q = new URLSearchParams()

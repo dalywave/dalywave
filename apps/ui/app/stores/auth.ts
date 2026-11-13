@@ -1,9 +1,18 @@
 import { defineStore } from 'pinia'
-import type { AuthProviders, Me, Permission } from '~/api/types'
+import type { AuthProviders, Me, Permission, SignInResult } from '~/api/types'
 import { ApiError } from '~/api/types'
 
 // Подсказка «вход уже был»: без неё публичные экраны не спрашивают сервер о сессии впустую
 const HINT_KEY = 'dw.session.hint'
+
+/** Сервер не ответил, какие способы входа есть: показываем вход через первого провайдера */
+export const FALLBACK_PROVIDERS: AuthProviders = {
+  oidc: { id: 'dalyrest', title: 'daly.rest', icon: null },
+  providers: [{ id: 'dalyrest', title: 'daly.rest', icon: null }],
+  password: true,
+  local: false,
+  setup: false,
+}
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'ready' | 'no-access' | 'offline'
 
@@ -68,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function loadProviders() {
-    providers.value ??= await bridge.auth.providers().catch(() => ({ oidc: { title: 'daly.rest' }, password: true }))
+    providers.value ??= await bridge.auth.providers().catch(() => FALLBACK_PROVIDERS)
     return providers.value
   }
 
@@ -76,6 +85,16 @@ export const useAuthStore = defineStore('auth', () => {
     const next = await bridge.auth.passwordLogin(password)
     apply(next)
     return next
+  }
+
+  /** Итог входа своим аккаунтом: сессия сайта — запоминаем; вход приложения — браузер уходит в приложение */
+  function signedIn(result: SignInResult): 'site' | 'app' {
+    if (result.redirect) {
+      window.location.assign(result.redirect)
+      return 'app'
+    }
+    apply(result.me)
+    return 'site'
   }
 
   async function logout() {
@@ -109,5 +128,5 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
-  return { me, status, providers, user, roles, isAdmin, can, load, loadProviders, passwordLogin, login, logout, loginUrl }
+  return { me, status, providers, user, roles, isAdmin, can, load, loadProviders, passwordLogin, signedIn, login, logout, loginUrl }
 })

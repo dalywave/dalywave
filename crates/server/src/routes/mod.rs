@@ -1,3 +1,4 @@
+pub mod accounts;
 pub mod acquisitions;
 pub mod admin;
 pub mod admin_catalog;
@@ -88,6 +89,7 @@ async fn method_not_allowed() -> AppError {
 /// только токен конвейера выпусков (`DALYWAVE_RELEASE_TOKEN`).
 pub fn router(state: AppState) -> Router {
     let admin = admin::routes()
+        .merge(accounts::admin_routes())
         .merge(queue::routes())
         .merge(acquisitions::routes())
         .merge(sources::routes())
@@ -153,7 +155,12 @@ pub fn router(state: AppState) -> Router {
         .merge(play)
         .merge(fetcher::routes())
         .merge(video::fetcher_routes())
-        .nest("/auth", auth::routes().merge(tv::auth_routes()))
+        .nest(
+            "/auth",
+            auth::routes()
+                .merge(tv::auth_routes())
+                .merge(accounts::routes()),
+        )
         .nest("/admin", admin)
         .method_not_allowed_fallback(method_not_allowed)
         .fallback(not_found)

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at\n         FROM users\n         ORDER BY (cardinality(roles) = 0 AND NOT disabled) DESC, last_login_at DESC NULLS LAST, created_at DESC",
+  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                  last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"\n           FROM users\n           ORDER BY (cardinality(roles) = 0 AND NOT disabled) DESC, last_login_at DESC NULLS LAST, created_at DESC",
   "describe": {
     "columns": [
       {
@@ -123,6 +123,23 @@
             "name": "last_login_at"
           }
         }
+      },
+      {
+        "ordinal": 11,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "has_password!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -139,8 +156,10 @@
       false,
       false,
       false,
-      true
+      true,
+      true,
+      null
     ]
   },
-  "hash": "6c4d86b4fda05d77befdf190a7a48739457223286c13780c36ade95c7da459b2"
+  "hash": "eeef9c225a5d0a41f1302e0f540b334b2faae436567f70d56f0298081cd5d44c"
 }

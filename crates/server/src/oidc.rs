@@ -1,8 +1,9 @@
-//! Клиент OpenID Connect для входа через daly.rest: authorization code + PKCE (S256),
-//! id_token ES256 с ключами из JWKS, роли из claim `roles`.
+//! Клиент OpenID Connect: authorization code + PKCE (S256), id_token с ключами из JWKS
+//! (RS256/PS256, ES256/ES384, EdDSA; HS256 — по секрету клиента), роли или группы из настроенного claim.
+//! Провайдеров несколько ([`crate::config::OidcConfig`]): у каждого свой [`Oidc`] со своим кешем.
 //!
-//! Своя небольшая реализация вместо крейта openidconnect: провайдер один, алгоритм один,
-//! claim `roles` нестандартный, а openidconnect тянет RSA, Ed25519, вторую версию reqwest и sha2.
+//! Своя небольшая реализация вместо крейта openidconnect: он тянет вторую версию reqwest и sha2,
+//! а подписи проверяет ring, который уже есть в сборке через rustls.
 
 use std::{
     sync::Arc,
@@ -12,17 +13,16 @@ use std::{
 use anyhow::{Context, bail, ensure};
 use axum::http::header;
 use base64::{Engine, engine::general_purpose::STANDARD};
-use p256::ecdsa::{Signature, VerifyingKey, signature::Verifier};
+use ring::{hmac, signature};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use tokio::sync::RwLock;
 
 use crate::{
-    config::OidcConfig,
+    config::{ClientAuth, OidcConfig},
     crypto::{b64_decode, secrets_match},
 };
 
-pub const SCOPE: &str = "openid email profile";
 const DISCOVERY_TTL: Duration = Duration::from_secs(3600);
 const JWKS_TTL: Duration = Duration::from_secs(3600);
 /// Неизвестный kid заставляет перечитать JWKS, но не чаще этого
@@ -38,11 +38,29 @@ pub struct Discovery {
     #[serde(default)]
     pub userinfo_endpoint: Option<String>,
     pub jwks_uri: String,
+    #[serde(default)]
+    pub token_endpoint_auth_methods_supported: Option<Vec<String>>,
 }
 
+/// Открытый ключ из JWKS.
+#[derive(Debug)]
+enum Key {
+    Rsa {
+        n: Vec<u8>,
+        e: Vec<u8>,
+    },
+    /// Несжатая точка SEC1: 0x04 || x || y
+    P256(Vec<u8>),
+    P384(Vec<u8>),
+    Ed25519(Vec<u8>),
+}
+
+#[derive(Debug)]
 struct Jwk {
     kid: Option<String>,
-    key: VerifyingKey,
+    /// Алгоритм, если ключ его называет: тогда другим алгоритмом им не проверяем
+    alg: Option<String>,
+    key: Key,
 }
 
 /// Профиль человека по данным провайдера.
@@ -54,7 +72,7 @@ pub struct Identity {
     pub email_verified: bool,
     pub name: Option<String>,
     pub avatar_url: Option<String>,
-    /// Роли daly.rest: `["admin"]` у админов
+    /// Значения claim ролей или групп из настроек провайдера (`roles`, `groups`…)
     pub roles: Vec<String>,
 }
 
@@ -93,6 +111,10 @@ impl Oidc {
         }
     }
 
+    pub fn id(&self) -> &str {
+        &self.config.id
+    }
+
     /// `/.well-known/openid-configuration` провайдера, кешируется на час.
     pub async fn discovery(&self) -> anyhow::Result<Arc<Discovery>> {
         if let Some((at, doc)) = &*self.discovery.read().await
@@ -129,7 +151,7 @@ impl Oidc {
             .append_pair("response_type", "code")
             .append_pair("client_id", &self.config.client_id)
             .append_pair("redirect_uri", redirect_uri)
-            .append_pair("scope", SCOPE)
+            .append_pair("scope", &self.config.scopes)
             .append_pair("state", state)
             .append_pair("nonce", nonce)
             .append_pair("code_challenge", code_challenge)
@@ -138,7 +160,7 @@ impl Oidc {
     }
 
     /// Меняет код на токены (только здесь, на сервере), проверяет id_token и собирает профиль.
-    /// Роли берутся из id_token, а если их там нет — из userinfo.
+    /// Claim ролей берётся из id_token, а если его там нет — из userinfo.
     pub async fn exchange(
         &self,
         code: &str,
@@ -156,14 +178,33 @@ impl Oidc {
         if !secrets_match(token_nonce, nonce) {
             return Err(OidcError::Nonce);
         }
-        let mut identity = identity(&doc.issuer, &claims)?;
-        if roles(claims.get("roles")).is_none() {
-            let access = tokens["access_token"]
-                .as_str()
-                .context("no access_token for userinfo")?;
+        let claim = self.config.admin_claim.as_deref();
+        let mut identity = identity(&doc.issuer, &claims, claim)?;
+        let roles_missing = claim.is_some_and(|c| roles(lookup(&claims, c)).is_none());
+        let profile_missing = identity.email.is_none() && identity.name.is_none();
+        if (roles_missing || profile_missing)
+            && doc.userinfo_endpoint.is_some()
+            && let Some(access) = tokens["access_token"].as_str()
+        {
             self.fill_from_userinfo(&doc, access, &mut identity).await?;
         }
         Ok(identity)
+    }
+
+    fn client_auth(&self, doc: &Discovery) -> ClientAuth {
+        if let Some(auth) = self.config.client_auth {
+            return auth;
+        }
+        // По умолчанию (RFC 8414) провайдер умеет client_secret_basic; post — только если basic он не называет
+        match &doc.token_endpoint_auth_methods_supported {
+            Some(list)
+                if !list.iter().any(|m| m == "client_secret_basic")
+                    && list.iter().any(|m| m == "client_secret_post") =>
+            {
+                ClientAuth::Post
+            }
+            _ => ClientAuth::Basic,
+        }
     }
 
     async fn redeem(
@@ -173,19 +214,33 @@ impl Oidc {
         verifier: &str,
         redirect_uri: &str,
     ) -> anyhow::Result<Value> {
-        let body = url::form_urlencoded::Serializer::new(String::new())
-            .append_pair("grant_type", "authorization_code")
-            .append_pair("code", code)
-            .append_pair("redirect_uri", redirect_uri)
-            .append_pair("code_verifier", verifier)
-            .finish();
-        let res = self
-            .http
-            .post(&doc.token_endpoint)
-            .header(
-                header::AUTHORIZATION,
-                basic_auth(&self.config.client_id, &self.config.client_secret),
-            )
+        let mut req = self.http.post(&doc.token_endpoint);
+        // Сериализатор формы не Send: тело собирается целиком до первого await
+        let body = {
+            let mut form = url::form_urlencoded::Serializer::new(String::new());
+            form.append_pair("grant_type", "authorization_code")
+                .append_pair("code", code)
+                .append_pair("redirect_uri", redirect_uri)
+                .append_pair("code_verifier", verifier);
+            match (&self.config.client_secret, self.client_auth(doc)) {
+                (Some(secret), ClientAuth::Basic) => {
+                    req = req.header(
+                        header::AUTHORIZATION,
+                        basic_auth(&self.config.client_id, secret),
+                    );
+                }
+                (Some(secret), ClientAuth::Post) => {
+                    form.append_pair("client_id", &self.config.client_id)
+                        .append_pair("client_secret", secret);
+                }
+                // Публичный клиент: только client_id, защищает PKCE
+                (None, _) => {
+                    form.append_pair("client_id", &self.config.client_id);
+                }
+            }
+            form.finish()
+        };
+        let res = req
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header(header::ACCEPT, "application/json")
             .body(body)
@@ -220,7 +275,11 @@ impl Oidc {
             info.get("sub").and_then(Value::as_str) == Some(identity.subject.as_str()),
             "userinfo sub mismatch"
         );
-        identity.roles = roles(info.get("roles")).unwrap_or_default();
+        if let Some(claim) = self.config.admin_claim.as_deref()
+            && let Some(found) = roles(lookup(info, claim))
+        {
+            identity.roles = found;
+        }
         if identity.email.is_none() {
             identity.email = text(info.get("email"));
             identity.email_verified = flag(info.get("email_verified"));
@@ -234,7 +293,7 @@ impl Oidc {
         Ok(())
     }
 
-    /// Подпись ES256 и claims iss, aud, azp, exp, iat. nonce сверяет вызывающий.
+    /// Подпись и claims iss, aud, azp, exp, iat. nonce сверяет вызывающий.
     async fn verify(&self, token: &str, doc: &Discovery) -> anyhow::Result<Map<String, Value>> {
         let mut parts = token.split('.');
         let (Some(head), Some(payload), Some(sig), None) =
@@ -244,27 +303,42 @@ impl Oidc {
         };
         let header: Value =
             serde_json::from_slice(&b64_decode(head).context("bad id_token header")?)?;
-        // Только ES256: никаких none и подмены алгоритма
-        ensure!(
-            header["alg"] == "ES256",
-            "unexpected id_token alg {}",
-            header["alg"]
-        );
-        let signature = Signature::from_slice(&b64_decode(sig).context("bad id_token signature")?)
-            .context("bad ES256 signature")?;
+        let alg = header["alg"].as_str().unwrap_or_default();
+        let signature = b64_decode(sig).context("bad id_token signature")?;
         let signed = &token.as_bytes()[..head.len() + 1 + payload.len()];
-        let kid = header["kid"].as_str();
 
-        let mut keys = self.keys(false).await?;
-        let mut result = check(&keys.1, kid, signed, &signature);
-        if matches!(result, KeyMatch::Unknown) && keys.0.elapsed() >= JWKS_REFRESH_GAP {
-            keys = self.keys(true).await?;
-            result = check(&keys.1, kid, signed, &signature);
+        if let Some(hash) = hmac_alg(alg) {
+            // HS256 подписан секретом клиента (так по умолчанию у Authentik без ключа подписи).
+            // Публичный клиент секрета не имеет — такой токен не принимаем
+            let secret = self
+                .config
+                .client_secret
+                .as_deref()
+                .context("HS* id_token needs a client secret")?;
+            let key = hmac::Key::new(hash, secret.as_bytes());
+            ensure!(
+                hmac::verify(&key, signed, &signature).is_ok(),
+                "id_token signature is invalid"
+            );
+        } else {
+            // Только известные асимметричные алгоритмы: никаких none и подмены алгоритма
+            ensure!(
+                verifier(alg).is_some(),
+                "unexpected id_token alg {}",
+                header["alg"]
+            );
+            let kid = header["kid"].as_str();
+            let mut keys = self.keys(false).await?;
+            let mut result = check(&keys.1, kid, alg, signed, &signature);
+            if matches!(result, KeyMatch::Unknown) && keys.0.elapsed() >= JWKS_REFRESH_GAP {
+                keys = self.keys(true).await?;
+                result = check(&keys.1, kid, alg, signed, &signature);
+            }
+            ensure!(
+                matches!(result, KeyMatch::Verified),
+                "id_token signature is invalid"
+            );
         }
-        ensure!(
-            matches!(result, KeyMatch::Verified),
-            "id_token signature is invalid"
-        );
 
         let claims: Map<String, Value> =
             serde_json::from_slice(&b64_decode(payload).context("bad id_token payload")?)
@@ -288,7 +362,7 @@ impl Oidc {
         let doc = self.discovery().await?;
         let jwks = self.get_json(&doc.jwks_uri, None).await?;
         let keys = Arc::new(parse_jwks(&jwks));
-        ensure!(!keys.is_empty(), "provider JWKS has no P-256 keys");
+        ensure!(!keys.is_empty(), "provider JWKS has no usable signing keys");
         let at = Instant::now();
         *self.keys.write().await = Some((at, keys.clone()));
         Ok((at, keys))
@@ -320,50 +394,129 @@ fn basic_auth(client_id: &str, secret: &str) -> String {
     )
 }
 
+fn hmac_alg(alg: &str) -> Option<hmac::Algorithm> {
+    match alg {
+        "HS256" => Some(hmac::HMAC_SHA256),
+        "HS384" => Some(hmac::HMAC_SHA384),
+        "HS512" => Some(hmac::HMAC_SHA512),
+        _ => None,
+    }
+}
+
+/// Проверка подписи для алгоритма JWS (RFC 7518, RFC 8037).
+fn verifier(alg: &str) -> Option<&'static dyn signature::VerificationAlgorithm> {
+    Some(match alg {
+        "RS256" => &signature::RSA_PKCS1_2048_8192_SHA256,
+        "RS384" => &signature::RSA_PKCS1_2048_8192_SHA384,
+        "RS512" => &signature::RSA_PKCS1_2048_8192_SHA512,
+        "PS256" => &signature::RSA_PSS_2048_8192_SHA256,
+        "PS384" => &signature::RSA_PSS_2048_8192_SHA384,
+        "PS512" => &signature::RSA_PSS_2048_8192_SHA512,
+        "ES256" => &signature::ECDSA_P256_SHA256_FIXED,
+        "ES384" => &signature::ECDSA_P384_SHA384_FIXED,
+        "EdDSA" => &signature::ED25519,
+        _ => return None,
+    })
+}
+
+/// Подходит ли ключ к алгоритму: RSA — к RS*/PS*, P-256 — к ES256 и т. д.
+fn fits(key: &Key, alg: &str) -> bool {
+    match key {
+        Key::Rsa { .. } => alg.starts_with("RS") || alg.starts_with("PS"),
+        Key::P256(_) => alg == "ES256",
+        Key::P384(_) => alg == "ES384",
+        Key::Ed25519(_) => alg == "EdDSA",
+    }
+}
+
+fn verify_with(key: &Key, alg: &str, signed: &[u8], sig: &[u8]) -> bool {
+    let Some(algorithm) = verifier(alg) else {
+        return false;
+    };
+    if !fits(key, alg) {
+        return false;
+    }
+    match key {
+        Key::Rsa { n, e } => signature::RsaPublicKeyComponents { n, e }
+            .verify(
+                match alg {
+                    "RS256" => &signature::RSA_PKCS1_2048_8192_SHA256,
+                    "RS384" => &signature::RSA_PKCS1_2048_8192_SHA384,
+                    "RS512" => &signature::RSA_PKCS1_2048_8192_SHA512,
+                    "PS256" => &signature::RSA_PSS_2048_8192_SHA256,
+                    "PS384" => &signature::RSA_PSS_2048_8192_SHA384,
+                    _ => &signature::RSA_PSS_2048_8192_SHA512,
+                },
+                signed,
+                sig,
+            )
+            .is_ok(),
+        Key::P256(point) | Key::P384(point) | Key::Ed25519(point) => {
+            signature::UnparsedPublicKey::new(algorithm, point)
+                .verify(signed, sig)
+                .is_ok()
+        }
+    }
+}
+
 fn parse_jwks(doc: &Value) -> Vec<Jwk> {
     let Some(list) = doc["keys"].as_array() else {
         return Vec::new();
     };
     list.iter()
         .filter_map(|k| {
-            if k["kty"] != "EC" || k["crv"] != "P-256" {
+            if k.get("use").is_some_and(|u| u != "sig") {
                 return None;
             }
-            if k.get("use").is_some_and(|u| u != "sig")
-                || k.get("alg").is_some_and(|a| a != "ES256")
-            {
-                return None;
-            }
-            let x = b64_decode(k["x"].as_str()?)?;
-            let y = b64_decode(k["y"].as_str()?)?;
-            if x.len() != 32 || y.len() != 32 {
-                return None;
-            }
-            // Несжатая точка SEC1: 0x04 || x || y
-            let point: Vec<u8> = [&[4u8][..], &x, &y].concat();
-            let key = VerifyingKey::from_sec1_bytes(&point).ok()?;
+            let field = |name: &str| b64_decode(k[name].as_str()?);
+            let key = match (k["kty"].as_str()?, k["crv"].as_str()) {
+                ("RSA", _) => Key::Rsa {
+                    n: field("n")?,
+                    e: field("e")?,
+                },
+                ("EC", Some(crv @ ("P-256" | "P-384"))) => {
+                    let len = if crv == "P-256" { 32 } else { 48 };
+                    let (x, y) = (field("x")?, field("y")?);
+                    if x.len() != len || y.len() != len {
+                        return None;
+                    }
+                    let point: Vec<u8> = [&[4u8][..], &x, &y].concat();
+                    if crv == "P-256" {
+                        Key::P256(point)
+                    } else {
+                        Key::P384(point)
+                    }
+                }
+                ("OKP", Some("Ed25519")) => {
+                    let x = field("x")?;
+                    if x.len() != 32 {
+                        return None;
+                    }
+                    Key::Ed25519(x)
+                }
+                _ => return None,
+            };
             Some(Jwk {
                 kid: k["kid"].as_str().map(str::to_string),
+                alg: k["alg"].as_str().map(str::to_string),
                 key,
             })
         })
         .collect()
 }
 
-fn check(keys: &[Jwk], kid: Option<&str>, signed: &[u8], signature: &Signature) -> KeyMatch {
-    let candidates: Vec<&Jwk> = match kid {
-        Some(kid) => keys
-            .iter()
-            .filter(|k| k.kid.as_deref() == Some(kid))
-            .collect(),
-        None => keys.iter().collect(),
-    };
+fn check(keys: &[Jwk], kid: Option<&str>, alg: &str, signed: &[u8], sig: &[u8]) -> KeyMatch {
+    let candidates: Vec<&Jwk> = keys
+        .iter()
+        .filter(|k| kid.is_none() || k.kid.as_deref() == kid)
+        .filter(|k| k.alg.as_deref().is_none_or(|a| a == alg) && fits(&k.key, alg))
+        .collect();
     if candidates.is_empty() {
         return KeyMatch::Unknown;
     }
     if candidates
         .iter()
-        .any(|k| k.key.verify(signed, signature).is_ok())
+        .any(|k| verify_with(&k.key, alg, signed, sig))
     {
         KeyMatch::Verified
     } else {
@@ -421,19 +574,37 @@ fn flag(v: Option<&Value>) -> bool {
     }
 }
 
-/// Роли только списком строк; что-то другое считаем отсутствием claim.
+/// Claim по пути через точку: `realm_access.roles` у Keycloak.
+fn lookup<'a>(claims: &'a Map<String, Value>, path: &str) -> Option<&'a Value> {
+    let mut parts = path.split('.');
+    let mut value = claims.get(parts.next()?)?;
+    for part in parts {
+        value = value.get(part)?;
+    }
+    Some(value)
+}
+
+/// Роли или группы: список строк или одна строка. Что-то другое считаем отсутствием claim.
 fn roles(v: Option<&Value>) -> Option<Vec<String>> {
-    v?.as_array()?
-        .iter()
-        .map(|r| r.as_str().map(str::to_string))
-        .collect()
+    match v? {
+        Value::String(s) => Some(vec![s.clone()]),
+        Value::Array(list) => list
+            .iter()
+            .map(|r| r.as_str().map(str::to_string))
+            .collect(),
+        _ => None,
+    }
 }
 
 fn display_name(c: &Map<String, Value>) -> Option<String> {
     text(c.get("name")).or_else(|| text(c.get("preferred_username")))
 }
 
-fn identity(issuer: &str, c: &Map<String, Value>) -> anyhow::Result<Identity> {
+fn identity(
+    issuer: &str,
+    c: &Map<String, Value>,
+    roles_claim: Option<&str>,
+) -> anyhow::Result<Identity> {
     let subject = text(c.get("sub")).context("id_token has no sub")?;
     Ok(Identity {
         issuer: issuer.to_string(),
@@ -442,7 +613,9 @@ fn identity(issuer: &str, c: &Map<String, Value>) -> anyhow::Result<Identity> {
         email_verified: flag(c.get("email_verified")),
         name: display_name(c),
         avatar_url: text(c.get("picture")),
-        roles: roles(c.get("roles")).unwrap_or_default(),
+        roles: roles_claim
+            .and_then(|claim| roles(lookup(c, claim)))
+            .unwrap_or_default(),
     })
 }
 
@@ -494,11 +667,41 @@ mod tests {
             Some(vec!["admin".to_string()])
         );
         assert_eq!(roles(Some(&json!([]))), Some(vec![]));
-        assert_eq!(roles(Some(&json!("admin"))), None);
+        assert_eq!(roles(Some(&json!("admin"))), Some(vec!["admin".into()]));
         assert_eq!(roles(Some(&json!([1]))), None);
+        assert_eq!(roles(Some(&json!({"a": 1}))), None);
         assert_eq!(roles(None), None);
         assert!(flag(Some(&json!("true"))));
         assert!(!flag(Some(&json!(false))));
+    }
+
+    #[test]
+    fn nested_claims() {
+        let c = claims(json!({"sub": "u", "realm_access": {"roles": ["wave-admin", "x"]}}));
+        let id = identity("i", &c, Some("realm_access.roles")).unwrap();
+        assert_eq!(id.roles, vec!["wave-admin", "x"]);
+        assert!(identity("i", &c, Some("groups")).unwrap().roles.is_empty());
+        assert!(identity("i", &c, None).unwrap().roles.is_empty());
+    }
+
+    #[test]
+    fn jwks_kinds() {
+        let p256 = crate::crypto::b64([1u8; 32]);
+        let doc = json!({"keys": [
+            {"kty": "RSA", "n": "AQAB", "e": "AQAB", "kid": "r"},
+            {"kty": "EC", "crv": "P-256", "x": p256, "y": p256, "kid": "e"},
+            {"kty": "EC", "crv": "P-521", "x": p256, "y": p256},
+            {"kty": "OKP", "crv": "Ed25519", "x": p256, "alg": "EdDSA"},
+            {"kty": "RSA", "n": "AQAB", "e": "AQAB", "use": "enc"},
+            {"kty": "oct", "k": "AQAB"},
+        ]});
+        let keys = parse_jwks(&doc);
+        assert_eq!(keys.len(), 3, "{keys:?}");
+        assert!(matches!(keys[0].key, Key::Rsa { .. }));
+        assert!(matches!(keys[1].key, Key::P256(_)));
+        assert!(matches!(keys[2].key, Key::Ed25519(_)));
+        assert!(fits(&keys[0].key, "PS256") && !fits(&keys[0].key, "ES256"));
+        assert!(verifier("none").is_none() && verifier("HS256").is_none());
     }
 
     #[test]

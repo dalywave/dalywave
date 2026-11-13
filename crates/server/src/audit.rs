@@ -16,6 +16,16 @@ pub const USER_CREATED: &str = "user.created";
 pub const ROLES_CHANGED: &str = "user.roles_changed";
 pub const USER_DISABLED: &str = "user.disabled";
 pub const USER_ENABLED: &str = "user.enabled";
+/// Вход через провайдера привязан к уже известному человеку (настройки, подтверждённая почта)
+pub const IDENTITY_LINKED: &str = "user.identity_linked";
+pub const IDENTITY_UNLINKED: &str = "user.identity_unlinked";
+/// Свой аккаунт: пароль задан или сменён (сам человек, по ссылке сброса)
+pub const PASSWORD_CHANGED: &str = "user.password_changed";
+/// Админ выдал одноразовую ссылку сброса пароля
+pub const PASSWORD_RESET_LINK: &str = "user.password_reset_link";
+pub const INVITE_CREATED: &str = "invite.created";
+pub const INVITE_USED: &str = "invite.used";
+pub const INVITE_REVOKED: &str = "invite.revoked";
 pub const SESSION_REVOKED: &str = "session.revoked";
 pub const JOB_RETRIED: &str = "job.retried";
 pub const JOB_CANCELLED: &str = "job.cancelled";

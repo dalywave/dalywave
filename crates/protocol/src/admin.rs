@@ -21,11 +21,18 @@ pub struct AdminUser {
     pub email_verified: bool,
     #[schema(required = true)]
     pub avatar_url: Option<String>,
-    /// Провайдер входа; `null` у локального владельца, созданного аварийным входом.
+    /// Провайдер, через который человек вошёл впервые; `null` у своих аккаунтов и владельца из аварийного входа.
     #[schema(required = true)]
     pub issuer: Option<String>,
+    /// Логин своего аккаунта.
+    #[schema(required = true)]
+    pub username: Option<String>,
+    /// Может входить логином и паролем.
+    pub has_password: bool,
+    /// Через каких провайдеров входит: названия из настроек (или адрес отключённого провайдера).
+    pub providers: Vec<String>,
     pub roles: Vec<Role>,
-    /// Роль admin выдана daly.rest и снимется, когда её снимут там.
+    /// Роль admin выдана провайдером и снимется, когда её снимут там.
     pub idp_admin: bool,
     pub disabled: bool,
     pub created_at: DateTime<Utc>,
@@ -50,6 +57,121 @@ pub struct UserPatch {
     pub roles: Option<Vec<Role>>,
     #[serde(default)]
     pub disabled: Option<bool>,
+}
+
+/// Способы входа на сервере — только чтение: настраиваются переменными окружения.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthOverview {
+    pub providers: Vec<ProviderInfo>,
+    /// Свои аккаунты (`DALYWAVE_LOCAL_AUTH`).
+    pub local: bool,
+    /// Аварийный пароль из `.env`.
+    pub emergency_password: bool,
+}
+
+/// Подключённый провайдер OIDC.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderInfo {
+    pub id: String,
+    pub title: String,
+    #[schema(required = true)]
+    pub icon: Option<String>,
+    pub issuer: String,
+    /// Адрес возврата, который надо зарегистрировать у провайдера.
+    pub callback_url: String,
+    /// Claim ролей или групп; `null` — провайдер не выдаёт админов.
+    #[schema(required = true)]
+    pub admin_claim: Option<String>,
+    pub admin_values: Vec<String>,
+    pub auto_register: bool,
+    pub trust_email: bool,
+    /// Сколько людей входит через него.
+    pub users: i64,
+}
+
+/// Новый свой аккаунт от админа.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NewUser {
+    #[serde(default)]
+    pub name: Option<String>,
+    pub username: String,
+    /// Без пароля ответ содержит одноразовую ссылку, по которой человек задаст его сам.
+    #[serde(default)]
+    pub password: Option<String>,
+    #[serde(default)]
+    pub roles: Vec<Role>,
+}
+
+/// Одноразовая ссылка: показывается один раз.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OneTimeLink {
+    pub url: String,
+    pub expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedUser {
+    pub user: AdminUser,
+    /// Ссылка, чтобы задать пароль; `null`, если пароль задан сразу.
+    #[schema(required = true)]
+    pub link: Option<OneTimeLink>,
+}
+
+/// Новое приглашение.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NewInvite {
+    #[serde(default)]
+    pub roles: Vec<Role>,
+    /// Сколько дней действует: 1–30, по умолчанию 7.
+    #[serde(default)]
+    pub days: Option<u32>,
+    /// Подпись для себя: кому отправили.
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum InviteStatus {
+    Active,
+    Used,
+    Expired,
+    Revoked,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Invite {
+    pub id: Uuid,
+    pub roles: Vec<Role>,
+    #[schema(required = true)]
+    pub note: Option<String>,
+    pub status: InviteStatus,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    /// Кто принял приглашение.
+    #[schema(required = true)]
+    pub used_by: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct InviteList {
+    pub items: Vec<Invite>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedInvite {
+    pub invite: Invite,
+    /// Ссылка-приглашение; показывается один раз.
+    pub url: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, IntoParams)]

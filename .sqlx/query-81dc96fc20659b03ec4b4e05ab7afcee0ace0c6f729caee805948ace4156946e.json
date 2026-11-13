@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (issuer, subject, email, email_verified, name, avatar_url, roles, idp_admin, last_login_at)\n                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())\n                 RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                          last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"\n                   FROM users WHERE id = $1 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -123,18 +123,28 @@
             "name": "last_login_at"
           }
         }
+      },
+      {
+        "ordinal": 11,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "has_password!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
-        "Text",
-        "Bool",
-        "Text",
-        "Text",
-        "TextArray",
-        "Bool"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -148,8 +158,10 @@
       false,
       false,
       false,
-      true
+      true,
+      true,
+      null
     ]
   },
-  "hash": "c160674c39367518a8c225cf4a35bbd34a7418c64088ec901a4ad401f37d6aa2"
+  "hash": "81dc96fc20659b03ec4b4e05ab7afcee0ace0c6f729caee805948ace4156946e"
 }

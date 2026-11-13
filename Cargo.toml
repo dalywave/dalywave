@@ -17,6 +17,8 @@ dalywave-transitions = { path = "crates/transitions" }
 
 aes-gcm = "0.10"
 anyhow = "1"
+# Пароли своих аккаунтов: argon2id (соль даёт сам сервер)
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "password-hash"] }
 axum = { version = "0.8.9", features = ["ws"] }
 axum-extra = { version = "0.12", features = ["cookie-private", "cookie-key-expansion"] }
 base64 = "0.22"
@@ -37,6 +39,8 @@ ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "
 p256 = { version = "0.14", features = ["ecdsa", "ecdh"] }
 # http2 — APNs принимает только HTTP/2
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "http2"] }
+# Подписи id_token провайдеров OIDC: RS256/PS256, ES256/ES384, EdDSA (уже есть в сборке через rustls)
+ring = "0.17"
 semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

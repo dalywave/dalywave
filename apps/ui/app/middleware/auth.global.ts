@@ -1,6 +1,11 @@
-// Кто может открыть страницу. Вход — только через daly.rest (или аварийный пароль);
+// Кто может открыть страницу. Вход — через провайдеров OIDC, свой аккаунт или аварийный пароль;
 // человек без ролей видит «ждём доступа»; админка — только администраторам
 export default defineNuxtRouteMiddleware(async (to) => {
+  // Ссылки-приглашения и сброса пароля открываются и без входа, и с ним: у них свой токен
+  if (to.path.startsWith('/invite/') || to.path.startsWith('/reset/')) {
+    void useBridge().ready()
+    return
+  }
   // Мини-плеер приложения — только вид плеера из движка: входа и данных сервера ему не нужно
   if (isMiniWindow()) return to.path === '/mini' ? undefined : navigateTo('/mini')
   // «Слушать вместе»: страница гостя открыта без входа — у гостя свой токен этой сессии
@@ -22,6 +27,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   void bridge.ready()
   await auth.load({ quiet: isAuthPage || isDev })
   if (isDev) return
+  // Вход приложения в системном браузере: экран входа нужен, даже если на сайте уже вошли
+  if (to.path === '/login' && to.query.app !== undefined) return
   // Разработка: посмотреть экраны входа и ожидания, не выходя из аккаунта (?preview)
   if (import.meta.dev && isAuthPage && to.query.preview !== undefined) return
 

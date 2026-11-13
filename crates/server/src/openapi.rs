@@ -7,11 +7,11 @@ use utoipa::{
 };
 
 use crate::routes::{
-    acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect, describe,
-    downloads, embed, events, export, fetcher, friends, home, images, imports, info, jam, library,
-    lyrics, notifications, offline, overlay, playlist_folders, playlist_set, playlists, presaves,
-    queue, reco, recognize, rewind, settings, share, sources, story, stream, sync, system, taste,
-    tv, updates, versions, video, wave, wave_presets, ws,
+    accounts, acquisitions, admin, admin_catalog, analysis, auth, catalog, collab, connect,
+    describe, downloads, embed, events, export, fetcher, friends, home, images, imports, info, jam,
+    library, lyrics, notifications, offline, overlay, playlist_folders, playlist_set, playlists,
+    presaves, queue, reco, recognize, rewind, settings, share, sources, story, stream, sync,
+    system, taste, tv, updates, versions, video, wave, wave_presets, ws,
 };
 
 #[derive(OpenApi)]
@@ -34,6 +34,23 @@ use crate::routes::{
         auth::app_start,
         auth::app_token,
         auth::app_pair,
+        auth::provider_start,
+        auth::provider_callback,
+        accounts::local_login,
+        accounts::setup,
+        accounts::invite_info,
+        accounts::accept_invite,
+        accounts::reset_info,
+        accounts::reset_password,
+        accounts::account,
+        accounts::change_password,
+        accounts::unlink_identity,
+        accounts::auth_overview,
+        accounts::create_user,
+        accounts::reset_link,
+        accounts::list_invites,
+        accounts::create_invite,
+        accounts::revoke_invite,
         admin::list_users,
         admin::update_user,
         admin::list_sessions,

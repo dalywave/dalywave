@@ -121,6 +121,7 @@ fn principal_from(kind: SessionKind, found: Option<session::Found>) -> Option<Pr
         let via = match (kind, s.auth_method.as_str()) {
             (SessionKind::Device, _) => AuthVia::Device,
             (_, "password") => AuthVia::Password,
+            (_, "local") => AuthVia::Local,
             _ => AuthVia::Oidc,
         };
         Principal {

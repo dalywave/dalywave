@@ -120,6 +120,9 @@ const language = computed({
       </SettingsRow>
     </SettingsGroup>
 
+    <!-- Вход: логин и пароль, привязанные провайдеры (только когда есть что менять) -->
+    <SettingsSignIn />
+
     <SettingsGroup :title="t('library')">
       <SettingsRow as="button" :title="t('import')" :description="t('importDesc')" @click="navigateTo('/import')">
         <Icon name="ph:caret-right" class="set__chev" aria-hidden="true" />

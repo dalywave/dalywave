@@ -3,6 +3,7 @@
 //! `sqlx::test` создаёт отдельную базу на каждый тест; daly.rest заменяет заглушка из `mock.rs`,
 //! Deezer — заглушка с записанными ответами из `deezer.rs`, хранилище S3 — хранилище в памяти.
 
+mod accounts;
 mod admin;
 mod admin_sections;
 mod analysis;
@@ -38,6 +39,7 @@ mod password;
 mod playlist_set;
 mod playlists;
 mod presaves;
+mod providers;
 mod quality;
 mod realtime;
 mod reco;

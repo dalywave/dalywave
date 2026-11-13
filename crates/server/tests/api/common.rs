@@ -35,7 +35,9 @@ pub fn config() -> Config {
         public_url: PUBLIC_URL.into(),
         secret_key: [7; 32],
         static_dir: None,
-        oidc: None,
+        oidc: Vec::new(),
+        // Как на wave.daly.rest: вход только через провайдера. Тесты своих аккаунтов включают сами
+        local_auth: false,
         admin_emails: Vec::new(),
         admin_password: None,
         s3: None,
@@ -133,7 +135,7 @@ impl TestApp {
         let provider = MockProvider::start().await;
         let deezer = DeezerMock::start().await;
         let mut config = config();
-        config.oidc = Some(provider.oidc_config());
+        config.oidc = vec![provider.oidc_config()];
         config.deezer.url = deezer.base.clone();
         tweak(&mut config);
         let mut state = AppState::new(db, config).unwrap();

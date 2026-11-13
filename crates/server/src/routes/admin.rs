@@ -27,7 +27,7 @@ use crate::{
     extract::{Json, Path, Query},
     session,
     state::AppState,
-    users::{UserRow, role_names},
+    users::{self, UserRow, role_names},
 };
 
 pub fn routes() -> Router<AppState> {
@@ -52,14 +52,20 @@ pub fn routes() -> Router<AppState> {
 pub async fn list_users(State(st): State<AppState>) -> AppResult<Json<UserList>> {
     let rows = sqlx::query_as!(
         UserRow,
-        "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-         FROM users
-         ORDER BY (cardinality(roles) = 0 AND NOT disabled) DESC, last_login_at DESC NULLS LAST, created_at DESC",
+        r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                  last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+           FROM users
+           ORDER BY (cardinality(roles) = 0 AND NOT disabled) DESC, last_login_at DESC NULLS LAST, created_at DESC"#,
     )
     .fetch_all(&st.db)
     .await?;
+    let ids: Vec<Uuid> = rows.iter().map(|u| u.id).collect();
+    let mut providers = users::provider_titles(&st, &ids).await?;
     Ok(Json(UserList {
-        items: rows.iter().map(UserRow::admin_view).collect(),
+        items: rows
+            .iter()
+            .map(|u| u.admin_view(providers.remove(&u.id).unwrap_or_default()))
+            .collect(),
         next_cursor: None,
     }))
 }
@@ -87,8 +93,9 @@ pub async fn update_user(
     let mut tx = st.db.begin().await?;
     let user = sqlx::query_as!(
         UserRow,
-        "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-         FROM users WHERE id = $1 FOR UPDATE",
+        r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                  last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+           FROM users WHERE id = $1 FOR UPDATE"#,
         id,
     )
     .fetch_optional(&mut *tx)
@@ -113,7 +120,7 @@ pub async fn update_user(
                 message: "нельзя снять роль администратора с самого себя".into(),
             });
         }
-        // Снятый вручную admin больше не считается выданным провайдером: при входе daly.rest вернёт его,
+        // Снятый вручную admin больше не считается выданным провайдером: при входе провайдер вернёт его,
         // только если там он по-прежнему админ
         if !roles.contains(&Role::Admin) {
             idp_admin = false;
@@ -158,8 +165,11 @@ pub async fn update_user(
 
     let updated = sqlx::query_as!(
         UserRow,
-        "UPDATE users SET roles = $2, idp_admin = $3, disabled = $4, updated_at = now() WHERE id = $1
-         RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+        r#"UPDATE users SET roles = $2, idp_admin = $3, disabled = $4, updated_at = now(),
+               idp_admin_issuer = CASE WHEN $3 THEN idp_admin_issuer END
+           WHERE id = $1
+           RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                     last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
         user.id,
         &role_names(&roles),
         idp_admin,
@@ -168,7 +178,10 @@ pub async fn update_user(
     .fetch_one(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(Json(updated.admin_view()))
+    let mut providers = users::provider_titles(&st, &[updated.id]).await?;
+    Ok(Json(updated.admin_view(
+        providers.remove(&updated.id).unwrap_or_default(),
+    )))
 }
 
 struct SessionRow {
@@ -200,6 +213,7 @@ impl SessionRow {
         let via = match (kind, self.auth_method.as_str()) {
             (SessionKind::Device, _) => AuthVia::Device,
             (_, "password") => AuthVia::Password,
+            (_, "local") => AuthVia::Local,
             _ => AuthVia::Oidc,
         };
         let device = match (self.device_id, self.device_name, self.device_created_at) {

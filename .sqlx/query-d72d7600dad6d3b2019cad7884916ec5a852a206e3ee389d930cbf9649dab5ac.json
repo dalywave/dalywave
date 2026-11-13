@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO password_resets (user_id, token_hash, created_by, expires_at)\n         VALUES ($1, $2, $3, now() + make_interval(hours => $4)) RETURNING expires_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "password_resets",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d72d7600dad6d3b2019cad7884916ec5a852a206e3ee389d930cbf9649dab5ac"
+}

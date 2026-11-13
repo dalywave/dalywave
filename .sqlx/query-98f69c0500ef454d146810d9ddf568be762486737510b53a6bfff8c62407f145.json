@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE app_login_requests\n         SET user_id = $2, code_hash = $3, code_expires_at = now() + interval '60 seconds', auth_method = $4\n         WHERE id = $1 AND code_hash IS NULL AND expires_at > now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bytea",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "98f69c0500ef454d146810d9ddf568be762486737510b53a6bfff8c62407f145"
+}

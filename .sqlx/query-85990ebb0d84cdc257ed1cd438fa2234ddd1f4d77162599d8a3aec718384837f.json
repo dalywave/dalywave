@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at\n             FROM users WHERE lower(email) = lower($1) AND email_verified\n             ORDER BY created_at LIMIT 1 FOR UPDATE",
+  "query": "INSERT INTO users (issuer, subject, email, email_verified, name, avatar_url, roles, idp_admin,\n                                      idp_admin_issuer, last_login_at)\n                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())\n                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                             last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"",
   "describe": {
     "columns": [
       {
@@ -123,10 +123,35 @@
             "name": "last_login_at"
           }
         }
+      },
+      {
+        "ordinal": 11,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "has_password!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Text",
+        "TextArray",
+        "Bool",
         "Text"
       ]
     },
@@ -141,8 +166,10 @@
       false,
       false,
       false,
-      true
+      true,
+      true,
+      null
     ]
   },
-  "hash": "7f4629539a83b00c24e8b7e4d15c76d6765e78c41509e0bc7429c8305ac50729"
+  "hash": "85990ebb0d84cdc257ed1cd438fa2234ddd1f4d77162599d8a3aec718384837f"
 }

@@ -1,7 +1,10 @@
-//! Люди: профиль из daly.rest, роли и владелец для аварийного входа.
+//! Люди: профиль от провайдеров OIDC, свои аккаунты, роли и владелец для аварийного входа.
 //!
-//! Человек ищется по паре (issuer, sub), затем по подтверждённой почте. Сама почта не идентификатор:
-//! неподтверждённый адрес никого не связывает и не делает админом.
+//! Входы через провайдеров лежат в `user_identities`: у человека их может быть несколько. Человек
+//! ищется по паре (issuer, sub), затем — только у провайдера с `TRUST_EMAIL` — по подтверждённой почте.
+//! Сама почта не идентификатор: неподтверждённый адрес никого не связывает и не делает админом.
+
+use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use dalywave_protocol::{
@@ -11,7 +14,13 @@ use dalywave_protocol::{
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{audit, error::AppResult, oidc::Identity, state::AppState};
+use crate::{
+    audit,
+    config::OidcConfig,
+    error::{AppError, AppResult},
+    oidc::Identity,
+    state::AppState,
+};
 
 pub const OWNER_NAME: &str = "Владелец";
 
@@ -27,6 +36,8 @@ pub struct UserRow {
     pub disabled: bool,
     pub created_at: DateTime<Utc>,
     pub last_login_at: Option<DateTime<Utc>>,
+    pub username: Option<String>,
+    pub has_password: bool,
 }
 
 impl UserRow {
@@ -43,7 +54,8 @@ impl UserRow {
         }
     }
 
-    pub fn admin_view(&self) -> AdminUser {
+    /// Вид для «Доступа»; `providers` — названия провайдеров, через которых человек входит.
+    pub fn admin_view(&self, providers: Vec<String>) -> AdminUser {
         AdminUser {
             id: self.id,
             name: self.name.clone(),
@@ -51,12 +63,46 @@ impl UserRow {
             email_verified: self.email_verified,
             avatar_url: self.avatar_url.clone(),
             issuer: self.issuer.clone(),
+            username: self.username.clone(),
+            has_password: self.has_password,
+            providers,
             roles: self.roles(),
             idp_admin: self.idp_admin,
             disabled: self.disabled,
             created_at: self.created_at,
             last_login_at: self.last_login_at,
         }
+    }
+}
+
+/// Названия провайдеров, через которых входят люди: id человека → список.
+pub async fn provider_titles(
+    st: &AppState,
+    users: &[Uuid],
+) -> AppResult<HashMap<Uuid, Vec<String>>> {
+    let rows = sqlx::query!(
+        "SELECT user_id, issuer FROM user_identities WHERE user_id = ANY($1) ORDER BY created_at",
+        users,
+    )
+    .fetch_all(&st.db)
+    .await?;
+    let mut out: HashMap<Uuid, Vec<String>> = HashMap::new();
+    for row in rows {
+        out.entry(row.user_id)
+            .or_default()
+            .push(provider_title(st, &row.issuer));
+    }
+    Ok(out)
+}
+
+/// Название провайдера по issuer; отключённый провайдер — его хост.
+pub fn provider_title(st: &AppState, issuer: &str) -> String {
+    match st.provider_by_issuer(issuer) {
+        Some(p) => p.config.title.clone(),
+        None => url::Url::parse(issuer)
+            .ok()
+            .and_then(|u| u.host_str().map(str::to_string))
+            .unwrap_or_else(|| issuer.to_string()),
     }
 }
 
@@ -77,33 +123,37 @@ pub fn role_names(roles: &[Role]) -> Vec<String> {
         .collect()
 }
 
-/// Роли после входа через daly.rest.
+/// Роли после входа через провайдера `issuer`.
 ///
-/// Админ daly.rest — админ и здесь; флаг `idp_admin` помнит, что роль выдал провайдер. Когда провайдер
-/// перестаёт присылать admin, снимается только такая роль: выданная вручную остаётся.
+/// Админ провайдера — админ и здесь; `granted_by` помнит, какой провайдер выдал роль. Снимает её только
+/// он же, когда перестаёт присылать admin: выданная вручную или другим провайдером остаётся.
+/// `upstream_admin` — `None`, если провайдер вообще не выдаёт админов (нет claim ролей).
 /// Подтверждённые почты из ADMIN_EMAILS получают admin всегда.
 pub fn map_roles(
     current: &[Role],
-    was_idp_admin: bool,
-    upstream_admin: bool,
+    granted_by: Option<&str>,
+    issuer: &str,
+    upstream_admin: Option<bool>,
     env_admin: bool,
-) -> (Vec<Role>, bool) {
+) -> (Vec<Role>, Option<String>) {
     let mut roles = current.to_vec();
-    let mut idp_admin = was_idp_admin;
-    if upstream_admin {
-        if !roles.contains(&Role::Admin) {
+    let mut by = granted_by.map(str::to_string);
+    match upstream_admin {
+        Some(true) if !roles.contains(&Role::Admin) => {
             roles.push(Role::Admin);
-            idp_admin = true;
+            by = Some(issuer.to_string());
         }
-    } else if was_idp_admin {
-        roles.retain(|r| *r != Role::Admin);
-        idp_admin = false;
+        Some(false) if by.as_deref() == Some(issuer) => {
+            roles.retain(|r| *r != Role::Admin);
+            by = None;
+        }
+        _ => {}
     }
     if env_admin && !roles.contains(&Role::Admin) {
         roles.push(Role::Admin);
-        idp_admin = false;
+        by = None;
     }
-    (parse_roles(&role_names(&roles)), idp_admin)
+    (parse_roles(&role_names(&roles)), by)
 }
 
 fn clean(value: Option<String>, max: usize) -> Option<String> {
@@ -112,17 +162,55 @@ fn clean(value: Option<String>, max: usize) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
-/// Вход через провайдера: находит или заводит человека, обновляет профиль и роли.
-pub async fn sign_in(st: &AppState, ident: Identity) -> AppResult<UserRow> {
+/// Зачем пришёл человек от провайдера.
+#[derive(Debug, Default)]
+pub struct Intent {
+    /// Привязать вход к этому аккаунту (настройки → «Вход»).
+    pub link_to: Option<Uuid>,
+    /// Роли по приглашению: новый человек получает их сразу.
+    pub invite_roles: Option<Vec<Role>>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SignInError {
+    /// Провайдер не пускает новых (`AUTO_REGISTER=false`), а приглашения нет.
+    #[error("not registered")]
+    NotRegistered,
+    /// Этот вход уже привязан к другому человеку.
+    #[error("identity belongs to another user")]
+    LinkedElsewhere,
+    #[error(transparent)]
+    App(#[from] AppError),
+}
+
+impl From<sqlx::Error> for SignInError {
+    fn from(e: sqlx::Error) -> Self {
+        Self::App(e.into())
+    }
+}
+
+/// Вход через провайдера: находит, связывает или заводит человека, обновляет профиль и роли.
+pub async fn sign_in(
+    st: &AppState,
+    provider: &OidcConfig,
+    ident: Identity,
+    intent: Intent,
+) -> Result<UserRow, SignInError> {
     let email = clean(ident.email, 320).filter(|e| e.contains('@'));
-    let verified = email.is_some() && ident.email_verified;
+    // Почта, которую прислал провайдер: для списка входов в настройках
+    let provider_email = email.clone();
+    // Подтверждению почты верим только у доверенного провайдера: иначе чужой провайдер мог бы
+    // «подтвердить» любой адрес и забрать аккаунт
+    let verified = email.is_some() && ident.email_verified && provider.trust_email;
     let name = clean(ident.name, 128);
     let avatar = clean(ident.avatar_url, 1000)
         .filter(|u| u.starts_with("https://") || u.starts_with("http://"));
-    let upstream_admin = st
-        .oidc
-        .as_ref()
-        .is_some_and(|o| ident.roles.iter().any(|r| o.config.admin_roles.contains(r)));
+    let upstream_admin = provider.admin_claim.as_ref().map(|_| {
+        ident
+            .roles
+            .iter()
+            .any(|r| provider.admin_values.contains(r))
+    });
     let env_admin = verified
         && email
             .as_ref()
@@ -131,25 +219,65 @@ pub async fn sign_in(st: &AppState, ident: Identity) -> AppResult<UserRow> {
     let mut tx = st.db.begin().await?;
     let mut found = sqlx::query_as!(
         UserRow,
-        "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-         FROM users WHERE issuer = $1 AND subject = $2 FOR UPDATE",
+        r#"SELECT u.id, u.issuer, u.email, u.email_verified, u.name, u.avatar_url, u.roles, u.idp_admin,
+                  u.disabled, u.created_at, u.last_login_at, u.username, u.password_hash IS NOT NULL AS "has_password!"
+           FROM user_identities i JOIN users u ON u.id = i.user_id
+           WHERE i.issuer = $1 AND i.subject = $2 FOR UPDATE OF u"#,
         ident.issuer,
         ident.subject,
     )
     .fetch_optional(&mut *tx)
     .await?;
-    if found.is_none() && verified {
-        // Тот же человек мог войти раньше под другим sub: связываем только по подтверждённой почте
+    if found.is_none() {
+        // Человек, заведённый прежней версией без списка входов (например, после отката)
         found = sqlx::query_as!(
             UserRow,
-            "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-             FROM users WHERE lower(email) = lower($1) AND email_verified
-             ORDER BY created_at LIMIT 1 FOR UPDATE",
+            r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                      last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+               FROM users WHERE issuer = $1 AND subject = $2 FOR UPDATE"#,
+            ident.issuer,
+            ident.subject,
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+    }
+    let known_identity = found.is_some();
+
+    if let Some(target) = intent.link_to {
+        if found.as_ref().is_some_and(|u| u.id != target) {
+            return Err(SignInError::LinkedElsewhere);
+        }
+        if found.is_none() {
+            found = sqlx::query_as!(
+                UserRow,
+                r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                          last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+                   FROM users WHERE id = $1 FOR UPDATE"#,
+                target,
+            )
+            .fetch_optional(&mut *tx)
+            .await?;
+            if found.is_none() {
+                return Err(AppError::Unauthorized.into());
+            }
+        }
+    } else if found.is_none() && verified {
+        // Тот же человек мог войти раньше через другого провайдера: связываем по подтверждённой почте
+        found = sqlx::query_as!(
+            UserRow,
+            r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                      last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+               FROM users WHERE lower(email) = lower($1) AND email_verified
+               ORDER BY created_at LIMIT 1 FOR UPDATE"#,
             email,
         )
         .fetch_optional(&mut *tx)
         .await?;
     }
+    if found.is_none() && intent.invite_roles.is_none() && !provider.auto_register {
+        return Err(SignInError::NotRegistered);
+    }
+
     let found_id = found.as_ref().map(|u| u.id);
     if verified {
         // Чужой неподтверждённый адрес не держит почту: её забирает тот, чей адрес подтверждён
@@ -172,49 +300,87 @@ pub async fn sign_in(st: &AppState, ident: Identity) -> AppResult<UserRow> {
         .await?,
         None => false,
     };
+    // Профиль обновляет основной вход человека — тот, через который он появился. Остальные входы
+    // только заполняют пустое: иначе имя и почта прыгали бы от провайдера к провайдеру
+    let primary = found
+        .as_ref()
+        .is_none_or(|u| u.issuer.as_deref() == Some(ident.issuer.as_str()));
     let (email, verified) = match &found {
-        // Почта занята другим человеком или провайдер её не прислал: остаётся прежняя
-        Some(u) if !email_free => (u.email.clone(), u.email_verified),
+        Some(u) if !email_free || (!primary && u.email.is_some()) => {
+            (u.email.clone(), u.email_verified)
+        }
         _ if email_free => (email, verified),
         _ => (None, false),
     };
 
-    let (before, was_idp_admin) = found
-        .as_ref()
-        .map(|u| (u.roles(), u.idp_admin))
-        .unwrap_or_default();
-    let (roles, idp_admin) = map_roles(&before, was_idp_admin, upstream_admin, env_admin);
+    let (before, granted_by) = match &found {
+        Some(u) => {
+            let by = sqlx::query_scalar!("SELECT idp_admin_issuer FROM users WHERE id = $1", u.id)
+                .fetch_one(&mut *tx)
+                .await?;
+            // Прежняя версия не помнила, кто выдал admin: считаем, что тот, через кого человек вошёл
+            let by = by.or_else(|| u.idp_admin.then(|| u.issuer.clone()).flatten());
+            (u.roles(), by)
+        }
+        None => (Vec::new(), None),
+    };
+    let (mut roles, granted_by) = map_roles(
+        &before,
+        granted_by.as_deref(),
+        &ident.issuer,
+        upstream_admin,
+        env_admin,
+    );
+    if let Some(extra) = &intent.invite_roles {
+        roles = parse_roles(&role_names(&[roles.as_slice(), extra.as_slice()].concat()));
+    }
     let role_list = role_names(&roles);
+    let idp_admin = granted_by.is_some();
 
     let user = match &found {
         Some(u) => {
+            let (name, avatar) = if primary {
+                (name, avatar)
+            } else {
+                (
+                    name.filter(|_| u.name.is_empty()),
+                    avatar.filter(|_| u.avatar_url.is_none()),
+                )
+            };
             sqlx::query_as!(
                 UserRow,
-                "UPDATE users SET issuer = $2, subject = $3, email = $4, email_verified = $5,
-                    name = COALESCE($6, name), avatar_url = COALESCE($7, avatar_url),
-                    roles = $8, idp_admin = $9, last_login_at = now(), updated_at = now()
-                 WHERE id = $1
-                 RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+                r#"UPDATE users SET email = $2, email_verified = $3,
+                       name = COALESCE($4, name), avatar_url = COALESCE($5, avatar_url),
+                       roles = $6, idp_admin = $7, idp_admin_issuer = $8, last_login_at = now(), updated_at = now()
+                   WHERE id = $1
+                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                             last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
                 u.id,
-                ident.issuer,
-                ident.subject,
                 email,
                 verified,
                 name,
                 avatar,
                 &role_list,
                 idp_admin,
+                granted_by,
             )
             .fetch_one(&mut *tx)
             .await?
         }
         None => {
-            let name = name.or_else(|| email.as_deref().and_then(|e| e.split('@').next()).map(str::to_string));
+            let name = name.or_else(|| {
+                email
+                    .as_deref()
+                    .and_then(|e| e.split('@').next())
+                    .map(str::to_string)
+            });
             let user = sqlx::query_as!(
                 UserRow,
-                "INSERT INTO users (issuer, subject, email, email_verified, name, avatar_url, roles, idp_admin, last_login_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-                 RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+                r#"INSERT INTO users (issuer, subject, email, email_verified, name, avatar_url, roles, idp_admin,
+                                      idp_admin_issuer, last_login_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                             last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
                 ident.issuer,
                 ident.subject,
                 email,
@@ -223,16 +389,59 @@ pub async fn sign_in(st: &AppState, ident: Identity) -> AppResult<UserRow> {
                 avatar,
                 &role_list,
                 idp_admin,
+                granted_by,
             )
             .fetch_one(&mut *tx)
             .await?;
-            let payload = json!({ "issuer": ident.issuer, "email": user.email, "name": user.name });
-            audit::record(&mut *tx, None, audit::USER_CREATED, Some(user.id.to_string()), payload).await?;
+            let payload = json!({ "issuer": ident.issuer, "email": user.email, "name": user.name, "provider": provider.id });
+            audit::record(
+                &mut *tx,
+                None,
+                audit::USER_CREATED,
+                Some(user.id.to_string()),
+                payload,
+            )
+            .await?;
             user
         }
     };
+    if known_identity {
+        sqlx::query!(
+            "UPDATE user_identities SET last_login_at = now(), email = COALESCE($3, email)
+             WHERE issuer = $1 AND subject = $2",
+            ident.issuer,
+            ident.subject,
+            provider_email,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    let linked = sqlx::query!(
+        "INSERT INTO user_identities (user_id, issuer, subject, email, last_login_at)
+         VALUES ($1, $2, $3, $4, now())
+         ON CONFLICT (issuer, subject) DO NOTHING",
+        user.id,
+        ident.issuer,
+        ident.subject,
+        provider_email,
+    )
+    .execute(&mut *tx)
+    .await?;
+    if linked.rows_affected() > 0 && found.is_some() {
+        let payload = json!({ "issuer": ident.issuer, "provider": provider.id });
+        audit::record(
+            &mut *tx,
+            intent.link_to,
+            audit::IDENTITY_LINKED,
+            Some(user.id.to_string()),
+            payload,
+        )
+        .await?;
+    }
     if before != roles {
-        let reason = if env_admin && !upstream_admin {
+        let reason = if intent.invite_roles.is_some() {
+            "invite"
+        } else if env_admin && upstream_admin != Some(true) {
             "admin_emails"
         } else {
             "provider"
@@ -256,8 +465,9 @@ pub async fn sign_in(st: &AppState, ident: Identity) -> AppResult<UserRow> {
 pub async fn owner(st: &AppState) -> AppResult<UserRow> {
     let admin = sqlx::query_as!(
         UserRow,
-        "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-         FROM users WHERE 'admin' = ANY(roles) AND NOT disabled ORDER BY created_at, id LIMIT 1",
+        r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                  last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+           FROM users WHERE 'admin' = ANY(roles) AND NOT disabled ORDER BY created_at, id LIMIT 1"#,
     )
     .fetch_optional(&st.db)
     .await?;
@@ -268,8 +478,9 @@ pub async fn owner(st: &AppState) -> AppResult<UserRow> {
     let mut tx = st.db.begin().await?;
     let local = sqlx::query_as!(
         UserRow,
-        "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-         FROM users WHERE issuer IS NULL ORDER BY created_at, id LIMIT 1 FOR UPDATE",
+        r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                  last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+           FROM users WHERE issuer IS NULL ORDER BY created_at, id LIMIT 1 FOR UPDATE"#,
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -281,8 +492,9 @@ pub async fn owner(st: &AppState) -> AppResult<UserRow> {
             let role_list = role_names(&roles);
             let user = sqlx::query_as!(
                 UserRow,
-                "UPDATE users SET roles = $2, disabled = false, updated_at = now() WHERE id = $1
-                 RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+                r#"UPDATE users SET roles = $2, disabled = false, updated_at = now() WHERE id = $1
+                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                             last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
                 u.id,
                 &role_list,
             )
@@ -303,8 +515,9 @@ pub async fn owner(st: &AppState) -> AppResult<UserRow> {
         None => {
             let user = sqlx::query_as!(
                 UserRow,
-                "INSERT INTO users (name, roles) VALUES ($1, '{admin}')
-                 RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at",
+                r#"INSERT INTO users (name, roles) VALUES ($1, '{admin}')
+                   RETURNING id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                             last_login_at, username, password_hash IS NOT NULL AS "has_password!""#,
                 OWNER_NAME,
             )
             .fetch_one(&mut *tx)
@@ -328,8 +541,9 @@ pub async fn owner(st: &AppState) -> AppResult<UserRow> {
 pub async fn get(st: &AppState, id: Uuid) -> AppResult<Option<UserRow>> {
     Ok(sqlx::query_as!(
         UserRow,
-        "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at
-         FROM users WHERE id = $1",
+        r#"SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,
+                  last_login_at, username, password_hash IS NOT NULL AS "has_password!"
+           FROM users WHERE id = $1"#,
         id,
     )
     .fetch_optional(&st.db)
@@ -342,33 +556,71 @@ mod tests {
 
     const A: Role = Role::Admin;
     const L: Role = Role::Listener;
+    const DR: &str = "https://daly.rest";
+    const AK: &str = "https://auth.example.com";
 
     #[test]
     fn upstream_admin_comes_and_goes() {
-        // daly.rest выдал admin: роль появляется и помечается как выданная провайдером
-        assert_eq!(map_roles(&[], false, true, false), (vec![A], true));
-        assert_eq!(map_roles(&[L], false, true, false), (vec![A, L], true));
+        // daly.rest выдал admin: роль появляется и помечается как выданная им
+        assert_eq!(
+            map_roles(&[], None, DR, Some(true), false),
+            (vec![A], Some(DR.into()))
+        );
+        assert_eq!(
+            map_roles(&[L], None, DR, Some(true), false),
+            (vec![A, L], Some(DR.into()))
+        );
         // Провайдер снял admin: снимается и здесь, остальные роли остаются
-        assert_eq!(map_roles(&[A, L], true, false, false), (vec![L], false));
+        assert_eq!(
+            map_roles(&[A, L], Some(DR), DR, Some(false), false),
+            (vec![L], None)
+        );
         // Повторный вход админа ничего не меняет
-        assert_eq!(map_roles(&[A], true, true, false), (vec![A], true));
+        assert_eq!(
+            map_roles(&[A], Some(DR), DR, Some(true), false),
+            (vec![A], Some(DR.into()))
+        );
+    }
+
+    #[test]
+    fn another_provider_does_not_touch_admin() {
+        // admin от daly.rest; вход через Authentik без админской группы роль не снимает
+        assert_eq!(
+            map_roles(&[A], Some(DR), AK, Some(false), false),
+            (vec![A], Some(DR.into()))
+        );
+        // Провайдер без claim ролей (Google) — тоже
+        assert_eq!(
+            map_roles(&[A], Some(DR), AK, None, false),
+            (vec![A], Some(DR.into()))
+        );
+        assert_eq!(map_roles(&[], None, AK, None, false), (vec![], None));
     }
 
     #[test]
     fn manual_admin_stays() {
         // admin выдан вручную: провайдер его не снимает
-        assert_eq!(map_roles(&[A], false, false, false), (vec![A], false));
-        // ...даже если какое-то время сам тоже присылал admin: флаг провайдера так и не появляется
-        let (roles, idp) = map_roles(&[A], false, true, false);
-        assert_eq!((roles.clone(), idp), (vec![A], false));
-        assert_eq!(map_roles(&roles, idp, false, false), (vec![A], false));
+        assert_eq!(
+            map_roles(&[A], None, DR, Some(false), false),
+            (vec![A], None)
+        );
+        // ...даже если какое-то время сам тоже присылал admin: отметка провайдера так и не появляется
+        let (roles, by) = map_roles(&[A], None, DR, Some(true), false);
+        assert_eq!((roles.clone(), by.clone()), (vec![A], None));
+        assert_eq!(
+            map_roles(&roles, by.as_deref(), DR, Some(false), false),
+            (vec![A], None)
+        );
     }
 
     #[test]
     fn admin_emails_always_win() {
-        assert_eq!(map_roles(&[], false, false, true), (vec![A], false));
+        assert_eq!(map_roles(&[], None, DR, Some(false), true), (vec![A], None));
         // Провайдер снял admin, но почта в ADMIN_EMAILS: роль остаётся, уже не как роль провайдера
-        assert_eq!(map_roles(&[A], true, false, true), (vec![A], false));
+        assert_eq!(
+            map_roles(&[A], Some(DR), DR, Some(false), true),
+            (vec![A], None)
+        );
     }
 
     #[test]

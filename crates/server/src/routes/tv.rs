@@ -250,10 +250,7 @@ pub async fn token(
         tx.commit().await?;
         return Err(AppError::Forbidden("аккаунт заблокирован".into()));
     }
-    let method = match row.auth_method.as_deref() {
-        Some("password") => Method::Password,
-        _ => Method::Oidc,
-    };
+    let method = Method::parse(row.auth_method.as_deref().unwrap_or_default());
     let platform: Platform = row.platform.parse().map_err(anyhow::Error::from)?;
     if platform == Platform::Web {
         tx.commit().await?;

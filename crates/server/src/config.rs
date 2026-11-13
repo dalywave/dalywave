@@ -42,7 +42,10 @@ pub struct Config {
     pub secret_key: [u8; 32],
     /// Собранный интерфейс; без него API отдаёт только `/api`.
     pub static_dir: Option<PathBuf>,
-    pub oidc: Option<OidcConfig>,
+    /// Провайдеры входа OIDC в порядке кнопок на экране входа; пусто — вход через провайдеров выключен.
+    pub oidc: Vec<OidcConfig>,
+    /// Свои аккаунты: логин и пароль, мастер первого запуска, приглашения. По умолчанию включены.
+    pub local_auth: bool,
     /// Почты (в нижнем регистре), которые получают роль admin при входе, если провайдер их подтвердил.
     pub admin_emails: Vec<String>,
     /// Пароль аварийного входа. `None` — вход паролем выключен.
@@ -301,16 +304,200 @@ impl Default for DeezerConfig {
     }
 }
 
-/// Клиент daly.rest. Включается, только когда заданы issuer, client_id и секрет.
+/// Провайдер входа OpenID Connect. Провайдеров может быть несколько: daly.rest, Authentik, Keycloak,
+/// Pocket ID, Google… Настраиваются переменными `DALYWAVE_OIDC_<ID>_*`; прежние `DALYWAVE_OIDC_ISSUER`,
+/// `_CLIENT_ID`, `_CLIENT_SECRET` дают провайдера `dalyrest` со старым адресом возврата.
 #[derive(Clone)]
 pub struct OidcConfig {
+    /// Имя в адресах `/api/auth/oidc/{id}/…`: строчные латинские буквы, цифры и `-`.
+    pub id: String,
     pub issuer: String,
     pub client_id: String,
-    pub client_secret: String,
+    /// `None` — публичный клиент: только PKCE, без секрета.
+    pub client_secret: Option<String>,
     /// Подпись кнопки входа.
     pub title: String,
-    /// Роли провайдера, которые делают человека администратором DalyWave.
-    pub admin_roles: Vec<String>,
+    /// Картинка на кнопке: адрес `https://…` или путь на этом сайте.
+    pub icon: Option<String>,
+    /// Запрашиваемые scope; `openid` есть всегда.
+    pub scopes: String,
+    /// Claim со списком ролей или групп: `roles`, `groups`, `realm_access.roles`.
+    /// `None` — провайдер не выдаёт админов.
+    pub admin_claim: Option<String>,
+    /// Значения claim, которые делают человека администратором DalyWave.
+    pub admin_values: Vec<String>,
+    /// Пускать новых людей (без ролей, «ждём доступа»). Нет — только уже известных и по приглашению.
+    pub auto_register: bool,
+    /// Подтверждённой почте провайдера можно верить: по ней вход связывается с уже известным человеком.
+    pub trust_email: bool,
+    /// Как предъявлять секрет; `None` — по discovery (basic, если провайдер его умеет).
+    pub client_auth: Option<ClientAuth>,
+    /// Адрес возврата — прежний `/api/auth/oidc/callback` (так зарегистрирован клиент в daly.rest).
+    pub legacy_callback: bool,
+}
+
+/// Способ предъявить секрет клиента в token endpoint (RFC 6749 2.3.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClientAuth {
+    Basic,
+    Post,
+}
+
+pub const DEFAULT_SCOPES: &str = "openid email profile";
+/// Провайдер из прежних переменных `DALYWAVE_OIDC_ISSUER`…
+pub const LEGACY_PROVIDER_ID: &str = "dalyrest";
+
+impl OidcConfig {
+    /// Провайдер с настройками по умолчанию: claim `roles`, значение `admin`, почте не верим.
+    pub fn new(id: &str, issuer: &str, client_id: &str, client_secret: Option<&str>) -> Self {
+        Self {
+            id: id.into(),
+            issuer: issuer.trim_end_matches('/').into(),
+            client_id: client_id.into(),
+            client_secret: client_secret.map(str::to_string),
+            title: id.into(),
+            icon: None,
+            scopes: DEFAULT_SCOPES.into(),
+            admin_claim: Some("roles".into()),
+            admin_values: vec!["admin".into()],
+            auto_register: true,
+            trust_email: false,
+            client_auth: None,
+            legacy_callback: false,
+        }
+    }
+}
+
+fn flag(name: &str, value: Option<String>, default: bool) -> anyhow::Result<bool> {
+    match value.map(|v| v.to_ascii_lowercase()).as_deref() {
+        None => Ok(default),
+        Some("1" | "true" | "yes" | "on") => Ok(true),
+        Some("0" | "false" | "no" | "off") => Ok(false),
+        Some(other) => bail!("DALYWAVE_{name}: `{other}` is neither true nor false"),
+    }
+}
+
+/// Провайдеры из переменных. `keys` — имена всех переменных окружения: по ним находятся
+/// `DALYWAVE_OIDC_<ID>_ISSUER`.
+fn parse_providers(
+    keys: &[String],
+    var: &dyn Fn(&str) -> Option<String>,
+) -> anyhow::Result<Vec<OidcConfig>> {
+    let mut out: Vec<OidcConfig> = Vec::new();
+    match (
+        var("OIDC_ISSUER"),
+        var("OIDC_CLIENT_ID"),
+        var("OIDC_CLIENT_SECRET"),
+    ) {
+        (Some(issuer), Some(client_id), Some(secret)) => {
+            let mut p = OidcConfig::new(LEGACY_PROVIDER_ID, &issuer, &client_id, Some(&secret));
+            p.title = var("OIDC_TITLE").unwrap_or_else(|| "daly.rest".into());
+            p.icon = var("OIDC_ICON");
+            let roles = list(var("OIDC_ADMIN_ROLES"));
+            if !roles.is_empty() {
+                p.admin_values = roles;
+            }
+            // daly.rest подтверждает почту сам: так было и до нескольких провайдеров
+            p.trust_email = true;
+            p.legacy_callback = true;
+            out.push(p);
+        }
+        (None, None, None) => {}
+        _ => bail!(
+            "DALYWAVE_OIDC_ISSUER, DALYWAVE_OIDC_CLIENT_ID and DALYWAVE_OIDC_CLIENT_SECRET go together"
+        ),
+    }
+
+    let mut ids: Vec<String> = keys
+        .iter()
+        .filter_map(|k| k.strip_prefix("DALYWAVE_OIDC_")?.strip_suffix("_ISSUER"))
+        .filter(|id| !id.is_empty())
+        .map(str::to_string)
+        .collect();
+    ids.sort();
+    ids.dedup();
+    for env_id in ids {
+        let v = |field: &str| var(&format!("OIDC_{env_id}_{field}"));
+        let id = env_id.to_ascii_lowercase().replace('_', "-");
+        if !id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        {
+            bail!("DALYWAVE_OIDC_{env_id}_ISSUER: provider id must be latin letters, digits and _");
+        }
+        let (Some(issuer), Some(client_id)) = (v("ISSUER"), v("CLIENT_ID")) else {
+            bail!("DALYWAVE_OIDC_{env_id}_ISSUER and DALYWAVE_OIDC_{env_id}_CLIENT_ID go together");
+        };
+        let parsed = url::Url::parse(&issuer)
+            .with_context(|| format!("DALYWAVE_OIDC_{env_id}_ISSUER is not a valid URL"))?;
+        if !matches!(parsed.scheme(), "http" | "https") {
+            bail!("DALYWAVE_OIDC_{env_id}_ISSUER must be an http(s) address");
+        }
+        let mut p = OidcConfig::new(&id, &issuer, &client_id, v("CLIENT_SECRET").as_deref());
+        // Без имени — из id: POCKET_ID → «Pocket Id»
+        p.title = v("NAME").unwrap_or_else(|| {
+            env_id
+                .split('_')
+                .filter(|w| !w.is_empty())
+                .map(|w| {
+                    let lower = w.to_ascii_lowercase();
+                    let mut chars = lower.chars();
+                    chars.next().map_or_else(String::new, |c| {
+                        c.to_ascii_uppercase().to_string() + chars.as_str()
+                    })
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        });
+        p.icon = v("ICON");
+        if let Some(scopes) = v("SCOPES") {
+            let mut parts: Vec<&str> = scopes.split([' ', ',']).filter(|s| !s.is_empty()).collect();
+            if !parts.contains(&"openid") {
+                parts.insert(0, "openid");
+            }
+            p.scopes = parts.join(" ");
+        }
+        match v("ADMIN_CLAIM").as_deref() {
+            Some("none" | "off" | "-") => p.admin_claim = None,
+            Some(claim) => p.admin_claim = Some(claim.to_string()),
+            None => {}
+        }
+        let values = list(v("ADMIN_VALUE").or_else(|| v("ADMIN_VALUES")));
+        if !values.is_empty() {
+            p.admin_values = values;
+        }
+        let name = |field: &str| format!("OIDC_{env_id}_{field}");
+        p.auto_register = flag(&name("AUTO_REGISTER"), v("AUTO_REGISTER"), true)?;
+        p.trust_email = flag(&name("TRUST_EMAIL"), v("TRUST_EMAIL"), false)?;
+        p.client_auth = match v("AUTH_METHOD").as_deref() {
+            None => None,
+            Some("client_secret_basic" | "basic") => Some(ClientAuth::Basic),
+            Some("client_secret_post" | "post") => Some(ClientAuth::Post),
+            Some(other) => bail!(
+                "DALYWAVE_OIDC_{env_id}_AUTH_METHOD: `{other}` (client_secret_basic, client_secret_post)"
+            ),
+        };
+        if out.iter().any(|o| o.id == p.id) {
+            bail!(
+                "DALYWAVE_OIDC_{env_id}_*: provider `{}` is configured twice",
+                p.id
+            );
+        }
+        out.push(p);
+    }
+
+    // Порядок кнопок: DALYWAVE_OIDC_PROVIDERS=authentik,google; не названные — после, как были
+    let order = list(var("OIDC_PROVIDERS"));
+    if !order.is_empty() {
+        let pos = |id: &str| {
+            order
+                .iter()
+                .position(|o| o.eq_ignore_ascii_case(id))
+                .unwrap_or(usize::MAX)
+        };
+        out.sort_by_key(|p| pos(&p.id));
+    }
+    Ok(out)
 }
 
 fn list(value: Option<String>) -> Vec<String> {
@@ -326,11 +513,18 @@ fn list(value: Option<String>) -> Vec<String> {
 
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
-        Self::from_lookup(|name| env::var(name).ok())
+        let keys: Vec<String> = env::vars_os()
+            .filter_map(|(k, _)| k.into_string().ok())
+            .collect();
+        Self::from_lookup(&keys, |name| env::var(name).ok())
     }
 
     /// Разбор настроек из любого источника: переменные окружения или словарь в тестах.
-    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> anyhow::Result<Self> {
+    /// `keys` — имена всех переменных: по ним находятся провайдеры `DALYWAVE_OIDC_<ID>_*`.
+    pub fn from_lookup(
+        keys: &[String],
+        lookup: impl Fn(&str) -> Option<String>,
+    ) -> anyhow::Result<Self> {
         let var = |name: &str| {
             lookup(&format!("DALYWAVE_{name}"))
                 .map(|v| v.trim().to_string())
@@ -358,26 +552,8 @@ impl Config {
             }
         };
 
-        let oidc = match (
-            var("OIDC_ISSUER"),
-            var("OIDC_CLIENT_ID"),
-            var("OIDC_CLIENT_SECRET"),
-        ) {
-            (Some(issuer), Some(client_id), Some(client_secret)) => Some(OidcConfig {
-                issuer: issuer.trim_end_matches('/').to_string(),
-                client_id,
-                client_secret,
-                title: var("OIDC_TITLE").unwrap_or_else(|| "daly.rest".into()),
-                admin_roles: match list(var("OIDC_ADMIN_ROLES")) {
-                    roles if roles.is_empty() => vec!["admin".into()],
-                    roles => roles,
-                },
-            }),
-            (None, None, None) => None,
-            _ => bail!(
-                "DALYWAVE_OIDC_ISSUER, DALYWAVE_OIDC_CLIENT_ID and DALYWAVE_OIDC_CLIENT_SECRET go together"
-            ),
-        };
+        let oidc = parse_providers(keys, &var)?;
+        let local_auth = flag("LOCAL_AUTH", var("LOCAL_AUTH"), true)?;
 
         let admin_password = var("ADMIN_PASSWORD").filter(|p| {
             let ok = p.chars().count() >= MIN_ADMIN_PASSWORD_LEN;
@@ -511,6 +687,7 @@ impl Config {
             secret_key,
             static_dir: var("STATIC_DIR").map(PathBuf::from),
             oidc,
+            local_auth,
             admin_emails: list(var("ADMIN_EMAILS"))
                 .into_iter()
                 .map(|e| e.to_lowercase())
@@ -543,8 +720,14 @@ impl Config {
             .unwrap_or_else(|_| self.public_url.clone())
     }
 
-    pub fn oidc_redirect_uri(&self) -> String {
-        format!("{}/api/auth/oidc/callback", self.public_url)
+    /// Адрес возврата провайдера: `/api/auth/oidc/{id}/callback`; у прежнего daly.rest —
+    /// `/api/auth/oidc/callback`, он так зарегистрирован.
+    pub fn oidc_redirect_uri(&self, provider: &OidcConfig) -> String {
+        if provider.legacy_callback {
+            format!("{}/api/auth/oidc/callback", self.public_url)
+        } else {
+            format!("{}/api/auth/oidc/{}/callback", self.public_url, provider.id)
+        }
     }
 
     /// Абсолютный адрес страницы интерфейса по пути вида `/library?tab=albums`.
@@ -616,7 +799,8 @@ mod tests {
             .iter()
             .map(|(k, v)| (format!("DALYWAVE_{k}"), v.to_string()))
             .collect();
-        Config::from_lookup(|name| map.get(name).cloned())
+        let keys: Vec<String> = map.keys().cloned().collect();
+        Config::from_lookup(&keys, |name| map.get(name).cloned())
     }
 
     #[test]
@@ -625,12 +809,9 @@ mod tests {
         assert_eq!(c.public_url, DEFAULT_PUBLIC_URL);
         assert_eq!(c.listen, DEFAULT_LISTEN.parse().unwrap());
         assert_eq!(c.database_url, DEFAULT_DATABASE_URL);
-        assert!(c.oidc.is_none() && c.admin_password.is_none() && c.static_dir.is_none());
+        assert!(c.oidc.is_empty() && c.admin_password.is_none() && c.static_dir.is_none());
+        assert!(c.local_auth, "свои аккаунты по умолчанию включены");
         assert!(!c.cookie_secure());
-        assert_eq!(
-            c.oidc_redirect_uri(),
-            "http://localhost:3400/api/auth/oidc/callback"
-        );
     }
 
     #[test]
@@ -674,13 +855,108 @@ mod tests {
             ("ADMIN_EMAILS", "Owner@Example.com, other@example.com"),
         ])
         .unwrap();
-        let oidc = c.oidc.unwrap();
+        // Прежние переменные — провайдер dalyrest со старым адресом возврата
+        let [oidc] = &c.oidc[..] else {
+            panic!("один провайдер")
+        };
+        assert_eq!(oidc.id, "dalyrest");
         assert_eq!(oidc.issuer, "https://daly.rest");
         assert_eq!(oidc.title, "daly.rest");
-        assert_eq!(oidc.admin_roles, vec!["admin"]);
+        assert_eq!(oidc.admin_claim.as_deref(), Some("roles"));
+        assert_eq!(oidc.admin_values, vec!["admin"]);
+        assert!(oidc.trust_email && oidc.auto_register && oidc.legacy_callback);
+        assert_eq!(
+            c.oidc_redirect_uri(oidc),
+            "http://localhost:3400/api/auth/oidc/callback"
+        );
         assert_eq!(
             c.admin_emails,
             vec!["owner@example.com", "other@example.com"]
+        );
+    }
+
+    #[test]
+    fn several_providers() {
+        let c = parse(&[
+            ("OIDC_ISSUER", "https://daly.rest"),
+            ("OIDC_CLIENT_ID", "dw"),
+            ("OIDC_CLIENT_SECRET", "s"),
+            ("OIDC_POCKET_ID_ISSUER", "https://id.example.com/"),
+            ("OIDC_POCKET_ID_CLIENT_ID", "pocket"),
+            (
+                "OIDC_AUTHENTIK_ISSUER",
+                "https://auth.example.com/application/o/dalywave/",
+            ),
+            ("OIDC_AUTHENTIK_CLIENT_ID", "ak"),
+            ("OIDC_AUTHENTIK_CLIENT_SECRET", "ak-secret"),
+            ("OIDC_AUTHENTIK_NAME", "Authentik"),
+            ("OIDC_AUTHENTIK_ICON", "https://auth.example.com/icon.svg"),
+            ("OIDC_AUTHENTIK_ADMIN_CLAIM", "groups"),
+            (
+                "OIDC_AUTHENTIK_ADMIN_VALUE",
+                "authentik Admins, wave-admins",
+            ),
+            ("OIDC_AUTHENTIK_AUTO_REGISTER", "false"),
+            ("OIDC_AUTHENTIK_TRUST_EMAIL", "yes"),
+            ("OIDC_AUTHENTIK_AUTH_METHOD", "client_secret_post"),
+            ("OIDC_AUTHENTIK_SCOPES", "email profile groups"),
+            ("LOCAL_AUTH", "false"),
+        ])
+        .unwrap();
+        assert!(!c.local_auth);
+        let ids: Vec<&str> = c.oidc.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(ids, ["dalyrest", "authentik", "pocket-id"]);
+        let ak = &c.oidc[1];
+        assert_eq!(ak.issuer, "https://auth.example.com/application/o/dalywave");
+        assert_eq!(ak.title, "Authentik");
+        assert_eq!(ak.admin_claim.as_deref(), Some("groups"));
+        assert_eq!(ak.admin_values, vec!["authentik Admins", "wave-admins"]);
+        assert!(!ak.auto_register && ak.trust_email && !ak.legacy_callback);
+        assert_eq!(ak.client_auth, Some(ClientAuth::Post));
+        assert_eq!(ak.scopes, "openid email profile groups");
+        assert_eq!(
+            c.oidc_redirect_uri(ak),
+            "http://localhost:3400/api/auth/oidc/authentik/callback"
+        );
+        let pocket = &c.oidc[2];
+        assert!(pocket.client_secret.is_none(), "публичный клиент");
+        assert!(
+            !pocket.trust_email,
+            "почте нового провайдера по умолчанию не верим"
+        );
+        assert_eq!(pocket.title, "Pocket Id");
+
+        // Порядок кнопок задаётся явно
+        let c = parse(&[
+            ("OIDC_A_ISSUER", "https://a.example.com"),
+            ("OIDC_A_CLIENT_ID", "a"),
+            ("OIDC_B_ISSUER", "https://b.example.com"),
+            ("OIDC_B_CLIENT_ID", "b"),
+            ("OIDC_PROVIDERS", "b,a"),
+        ])
+        .unwrap();
+        assert_eq!(c.oidc[0].id, "b");
+
+        assert!(parse(&[("OIDC_X_ISSUER", "https://x.example.com")]).is_err());
+        assert!(parse(&[("OIDC_X_ISSUER", "ftp://x"), ("OIDC_X_CLIENT_ID", "x")]).is_err());
+        assert!(
+            parse(&[
+                ("OIDC_X_ISSUER", "https://x.example.com"),
+                ("OIDC_X_CLIENT_ID", "x"),
+                ("OIDC_X_AUTO_REGISTER", "maybe"),
+            ])
+            .is_err()
+        );
+        assert!(
+            parse(&[
+                ("OIDC_ISSUER", "https://daly.rest"),
+                ("OIDC_CLIENT_ID", "dw"),
+                ("OIDC_CLIENT_SECRET", "s"),
+                ("OIDC_DALYREST_ISSUER", "https://daly.rest"),
+                ("OIDC_DALYREST_CLIENT_ID", "dw"),
+            ])
+            .is_err(),
+            "один id дважды"
         );
     }
 

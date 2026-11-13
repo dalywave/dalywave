@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE app_login_requests SET used_at = now()\n         WHERE code_hash = $1 AND used_at IS NULL\n         RETURNING id, user_id, code_challenge, code_expires_at, device_name, platform",
+  "query": "UPDATE app_login_requests SET used_at = now()\n         WHERE code_hash = $1 AND used_at IS NULL\n         RETURNING id, user_id, code_challenge, code_expires_at, device_name, platform, auth_method",
   "describe": {
     "columns": [
       {
@@ -68,6 +68,17 @@
             "name": "platform"
           }
         }
+      },
+      {
+        "ordinal": 6,
+        "name": "auth_method",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "app_login_requests",
+            "name": "auth_method"
+          }
+        }
       }
     ],
     "parameters": {
@@ -81,8 +92,9 @@
       false,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "1a9e02726459c9100e9454eea1aead7be51095514efa866fa3371733511cf65c"
+  "hash": "65764781a77d10f833329a857eb5e5638af74b423678d44b51623e39f5868111"
 }

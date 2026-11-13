@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at, last_login_at\n         FROM users WHERE id = $1 FOR UPDATE",
+  "query": "SELECT id, issuer, email, email_verified, name, avatar_url, roles, idp_admin, disabled, created_at,\n                      last_login_at, username, password_hash IS NOT NULL AS \"has_password!\"\n               FROM users WHERE issuer = $1 AND subject = $2 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -123,11 +123,29 @@
             "name": "last_login_at"
           }
         }
+      },
+      {
+        "ordinal": 11,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "has_password!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -141,8 +159,10 @@
       false,
       false,
       false,
-      true
+      true,
+      true,
+      null
     ]
   },
-  "hash": "0e2f9176afb39032c9d2dc326a26157cc464bee06a1163bd72bbe1da6a71e000"
+  "hash": "615803c6fa6c171aa8fa48135b7f3c003c5f13091bdb0b9cde39d429f63690cd"
 }

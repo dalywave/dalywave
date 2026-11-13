@@ -391,6 +391,21 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       passwordLogin: password => unwrap(api.POST('/api/auth/password', { body: { password } })),
       logout: opts.auth?.logout ?? (() => done(api.POST('/api/auth/logout'))),
       loginUrl: next => `/api/auth/oidc/start?next=${encodeURIComponent(next)}`,
+      providerUrl: (id, o = {}) => `/api/auth/oidc/${encodeURIComponent(id)}/start${query({
+        next: o.next && o.next !== '/' ? o.next : undefined,
+        app: o.app ? 1 : undefined,
+        link: o.link ? 1 : undefined,
+        invite: o.invite,
+      })}`,
+      localLogin: (username, password, app = false) => unwrap(api.POST('/api/auth/local/login', { body: { username, password, app } })),
+      setup: account => unwrap(api.POST('/api/auth/setup', { body: account })),
+      inviteInfo: token => unwrap(api.GET('/api/auth/invites/{token}', { params: { path: { token } } })),
+      acceptInvite: (token, account) => unwrap(api.POST('/api/auth/invites/{token}', { params: { path: { token } }, body: account })),
+      resetInfo: token => unwrap(api.GET('/api/auth/reset/{token}', { params: { path: { token } } })),
+      resetPassword: (token, body) => unwrap(api.POST('/api/auth/reset/{token}', { params: { path: { token } }, body })),
+      account: () => unwrap(api.GET('/api/auth/account')),
+      changePassword: body => done(api.POST('/api/auth/account/password', { body })),
+      unlinkIdentity: id => done(api.DELETE('/api/auth/account/identities/{id}', { params: { path: { id } } })),
       onSignedOut(cb) {
         signedOut.add(cb)
         return () => signedOut.delete(cb)
@@ -724,6 +739,12 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       // Все люди одной страницей, ждущие доступа — первыми
       users: () => unwrap(api.GET('/api/admin/users')),
       updateUser: (id, patch) => done(api.PATCH('/api/admin/users/{id}', { params: { path: { id } }, body: patch })),
+      authOverview: () => unwrap(api.GET('/api/admin/auth')),
+      createUser: user => unwrap(api.POST('/api/admin/users', { body: user })),
+      resetLink: id => unwrap(api.POST('/api/admin/users/{id}/reset', { params: { path: { id } } })),
+      invites: () => unwrap(api.GET('/api/admin/invites')),
+      createInvite: invite => unwrap(api.POST('/api/admin/invites', { body: invite })),
+      revokeInvite: id => done(api.DELETE('/api/admin/invites/{id}', { params: { path: { id } } })),
       sessions: userId => unwrap(api.GET('/api/admin/sessions', { params: { query: { userId } } })),
       revokeSession: id => done(api.DELETE('/api/admin/sessions/{id}', { params: { path: { id } } })),
       audit: (cursor, limit = 50, filter = {}) => unwrap(api.GET('/api/admin/audit', { params: { query: { cursor: cursor ?? undefined, limit, kind: filter.kind || undefined, actor: filter.actor || undefined } } })),

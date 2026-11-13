@@ -33,7 +33,8 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::new(db, config)?;
     tracing::info!(
         public_url = %state.config.public_url,
-        oidc = state.oidc.is_some(),
+        oidc = ?state.oidc.iter().map(|p| p.id()).collect::<Vec<_>>(),
+        local_auth = state.config.local_auth,
         apns = state.config.push.apns.is_some(),
         web_push = state.config.push.vapid.is_some(),
         password = state.config.admin_password.is_some(),
@@ -41,8 +42,10 @@ async fn main() -> anyhow::Result<()> {
         storage = ?state.storage,
         "configured"
     );
-    if state.oidc.is_none() && state.config.admin_password.is_none() {
-        tracing::warn!("no way to sign in: set DALYWAVE_OIDC_* or DALYWAVE_ADMIN_PASSWORD");
+    if state.oidc.is_empty() && !state.config.local_auth && state.config.admin_password.is_none() {
+        tracing::warn!(
+            "no way to sign in: set DALYWAVE_OIDC_*, DALYWAVE_LOCAL_AUTH=true or DALYWAVE_ADMIN_PASSWORD"
+        );
     }
     if state.storage.is_memory() {
         tracing::warn!("S3 is not configured: files are kept in memory and lost on restart");

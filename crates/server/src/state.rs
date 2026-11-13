@@ -28,8 +28,8 @@ pub struct AppState {
     /// Шифрует cookie `dw_oidc`. Выведен из SECRET_KEY, поэтому вход переживает перезапуск
     pub cookie_key: Key,
     pub limiter: Arc<RateLimiter>,
-    /// Клиент daly.rest; `None`, если вход через провайдера не настроен
-    pub oidc: Option<Arc<Oidc>>,
+    /// Провайдеры входа OIDC в порядке кнопок; пусто, если вход через провайдеров не настроен
+    pub oidc: Arc<Vec<Arc<Oidc>>>,
     pub started: Instant,
     pub deezer: Arc<Deezer>,
     pub storage: Arc<Storage>,
@@ -64,10 +64,13 @@ impl AppState {
             // Ответы token и userinfo приходят напрямую; редирект там означает ошибку настройки
             .redirect(reqwest::redirect::Policy::none())
             .build()?;
-        let oidc = config
-            .oidc
-            .clone()
-            .map(|c| Arc::new(Oidc::new(c, http.clone())));
+        let oidc = Arc::new(
+            config
+                .oidc
+                .iter()
+                .map(|c| Arc::new(Oidc::new(c.clone(), http.clone())))
+                .collect(),
+        );
         let deezer = Deezer::new(&config.deezer.url, config.deezer.rate_api)?;
         let ml = Ml::new(&config.ml.url)?;
         let lrclib = Lrclib::new(&config.lrclib.url, LRCLIB_GAP)?;
@@ -88,6 +91,17 @@ impl AppState {
             oidc,
             started: Instant::now(),
         })
+    }
+
+    /// Провайдер входа по id из адреса.
+    pub fn provider(&self, id: &str) -> Option<&Arc<Oidc>> {
+        self.oidc.iter().find(|p| p.id() == id)
+    }
+
+    /// Провайдер по issuer: чей вход у человека в списке его входов.
+    pub fn provider_by_issuer(&self, issuer: &str) -> Option<&Arc<Oidc>> {
+        let issuer = issuer.trim_end_matches('/');
+        self.oidc.iter().find(|p| p.config.issuer == issuer)
     }
 }
 

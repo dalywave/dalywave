@@ -79,6 +79,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/clips/reports": {
         parameters: {
             query?: never;
@@ -138,6 +154,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_invites"];
+        put?: never;
+        post: operations["create_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/invites/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_invite"];
         options?: never;
         head?: never;
         patch?: never;
@@ -456,7 +504,7 @@ export interface paths {
         };
         get: operations["list_users"];
         put?: never;
-        post?: never;
+        post: operations["create_user"];
         delete?: never;
         options?: never;
         head?: never;
@@ -477,6 +525,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_user"];
+        trace?: never;
+    };
+    "/api/admin/users/{id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reset_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/albums/{id}": {
@@ -543,6 +607,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["account"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/account/identities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unlink_identity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/account/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["change_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/app/pair": {
         parameters: {
             query?: never;
@@ -585,6 +697,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["app_token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/invites/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["invite_info"];
+        put?: never;
+        post: operations["accept_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/local/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["local_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -655,6 +799,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/oidc/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["provider_callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/oidc/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["provider_start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/password": {
         parameters: {
             query?: never;
@@ -681,6 +857,38 @@ export interface paths {
         get: operations["providers"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/reset/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reset_info"];
+        put?: never;
+        post: operations["reset_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3443,6 +3651,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Свой аккаунт в настройках: логин, пароль, привязанные входы. */
+        Account: {
+            hasPassword: boolean;
+            identities: components["schemas"]["LinkedIdentity"][];
+            /** @description Провайдеры, которые ещё можно привязать. */
+            linkable: components["schemas"]["OidcProvider"][];
+            /** @description Можно ли задать логин и пароль (свои аккаунты включены на сервере). */
+            local: boolean;
+            username: string | null;
+        };
         /**
          * @description Данные задачи `acquire`: что скачать. Тот же набор полей сервер отдаёт домашнему загрузчику
          *     (`POST /api/fetcher/jobs/claim`) вместе с подписанной ссылкой для файла.
@@ -3709,16 +3927,22 @@ export interface components {
             disabled: boolean;
             email: string | null;
             emailVerified: boolean;
+            /** @description Может входить логином и паролем. */
+            hasPassword: boolean;
             /** Format: uuid */
             id: string;
-            /** @description Роль admin выдана daly.rest и снимется, когда её снимут там. */
+            /** @description Роль admin выдана провайдером и снимется, когда её снимут там. */
             idpAdmin: boolean;
-            /** @description Провайдер входа; `null` у локального владельца, созданного аварийным входом. */
+            /** @description Провайдер, через который человек вошёл впервые; `null` у своих аккаунтов и владельца из аварийного входа. */
             issuer: string | null;
             /** Format: date-time */
             lastLoginAt: string | null;
             name: string;
+            /** @description Через каких провайдеров входит: названия из настроек (или адрес отключённого провайдера). */
+            providers: string[];
             roles: components["schemas"]["Role"][];
+            /** @description Логин своего аккаунта. */
+            username: string | null;
         };
         /** @description Страница альбома. */
         AlbumDetail: {
@@ -3983,17 +4207,31 @@ export interface components {
             items: components["schemas"]["AuditEvent"][];
             nextCursor: string | null;
         };
+        /** @description Способы входа на сервере — только чтение: настраиваются переменными окружения. */
+        AuthOverview: {
+            /** @description Аварийный пароль из `.env`. */
+            emergencyPassword: boolean;
+            /** @description Свои аккаунты (`DALYWAVE_LOCAL_AUTH`). */
+            local: boolean;
+            providers: components["schemas"]["ProviderInfo"][];
+        };
         /** @description Какие способы входа включены на сервере. */
         AuthProviders: {
+            /** @description Свои аккаунты: форма логина и пароля. */
+            local: boolean;
             oidc: components["schemas"]["OidcProvider"] | null;
-            /** @description Включён ли аварийный вход паролем. */
+            /** @description Включён ли аварийный вход паролем из `.env`. */
             password: boolean;
+            /** @description Провайдеры OIDC в порядке кнопок. */
+            providers: components["schemas"]["OidcProvider"][];
+            /** @description Первый запуск: людей ещё нет, экран входа предлагает создать администратора. */
+            setup: boolean;
         };
         /**
          * @description Как открыта текущая сессия.
          * @enum {string}
          */
-        AuthVia: "oidc" | "password" | "device";
+        AuthVia: "oidc" | "password" | "device" | "local";
         /** @description «Не рекомендовать»: трек или артист. */
         BlockedItem: {
             artist: components["schemas"]["ArtistSummary"] | null;
@@ -4523,6 +4761,15 @@ export interface components {
          * @enum {string}
          */
         ContextType: "album" | "playlist" | "artist" | "wave" | "radio" | "mix" | "search" | "library" | "queue" | "remote";
+        CreatedInvite: {
+            invite: components["schemas"]["Invite"];
+            /** @description Ссылка-приглашение; показывается один раз. */
+            url: string;
+        };
+        CreatedUser: {
+            link: components["schemas"]["OneTimeLink"] | null;
+            user: components["schemas"]["AdminUser"];
+        };
         /** @description Человек и что он делал. Один человек — одна строка, роли по порядку важности. */
         CreditPerson: {
             /**
@@ -5513,12 +5760,36 @@ export interface components {
              */
             size: number;
         };
+        Invite: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            id: string;
+            note: string | null;
+            roles: components["schemas"]["Role"][];
+            status: components["schemas"]["InviteStatus"];
+            /** @description Кто принял приглашение. */
+            usedBy: string | null;
+        };
+        /** @description Приглашение по ссылке: что оно даст. */
+        InviteInfo: {
+            /** Format: date-time */
+            expiresAt: string;
+            roles: components["schemas"]["Role"][];
+        };
         /** @description Ссылка «Добавить в друзья»: кто откроет её, станет другом сразу. */
         InviteLink: {
             code: string;
             /** @description Полный адрес для QR-кода и «Поделиться». */
             url: string;
         };
+        InviteList: {
+            items: components["schemas"]["Invite"][];
+        };
+        /** @enum {string} */
+        InviteStatus: "active" | "used" | "expired" | "revoked";
         /** @description Сессия глазами хозяина. */
         Jam: {
             code: string;
@@ -5913,6 +6184,21 @@ export interface components {
          * @enum {string}
          */
         LinkSource: "dalywave" | "deezer" | "spotify" | "apple" | "youtube" | "soundcloud" | "bandcamp";
+        /** @description Вход через провайдера, привязанный к аккаунту. */
+        LinkedIdentity: {
+            /** Format: date-time */
+            createdAt: string;
+            email: string | null;
+            icon: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            lastLoginAt: string | null;
+            /** @description id провайдера из настроек; `null` — провайдер больше не подключён. */
+            provider: string | null;
+            /** @description Название провайдера или его адрес, если он больше не подключён. */
+            title: string;
+        };
         /** @enum {string} */
         ListFormat: "text" | "csv" | "m3u";
         /** @description Импорт списка. Формат без указания определяется по тексту. */
@@ -5946,6 +6232,13 @@ export interface components {
             topGenres: components["schemas"]["TopGenre"][];
             /** Format: int64 */
             tracks: number;
+        };
+        /** @description Вход своим аккаунтом. */
+        LocalLogin: {
+            /** @description Вход приложения, начатый в этом браузере: вместо сессии сайта — код для приложения. */
+            app?: boolean;
+            password: string;
+            username: string;
         };
         /** @description Трек, в тексте которого нашлась строчка. */
         LyricsHit: {
@@ -6139,6 +6432,16 @@ export interface components {
          * @enum {string}
          */
         NetworkKind: "wifi" | "cellular";
+        /** @description Новый аккаунт: мастер первого запуска, приглашение. */
+        NewAccount: {
+            app?: boolean;
+            /** @description Как показывать человека; пусто — логин. */
+            name?: string | null;
+            /** @description Не короче 10 символов. */
+            password: string;
+            /** @description 3–32 символа: буквы, цифры, `.`, `_`, `-`. Регистр не важен. */
+            username: string;
+        };
         /** @description Закрепить на этом устройстве. `refId` — у всех, кроме `liked`. */
         NewDeviceDownload: {
             kind: components["schemas"]["DownloadKind"];
@@ -6153,6 +6456,17 @@ export interface components {
             /** Format: uuid */
             userId: string;
         };
+        /** @description Новое приглашение. */
+        NewInvite: {
+            /**
+             * Format: int32
+             * @description Сколько дней действует: 1–30, по умолчанию 7.
+             */
+            days?: number | null;
+            /** @description Подпись для себя: кому отправили. */
+            note?: string | null;
+            roles?: components["schemas"]["Role"][];
+        };
         NewPlaylist: {
             description?: string | null;
             title: string;
@@ -6163,6 +6477,14 @@ export interface components {
         NewPlaylistFolder: {
             playlistIds?: string[];
             title: string;
+        };
+        /** @description Новый свой аккаунт от админа. */
+        NewUser: {
+            name?: string | null;
+            /** @description Без пароля ответ содержит одноразовую ссылку, по которой человек задаст его сам. */
+            password?: string | null;
+            roles?: components["schemas"]["Role"][];
+            username: string;
         };
         /** @description Новое сочетание — в конец ряда. */
         NewWavePreset: {
@@ -6263,8 +6585,18 @@ export interface components {
             unread: number;
         };
         OidcProvider: {
+            /** @description Картинка на кнопке: адрес `https://…` или путь на сайте; `null` — без картинки. */
+            icon: string | null;
+            /** @description Имя в адресах: `/api/auth/oidc/{id}/start`. */
+            id: string;
             /** @description Подпись кнопки входа, например `daly.rest`. */
             title: string;
+        };
+        /** @description Одноразовая ссылка: показывается один раз. */
+        OneTimeLink: {
+            /** Format: date-time */
+            expiresAt: string;
+            url: string;
         };
         /** @description `GET /api/overlay`: ссылки ещё нет — `link: null`. */
         OverlayInfo: {
@@ -6349,6 +6681,14 @@ export interface components {
             energetic: boolean;
             /** @description Волна не повторяет артистов, которые уже звучали на этой вечеринке. */
             noArtistRepeat: boolean;
+        };
+        /** @description Смена пароля своего аккаунта. */
+        PasswordChange: {
+            /** @description Нынешний пароль; не нужен, если пароля ещё нет. */
+            current?: string | null;
+            password: string;
+            /** @description Логин, если его ещё нет. */
+            username?: string | null;
         };
         PasswordLogin: {
             password: string;
@@ -6617,6 +6957,25 @@ export interface components {
          * @enum {string}
          */
         PrivateSessionMode: "off" | "hours6" | "until_off";
+        /** @description Подключённый провайдер OIDC. */
+        ProviderInfo: {
+            /** @description Claim ролей или групп; `null` — провайдер не выдаёт админов. */
+            adminClaim: string | null;
+            adminValues: string[];
+            autoRegister: boolean;
+            /** @description Адрес возврата, который надо зарегистрировать у провайдера. */
+            callbackUrl: string;
+            icon: string | null;
+            id: string;
+            issuer: string;
+            title: string;
+            trustEmail: boolean;
+            /**
+             * Format: int64
+             * @description Сколько людей входит через него.
+             */
+            users: number;
+        };
         /**
          * @description Канал доставки push.
          * @enum {string}
@@ -7054,6 +7413,19 @@ export interface components {
          */
         ReplaceAudio: {
             url?: string | null;
+        };
+        /** @description Одноразовая ссылка сброса пароля: для кого она. */
+        ResetInfo: {
+            /** Format: date-time */
+            expiresAt: string;
+            name: string;
+            /** @description `null` — логина ещё нет, его надо придумать. */
+            username: string | null;
+        };
+        ResetPassword: {
+            password: string;
+            /** @description Только если логина ещё нет. */
+            username?: string | null;
         };
         /**
          * @description Что сделать со спорной (или неудачной) записью.
@@ -7742,6 +8114,12 @@ export interface components {
         });
         /** @enum {string} */
         ShelfKind: "continue" | "new_releases" | "recent_likes" | "top_artists" | "daily_mixes" | "discover_weekly" | "forgotten_favorites" | "release_radar";
+        /** @description Итог входа без провайдера: сессия сайта (`me`) или адрес возврата в приложение с кодом. */
+        SignInResult: {
+            me: components["schemas"]["Me"] | null;
+            /** @description Вход приложения: браузер переходит сюда, приложение меняет код на токен. */
+            redirect: string | null;
+        };
         /** @description Поиск словами по звучанию: «грустный инди под дождь». */
         SoundSearch: {
             /**
@@ -9227,6 +9605,35 @@ export interface operations {
             };
         };
     };
+    auth_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Способы входа (только чтение: настраиваются переменными окружения) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthOverview"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     clip_reports: {
         parameters: {
             query?: never;
@@ -9359,6 +9766,98 @@ export interface operations {
             };
             /** @description Нет права admin */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_invites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Приглашения: действующие и последние использованные */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteList"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    create_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewInvite"];
+            };
+        };
+        responses: {
+            /** @description Ссылка-приглашение; показывается один раз */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedInvite"];
+                };
+            };
+            /** @description Нет права admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    revoke_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id приглашения */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Приглашение отозвано */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет действующего приглашения */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10167,6 +10666,57 @@ export interface operations {
             };
         };
     };
+    create_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewUser"];
+            };
+        };
+        responses: {
+            /** @description Аккаунт создан; без пароля — со ссылкой, чтобы задать его */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedUser"];
+                };
+            };
+            /** @description Свои аккаунты выключены (`password_disabled`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин занят (`username_taken`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин или пароль не подходят */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     update_user: {
         parameters: {
             query?: never;
@@ -10203,6 +10753,47 @@ export interface operations {
             };
             /** @description Нельзя снять admin с себя (`cannot_demote_self`) или заблокировать себя (`cannot_disable_self`) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reset_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id пользователя */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Одноразовая ссылка: задать пароль (и логин, если его нет) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OneTimeLink"];
+                };
+            };
+            /** @description Свои аккаунты выключены (`password_disabled`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого пользователя */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10349,6 +10940,141 @@ export interface operations {
             };
         };
     };
+    account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Логин, пароль и привязанные входы */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            /** @description Нет сессии */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unlink_identity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id входа из `/api/auth/account` */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Вход отвязан */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет такого входа у этого аккаунта */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Это последний способ войти (`last_sign_in_method`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    change_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Пароль задан или сменён */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нынешний пароль не подошёл (`wrong_password`) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Свои аккаунты выключены (`password_disabled`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин занят (`username_taken`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин или пароль не подходят */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 5 попыток в минуту */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     app_pair: {
         parameters: {
             query?: never;
@@ -10430,7 +11156,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description На daly.rest; после входа — на redirect_uri с `code` и `state` или с `error` и `state` */
+            /** @description На экран входа сайта (`/login?app=1`, запрос — в cookie `dw_app`) или сразу к провайдеру, если способ входа один; после входа — на redirect_uri с `code` и `state` или с `error` и `state` */
             302: {
                 headers: {
                     [name: string]: unknown;
@@ -10481,6 +11207,161 @@ export interface operations {
             };
             /** @description Аккаунт заблокирован */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    invite_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Токен из ссылки-приглашения */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Приглашение действует */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteInfo"];
+                };
+            };
+            /** @description Нет, использовано или истекло (`invite_invalid`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    accept_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Токен из ссылки-приглашения */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewAccount"];
+            };
+        };
+        responses: {
+            /** @description Аккаунт создан с ролями приглашения, вход выполнен */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInResult"];
+                };
+            };
+            /** @description Свои аккаунты выключены (`password_disabled`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Приглашение не действует (`invite_invalid`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин занят (`username_taken`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин или пароль не подходят */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    local_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocalLogin"];
+            };
+        };
+        responses: {
+            /** @description Сессия сайта (`me`, cookie `dw_session`) или адрес возврата в приложение */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInResult"];
+                };
+            };
+            /** @description Логин или пароль не подошли (`wrong_password`) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Свои аккаунты выключены (`password_disabled`) или аккаунт заблокирован */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Вход приложения устарел (`app_expired`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 5 попыток в минуту для логина с одного адреса */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10553,7 +11434,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Успех: cookie `dw_session` и переход на `next` (или код приложению). Ошибка: `/login?error=cancelled|expired|state|disabled|provider` */
+            /** @description Возврат от daly.rest из прежних переменных (адрес зарегистрирован там). Успех: cookie `dw_session` и переход на `next` (или код приложению). Ошибка: `/login?error=cancelled|expired|state|disabled|provider|not_registered` */
             302: {
                 headers: {
                     [name: string]: unknown;
@@ -10567,6 +11448,12 @@ export interface operations {
             query?: {
                 /** @description Куда вернуть после входа: путь на этом же сайте, например `/library`. */
                 next?: string;
+                /** @description `1` — вход приложения, начатый через `/api/auth/app/start` в этом браузере. */
+                app?: string;
+                /** @description `1` — привязать вход провайдера к своему аккаунту (нужна сессия сайта). */
+                link?: string;
+                /** @description Токен приглашения: новый человек получит его роли. */
+                invite?: string;
             };
             header?: never;
             path?: never;
@@ -10574,7 +11461,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description На страницу входа daly.rest; ставит cookie `dw_oidc` на 10 минут */
+            /** @description Вход через первого провайдера (прежний адрес): как `/api/auth/oidc/{provider}/start` */
             302: {
                 headers: {
                     [name: string]: unknown;
@@ -10590,7 +11477,92 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Вход через daly.rest не настроен */
+            /** @description Провайдеры не настроены */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    provider_callback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                /** @description Ошибка провайдера, например `access_denied`, если вход отменили */
+                error?: string;
+                /** @description RFC 9207: кто выдал ответ */
+                iss?: string;
+            };
+            header?: never;
+            path: {
+                /** @description id провайдера */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Успех: cookie `dw_session` и переход на `next`, код приложению или `/settings?linked=…`. Ошибка: `/login?error=cancelled|expired|state|disabled|provider|not_registered` (привязка — `/settings?link_error=…`) */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    provider_start: {
+        parameters: {
+            query?: {
+                /** @description Куда вернуть после входа: путь на этом же сайте, например `/library`. */
+                next?: string;
+                /** @description `1` — вход приложения, начатый через `/api/auth/app/start` в этом браузере. */
+                app?: string;
+                /** @description `1` — привязать вход провайдера к своему аккаунту (нужна сессия сайта). */
+                link?: string;
+                /** @description Токен приглашения: новый человек получит его роли. */
+                invite?: string;
+            };
+            header?: never;
+            path: {
+                /** @description id провайдера из `/api/auth/providers` */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description На страницу входа провайдера; ставит cookie `dw_oidc` на 10 минут */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `next` — не путь на этом сайте */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `link=1` без входа на сайте */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Нет такого провайдера */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -10668,6 +11640,152 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthProviders"];
+                };
+            };
+        };
+    };
+    reset_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Токен из ссылки сброса */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Для кого ссылка */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetInfo"];
+                };
+            };
+            /** @description Нет, использована или истекла (`reset_invalid`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reset_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Токен из ссылки сброса */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPassword"];
+            };
+        };
+        responses: {
+            /** @description Пароль задан, прежние сессии закрыты, вход выполнен */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInResult"];
+                };
+            };
+            /** @description Свои аккаунты выключены или аккаунт заблокирован */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Ссылка не действует (`reset_invalid`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин занят (`username_taken`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин или пароль не подходят */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    setup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewAccount"];
+            };
+        };
+        responses: {
+            /** @description Первый запуск: администратор создан, вход выполнен */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInResult"];
+                };
+            };
+            /** @description Свои аккаунты выключены (`password_disabled`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Люди уже есть (`already_set_up`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Логин (`bad_username`) или пароль (`weak_password`) не подходят */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

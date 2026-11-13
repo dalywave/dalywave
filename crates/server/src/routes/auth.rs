@@ -1,12 +1,17 @@
-//! Вход: daly.rest на сайте, аварийный пароль и вход приложений через системный браузер.
+//! Вход: провайдеры OIDC и свои аккаунты на сайте, аварийный пароль и вход приложений через
+//! системный браузер.
 //!
-//! Сайт: `/api/auth/oidc/start` → daly.rest → `/api/auth/oidc/callback` → cookie `dw_session` → `next`.
-//! Приложение: `/api/auth/app/start` → тот же круг через daly.rest → одноразовый код на redirect_uri
-//! приложения → `POST /api/auth/app/token` → токен устройства `dwd_…`. Код от daly.rest меняется
-//! на токены только здесь, на сервере: секрет клиента есть только у него.
+//! Сайт: `/api/auth/oidc/{provider}/start` → провайдер → `/api/auth/oidc/{provider}/callback` → cookie
+//! `dw_session` → `next`. У daly.rest из прежних переменных адрес возврата старый: `/api/auth/oidc/callback`.
+//! Свои аккаунты — [`crate::routes::accounts`].
+//!
+//! Приложение: `/api/auth/app/start` → экран входа сайта в системном браузере (`/login?app=1`; запрос
+//! приложения — в cookie `dw_app` этого браузера) → любой способ входа → одноразовый код на redirect_uri
+//! приложения → `POST /api/auth/app/token` → токен устройства `dwd_…`. Если способ входа один — провайдер,
+//! экран входа пропускается, как раньше. Код провайдера меняется на токены только здесь, на сервере.
 //! Часы: своего входа нет — вошедший iPhone просит `POST /api/auth/app/pair` и передаёт им токен.
 
-use std::{net::IpAddr, time::Duration};
+use std::{net::IpAddr, sync::Arc, time::Duration};
 
 use axum::{
     Router,
@@ -30,21 +35,23 @@ use utoipa::IntoParams;
 use uuid::Uuid;
 
 use crate::{
-    audit,
+    accounts, audit,
     auth::{self, Principal, permissions},
     crypto::{pkce_challenge, random_token, secrets_match, sha256, valid_pkce},
     devices,
     error::{AppError, AppResult, bad},
-    extract::{Json, Query},
-    oidc::OidcError,
+    extract::{Json, Path, Query},
+    oidc::{Oidc, OidcError},
     session::{self, Method, NewSession, SESSION_COOKIE},
     state::{AppState, ClientIp},
-    users::{self, UserRow},
+    users::{self, Intent, SignInError, UserRow},
 };
 
 pub const OIDC_COOKIE: &str = "dw_oidc";
+/// Вход приложения, начатый в этом браузере: id запроса `app_login_requests`
+pub const APP_COOKIE: &str = "dw_app";
 pub const OIDC_COOKIE_PATH: &str = "/api/auth";
-/// Сколько ждём возврата от daly.rest
+/// Сколько ждём возврата от провайдера
 pub const OIDC_TTL_S: i64 = 600;
 
 pub fn routes() -> Router<AppState> {
@@ -52,6 +59,8 @@ pub fn routes() -> Router<AppState> {
         .route("/providers", get(providers))
         .route("/oidc/start", get(oidc_start))
         .route("/oidc/callback", get(oidc_callback))
+        .route("/oidc/{provider}/start", get(provider_start))
+        .route("/oidc/{provider}/callback", get(provider_callback))
         .route("/password", post(password_login))
         .route("/logout", post(logout))
         .route("/me", get(me))
@@ -72,9 +81,25 @@ pub struct Pending {
     pub app: Option<Uuid>,
     /// Unix-время, после которого вход надо начинать заново
     pub exp: i64,
+    /// id провайдера; пусто — вход, начатый прежней версией (daly.rest)
+    #[serde(default)]
+    pub provider: String,
+    /// Привязать вход к этому аккаунту (настройки)
+    #[serde(default)]
+    pub link: Option<Uuid>,
+    /// Токен приглашения
+    #[serde(default)]
+    pub invite: Option<String>,
 }
 
-fn found(location: &str) -> Response {
+/// Вход приложения, начатый через `/api/auth/app/start` и продолженный на экране входа.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppPending {
+    pub id: Uuid,
+    pub exp: i64,
+}
+
+pub(crate) fn found(location: &str) -> Response {
     (StatusCode::FOUND, [(header::LOCATION, location)]).into_response()
 }
 
@@ -125,7 +150,7 @@ fn user_agent(headers: &HeaderMap) -> Option<&str> {
         .and_then(|v| v.to_str().ok())
 }
 
-fn me_for(user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
+pub(crate) fn me_for(user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
     let roles = user.roles();
     Me {
         user: user.public(),
@@ -137,6 +162,24 @@ fn me_for(user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
     }
 }
 
+fn provider_view(p: &Oidc) -> OidcProvider {
+    OidcProvider {
+        id: p.config.id.clone(),
+        title: p.config.title.clone(),
+        icon: p.config.icon.clone(),
+    }
+}
+
+fn private_cookie(st: &AppState, name: &'static str, value: String) -> Cookie<'static> {
+    Cookie::build((name, value))
+        .http_only(true)
+        .secure(st.config.cookie_secure())
+        .same_site(SameSite::Lax)
+        .path(OIDC_COOKIE_PATH)
+        .max_age(time::Duration::seconds(OIDC_TTL_S))
+        .build()
+}
+
 // ---------- способы входа ----------
 
 #[utoipa::path(
@@ -145,16 +188,19 @@ fn me_for(user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
     tag = "auth",
     responses((status = 200, description = "Какие способы входа включены", body = AuthProviders)),
 )]
-pub async fn providers(State(st): State<AppState>) -> Json<AuthProviders> {
-    Json(AuthProviders {
-        oidc: st.oidc.as_ref().map(|o| OidcProvider {
-            title: o.config.title.clone(),
-        }),
+pub async fn providers(State(st): State<AppState>) -> AppResult<Json<AuthProviders>> {
+    let list: Vec<OidcProvider> = st.oidc.iter().map(|p| provider_view(p)).collect();
+    let setup = st.config.local_auth && accounts::first_run(&st.db).await?;
+    Ok(Json(AuthProviders {
+        oidc: list.first().cloned(),
+        providers: list,
         password: st.config.admin_password.is_some(),
-    })
+        local: st.config.local_auth,
+        setup,
+    }))
 }
 
-// ---------- daly.rest ----------
+// ---------- провайдеры OIDC ----------
 
 #[utoipa::path(
     get,
@@ -162,36 +208,96 @@ pub async fn providers(State(st): State<AppState>) -> Json<AuthProviders> {
     tag = "auth",
     params(OidcStartQuery),
     responses(
-        (status = 302, description = "На страницу входа daly.rest; ставит cookie `dw_oidc` на 10 минут"),
+        (status = 302, description = "Вход через первого провайдера (прежний адрес): как `/api/auth/oidc/{provider}/start`"),
         (status = 400, description = "`next` — не путь на этом сайте", body = ErrorBody),
-        (status = 404, description = "Вход через daly.rest не настроен", body = ErrorBody),
+        (status = 404, description = "Провайдеры не настроены", body = ErrorBody),
     ),
 )]
 pub async fn oidc_start(
     State(st): State<AppState>,
+    headers: HeaderMap,
     jar: PrivateCookieJar,
     Query(q): Query<OidcStartQuery>,
+) -> AppResult<(PrivateCookieJar, Response)> {
+    let provider = st.oidc.first().cloned().ok_or(AppError::NotFound)?;
+    start(&st, &headers, jar, provider, q).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/auth/oidc/{provider}/start",
+    tag = "auth",
+    params(("provider" = String, Path, description = "id провайдера из `/api/auth/providers`"), OidcStartQuery),
+    responses(
+        (status = 302, description = "На страницу входа провайдера; ставит cookie `dw_oidc` на 10 минут"),
+        (status = 400, description = "`next` — не путь на этом сайте", body = ErrorBody),
+        (status = 401, description = "`link=1` без входа на сайте", body = ErrorBody),
+        (status = 404, description = "Нет такого провайдера", body = ErrorBody),
+    ),
+)]
+pub async fn provider_start(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    jar: PrivateCookieJar,
+    Path(provider): Path<String>,
+    Query(q): Query<OidcStartQuery>,
+) -> AppResult<(PrivateCookieJar, Response)> {
+    let provider = st.provider(&provider).cloned().ok_or(AppError::NotFound)?;
+    start(&st, &headers, jar, provider, q).await
+}
+
+async fn start(
+    st: &AppState,
+    headers: &HeaderMap,
+    jar: PrivateCookieJar,
+    provider: Arc<Oidc>,
+    q: OidcStartQuery,
 ) -> AppResult<(PrivateCookieJar, Response)> {
     let next = match q.next.as_deref() {
         None | Some("") => "/",
         Some(next) => local_path(next)
             .ok_or_else(|| bad("next должен быть путём на этом сайте, например /library"))?,
     };
-    begin(&st, jar, next.to_string(), None).await
+    let on = |v: &Option<String>| v.as_deref().is_some_and(|v| v == "1" || v == "true");
+    // Вход приложения: запрос лежит в cookie этого браузера, адрес его не передаёт
+    let app = if on(&q.app) {
+        let pending: Option<AppPending> = jar
+            .get(APP_COOKIE)
+            .and_then(|c| serde_json::from_str(c.value()).ok());
+        match pending.filter(|p| p.exp >= Utc::now().timestamp()) {
+            Some(p) => Some(p.id),
+            None => return Ok((jar, found(&st.config.login_error("expired", next)))),
+        }
+    } else {
+        None
+    };
+    let link = if on(&q.link) {
+        let principal = auth::authenticate(st, headers)
+            .await?
+            .filter(|p| p.kind == SessionKind::Web)
+            .ok_or(AppError::Unauthorized)?;
+        Some(principal.user.id)
+    } else {
+        None
+    };
+    let invite = q.invite.filter(|t| !t.is_empty() && t.len() <= 128);
+    begin(st, jar, provider, next.to_string(), app, link, invite).await
 }
 
-/// Уводит браузер на daly.rest. state, nonce и verifier уходят в cookie этого браузера.
+/// Уводит браузер к провайдеру. state, nonce и verifier уходят в cookie этого браузера.
 async fn begin(
     st: &AppState,
     jar: PrivateCookieJar,
+    oidc: Arc<Oidc>,
     next: String,
     app: Option<Uuid>,
+    link: Option<Uuid>,
+    invite: Option<String>,
 ) -> AppResult<(PrivateCookieJar, Response)> {
-    let oidc = st.oidc.as_ref().ok_or(AppError::NotFound)?;
     let doc = match oidc.discovery().await {
         Ok(doc) => doc,
         Err(e) => {
-            tracing::warn!(error = %e, "OIDC discovery failed");
+            tracing::warn!(provider = oidc.id(), error = %e, "OIDC discovery failed");
             return Ok((jar, found(&st.config.login_error("provider", &next))));
         }
     };
@@ -202,23 +308,19 @@ async fn begin(
         next,
         app,
         exp: Utc::now().timestamp() + OIDC_TTL_S,
+        provider: oidc.id().to_string(),
+        link,
+        invite,
     };
     let url = oidc.authorize_url(
         &doc,
-        &st.config.oidc_redirect_uri(),
+        &st.config.oidc_redirect_uri(&oidc.config),
         &pending.state,
         &pending.nonce,
         &pkce_challenge(&pending.verifier),
     )?;
     let value = serde_json::to_string(&pending).map_err(anyhow::Error::from)?;
-    let cookie = Cookie::build((OIDC_COOKIE, value))
-        .http_only(true)
-        .secure(st.config.cookie_secure())
-        .same_site(SameSite::Lax)
-        .path(OIDC_COOKIE_PATH)
-        .max_age(time::Duration::seconds(OIDC_TTL_S))
-        .build();
-    Ok((jar.add(cookie), found(&url)))
+    Ok((jar.add(private_cookie(st, OIDC_COOKIE, value)), found(&url)))
 }
 
 #[derive(Debug, Default, Deserialize, IntoParams)]
@@ -240,6 +342,10 @@ enum Fail {
     State,
     Disabled,
     Provider,
+    /// Провайдер не пускает новых людей, а приглашения нет
+    NotRegistered,
+    /// Привязка: этот вход уже у другого человека
+    LinkedElsewhere,
 }
 
 impl Fail {
@@ -250,6 +356,8 @@ impl Fail {
             Self::State => "state",
             Self::Disabled => "disabled",
             Self::Provider => "provider",
+            Self::NotRegistered => "not_registered",
+            Self::LinkedElsewhere => "linked_elsewhere",
         }
     }
 }
@@ -267,8 +375,9 @@ struct AppRequest {
     params(CallbackQuery),
     responses((
         status = 302,
-        description = "Успех: cookie `dw_session` и переход на `next` (или код приложению). \
-                       Ошибка: `/login?error=cancelled|expired|state|disabled|provider`",
+        description = "Возврат от daly.rest из прежних переменных (адрес зарегистрирован там). \
+                       Успех: cookie `dw_session` и переход на `next` (или код приложению). \
+                       Ошибка: `/login?error=cancelled|expired|state|disabled|provider|not_registered`",
     )),
 )]
 pub async fn oidc_callback(
@@ -279,6 +388,42 @@ pub async fn oidc_callback(
     sessions: CookieJar,
     Query(q): Query<CallbackQuery>,
 ) -> (PrivateCookieJar, Response) {
+    callback(&st, ip, &headers, jar, sessions, None, q).await
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/auth/oidc/{provider}/callback",
+    tag = "auth",
+    params(("provider" = String, Path, description = "id провайдера"), CallbackQuery),
+    responses((
+        status = 302,
+        description = "Успех: cookie `dw_session` и переход на `next`, код приложению или `/settings?linked=…`. \
+                       Ошибка: `/login?error=cancelled|expired|state|disabled|provider|not_registered` \
+                       (привязка — `/settings?link_error=…`)",
+    )),
+)]
+pub async fn provider_callback(
+    State(st): State<AppState>,
+    ClientIp(ip): ClientIp,
+    headers: HeaderMap,
+    jar: PrivateCookieJar,
+    sessions: CookieJar,
+    Path(provider): Path<String>,
+    Query(q): Query<CallbackQuery>,
+) -> (PrivateCookieJar, Response) {
+    callback(&st, ip, &headers, jar, sessions, Some(provider), q).await
+}
+
+async fn callback(
+    st: &AppState,
+    ip: IpAddr,
+    headers: &HeaderMap,
+    jar: PrivateCookieJar,
+    sessions: CookieJar,
+    path_provider: Option<String>,
+    q: CallbackQuery,
+) -> (PrivateCookieJar, Response) {
     let pending: Option<Pending> = jar
         .get(OIDC_COOKIE)
         .and_then(|c| serde_json::from_str(c.value()).ok());
@@ -286,14 +431,86 @@ pub async fn oidc_callback(
     let next = pending
         .as_ref()
         .map_or_else(|| "/".to_string(), |p| p.next.clone());
-    let response = match complete(&st, ip, &headers, sessions, pending, q).await {
+    let linking = pending.as_ref().is_some_and(|p| p.link.is_some());
+    let jar = if pending.as_ref().is_some_and(|p| p.app.is_some()) {
+        jar.remove(Cookie::build(APP_COOKIE).path(OIDC_COOKIE_PATH))
+    } else {
+        jar
+    };
+    let response = match complete(st, ip, headers, sessions, pending, path_provider, q).await {
         Ok(response) => response,
         Err(e) => {
             tracing::error!(error = %e, "OIDC callback failed");
-            found(&st.config.login_error(Fail::Provider.code(), &next))
+            if linking {
+                found(&link_result(st, Err(Fail::Provider)))
+            } else {
+                found(&st.config.login_error(Fail::Provider.code(), &next))
+            }
         }
     };
     (jar, response)
+}
+
+/// Куда вернуть после привязки входа в настройках.
+fn link_result(st: &AppState, result: Result<&str, Fail>) -> String {
+    match result {
+        Ok(provider) => st.config.page(&format!("/settings?linked={provider}")),
+        Err(fail) => st
+            .config
+            .page(&format!("/settings?link_error={}", fail.code())),
+    }
+}
+
+/// Запрос приложения, ещё ждущий входа.
+async fn app_request(st: &AppState, id: Uuid) -> AppResult<Option<AppRequest>> {
+    Ok(sqlx::query_as!(
+        AppRequest,
+        "SELECT id, redirect_uri, state FROM app_login_requests
+         WHERE id = $1 AND expires_at > now() AND code_hash IS NULL",
+        id,
+    )
+    .fetch_optional(&st.db)
+    .await?)
+}
+
+/// Выдаёт одноразовый код приложению: адрес возврата с `code` и `state`; `None` — запрос истёк.
+/// Код живёт 60 секунд и привязан к code_challenge, присланному приложением в начале.
+pub(crate) async fn issue_app_code(
+    st: &AppState,
+    app: Uuid,
+    user: Uuid,
+    method: Method,
+) -> AppResult<Option<String>> {
+    let Some(req) = app_request(st, app).await? else {
+        return Ok(None);
+    };
+    let code = random_token()?;
+    let issued = sqlx::query!(
+        "UPDATE app_login_requests
+         SET user_id = $2, code_hash = $3, code_expires_at = now() + interval '60 seconds', auth_method = $4
+         WHERE id = $1 AND code_hash IS NULL AND expires_at > now()",
+        req.id,
+        user,
+        &sha256(&code)[..],
+        method.as_str(),
+    )
+    .execute(&st.db)
+    .await?;
+    if issued.rows_affected() == 0 {
+        return Ok(None);
+    }
+    Ok(Some(with_params(
+        &req.redirect_uri,
+        &[("code", &code), ("state", &req.state)],
+    )))
+}
+
+/// Запрос приложения из cookie `dw_app` этого браузера.
+pub(crate) fn app_cookie(jar: &PrivateCookieJar) -> Option<Uuid> {
+    jar.get(APP_COOKIE)
+        .and_then(|c| serde_json::from_str::<AppPending>(c.value()).ok())
+        .filter(|p| p.exp >= Utc::now().timestamp())
+        .map(|p| p.id)
 }
 
 async fn complete(
@@ -302,26 +519,18 @@ async fn complete(
     headers: &HeaderMap,
     sessions: CookieJar,
     pending: Option<Pending>,
+    path_provider: Option<String>,
     q: CallbackQuery,
 ) -> AppResult<Response> {
     let next = pending
         .as_ref()
         .map_or_else(|| "/".to_string(), |p| p.next.clone());
+    let link = pending.as_ref().and_then(|p| p.link);
     let app = match pending.as_ref().and_then(|p| p.app) {
-        Some(id) => {
-            let req = sqlx::query_as!(
-                AppRequest,
-                "SELECT id, redirect_uri, state FROM app_login_requests
-                 WHERE id = $1 AND expires_at > now() AND code_hash IS NULL",
-                id,
-            )
-            .fetch_optional(&st.db)
-            .await?;
-            match req {
-                Some(req) => Some(req),
-                None => return Ok(found(&st.config.login_error(Fail::Expired.code(), &next))),
-            }
-        }
+        Some(id) => match app_request(st, id).await? {
+            Some(req) => Some(req),
+            None => return Ok(found(&st.config.login_error(Fail::Expired.code(), &next))),
+        },
         None => None,
     };
     let fail = |reason: Fail| match &app {
@@ -329,36 +538,23 @@ async fn complete(
             &req.redirect_uri,
             &[("error", reason.code()), ("state", &req.state)],
         )),
+        None if link.is_some() => found(&link_result(st, Err(reason))),
         None => found(&st.config.login_error(reason.code(), &next)),
     };
 
-    let user = match sign_in(st, ip, pending, &q).await {
-        Ok(user) => user,
+    let (user, provider) = match sign_in(st, ip, pending, path_provider.as_deref(), &q).await {
+        Ok(found) => found,
         Err(reason) => return Ok(fail(reason)),
     };
 
+    if link.is_some() {
+        return Ok(found(&link_result(st, Ok(&provider))));
+    }
     match &app {
-        Some(req) => {
-            // Код живёт 60 секунд и привязан к code_challenge, присланному приложением в начале
-            let code = random_token()?;
-            let issued = sqlx::query!(
-                "UPDATE app_login_requests
-                 SET user_id = $2, code_hash = $3, code_expires_at = now() + interval '60 seconds'
-                 WHERE id = $1 AND code_hash IS NULL AND expires_at > now()",
-                req.id,
-                user.id,
-                &sha256(&code)[..],
-            )
-            .execute(&st.db)
-            .await?;
-            if issued.rows_affected() == 0 {
-                return Ok(fail(Fail::Expired));
-            }
-            Ok(found(&with_params(
-                &req.redirect_uri,
-                &[("code", &code), ("state", &req.state)],
-            )))
-        }
+        Some(req) => match issue_app_code(st, req.id, user.id, Method::Oidc).await? {
+            Some(location) => Ok(found(&location)),
+            None => Ok(fail(Fail::Expired)),
+        },
         None => {
             let (sessions, _) =
                 open_web_session(st, sessions, headers, ip, user.id, Method::Oidc).await?;
@@ -367,13 +563,14 @@ async fn complete(
     }
 }
 
-/// Проверяет возврат от daly.rest, меняет код на профиль и находит человека.
+/// Проверяет возврат от провайдера, меняет код на профиль и находит человека.
 async fn sign_in(
     st: &AppState,
     ip: IpAddr,
     pending: Option<Pending>,
+    path_provider: Option<&str>,
     q: &CallbackQuery,
-) -> Result<UserRow, Fail> {
+) -> Result<(UserRow, String), Fail> {
     if q.error.is_some() {
         return Err(Fail::Cancelled);
     }
@@ -390,14 +587,29 @@ async fn sign_in(
     if !secrets_match(state, &pending.state) {
         return Err(Fail::State);
     }
-    let oidc = st.oidc.as_ref().ok_or(Fail::Provider)?;
+    // Вход, начатый прежней версией, шёл через daly.rest — первого провайдера со старым адресом
+    let oidc = if pending.provider.is_empty() {
+        st.oidc.iter().find(|p| p.config.legacy_callback)
+    } else {
+        st.provider(&pending.provider)
+    }
+    .cloned()
+    .ok_or(Fail::Provider)?;
+    // Возврат пришёл на адрес другого провайдера: так не бывает, если ответ не подменили
+    let path_ok = match path_provider {
+        Some(id) => id == oidc.id() && !oidc.config.legacy_callback,
+        None => oidc.config.legacy_callback,
+    };
+    if !path_ok {
+        return Err(Fail::State);
+    }
     if let Some(iss) = q.iss.as_deref() {
         let expected = oidc
             .discovery()
             .await
             .map(|d| d.issuer.clone())
             .map_err(|e| {
-                tracing::warn!(error = %e, "OIDC discovery failed");
+                tracing::warn!(provider = oidc.id(), error = %e, "OIDC discovery failed");
                 Fail::Provider
             })?;
         if iss != expected {
@@ -409,7 +621,7 @@ async fn sign_in(
         .exchange(
             code,
             &pending.verifier,
-            &st.config.oidc_redirect_uri(),
+            &st.config.oidc_redirect_uri(&oidc.config),
             &pending.nonce,
         )
         .await
@@ -419,14 +631,39 @@ async fn sign_in(
                 Fail::State
             }
             OidcError::Provider(e) => {
-                tracing::warn!(error = %e, "OIDC code exchange failed");
+                tracing::warn!(provider = oidc.id(), error = %e, "OIDC code exchange failed");
                 Fail::Provider
             }
         })?;
-    let user = users::sign_in(st, identity).await.map_err(|e| {
-        tracing::error!(error = %e, "could not save the user after OIDC sign-in");
-        Fail::Provider
-    })?;
+
+    let invite = match pending.invite.as_deref() {
+        Some(token) if pending.link.is_none() => {
+            accounts::find_invite(&st.db, token).await.map_err(|e| {
+                tracing::error!(error = %e, "could not read the invite");
+                Fail::Provider
+            })?
+        }
+        _ => None,
+    };
+    let intent = Intent {
+        link_to: pending.link,
+        invite_roles: invite.as_ref().map(|i| i.roles.clone()),
+    };
+    let user = users::sign_in(st, &oidc.config, identity, intent)
+        .await
+        .map_err(|e| match e {
+            SignInError::NotRegistered => Fail::NotRegistered,
+            SignInError::LinkedElsewhere => Fail::LinkedElsewhere,
+            SignInError::App(e) => {
+                tracing::error!(error = %e, "could not save the user after OIDC sign-in");
+                Fail::Provider
+            }
+        })?;
+    if let Some(invite) = invite
+        && let Err(e) = accounts::use_invite(&st.db, invite.id, user.id).await
+    {
+        tracing::error!(error = %e, "could not mark the invite as used");
+    }
     if user.disabled {
         let payload = json!({ "via": "oidc", "reason": "disabled", "ip": ip.to_string() });
         if let Err(e) = audit::record(
@@ -442,7 +679,7 @@ async fn sign_in(
         }
         return Err(Fail::Disabled);
     }
-    Ok(user)
+    Ok((user, oidc.id().to_string()))
 }
 
 /// Новая сессия сайта. Прежняя сессия этого браузера закрывается.
@@ -589,8 +826,9 @@ pub async fn me(State(st): State<AppState>, principal: Principal) -> AppResult<J
     tag = "auth",
     params(AppStartQuery),
     responses(
-        (status = 302, description = "На daly.rest; после входа — на redirect_uri с `code` и `state` \
-                                      или с `error` и `state`"),
+        (status = 302, description = "На экран входа сайта (`/login?app=1`, запрос — в cookie `dw_app`) \
+                                      или сразу к провайдеру, если способ входа один; после входа — \
+                                      на redirect_uri с `code` и `state` или с `error` и `state`"),
         (status = 400, description = "redirect_uri не из разрешённых", body = ErrorBody),
     ),
 )]
@@ -647,7 +885,7 @@ pub async fn app_start(
     let Some(platform) = q.platform else {
         return Ok((jar, reject("invalid_request", "platform is required")));
     };
-    if st.oidc.is_none() {
+    if st.oidc.is_empty() && !st.config.local_auth {
         return Ok((
             jar,
             reject("provider", "sign-in provider is not configured"),
@@ -675,7 +913,21 @@ pub async fn app_start(
     )
     .fetch_one(&st.db)
     .await?;
-    begin(&st, jar, "/".into(), Some(id)).await
+    // Способ входа один — провайдер: сразу к нему, как раньше
+    if let ([provider], false) = (&st.oidc[..], st.config.local_auth) {
+        return begin(&st, jar, provider.clone(), "/".into(), Some(id), None, None).await;
+    }
+    // Иначе — экран входа сайта в этом же браузере: там все провайдеры и форма пароля.
+    // Запрос приложения едет в зашифрованной cookie, а не в адресе
+    let pending = AppPending {
+        id,
+        exp: Utc::now().timestamp() + OIDC_TTL_S,
+    };
+    let value = serde_json::to_string(&pending).map_err(anyhow::Error::from)?;
+    Ok((
+        jar.add(private_cookie(&st, APP_COOKIE, value)),
+        found(&st.config.page("/login?app=1")),
+    ))
 }
 
 #[utoipa::path(
@@ -709,7 +961,7 @@ pub async fn app_token(
     let row = sqlx::query!(
         "UPDATE app_login_requests SET used_at = now()
          WHERE code_hash = $1 AND used_at IS NULL
-         RETURNING id, user_id, code_challenge, code_expires_at, device_name, platform",
+         RETURNING id, user_id, code_challenge, code_expires_at, device_name, platform, auth_method",
         &code_hash[..],
     )
     .fetch_optional(&mut *tx)
@@ -779,7 +1031,7 @@ pub async fn app_token(
     let new = NewSession {
         user_id: user.id,
         device_id: Some(device.id),
-        method: Method::Oidc,
+        method: Method::parse(row.auth_method.as_deref().unwrap_or_default()),
         user_agent: user_agent(&headers),
         ip,
     };
@@ -868,10 +1120,7 @@ pub async fn app_pair(
             "сопряжённое устройство не выдаёт сессий".into(),
         ));
     }
-    let method = match parent_row.auth_method.as_str() {
-        "password" => Method::Password,
-        _ => Method::Oidc,
-    };
+    let method = Method::parse(&parent_row.auth_method);
     let name = body
         .device_name
         .as_deref()

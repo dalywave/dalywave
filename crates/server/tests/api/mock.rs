@@ -1,4 +1,6 @@
-//! Заглушка daly.rest на случайном локальном порту: discovery, token с id_token ES256, JWKS, userinfo.
+//! Подставной провайдер OIDC на случайном локальном порту: discovery, token с подписанным id_token
+//! (ES256, RS256 или EdDSA), JWKS, userinfo. По умолчанию изображает daly.rest; [`MockOptions`]
+//! делают из него Authentik, Keycloak или Pocket ID (группы, client_secret_post, публичный клиент).
 //! Страницу входа не изображаем: тест сам «входит» через [`MockProvider::approve`].
 
 use std::{
@@ -17,13 +19,20 @@ use base64::{
     Engine,
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
 };
-use dalywave_server::config::OidcConfig;
+use dalywave_server::config::{LEGACY_PROVIDER_ID, OidcConfig};
 use p256::ecdsa::{Signature, SigningKey, signature::Signer};
+use ring::{
+    rand::SystemRandom,
+    signature::{Ed25519KeyPair, KeyPair, RSA_PKCS1_SHA256, RsaKeyPair},
+};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 pub const CLIENT_ID: &str = "dalywave-test";
 pub const CLIENT_SECRET: &str = "test secret+/=";
+
+/// Тестовый ключ RSA 2048 (PKCS#8): только для подписи id_token подставного провайдера.
+const RSA_KEY: &[u8] = include_bytes!("../fixtures/oidc/test_rsa.pk8");
 
 fn b64(data: impl AsRef<[u8]>) -> String {
     URL_SAFE_NO_PAD.encode(data)
@@ -35,7 +44,7 @@ fn random() -> String {
     b64(buf)
 }
 
-/// Человек с аккаунтом на «daly.rest».
+/// Человек с аккаунтом у провайдера.
 #[derive(Debug, Clone)]
 pub struct Person {
     pub sub: String,
@@ -63,7 +72,7 @@ impl Person {
         }
     }
 
-    fn claims(&self, with_roles: bool) -> Value {
+    fn claims(&self, roles_claim: &str, with_roles: bool) -> Value {
         let mut c = json!({
             "sub": self.sub,
             "name": self.name,
@@ -75,10 +84,55 @@ impl Person {
             c["email_verified"] = json!(self.email_verified);
         }
         if with_roles {
-            c["roles"] = json!(self.roles);
+            // `realm_access.roles` — вложенный claim, как у Keycloak
+            match roles_claim.split_once('.') {
+                Some((outer, inner)) => {
+                    let mut nested = serde_json::Map::new();
+                    nested.insert(inner.into(), json!(self.roles));
+                    c[outer] = Value::Object(nested);
+                }
+                None => c[roles_claim] = json!(self.roles),
+            }
         }
         c
     }
+}
+
+/// Чем подписан id_token.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Alg {
+    Es256,
+    Rs256,
+    EdDsa,
+}
+
+/// Как ведёт себя провайдер.
+#[derive(Debug, Clone)]
+pub struct MockOptions {
+    pub alg: Alg,
+    /// Claim ролей или групп
+    pub roles_claim: String,
+    /// Секрет только в теле (client_secret_post): discovery не называет basic
+    pub post_only: bool,
+    /// Публичный клиент: секрета нет вовсе
+    pub public: bool,
+}
+
+impl Default for MockOptions {
+    fn default() -> Self {
+        Self {
+            alg: Alg::Es256,
+            roles_claim: "roles".into(),
+            post_only: false,
+            public: false,
+        }
+    }
+}
+
+enum Key {
+    Es(SigningKey),
+    Rsa(RsaKeyPair),
+    Ed(Ed25519KeyPair),
 }
 
 struct Grant {
@@ -89,7 +143,7 @@ struct Grant {
 }
 
 struct Inner {
-    key: SigningKey,
+    key: Key,
     kid: String,
     grants: HashMap<String, Grant>,
     access: HashMap<String, Person>,
@@ -101,22 +155,57 @@ struct Inner {
 #[derive(Clone)]
 pub struct MockProvider {
     pub issuer: String,
+    pub options: Arc<MockOptions>,
     inner: Arc<Mutex<Inner>>,
+}
+
+/// SEQUENCE { INTEGER n, INTEGER e } из DER открытого ключа RSA → (n, e) без ведущих нулей.
+fn rsa_components(der: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    fn read(buf: &[u8]) -> (u8, &[u8], &[u8]) {
+        let tag = buf[0];
+        let (len, start) = if buf[1] & 0x80 == 0 {
+            (buf[1] as usize, 2)
+        } else {
+            let n = (buf[1] & 0x7f) as usize;
+            let len = buf[2..2 + n]
+                .iter()
+                .fold(0usize, |acc, b| (acc << 8) | *b as usize);
+            (len, 2 + n)
+        };
+        (tag, &buf[start..start + len], &buf[start + len..])
+    }
+    let (_, seq, _) = read(der);
+    let (_, n, rest) = read(seq);
+    let (_, e, _) = read(rest);
+    let trim = |v: &[u8]| v.iter().skip_while(|b| **b == 0).copied().collect();
+    (trim(n), trim(e))
 }
 
 impl MockProvider {
     pub async fn start() -> Self {
+        Self::start_with(MockOptions::default()).await
+    }
+
+    pub async fn start_with(options: MockOptions) -> Self {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let issuer = format!("http://{}", listener.local_addr().unwrap());
-        let key = loop {
-            let mut seed = [0u8; 32];
-            getrandom::fill(&mut seed).unwrap();
-            if let Ok(key) = SigningKey::from_slice(&seed) {
-                break key;
+        let key = match options.alg {
+            Alg::Es256 => Key::Es(loop {
+                let mut seed = [0u8; 32];
+                getrandom::fill(&mut seed).unwrap();
+                if let Ok(key) = SigningKey::from_slice(&seed) {
+                    break key;
+                }
+            }),
+            Alg::Rs256 => Key::Rsa(RsaKeyPair::from_pkcs8(RSA_KEY).unwrap()),
+            Alg::EdDsa => {
+                let doc = Ed25519KeyPair::generate_pkcs8(&SystemRandom::new()).unwrap();
+                Key::Ed(Ed25519KeyPair::from_pkcs8(doc.as_ref()).unwrap())
             }
         };
         let provider = Self {
             issuer,
+            options: Arc::new(options),
             inner: Arc::new(Mutex::new(Inner {
                 key,
                 kid: random(),
@@ -137,17 +226,30 @@ impl MockProvider {
         provider
     }
 
+    /// Как daly.rest из прежних переменных: id `dalyrest`, старый адрес возврата, почте верим.
     pub fn oidc_config(&self) -> OidcConfig {
-        OidcConfig {
-            issuer: self.issuer.clone(),
-            client_id: CLIENT_ID.into(),
-            client_secret: CLIENT_SECRET.into(),
-            title: "daly.rest".into(),
-            admin_roles: vec!["admin".into()],
-        }
+        let mut c = OidcConfig::new(
+            LEGACY_PROVIDER_ID,
+            &self.issuer,
+            CLIENT_ID,
+            Some(CLIENT_SECRET),
+        );
+        c.title = "daly.rest".into();
+        c.trust_email = true;
+        c.legacy_callback = true;
+        c
     }
 
-    /// Человек вошёл на «daly.rest» по адресу, который выдал наш сервер. Возвращает (code, state).
+    /// Новый провайдер `id` из переменных `DALYWAVE_OIDC_<ID>_*`.
+    pub fn provider_config(&self, id: &str, title: &str) -> OidcConfig {
+        let secret = (!self.options.public).then_some(CLIENT_SECRET);
+        let mut c = OidcConfig::new(id, &self.issuer, CLIENT_ID, secret);
+        c.title = title.into();
+        c.admin_claim = Some(self.options.roles_claim.clone());
+        c
+    }
+
+    /// Человек вошёл у провайдера по адресу, который выдал наш сервер. Возвращает (code, state).
     pub fn approve(&self, authorize_url: &str, person: &Person) -> (String, String) {
         let url = url::Url::parse(authorize_url).unwrap();
         assert!(
@@ -158,7 +260,7 @@ impl MockProvider {
         assert_eq!(q["client_id"], CLIENT_ID);
         assert_eq!(q["response_type"], "code");
         assert_eq!(q["code_challenge_method"], "S256");
-        assert_eq!(q["scope"], "openid email profile");
+        assert!(q["scope"].starts_with("openid"), "{}", q["scope"]);
         let code = random();
         let grant = Grant {
             person: person.clone(),
@@ -194,6 +296,11 @@ fn oauth_error(status: StatusCode, error: &str) -> Response {
 
 async fn discovery(State(p): State<MockProvider>) -> Json<Value> {
     let iss = &p.issuer;
+    let methods = if p.options.post_only {
+        json!(["client_secret_post"])
+    } else {
+        json!(["client_secret_basic", "client_secret_post"])
+    };
     Json(json!({
         "issuer": iss,
         "authorization_endpoint": format!("{iss}/authorize"),
@@ -201,20 +308,33 @@ async fn discovery(State(p): State<MockProvider>) -> Json<Value> {
         "userinfo_endpoint": format!("{iss}/userinfo"),
         "jwks_uri": format!("{iss}/jwks"),
         "response_types_supported": ["code"],
-        "id_token_signing_alg_values_supported": ["ES256"],
+        "id_token_signing_alg_values_supported": ["ES256", "RS256", "EdDSA"],
         "code_challenge_methods_supported": ["S256"],
-        "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"],
+        "token_endpoint_auth_methods_supported": methods,
     }))
 }
 
 async fn jwks(State(p): State<MockProvider>) -> Json<Value> {
     let inner = p.inner.lock().unwrap();
-    let point = inner.key.verifying_key().to_sec1_point(false);
-    let bytes = point.as_bytes();
-    Json(json!({ "keys": [{
-        "kty": "EC", "crv": "P-256", "use": "sig", "alg": "ES256", "kid": inner.kid,
-        "x": b64(&bytes[1..33]), "y": b64(&bytes[33..65]),
-    }]}))
+    let key = match &inner.key {
+        Key::Es(key) => {
+            let point = key.verifying_key().to_sec1_point(false);
+            let bytes = point.as_bytes();
+            json!({ "kty": "EC", "crv": "P-256", "alg": "ES256",
+                    "x": b64(&bytes[1..33]), "y": b64(&bytes[33..65]) })
+        }
+        Key::Rsa(key) => {
+            let (n, e) = rsa_components(key.public().as_ref());
+            json!({ "kty": "RSA", "alg": "RS256", "n": b64(n), "e": b64(e) })
+        }
+        Key::Ed(key) => {
+            json!({ "kty": "OKP", "crv": "Ed25519", "alg": "EdDSA", "x": b64(key.public_key().as_ref()) })
+        }
+    };
+    let mut key = key;
+    key["use"] = json!("sig");
+    key["kid"] = json!(inner.kid);
+    Json(json!({ "keys": [key] }))
 }
 
 fn basic_client(headers: &HeaderMap) -> Option<(String, String)> {
@@ -238,7 +358,18 @@ async fn token(
     headers: HeaderMap,
     Form(form): Form<HashMap<String, String>>,
 ) -> Response {
-    if basic_client(&headers) != Some((CLIENT_ID.into(), CLIENT_SECRET.into())) {
+    let posted = (
+        form.get("client_id").cloned(),
+        form.get("client_secret").cloned(),
+    );
+    let client_ok = if p.options.public {
+        posted == (Some(CLIENT_ID.into()), None) && basic_client(&headers).is_none()
+    } else if p.options.post_only {
+        posted == (Some(CLIENT_ID.into()), Some(CLIENT_SECRET.into()))
+    } else {
+        basic_client(&headers) == Some((CLIENT_ID.into(), CLIENT_SECRET.into()))
+    };
+    if !client_ok {
         return oauth_error(StatusCode::UNAUTHORIZED, "invalid_client");
     }
     if form.get("grant_type").map(String::as_str) != Some("authorization_code") {
@@ -256,16 +387,40 @@ async fn token(
         return oauth_error(StatusCode::BAD_REQUEST, "invalid_grant");
     }
     let now = chrono::Utc::now().timestamp();
-    let mut claims = grant.person.claims(inner.roles_in_id_token);
+    let mut claims = grant
+        .person
+        .claims(&p.options.roles_claim, inner.roles_in_id_token);
     claims["iss"] = json!(p.issuer);
     claims["aud"] = json!(CLIENT_ID);
     claims["iat"] = json!(now);
     claims["exp"] = json!(now + 300);
     claims["nonce"] = json!(inner.nonce_override.clone().unwrap_or(grant.nonce));
-    let header = json!({ "alg": "ES256", "typ": "JWT", "kid": inner.kid });
+    let alg = match p.options.alg {
+        Alg::Es256 => "ES256",
+        Alg::Rs256 => "RS256",
+        Alg::EdDsa => "EdDSA",
+    };
+    let header = json!({ "alg": alg, "typ": "JWT", "kid": inner.kid });
     let input = format!("{}.{}", b64(header.to_string()), b64(claims.to_string()));
-    let signature: Signature = inner.key.sign(input.as_bytes());
-    let id_token = format!("{input}.{}", b64(signature.to_bytes()));
+    let signature = match &inner.key {
+        Key::Es(key) => {
+            let sig: Signature = key.sign(input.as_bytes());
+            sig.to_bytes().to_vec()
+        }
+        Key::Rsa(key) => {
+            let mut sig = vec![0u8; key.public().modulus_len()];
+            key.sign(
+                &RSA_PKCS1_SHA256,
+                &SystemRandom::new(),
+                input.as_bytes(),
+                &mut sig,
+            )
+            .unwrap();
+            sig
+        }
+        Key::Ed(key) => key.sign(input.as_bytes()).as_ref().to_vec(),
+    };
+    let id_token = format!("{input}.{}", b64(signature));
     let access = random();
     inner.access.insert(access.clone(), grant.person);
     Json(json!({ "access_token": access, "token_type": "Bearer", "expires_in": 3600, "id_token": id_token }))
@@ -280,7 +435,7 @@ async fn userinfo(State(p): State<MockProvider>, headers: HeaderMap) -> Response
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "));
     match token.and_then(|t| inner.access.get(t)) {
-        Some(person) => Json(person.claims(true)).into_response(),
+        Some(person) => Json(person.claims(&p.options.roles_claim, true)).into_response(),
         None => oauth_error(StatusCode::UNAUTHORIZED, "invalid_token"),
     }
 }

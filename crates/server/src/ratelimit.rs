@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 type Buckets = HashMap<(&'static str, IpAddr), (Instant, u32)>;
 type KeyedBuckets = HashMap<(&'static str, Uuid), (Instant, u32)>;
+type TextBuckets = HashMap<(&'static str, String), (Instant, u32)>;
 
 /// Лимитер с фиксированным окном в памяти процесса. API работает в одном экземпляре, этого хватает.
 #[derive(Default)]
@@ -16,6 +17,8 @@ pub struct RateLimiter {
     buckets: Mutex<Buckets>,
     /// Лимиты по id (гость «Слушать вместе»): у гостей за одним Wi-Fi общий IP
     keyed: Mutex<KeyedBuckets>,
+    /// Лимиты по строке: вход своим аккаунтом — по паре «адрес + логин»
+    text: Mutex<TextBuckets>,
 }
 
 fn hit<K: std::hash::Hash + Eq>(
@@ -49,6 +52,11 @@ impl RateLimiter {
     /// То же, но лимит — на id (а не на адрес).
     pub fn check_id(&self, bucket: &'static str, id: Uuid, max: u32, window: Duration) -> bool {
         hit(&self.keyed, (bucket, id), max, window)
+    }
+
+    /// То же, но лимит — на строку, например `адрес|логин`.
+    pub fn check_key(&self, bucket: &'static str, key: &str, max: u32, window: Duration) -> bool {
+        hit(&self.text, (bucket, key.to_string()), max, window)
     }
 }
 

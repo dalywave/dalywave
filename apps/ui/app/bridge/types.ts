@@ -3,6 +3,8 @@
 // который сам ведёт «Сейчас играет» и пульт системы. Экраны пишутся один раз.
 import type { EqConfig } from '~/utils/eq'
 import type {
+  Account, AuthOverview, CreatedInvite, CreatedUser, InviteInfo, InviteList, NewAccount, NewInvite, NewUser, OneTimeLink,
+  PasswordChange, ResetInfo, ResetPassword, SignInResult,
   AddPlaylistItems, AddedPlaylistItems, AdminAcquisition, AdminAcquisitionPage, AdminImportList, AdminOverview, AdminRecordingPage,
   AcquisitionStatus, AudioStatus, DownloaderToken, RecoOverview, RecoRunResult, RecoSettings,
   RecoSettingsPatch, RecoTask, ResolveRequest, ServerSettings, ServerSettingsPatch, Sources, StorageOverview, TrackPreview, AlbumDetail, ArtistDetail, AuditPage, AuthProviders, BlockedKind, BlockedList,
@@ -608,8 +610,23 @@ export interface Bridge {
     readonly passwordAllowed: boolean
     passwordLogin(password: string): Promise<Me>
     logout(): Promise<void>
-    /** Адрес начала входа через daly.rest (сайт) */
+    /** Адрес начала входа через первого провайдера (сайт) */
     loginUrl(next: string): string
+    /** Адрес входа через провайдера `id`: на сайте и в системном браузере при входе приложения
+     *  (`app`), привязка к своему аккаунту (`link`), приглашение (`invite`) */
+    providerUrl(id: string, opts?: { next?: string, app?: boolean, link?: boolean, invite?: string }): string
+    /** Вход своим аккаунтом; `app` — вход приложения, начатый в этом браузере (ответ — адрес возврата) */
+    localLogin(username: string, password: string, app?: boolean): Promise<SignInResult>
+    /** Первый запуск: создать администратора */
+    setup(account: NewAccount): Promise<SignInResult>
+    inviteInfo(token: string): Promise<InviteInfo>
+    acceptInvite(token: string, account: NewAccount): Promise<SignInResult>
+    resetInfo(token: string): Promise<ResetInfo>
+    resetPassword(token: string, body: ResetPassword): Promise<SignInResult>
+    /** «Вход» в настройках: логин, пароль, привязанные провайдеры */
+    account(): Promise<Account>
+    changePassword(body: PasswordChange): Promise<void>
+    unlinkIdentity(id: string): Promise<void>
     /** Сессия кончилась не по нашей кнопке: сервер ответил 401 или вышли в другом окне */
     onSignedOut(cb: () => void): () => void
   }
@@ -937,6 +954,14 @@ export interface Bridge {
     overview(): Promise<AdminOverview>
     users(): Promise<UserList>
     updateUser(id: string, patch: UserPatch): Promise<void>
+    /** Способы входа (только чтение — настраиваются переменными окружения) */
+    authOverview(): Promise<AuthOverview>
+    createUser(user: NewUser): Promise<CreatedUser>
+    /** Одноразовая ссылка: задать пароль заново */
+    resetLink(userId: string): Promise<OneTimeLink>
+    invites(): Promise<InviteList>
+    createInvite(invite: NewInvite): Promise<CreatedInvite>
+    revokeInvite(id: string): Promise<void>
     sessions(userId?: string): Promise<SessionList>
     revokeSession(id: string): Promise<void>
     audit(cursor?: string | null, limit?: number, filter?: { kind?: string, actor?: string }): Promise<AuditPage>
