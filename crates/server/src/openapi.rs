@@ -112,6 +112,7 @@ use crate::routes::{
         wave::next,
         wave::feedback,
         wave::why,
+        wave::explain_map,
         describe::describe_preview,
         describe::describe_more,
         describe::save_described,

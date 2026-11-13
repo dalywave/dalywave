@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, a.map_x AS \"x!\", a.map_y AS \"y!\" FROM tracks t\n           JOIN track_analysis a ON a.recording_id = t.recording_id\n           WHERE t.id = ANY($1) AND a.map_x IS NOT NULL AND a.map_y IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tracks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "x!",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "map_x"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "y!",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "map_y"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "cc5891773bf49696e562ff2779e345315a08d2db569c597bc75f1438dad2d786"
+}

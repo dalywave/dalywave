@@ -61,6 +61,7 @@ mod updates;
 mod versions;
 mod video;
 mod watch;
+mod wave_map;
 mod wave_prep;
 mod wave_presets;
 mod web_login;

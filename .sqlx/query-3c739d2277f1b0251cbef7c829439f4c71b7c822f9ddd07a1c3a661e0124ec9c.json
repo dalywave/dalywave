@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.recording_id FROM tracks t JOIN track_analysis a ON a.recording_id = t.recording_id\n           WHERE t.id = ANY($1) AND a.sound IS NOT NULL AND a.map_x IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "recording_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "track_analysis",
+            "name": "recording_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3c739d2277f1b0251cbef7c829439f4c71b7c822f9ddd07a1c3a661e0124ec9c"
+}

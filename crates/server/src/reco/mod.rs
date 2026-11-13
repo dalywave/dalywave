@@ -7,6 +7,8 @@
 pub mod analysis;
 pub mod describe;
 pub mod device_set;
+pub mod explain;
+pub mod map;
 pub mod model;
 pub mod prep;
 pub mod profile;
@@ -15,6 +17,7 @@ pub mod repeat;
 pub mod scout;
 pub mod suggest;
 pub mod taste;
+pub mod trace;
 pub mod training;
 pub mod vectors;
 pub mod wave;
@@ -381,6 +384,10 @@ pub struct Cand {
     pub model: Option<f32>,
     /// Версия сети, которая дала оценку.
     pub model_version: Option<String>,
+    /// Вероятности сети: пропуск, дослушивание, лайк — для следа подбора.
+    pub model_probs: Option<[f32; 3]>,
+    /// След подбора, из которого выбран трек ([`trace`]): пишется вместе с показом.
+    pub trace: Option<std::sync::Arc<trace::Draft>>,
 }
 
 impl Cand {
@@ -568,6 +575,8 @@ pub async fn candidates(
             damped: r.damped,
             model: None,
             model_version: None,
+            model_probs: None,
+            trace: None,
         })
         .collect())
 }
@@ -618,6 +627,8 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
     let analysis = analysis::schedule_backfill(db, 500).await?;
     let taste = taste::schedule(db, &settings).await?;
     let model = model::schedule(db, &settings).await?;
+    let map = map::schedule(db, &settings).await?;
+    let traces = trace::cleanup(db).await?;
     let sessions =
         sqlx::query!("DELETE FROM wave_sessions WHERE last_active_at < now() - interval '30 days'")
             .execute(db)
@@ -637,6 +648,8 @@ pub async fn schedule(db: &PgPool) -> Result<ScheduleReport, sqlx::Error> {
         model,
         sessions_deleted: sessions,
         impressions_deleted: impressions,
+        map,
+        traces_deleted: traces,
     })
 }
 
@@ -651,6 +664,10 @@ pub struct ScheduleReport {
     pub model: bool,
     pub sessions_deleted: u64,
     pub impressions_deleted: u64,
+    /// Поставлен пересчёт карты звучания («Как подобран»).
+    pub map: bool,
+    /// Удалено следов подбора старше 30 дней.
+    pub traces_deleted: u64,
 }
 
 #[cfg(test)]

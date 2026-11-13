@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE track_analysis a SET map_x = x.x, map_y = x.y\n             FROM unnest($1::uuid[], $2::real[], $3::real[]) AS x(id, x, y) WHERE a.recording_id = x.id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Float4Array",
+        "Float4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f27fa90f9cebfa9fbb890ec9edea3d69d8b0cc0cfb2bba1800cc28cd2a35fcc"
+}

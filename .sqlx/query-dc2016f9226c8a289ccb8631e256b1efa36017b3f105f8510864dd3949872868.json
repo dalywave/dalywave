@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO recommendation_impressions (user_id, track_id, surface, wave_session_id, model_version, score,\n                                                 reason, position, trace_id)\n         SELECT $1, t, $2, $3, $4, s, r::jsonb, p, tr\n         FROM unnest($5::uuid[], $6::real[], $7::text[], $8::int[], $9::uuid[]) AS x(t, s, r, p, tr)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Text",
+        "UuidArray",
+        "Float4Array",
+        "TextArray",
+        "Int4Array",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dc2016f9226c8a289ccb8631e256b1efa36017b3f105f8510864dd3949872868"
+}

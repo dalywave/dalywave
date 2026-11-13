@@ -12,6 +12,9 @@ const THEMES: ThemePref[] = ['dark', 'light', 'system']
 export type ClipStyle = 'square' | 'wide' | 'backdrop' | 'cinema' | 'off'
 export const CLIP_STYLES: ClipStyle[] = ['square', 'wide', 'backdrop', 'cinema', 'off']
 
+/** Что на месте обложки у трека волны: обложка или «Как подобран» — карта вкуса */
+export type PlayerView = 'cover' | 'map'
+
 /**
  * Настройки интерфейса «под себя». Плоский объект с отметкой времени: так же целиком уйдёт
  * на сервер, когда появится синхронизация между устройствами (побеждает более поздняя запись)
@@ -28,13 +31,15 @@ export interface Preferences {
   motionWifiOnly: boolean
   /** Как клип показан в полном плеере (живая обложка альбома — всегда на месте обложки) */
   clipStyle: ClipStyle
+  /** Настройка устройства: у трека волны вместо обложки — карта «Как подобран» */
+  playerView: PlayerView
   updatedAt: string | null
 }
 
 export type PreferencesPatch = Partial<Omit<Preferences, 'updatedAt'>>
 
 const STORAGE_KEY = 'dw.prefs'
-const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', motion: true, motionWifiOnly: false, clipStyle: 'square', updatedAt: null }
+const DEFAULTS: Preferences = { scrubber: 'wave', sidePlayer: true, theme: 'dark', motion: true, motionWifiOnly: false, clipStyle: 'square', playerView: 'cover', updatedAt: null }
 
 // По умолчанию — тёмная: «Полночь» задумана тёмной; светлую и «как в системе»
 // выбирают в настройках. Ключ и значения читает и скрипт в <head> (utils/theme.ts) — до отрисовки
@@ -49,6 +54,7 @@ function sanitize(raw: unknown): Preferences {
     motion: typeof r.motion === 'boolean' ? r.motion : DEFAULTS.motion,
     motionWifiOnly: typeof r.motionWifiOnly === 'boolean' ? r.motionWifiOnly : DEFAULTS.motionWifiOnly,
     clipStyle: CLIP_STYLES.includes(r.clipStyle as ClipStyle) ? r.clipStyle as ClipStyle : DEFAULTS.clipStyle,
+    playerView: r.playerView === 'map' ? 'map' : 'cover',
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : null,
   }
 }
@@ -111,6 +117,11 @@ export const usePrefsStore = defineStore('prefs', () => {
     set: v => update({ clipStyle: v }),
   })
 
+  const playerView = computed<PlayerView>({
+    get: () => prefs.value.playerView,
+    set: v => update({ playerView: v }),
+  })
+
   // Выбор в другой вкладке подхватывается сразу (key = null — там очистили хранилище)
   if (import.meta.client) {
     window.addEventListener('storage', (e) => {
@@ -118,5 +129,5 @@ export const usePrefsStore = defineStore('prefs', () => {
     })
   }
 
-  return { prefs, scrubber, sidePlayer, theme, motion, motionWifiOnly, clipStyle, update }
+  return { prefs, scrubber, sidePlayer, theme, motion, motionWifiOnly, clipStyle, playerView, update }
 })

@@ -76,6 +76,8 @@ async fn listened(db: &PgPool, user_id: Uuid) -> Result<Vec<Listened>, sqlx::Err
                FROM play_events p
                WHERE p.user_id = $1 AND p.started_at > now() - interval '365 days'
                  AND p.started_at > taste_reset_at($1)
+                 -- Превью (30 с вместо трека) «дослушивается» за полминуты: вкус по нему не собирается
+                 AND p.duration_ms > 31000
                GROUP BY p.track_id
            ), liked AS (
                SELECT track_id, (extract(epoch FROM now() - created_at) / 86400.0)::real AS age
@@ -427,7 +429,11 @@ pub async fn rebuild(
         ..Default::default()
     };
     if items.len() < MIN_TRACKS {
-        // Не из чего собирать: старые грани остаются, пока не появятся данные
+        // Не из чего собирать: прежние грани больше не опираются ни на что (послушанное ушло за год,
+        // а раньше их могли собрать и из превью) — убираем, иначе одна случайная грань — «весь вкус»
+        sqlx::query!("DELETE FROM taste_facets WHERE user_id = $1", user_id)
+            .execute(db)
+            .await?;
         return Ok(report);
     }
     let points: Vec<Vec<f32>> = items.iter().map(|l| l.sound.clone()).collect();
@@ -442,7 +448,7 @@ pub async fn rebuild(
         r#"SELECT p.track_id, p.started_at, COALESCE(d.platform, p.platform) AS "platform?"
            FROM play_events p LEFT JOIN devices d ON d.id = p.device_id
            WHERE p.user_id = $1 AND p.started_at > now() - interval '180 days'
-             AND p.started_at > taste_reset_at($1)
+             AND p.started_at > taste_reset_at($1) AND p.duration_ms > 31000
              AND (p.end_reason = 'completed' OR p.played_ms >= 0.8 * p.duration_ms)"#,
         user_id,
     )

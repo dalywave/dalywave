@@ -480,6 +480,97 @@ pub struct WhyTrack {
     pub details: Option<serde_json::Value>,
 }
 
+// ───────────── «Как подобран»: карта вкуса ─────────────
+// Координаты — в системе карты звучания (UMAP по векторам звучания, примерно 0..1); масштаб и рамку
+// выбирает приложение.
+
+/// Грань вкуса на карте: облако с подписью.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplainFacet {
+    pub id: Uuid,
+    pub label: String,
+    pub x: f32,
+    pub y: f32,
+    /// Радиус облака.
+    pub r: f32,
+    /// Доля вкуса, 0..1.
+    pub weight: f32,
+}
+
+/// Трек сессии до выбранного: линия того, что играло.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplainStep {
+    pub track_id: Uuid,
+    pub title: String,
+    pub artists: String,
+    pub x: f32,
+    pub y: f32,
+    /// Чем кончился: дослушан, пропущен, лайк…; `null` — реакции не было.
+    pub outcome: Option<WaveFeedbackKind>,
+}
+
+/// Что стало с вариантом подбора.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExplainStage {
+    /// Прошёл отбор и оценён.
+    Ranked,
+    /// Выбран в эту выдачу (сам выбранный трек — в `chosen`).
+    Picked,
+    /// Отсеян: уже звучал, отдыхает, далеко от вкуса, вне настроек.
+    Dropped,
+}
+
+/// Вариант этого подбора.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplainCandidate {
+    pub track_id: Uuid,
+    pub x: f32,
+    pub y: f32,
+    pub stage: ExplainStage,
+    /// Номер грани в `facets`, из которой пришёл вариант.
+    pub facet: Option<u32>,
+    /// Оценка подбора (у отсеянных — нет): чем выше, тем ярче точка.
+    pub score: Option<f32>,
+}
+
+/// Ближайший соперник выбранного.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplainRival {
+    pub track_id: Uuid,
+    pub title: String,
+    pub artists: String,
+    pub x: f32,
+    pub y: f32,
+}
+
+/// «Как подобран»: всё для карты вкуса у трека, который подобрала волна.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WaveExplain {
+    pub track: Track,
+    pub x: f32,
+    pub y: f32,
+    /// Грань, из которой пришёл трек (номер в `facets`).
+    pub facet: Option<u32>,
+    pub facets: Vec<ExplainFacet>,
+    /// Последние треки сессии до этого, по порядку.
+    pub session: Vec<ExplainStep>,
+    /// Варианты подбора с координатами; следа нет (старый показ) — пусто.
+    pub candidates: Vec<ExplainCandidate>,
+    pub rivals: Vec<ExplainRival>,
+    /// Причины коротко — для чипов: главное первым.
+    pub reasons: Vec<WhyLine>,
+    /// Сколько вариантов рассматривал подбор (с отсеянными); следа нет — `null`.
+    pub considered: Option<u32>,
+    /// Остальной каталог вокруг — «пыль» карты: x0, y0, x1, y1, …
+    pub dust: Vec<f32>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

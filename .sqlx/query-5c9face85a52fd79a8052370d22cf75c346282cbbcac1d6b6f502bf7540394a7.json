@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE taste_facets f SET map_x = n.x, map_y = n.y, map_r = n.r\n           FROM (SELECT g.id, c.x, c.y,\n                        (SELECT avg(sqrt(power(k.map_x - c.x, 2) + power(k.map_y - c.y, 2)))\n                         FROM (SELECT b.map_x, b.map_y FROM track_analysis b\n                               WHERE b.sound IS NOT NULL AND b.map_x IS NOT NULL\n                               ORDER BY b.sound <=> g.centroid LIMIT $3) k)::real AS r\n                 FROM taste_facets g\n                 CROSS JOIN LATERAL (\n                     SELECT avg(k.map_x)::real AS x, avg(k.map_y)::real AS y\n                     FROM (SELECT b.map_x, b.map_y FROM track_analysis b\n                           WHERE b.sound IS NOT NULL AND b.map_x IS NOT NULL\n                           ORDER BY b.sound <=> g.centroid LIMIT $4) k) c\n                 WHERE ($1::uuid IS NULL OR g.user_id = $1) AND ($2 OR g.map_x IS NULL)) n\n           WHERE f.id = n.id AND n.x IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5c9face85a52fd79a8052370d22cf75c346282cbbcac1d6b6f502bf7540394a7"
+}

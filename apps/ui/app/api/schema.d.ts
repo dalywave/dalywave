@@ -3556,6 +3556,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/wave/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["explain_map"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/wave/presets": {
         parameters: {
             query?: never;
@@ -5202,6 +5218,74 @@ export interface components {
              */
             duplicates: number;
             rejected: components["schemas"]["RejectedEvent"][];
+        };
+        /** @description Вариант этого подбора. */
+        ExplainCandidate: {
+            /**
+             * Format: int32
+             * @description Номер грани в `facets`, из которой пришёл вариант.
+             */
+            facet?: number | null;
+            /**
+             * Format: float
+             * @description Оценка подбора (у отсеянных — нет): чем выше, тем ярче точка.
+             */
+            score?: number | null;
+            stage: components["schemas"]["ExplainStage"];
+            /** Format: uuid */
+            trackId: string;
+            /** Format: float */
+            x: number;
+            /** Format: float */
+            y: number;
+        };
+        /** @description Грань вкуса на карте: облако с подписью. */
+        ExplainFacet: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /**
+             * Format: float
+             * @description Радиус облака.
+             */
+            r: number;
+            /**
+             * Format: float
+             * @description Доля вкуса, 0..1.
+             */
+            weight: number;
+            /** Format: float */
+            x: number;
+            /** Format: float */
+            y: number;
+        };
+        /** @description Ближайший соперник выбранного. */
+        ExplainRival: {
+            artists: string;
+            title: string;
+            /** Format: uuid */
+            trackId: string;
+            /** Format: float */
+            x: number;
+            /** Format: float */
+            y: number;
+        };
+        /**
+         * @description Что стало с вариантом подбора.
+         * @enum {string}
+         */
+        ExplainStage: "ranked" | "picked" | "dropped";
+        /** @description Трек сессии до выбранного: линия того, что играло. */
+        ExplainStep: {
+            artists: string;
+            outcome?: components["schemas"]["WaveFeedbackKind"] | null;
+            title: string;
+            /** Format: uuid */
+            trackId: string;
+            /** Format: float */
+            x: number;
+            /** Format: float */
+            y: number;
         };
         /**
          * @description Формат выгрузки.
@@ -9312,6 +9396,34 @@ export interface components {
          * @enum {string}
          */
         WaveCharacter: "fav" | "mix" | "new" | "pop" | "rare";
+        /** @description «Как подобран»: всё для карты вкуса у трека, который подобрала волна. */
+        WaveExplain: {
+            /** @description Варианты подбора с координатами; следа нет (старый показ) — пусто. */
+            candidates: components["schemas"]["ExplainCandidate"][];
+            /**
+             * Format: int32
+             * @description Сколько вариантов рассматривал подбор (с отсеянными); следа нет — `null`.
+             */
+            considered?: number | null;
+            /** @description Остальной каталог вокруг — «пыль» карты: x0, y0, x1, y1, … */
+            dust: number[];
+            /**
+             * Format: int32
+             * @description Грань, из которой пришёл трек (номер в `facets`).
+             */
+            facet?: number | null;
+            facets: components["schemas"]["ExplainFacet"][];
+            /** @description Причины коротко — для чипов: главное первым. */
+            reasons: components["schemas"]["WhyLine"][];
+            rivals: components["schemas"]["ExplainRival"][];
+            /** @description Последние треки сессии до этого, по порядку. */
+            session: components["schemas"]["ExplainStep"][];
+            track: components["schemas"]["Track"];
+            /** Format: float */
+            x: number;
+            /** Format: float */
+            y: number;
+        };
         WaveFeedback: {
             kind: components["schemas"]["WaveFeedbackKind"];
             /**
@@ -19224,6 +19336,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionChoices"];
+                };
+            };
+        };
+    };
+    explain_map: {
+        parameters: {
+            query: {
+                trackId: string;
+                /** @description Сессия волны, из которой трек; без неё — последний показ трека. */
+                sessionId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description «Как подобран»: карта вкуса — грани облаками, что играло в сессии, варианты этого подбора и отсеянное, выбранный трек, соперники и причины. Только свои показы */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveExplain"];
+                };
+            };
+            /** @description Волна не предлагала этот трек слушателю или у трека нет места на карте */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

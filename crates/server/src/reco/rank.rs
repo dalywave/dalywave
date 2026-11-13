@@ -599,15 +599,27 @@ pub struct Scored {
 /// Кандидаты, которых нельзя предлагать вовсе: «не рекомендовать», «не нравится», уже выданное,
 /// отдыхающее, недоступное для скачивания, отдыхающий в сессии артист.
 pub fn admissible(e: &Entry, ctx: &RankContext, exclude: &HashSet<Uuid>) -> bool {
+    rejection(e, ctx, exclude).is_none()
+}
+
+/// Почему кандидата нельзя предлагать ([`admissible`]): `rule` — «не рекомендовать» или «не нравится»,
+/// `served`, `resting`, `unavailable`, `artistRest`. Подходит — `None`.
+pub fn rejection(e: &Entry, ctx: &RankContext, exclude: &HashSet<Uuid>) -> Option<&'static str> {
     let c = &e.cand;
     let key = c.recording_id.unwrap_or(c.track_id);
-    !c.excluded
-        && !exclude.contains(&c.track_id)
-        && !exclude.contains(&key)
-        && !ctx.state.served_song(c)
-        && !resting(c, ctx.settings.character, ctx.now)
-        && acquirable(c)
-        && !ctx.state.artist_rested(c)
+    if c.excluded {
+        Some("rule")
+    } else if exclude.contains(&c.track_id) || exclude.contains(&key) || ctx.state.served_song(c) {
+        Some("served")
+    } else if resting(c, ctx.settings.character, ctx.now) {
+        Some("resting")
+    } else if !acquirable(c) {
+        Some("unavailable")
+    } else if ctx.state.artist_rested(c) {
+        Some("artistRest")
+    } else {
+        None
+    }
 }
 
 /// Тяга настроения и занятия: границы отсекают явно чужое, а внутри них «Спокойное» тянет к тихому,

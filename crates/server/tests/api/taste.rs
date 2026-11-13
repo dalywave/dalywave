@@ -488,3 +488,54 @@ async fn home_has_release_radar_in_time_of_day_order(db: PgPool) {
     assert!(pos(&morning, "release-radar") < pos(&morning, "forgotten-favorites"));
     assert_eq!(shelf_order(DayPart::Night)[0], "daily-mixes");
 }
+
+/// Превью (30 с вместо трека) «дослушивается» за полминуты — вкус по нему не собирается. Грань,
+/// собранная раньше из одних превью, при пересчёте уходит, а не остаётся «всем вкусом» с долей 1.
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn previews_do_not_make_a_taste(db: PgPool) {
+    let app = TestApp::new(db.clone()).await;
+    let me = app.listener("ann").await;
+    let user = user_of(&app, &me).await;
+    let s = Synth::new(db.clone());
+    let a = s.artist("Booker").await;
+    for i in 0..6 {
+        let t = s
+            .track(
+                a,
+                &format!("Превью {i}"),
+                Feat {
+                    axis: 0,
+                    jitter: i,
+                    ..Default::default()
+                },
+            )
+            .await;
+        sqlx::query(
+            "INSERT INTO play_events (client_event_id, user_id, track_id, started_at, played_ms, duration_ms, end_reason, source)
+             VALUES ($1, $2, $3, now() - interval '1 hour', 29000, 30000, 'completed', 'stream')",
+        )
+        .bind(Uuid::now_v7())
+        .bind(user)
+        .bind(t)
+        .execute(&db)
+        .await
+        .unwrap();
+    }
+    // Старая грань из превью (как собиралась до исправления)
+    sqlx::query(
+        "INSERT INTO taste_facets (user_id, position, label, centroid, weight)
+         VALUES ($1, 0, 'Booker', array_fill(0.03::real, ARRAY[1280])::halfvec(1280), 1.0)",
+    )
+    .bind(user)
+    .execute(&db)
+    .await
+    .unwrap();
+    let report = rebuild(&app, user).await;
+    assert_eq!(report.tracks, 0, "{report:?}");
+    assert!(
+        overview(&app, &me).await["facets"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}

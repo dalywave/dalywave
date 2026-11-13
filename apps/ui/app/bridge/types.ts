@@ -24,6 +24,7 @@ import type {
   NotificationPage, NotificationSettings, NotificationSettingsPatch, NotificationsRead, PushInfo, PushRegistered, PushRegistration,
   PushTest, PushUnregister,
   WhyTrack,
+  WaveExplain,
   FriendList, FriendProfile, FriendRequestResult, InviteLink, PeopleList, PersonCard, Privacy, PrivacyPatch, PlaylistInvite,
   DescribeBrief, DescribePreview, DescribedPlaylist, SaveDescribed,
   AlbumMotion, TrackClip, ClipView, ClipChoice, ClipReportList,
@@ -910,6 +911,8 @@ export interface Bridge {
     feedback(session: string, trackId: string, kind: WaveFeedbackKind, positionMs: number): Promise<void>
     /** «Почему этот трек»: что повлияло на выбор, понятными словами (админу — и подробности) */
     why(trackId: string, session: string | null): Promise<WhyTrack>
+    /** «Как подобран»: карта вкуса — грани, сессия, варианты подбора, выбранный и причины */
+    explain(trackId: string, session: string | null): Promise<WaveExplain>
     /** Сохранённые сочетания настроек: карточки под волной, по порядку */
     presets: {
       list(): Promise<WavePreset[]>

@@ -60,6 +60,8 @@ pub mod kind {
     pub const LIBRARY_SCAN: &str = "library_scan";
     /// Своя музыка: громкость и огибающая файла, затем полный анализ звука (полоса «Своя музыка: громкость»).
     pub const LIBRARY_ANALYZE: &str = "library_analyze";
+    /// Карта звучания для «Как подобран»: UMAP всего индекса раз в сутки, выровненный к прошлой карте.
+    pub const TRACK_MAP: &str = "track_map";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]

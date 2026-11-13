@@ -26,9 +26,9 @@ use super::{
     Cand, DayPart, MODEL_VERSION, Neighbour, Settings, analysis, candidates, nearest_fitting,
     nearest_semantic, nearest_sound,
     rank::{
-        self, Entry, Fit, Origin, RankContext, Scored, SessionState, WIDEST, admissible,
-        constraints, effect, fit, merge, novelty_floor, score, sequence, similar_threshold,
-        violation, within_bounds,
+        self, Entry, Fit, Origin, RankContext, Scored, SessionState, WIDEST, below_floor,
+        constraints, effect, fit, merge, novelty_floor, rejection, score, sequence,
+        similar_threshold, violation, within_bounds,
     },
     taste, track_sound,
     vectors::{Rng, blend, weighted_mean},
@@ -727,6 +727,8 @@ pub async fn select(
 
     let facets = taste::facets(db, user).await?;
     let raw = pool(db, session, &facets, part, platform).await?;
+    // След подбора для «Как подобран»: числа по ходу, запись — вместе с показами
+    let mut trace = super::trace::Collector::new(&facets, &raw, part, platform);
     let mut ids: Vec<Uuid> = Vec::with_capacity(raw.len());
     let mut seen = HashSet::new();
     for (track, _, _) in &raw {
@@ -770,13 +772,31 @@ pub async fn select(
     let exclude = session.state.served_set();
     let bounds = constraints(&session.settings);
     let mut rng = Rng::from_uuid(session.id, u64::from(session.state.step));
+    trace.considered(entries.len());
     let admitted: Vec<Entry> = entries
         .into_iter()
-        .filter(|e| admissible(e, &ctx, &exclude))
-        .filter(|e| !opts.skip_heard || e.cand.plays_30d == 0)
+        .filter(|e| {
+            let why = rejection(e, &ctx, &exclude)
+                .or((opts.skip_heard && e.cand.plays_30d > 0).then_some("heard"));
+            if let Some(why) = why {
+                trace.drop(e, why);
+            }
+            why.is_none()
+        })
         .collect();
     // Незнакомое от незнакомых артистов — только рядом со вкусом
+    let before: Vec<Entry> = admitted
+        .iter()
+        .filter(|e| below_floor(e))
+        .cloned()
+        .collect();
     let mut admitted = novelty_floor(admitted, want);
+    if !before.is_empty() {
+        let kept: HashSet<Uuid> = admitted.iter().map(|e| e.cand.track_id).collect();
+        for e in before.iter().filter(|e| !kept.contains(&e.cand.track_id)) {
+            trace.drop(e, "far");
+        }
+    }
     // Сеть вкуса, если включена: своя оценка каждому кандидату с анализом
     super::model::annotate(
         db,
@@ -795,7 +815,13 @@ pub async fn select(
     let ready_only = opts.only_ready && admitted.iter().any(|e| e.cand.ready());
     let scored: Vec<Scored> = admitted
         .into_iter()
-        .filter(|e| !ready_only || e.cand.ready())
+        .filter(|e| {
+            let keep = !ready_only || e.cand.ready();
+            if !keep {
+                trace.drop(e, "notReady");
+            }
+            keep
+        })
         .map(|e| {
             let v = violation(&e.cand, &bounds);
             let mut s = score(&e, &ctx, &mut rng) - 1.5 * v.min(1.0);
@@ -809,15 +835,19 @@ pub async fn select(
             }
         })
         .collect();
-    Ok(
-        sequence(within_bounds(scored, want, &bounds), want + 5, &ctx)
-            .into_iter()
-            .map(|s| {
-                let reason = rank::reason(&s.entry, &ctx);
-                (s, reason)
-            })
-            .collect(),
-    )
+    let rows = trace.rows(&scored);
+    let bounded = within_bounds(scored, want, &bounds);
+    trace.bounded(rows, &bounded);
+    let picked = sequence(bounded, want + 5, &ctx);
+    let draft = trace.finish(session, &ctx, &picked);
+    Ok(picked
+        .into_iter()
+        .map(|mut s| {
+            let reason = rank::reason(&s.entry, &ctx);
+            s.entry.cand.trace = Some(draft.clone());
+            (s, reason)
+        })
+        .collect())
 }
 
 /// Выдача из подобранного: не больше `count`, без артиста подряд. Чего нет на сервере — на скачивание:
@@ -895,6 +925,19 @@ pub async fn persist(
     let positions: Vec<i32> = (0..out.len())
         .map(|i| (first_position as usize + i) as i32)
         .collect();
+    // Из какого подбора каждый трек: следы пишутся фоном («Как подобран», `reco::trace`)
+    let traces: Vec<Option<Uuid>> = out
+        .iter()
+        .map(|(s, _)| s.entry.cand.trace.as_ref().map(|d| d.id))
+        .collect();
+    let mut drafts: Vec<std::sync::Arc<super::trace::Draft>> = Vec::new();
+    for (s, _) in out {
+        if let Some(d) = &s.entry.cand.trace
+            && !drafts.iter().any(|x| x.id == d.id)
+        {
+            drafts.push(d.clone());
+        }
+    }
     let state_json = serde_json::to_value(state).map_err(anyhow::Error::from)?;
     let mut tx = db.begin().await?;
     sqlx::query!(
@@ -906,9 +949,9 @@ pub async fn persist(
     .await?;
     sqlx::query!(
         "INSERT INTO recommendation_impressions (user_id, track_id, surface, wave_session_id, model_version, score,
-                                                 reason, position)
-         SELECT $1, t, $2, $3, $4, s, r::jsonb, p
-         FROM unnest($5::uuid[], $6::real[], $7::text[], $8::int[]) AS x(t, s, r, p)",
+                                                 reason, position, trace_id)
+         SELECT $1, t, $2, $3, $4, s, r::jsonb, p, tr
+         FROM unnest($5::uuid[], $6::real[], $7::text[], $8::int[], $9::uuid[]) AS x(t, s, r, p, tr)",
         session.user_id,
         session.surface(),
         session.id,
@@ -917,10 +960,12 @@ pub async fn persist(
         &scores,
         &reasons,
         &positions,
+        &traces as &[Option<Uuid>],
     )
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
+    super::trace::spawn_write(db, drafts);
     Ok(())
 }
 

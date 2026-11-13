@@ -668,6 +668,10 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         await ready()
         return unwrap(api.GET('/api/wave/why', { params: { query: { trackId, sessionId: session ?? undefined } } }))
       },
+      async explain(trackId, session) {
+        await ready()
+        return unwrap(api.GET('/api/wave/explain', { params: { query: { trackId, sessionId: session ?? undefined } } }))
+      },
       presets: {
         list: async () => (await unwrap(api.GET('/api/wave/presets'))).items,
         create: body => unwrap(api.POST('/api/wave/presets', { body })),
