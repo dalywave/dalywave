@@ -65,7 +65,7 @@ watch(() => [ui.panelOpen, ui.panelTab], ([open, tab]) => {
 .panel__title { flex: 1; min-width: 0; height: 50px; margin: 0; font-size: var(--fs-body); font-weight: 700; line-height: 50px; }
 .panel__tabs :deep(.tabs__list) { gap: 18px; border-bottom: 0; }
 .panel__tabs :deep(.tabs__item) { height: 50px; }
-.panel__body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 8px calc(12px - var(--sb-size, 0px)) 24px 12px; border-top: 1px solid var(--hair); }
+.panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 24px; border-top: 1px solid var(--hair); }
 .panel__devices { padding: 12px 0; }
 /* Текст: лента сама держит строку — без прокрутки панели */
 .panel__body.is-lyrics { position: relative; overflow: hidden; padding: 0 4px; }

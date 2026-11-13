@@ -158,21 +158,20 @@ const phoneMain = ref<HTMLElement | null>(null)
 .app__side { grid-row: 1; grid-column: 1; }
 .app__center { position: relative; display: flex; grid-row: 1; grid-column: 2; min-width: 0; min-height: 0; }
 .app__stage { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; }
-.app__main { position: relative; flex: 1; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; }
-/* Классическая полоса (Windows): место под неё всегда оставлено — страницы не прыгают; ползунок
-   ходит ниже верхней строки, а правый край содержимого остаётся там же, где без полосы (--sb-size) */
-:root[data-scrollbars='classic'] .app__main::-webkit-scrollbar-track { margin: calc(var(--topbar-h) + 4px) 0 6px; }
+.app__main { position: relative; flex: 1; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+/* Накладная полоса (Windows, plugins/scrollbars.client.ts) ходит ниже верхней строки и над плеером */
+.app__main { --scrollbar-inset-top: calc(var(--topbar-h) + 4px); --scrollbar-inset-bottom: 4px; }
 .app__panel { flex: none; }
 .app__bar { grid-row: 2; grid-column: 1 / -1; }
 /* Ширину колонки меняет не только окно, но и правая панель — содержимое страниц подстраивается
    под колонку через @container main, а не под окно */
-.page { --page-x: 32px; position: relative; min-height: 100%; padding: calc(var(--topbar-h) + 8px) calc(var(--page-x) - var(--sb-size, 0px)) 64px var(--page-x); container: main / inline-size; }
+.page { position: relative; min-height: 100%; padding: calc(var(--topbar-h) + 8px) 32px 64px; container: main / inline-size; }
 
 @media (max-width: 1279px) {
   .app:not(.is-rail) { --sidebar-w: 232px; }
 }
 @media (max-width: 1023px) {
-  .page { --page-x: 20px; padding-bottom: 48px; }
+  .page { padding: calc(var(--topbar-h) + 8px) 20px 48px; }
 }
 
 /* Планшет под пальцем: документ прокручивается сам, низ — под плавающими вкладками и плеером */

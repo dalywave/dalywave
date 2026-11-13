@@ -92,11 +92,15 @@
   .caps { font-size: var(--fs-micro); font-weight: 650; letter-spacing: var(--tr-caps); text-transform: uppercase; }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
-  /* Накладные полосы (macOS, iOS) — системные, только тоньше и в тон; классические — см. ниже */
+  /* Накладные полосы (macOS, iOS) — системные, только тоньше и в тон; классические заменяет накладная
+     полоса плагина (см. ниже) — системную прячем: Chromium (WebView2) слушает ::-webkit-scrollbar,
+     только пока scrollbar-width и scrollbar-color не заданы, Firefox — scrollbar-width: none */
   .thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
-  /* Chromium (WebView2) рисует ::-webkit-scrollbar, только пока scrollbar-width и scrollbar-color не заданы */
   @supports selector(::-webkit-scrollbar) {
     :root[data-scrollbars='classic'] .thin-scrollbar { scrollbar-width: auto; scrollbar-color: auto; }
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    :root[data-scrollbars='classic'] .thin-scrollbar { scrollbar-width: none; }
   }
   .glass {
     background: var(--glass);
@@ -114,27 +118,60 @@
 
 
 /* Классические полосы прокрутки (Windows, Linux, Mac с «Показывать всегда»; признак ставит
-   plugins/scrollbars.client.ts) — единый вид для всех прокручиваемых областей: без дорожки и стрелок,
-   тихий ползунок 6 px, под указателем — шире и темнее. (Проявлять его только над областью нельзя:
-   Chromium не перерисовывает полосу, когда меняется :hover самой области.) Ширина полосы —
-   --sb-size: на неё колонка содержимого сужает свой правый отступ (AppShell). Слой base — чтобы
-   .no-scrollbar и стили компонентов, прячущие полосу, всегда были сильнее */
+   plugins/scrollbars.client.ts). Системная вертикальная полоса спрятана и места не занимает — вместо неё
+   плагин рисует накладную (.ovs ниже), как на Mac и в Spotify. Горизонтальные ленты, где полоса не
+   спрятана нарочно, — тонкий ползунок без дорожки. Слой base — чтобы .no-scrollbar и стили компонентов,
+   прячущие полосу, всегда были сильнее; проба плагина (data-scrollbar-probe) — системная */
 @layer base {
-  :root[data-scrollbars='classic'] { --sb-size: 10px; }
   @supports selector(::-webkit-scrollbar) {
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); background: transparent; }
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-track,
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-corner { background: transparent; }
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-thumb { min-height: 40px; min-width: 40px; border: 2px solid transparent; border-radius: var(--sb-size); background: var(--scroll-thumb); background-clip: padding-box; }
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-thumb:hover,
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *)::-webkit-scrollbar-thumb:active { border-width: 1px; background-color: var(--scroll-thumb-hover); }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar { width: 0; height: 10px; background: transparent; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar-track,
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar-corner { background: transparent; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar-thumb { min-width: 40px; border: 2px solid transparent; border-radius: 10px; background: var(--scroll-thumb); background-clip: padding-box; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar-thumb:hover,
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe])::-webkit-scrollbar-thumb:active { border-width: 1px; background-color: var(--scroll-thumb-hover); }
   }
-  /* Firefox: своих частей полосы нет — тонкая системная в тон */
+  /* Firefox: частей полосы не настроить — системные спрятаны все, вертикальные заменяет накладная */
   @supports not selector(::-webkit-scrollbar) {
-    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *) { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+    :where([data-scrollbars='classic'], [data-scrollbars='classic'] *):not([data-scrollbar-probe]) { scrollbar-width: none; }
   }
 }
+
+/* Отступы накладной полосы от верхнего и нижнего края области (например, ниже верхней строки главной
+   колонки). Зарегистрированы, чтобы плагин читал готовые px, а не calc(); не наследуются */
+@property --scrollbar-inset-top { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --scrollbar-inset-bottom { syntax: '<length>'; inherits: false; initial-value: 0px; }
+
+/* Накладная полоса: узел в body поверх области (position: fixed, место задаёт плагин). Тонкий ползунок
+   у правого края, под указателем — шире и темнее; появляется быстро, гаснет плавно. При
+   prefers-reduced-motion переходы гасит общее правило ниже */
+.ovs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  width: 12px;
+  opacity: 0;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: layout style;
+  transition: opacity var(--dur-4) var(--ease-out);
+}
+.ovs.is-on { opacity: 1; pointer-events: auto; transition-duration: var(--dur-1); }
+.ovs__thumb {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  width: 6px;
+  border-radius: 999px;
+  background: var(--ovs-thumb, var(--scroll-overlay));
+  will-change: transform;
+  transition: width var(--dur-1) var(--ease-out), right var(--dur-1) var(--ease-out), background-color var(--dur-1);
+}
+.ovs__thumb:hover, .ovs.is-drag .ovs__thumb { right: 2px; width: 9px; background: var(--ovs-thumb-hover, var(--scroll-overlay-hover)); }
 
 /* Тёмный остров в светлой теме (токены — в tokens.css): свой цвет текста по умолчанию */
 .scheme-dark { color: var(--text-1); }
