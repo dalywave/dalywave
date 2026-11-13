@@ -401,7 +401,7 @@ macOS и Windows: окно 360 × 136 поверх всех — обложка, 
 ```ts
 interface AudioOutputs {
   mode: 'list' | 'picker'
-  outputs: { id: string, name: string, kind: AudioOutputKind, current: boolean }[]
+  outputs: { id: string, name: string, kind: AudioOutputKind, current: boolean, spatial?: boolean }[]
   followsSystem: boolean
 }
 type AudioOutputKind = 'builtin' | 'headphones' | 'bluetooth' | 'airplay' | 'usb' | 'hdmi' | 'other'
@@ -427,7 +427,10 @@ AirPlay ушла из сети, ЦАП выдернули) — пауза, вы�
 управления; на iPad — поповер у нижнего края экрана по центру). `outputs` — текущий маршрут, обычно
 один элемент с `current: true`: `name` — как его называет система («Динамик», «Гостиная»), `id` —
 тип порта (`Speaker`, `Headphones`, `BluetoothA2DPOutput`, `AirPlay`…). Выбор в окне приходит
-событием `audio:outputs`; `followsSystem` всегда `true`.
+событием `audio:outputs`; `followsSystem` всегда `true`. `spatial: true` — на этом выходе включено
+пространственное аудио (AirPods, Beats): режим «Фиксированное» или «С отслеживанием головы» человек
+выбирает в Пункте управления (удержать громкость), сводит звук сама iOS. Включили или выключили —
+тоже приходит `audio:outputs`.
 
 `audio.setOutput()` на iPhone и `audio.showPicker()` на компьютере отклоняются с кодом
 `unsupported`.

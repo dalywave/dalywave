@@ -145,6 +145,8 @@ export interface AudioOutput {
   kind: AudioOutputKind
   /** Сейчас звук идёт сюда */
   current: boolean
+  /** iPhone и iPad: на выходе включено пространственное аудио (AirPods, Beats) */
+  spatial?: boolean
 }
 
 export interface AudioOutputs {

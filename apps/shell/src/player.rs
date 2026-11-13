@@ -152,9 +152,10 @@ fn start_engine(app: &AppHandle) {
     #[cfg(target_os = "ios")]
     match dalywave_audio::apple::activate_audio_session() {
         Ok((rate, io)) => log::info!(
-            "audio session active: {rate} Hz, IO buffer {:.1} ms, route policy {}",
+            "audio session active: {rate} Hz, IO buffer {:.1} ms, route policy {}, spatial: {}",
             io * 1000.0,
-            dalywave_audio::apple::route_sharing_policy()
+            dalywave_audio::apple::route_sharing_policy(),
+            dalywave_audio::apple::spatial_description()
         ),
         Err(e) => log::error!("audio session: {e}"),
     }

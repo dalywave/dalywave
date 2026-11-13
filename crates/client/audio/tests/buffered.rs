@@ -240,6 +240,8 @@ fn renderer_on_this_mac_follows_the_wall_clock() {
     let mut started: Option<Instant> = None;
     let mut paused = false;
     let mut changed_after: Option<Duration> = None;
+    // Насколько звук уходит наперёд: с такой задержкой слышны эквалайзер и затухание таймера сна
+    let mut ahead_max = 0u32;
     let t0 = Instant::now();
     loop {
         assert!(t0.elapsed() < Duration::from_secs(30), "не доиграло");
@@ -254,6 +256,7 @@ fn renderer_on_this_mac_follows_the_wall_clock() {
                 ..
             } => {
                 let Some(s) = started else { continue };
+                ahead_max = ahead_max.max(engine.snapshot().output_ahead_ms);
                 // Слышимое не обгоняет часы: задержка вывода учтена
                 let wall = s.elapsed().as_millis() as u64;
                 assert!(
@@ -291,6 +294,7 @@ fn renderer_on_this_mac_follows_the_wall_clock() {
         }
     }
     // 3 с трека a и ~0,9 с паузы: переход не раньше, чем a дозвучало
+    eprintln!("рендерер: наперёд до {ahead_max} мс");
     let changed = changed_after.expect("переход к b");
     assert!(
         changed >= Duration::from_millis(3700),

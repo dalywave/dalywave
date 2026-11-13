@@ -49,6 +49,9 @@ pub struct AudioOutput {
     kind: &'static str,
     /// Сейчас звук идёт сюда
     current: bool,
+    /// iPhone и iPad: на этом выходе включено пространственное аудио (AirPods, Beats)
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    spatial: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -198,6 +201,7 @@ fn current(app: &AppHandle) -> ShellResult<AudioOutputs> {
             kind: d.kind.as_str(),
             name: d.name,
             id: d.id,
+            spatial: false,
         })
         .collect();
     Ok(AudioOutputs {
@@ -218,6 +222,7 @@ fn current(_app: &AppHandle) -> ShellResult<AudioOutputs> {
             name: p.name,
             kind: p.kind.as_str(),
             current: true,
+            spatial: p.spatial,
         })
         .collect();
     #[cfg(not(target_os = "ios"))]
@@ -311,6 +316,7 @@ mod tests {
                 name: "Динамики MacBook Pro".into(),
                 kind: "builtin",
                 current: true,
+                spatial: false,
             }],
             follows_system: true,
         })
