@@ -12,6 +12,11 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ru</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -55,6 +60,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dalywave-pair._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Чтобы подключать Apple TV в этой сети к DalyWave</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Чтобы узнать, какая песня играет рядом</string>
 	<key>NSSiriUsageDescription</key>

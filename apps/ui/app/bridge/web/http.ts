@@ -1,6 +1,7 @@
 // HTTP к нашему API. Типизированные вызовы — через openapi-fetch по сгенерированной схеме.
 // Сайт ходит на свой адрес с cookie; приложение — на адрес сервера с токеном устройства.
 import createClient from 'openapi-fetch'
+import { contentIsEnglish, englishMixes } from '~/utils/mixTitles'
 import type { paths } from '~/api/schema'
 import { ApiError, type ErrorBody } from '~/api/types'
 
@@ -87,6 +88,16 @@ export function createHttp(opts: HttpOptions = {}) {
     onResponse({ request, response }) {
       expired(request.url, response.status)
       return response
+    },
+  })
+  // Английский интерфейс: миксы сервера («Микс дня 1», «Открытия недели») — по-английски
+  api.use({
+    async onResponse({ response }) {
+      if (!contentIsEnglish()) return response
+      if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return response
+      const data: unknown = await response.clone().json().catch(() => null)
+      if (!englishMixes(data)) return response
+      return new Response(JSON.stringify(data), { status: response.status, statusText: response.statusText, headers: response.headers })
     },
   })
 

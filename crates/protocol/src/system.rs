@@ -31,6 +31,10 @@ pub enum StorageKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerConfig {
+    /// Всегда `dalywave`: по нему приложения узнают, что по адресу именно сервер DalyWave.
+    pub app: String,
+    /// Название сервера (`DALYWAVE_SERVER_NAME`, по умолчанию «DalyWave»).
+    pub name: String,
     pub version: String,
     /// Каталог Deezer: поиск по каталогу, чарты, новинки, похожие, страницы артистов целиком.
     pub deezer: bool,

@@ -12,8 +12,8 @@ struct PartyView: View {
             VStack(alignment: .leading, spacing: 30) {
                 Text("Вечеринка").font(.system(size: 64, weight: .bold)).foregroundStyle(Theme.text1)
                 Text(active
-                     ? "Гости наводят камеру на код и добавляют треки — без аккаунта."
-                     : "Сцена на весь экран и QR для гостей: они добавляют треки со своих телефонов.")
+                     ? String(localized: "Гости наводят камеру на код и добавляют треки — без аккаунта.")
+                     : String(localized: "Сцена на весь экран и QR для гостей: они добавляют треки со своих телефонов."))
                     .font(.system(size: 30))
                     .foregroundStyle(Theme.text2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -22,7 +22,7 @@ struct PartyView: View {
                     store.updateParty(["active": !active])
                     if !active { store.tab = .now }
                 } label: {
-                    Label(active ? "Закончить вечеринку" : "Начать вечеринку",
+                    Label(active ? String(localized: "Закончить вечеринку") : String(localized: "Начать вечеринку"),
                           systemImage: active ? "stop.fill" : "party.popper.fill")
                         .font(.system(size: 30, weight: .semibold))
                         .padding(.horizontal, 20)
@@ -30,13 +30,13 @@ struct PartyView: View {
                 .padding(.top, 10)
 
                 VStack(alignment: .leading, spacing: 18) {
-                    toggle("Только энергичное", on: store.party?.settings.energetic ?? false) {
+                    toggle(String(localized: "Только энергичное"), on: store.party?.settings.energetic ?? false) {
                         store.updateParty(["energetic": $0])
                     }
-                    toggle("Без повторов артистов", on: store.party?.settings.noArtistRepeat ?? true) {
+                    toggle(String(localized: "Без повторов артистов"), on: store.party?.settings.noArtistRepeat ?? true) {
                         store.updateParty(["noArtistRepeat": $0])
                     }
-                    toggle("Диджей", on: store.party?.settings.dj ?? true) {
+                    toggle(String(localized: "Диджей"), on: store.party?.settings.dj ?? true) {
                         store.updateParty(["dj": $0])
                     }
                 }
@@ -80,7 +80,7 @@ struct PartyView: View {
             HStack {
                 Text(title).font(.system(size: 30, weight: .medium))
                 Spacer()
-                Text(on ? "Вкл." : "Выкл.").font(.system(size: 28)).foregroundStyle(.secondary)
+                Text(on ? String(localized: "Вкл.") : String(localized: "Выкл.")).font(.system(size: 28)).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 10)
         }

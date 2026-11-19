@@ -1,0 +1,97 @@
+/* DalyWave для Apple TV и Top Shelf. Ключи — русский текст из кода (TVApp/Sources, TVTopShelf). */
+
+/* Подключение к серверу (ConnectView) */
+"Подключите DalyWave" = "Connect DalyWave";
+"DalyWave играет музыку с вашего сервера. Выберите его — или загляните в демо с открытой музыкой." = "DalyWave plays music from your own server. Choose it below, or try the demo with open music.";
+"Адрес сервера, например music.example.com" = "Server address, e.g. music.example.com";
+"Подключиться" = "Connect";
+"Попробовать демо" = "Try the Demo";
+"Открытая музыка, вход appreview" = "Open music, sign in as appreview";
+"Подключить с iPhone" = "Connect with iPhone";
+"Прежний сервер" = "Previous server";
+"С вашего iPhone" = "From your iPhone";
+"В этой сети" = "On this network";
+"Откройте DalyWave на iPhone в этой же сети — он предложит подключить этот Apple TV." = "Open DalyWave on an iPhone on the same network, and it will offer to connect this Apple TV.";
+"Подтвердите на iPhone. Сервер: %@" = "Confirm on your iPhone. Server: %@";
+"Сервер не отвечает. Проверьте адрес и сеть" = "The server isn’t responding. Check the address and your network.";
+"По этому адресу не DalyWave" = "This address isn’t a DalyWave server.";
+"Это не похоже на адрес. Например: music.example.com" = "That doesn’t look like an address. For example: music.example.com";
+"iPhone прислал непонятный адрес сервера" = "The iPhone sent an invalid server address.";
+"На iPhone нет входа в DalyWave" = "The iPhone isn’t signed in to DalyWave.";
+"iPhone не достучался до сервера" = "The iPhone couldn’t reach the server.";
+"iPhone не смог подтвердить вход" = "The iPhone couldn’t confirm sign-in.";
+"Сервер %@ не отвечает" = "Server %@ isn’t responding.";
+
+/* Вход (SignInView) */
+"Войдите в DalyWave" = "Sign In to DalyWave";
+"Наведите камеру телефона на код или откройте " = "Point your phone’s camera at the code, or open ";
+" и введите код с экрана." = " and enter the code shown on screen.";
+"Нет связи с сервером. Пробуем снова…" = "Can’t reach the server. Trying again…";
+"Другой сервер" = "Other Server";
+
+/* Вкладки (Store.Tab) */
+"Сейчас играет" = "Now Playing";
+"Моя волна" = "My Wave";
+"Медиатека" = "Library";
+"Поиск" = "Search";
+"Вечеринка" = "Party";
+
+/* Настроения (Theme.Mood, Top Shelf) */
+"Бодрое" = "Energetic";
+"Весёлое" = "Happy";
+"Спокойное" = "Calm";
+"Грустное" = "Sad";
+
+/* Сейчас играет (NowPlayingView) */
+"Добавил(а) %@" = "Added by %@";
+"Играет на «%@»" = "Playing on “%@”";
+"Ждём загрузчик…" = "Waiting for the downloader…";
+"Готовим трек…" = "Preparing track…";
+"Играть здесь" = "Play Here";
+"Дальше" = "Up Next";
+"Добавить трек" = "Add a Track";
+"Наведите камеру" = "Scan with your camera";
+"Ничего не играет" = "Nothing Playing";
+"Включите волну — она подстроится под вас" = "Start your wave — it adapts to your taste";
+
+/* Моя волна (WaveView) */
+"Знакомое и новое — под ваш вкус" = "Familiar and new, tuned to your taste";
+"Настроение" = "Mood";
+"Сочетания" = "Presets";
+
+/* Медиатека (LibraryView), Top Shelf */
+"Любимые" = "Favorites";
+"Любимые треки" = "Favorite Tracks";
+"Недавнее" = "Recent";
+"Плейлисты" = "Playlists";
+"Выйти" = "Sign Out";
+
+/* Поиск (SearchView) */
+"Ничего не нашлось" = "No Results";
+"Треки" = "Tracks";
+"Альбомы" = "Albums";
+"Артисты" = "Artists";
+"Песни, альбомы, артисты" = "Songs, Albums, Artists";
+
+/* Вечеринка (PartyView) */
+"Гости наводят камеру на код и добавляют треки — без аккаунта." = "Guests scan the code with their camera and add tracks — no account needed.";
+"Сцена на весь экран и QR для гостей: они добавляют треки со своих телефонов." = "A full-screen stage with a QR code for guests: they add tracks from their phones.";
+"Закончить вечеринку" = "End Party";
+"Начать вечеринку" = "Start Party";
+"Только энергичное" = "Energetic Only";
+"Без повторов артистов" = "No Repeated Artists";
+"Диджей" = "DJ";
+"Вкл." = "On";
+"Выкл." = "Off";
+"Гости" = "Guests";
+
+/* Сообщения (Player, Store) */
+"Волна не собралась" = "Couldn’t build your wave";
+"Не удалось включить волну" = "Couldn’t start your wave";
+"Трек недоступен" = "Track unavailable";
+"Здесь пока пусто" = "Nothing here yet";
+"Не удалось загрузить" = "Couldn’t load";
+"Не удалось сохранить" = "Couldn’t save";
+
+/* Доступность (Theme.QRCode) */
+"QR-код" = "QR code";

@@ -1,3 +1,5 @@
+import { shellServerChosen } from '~/bridge/tauri'
+
 // Кто может открыть страницу. Вход — через провайдеров OIDC, свой аккаунт или аварийный пароль;
 // человек без ролей видит «ждём доступа»; админка — только администраторам
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -12,8 +14,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path.startsWith('/jam/')) return
   // Оверлей для стрима (OBS): без входа — у ссылки свой секретный ключ
   if (to.path === '/overlay') return
+  // Политика конфиденциальности — открыта всем (ссылка со страницы входа и из App Store)
+  if (to.path === '/privacy') return
   const auth = useAuthStore()
   const bridge = useBridge()
+  // «Адрес сервера» — только в приложении; первый запуск сборки для App Store начинается с него
+  if (to.path === '/server') {
+    if (!bridge.appServer) return navigateTo('/login')
+    void bridge.ready()
+    return
+  }
+  if (bridge.appServer && !shellServerChosen()) return navigateTo('/server')
   // Сцена вечеринки: телевизор без входа показывает код, вход подтверждают с телефона
   if (to.path === '/party') {
     void bridge.ready()

@@ -157,6 +157,22 @@ async function createAdmin(v: { name: string, username: string, password: string
   }
 }
 
+// ---------- Сервер приложения и приложение на телефоне ----------
+const serverHost = computed(() => {
+  if (!bridge.appServer || typeof location === 'undefined') return ''
+  try {
+    return new URL(bridge.resolveUrl('/'), location.href).host
+  }
+  catch {
+    return ''
+  }
+})
+// Сайт (не вход приложения в браузере): ссылка dalywave://server на этот сервер
+const phoneLink = computed(() => (bridge.kind === 'web' && !appMode.value && typeof location !== 'undefined'
+  ? `dalywave://server?url=${encodeURIComponent(location.origin)}`
+  : null))
+const qrOpen = ref(false)
+
 // ---------- Аварийный вход ----------
 const canPassword = computed(() => !!providers.value?.password && bridge.auth.passwordAllowed && !appMode.value && !handedOff.value)
 const showPassword = ref(false)
@@ -235,9 +251,10 @@ async function submit() {
       />
     </template>
 
-    <template v-if="canPassword && !signingIn" #foot>
+    <template v-if="!signingIn && !handedOff" #foot>
+      <div class="lf">
       <!-- Компьютер: поле прямо здесь; под пальцем — нижний лист -->
-      <form v-if="showPassword && !ui.isTouchUi" class="pw pw--inline" @submit.prevent="submit">
+      <form v-if="canPassword && showPassword && !ui.isTouchUi" class="pw pw--inline" @submit.prevent="submit">
         <div class="pw__row">
           <input
             ref="input"
@@ -255,7 +272,20 @@ async function submit() {
         </div>
         <p v-if="formError" id="pw-error" class="pw__error" role="alert">{{ formError }}</p>
       </form>
-      <button v-else type="button" class="pw-link" @click="showPassword = true">{{ local ? t('emergency.link') : t('password') }}</button>
+      <div class="lf__links">
+        <button v-if="canPassword && !showPassword" type="button" class="pw-link" @click="showPassword = true">{{ local ? t('emergency.link') : t('password') }}</button>
+        <!-- Приложение: к какому серверу подключено и как сменить -->
+        <NuxtLink v-if="bridge.appServer" to="/server" class="pw-link">{{ t('changeServer', { host: serverHost }) }}</NuxtLink>
+        <!-- Сайт: приложение на телефоне — QR-код с адресом этого сервера; на самом телефоне — ссылка -->
+        <a v-if="phoneLink && ui.isPhone" :href="phoneLink" class="pw-link">{{ t('openApp') }}</a>
+        <button v-else-if="phoneLink" type="button" class="pw-link" @click="qrOpen = true">{{ t('phone') }}</button>
+        <NuxtLink to="/privacy" class="pw-link">{{ t('privacy') }}</NuxtLink>
+      </div>
+      <!-- Окно уходит в портал: место в разметке не важно -->
+      <UiModal v-if="phoneLink" v-model:open="qrOpen" :title="t('phone')" :width="360">
+        <div class="lq"><AuthAppQr compact /></div>
+      </UiModal>
+      </div>
     </template>
 
     <!-- Лист аварийного входа под пальцем (уходит в портал — место в разметке не важно) -->
@@ -283,7 +313,10 @@ async function submit() {
 
 <style scoped>
 /* Ссылка на аварийный вход: неприметная, но с полноценной зоной касания */
-.pw-link { min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--text-4); font: inherit; font-size: var(--fs-small); cursor: pointer; transition: color var(--dur-1); }
+.lf { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.lf__links { display: flex; flex-wrap: wrap; justify-content: center; }
+.lq { padding: 4px 20px 20px; }
+.pw-link { display: inline-flex; align-items: center; text-decoration: none; min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--text-4); font: inherit; font-size: var(--fs-small); cursor: pointer; transition: color var(--dur-1); }
 .pw-link:hover { color: var(--text-2); }
 .pw-link:focus-visible { outline: none; border-radius: var(--r-2); box-shadow: 0 0 0 2px var(--focus); }
 .pw { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; animation: fade-in var(--dur-2); }
@@ -321,6 +354,10 @@ async function submit() {
     "signIn": "Войти",
     "retry": "Попробовать снова",
     "password": "Вход по паролю",
+    "changeServer": "{host} · сменить сервер",
+    "phone": "Приложение на телефоне",
+    "openApp": "Открыть в приложении",
+    "privacy": "Конфиденциальность",
     "failed": "Не получилось войти",
     "cancelled": { "title": "Вход отменён" },
     "disabled": { "title": "Доступ закрыт" },
@@ -386,6 +423,10 @@ async function submit() {
     "signIn": "Sign in",
     "retry": "Try again",
     "password": "Sign in with password",
+    "changeServer": "{host} · change server",
+    "phone": "App on your phone",
+    "openApp": "Open in the app",
+    "privacy": "Privacy",
     "failed": "Couldn't sign in",
     "cancelled": { "title": "Sign-in cancelled" },
     "disabled": { "title": "Access closed" },

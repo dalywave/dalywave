@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Health } from '~/api/types'
+import { ApiError } from '~/api/types'
 import type { TransitionMode } from '~/stores/player'
 
 // Настройки: аккаунт, воспроизведение, волна, внешний вид, о приложении.
@@ -14,6 +15,8 @@ const offline = useOfflineStore()
 const ui = useUiStore()
 const focus = useFocusStore()
 const bridge = useBridge()
+// Клипы скачивает загрузчик: без него на сервере и выбора вида клипа нет
+const server = useServerStore()
 const toast = useToast()
 const { t } = useI18n({ useScope: 'local' })
 const { tg } = useGlobalT()
@@ -45,6 +48,34 @@ async function logout() {
   await auth.logout().catch(() => toast.error(t('logoutFailed')))
   await navigateTo('/login')
 }
+
+// Удаление аккаунта: подтверждение, затем выход — сессии на сервере уже нет
+const pui = usePlaylistUi()
+async function deleteAccount() {
+  const ok = await pui.confirm({ title: t('deleteTitle'), text: t('deleteText'), action: t('deleteConfirm'), danger: true })
+  if (!ok) return
+  try {
+    await bridge.auth.deleteAccount()
+  }
+  catch (e) {
+    toast.error(e instanceof ApiError && e.code === 'last_admin' ? t('deleteLastAdmin') : t('deleteFailed'))
+    return
+  }
+  await auth.logout().catch(() => {})
+  await navigateTo('/login')
+}
+
+// ---------- Сервер приложения ----------
+
+const serverHost = computed(() => {
+  if (!bridge.appServer || typeof location === 'undefined') return ''
+  try {
+    return new URL(bridge.resolveUrl('/'), location.href).host
+  }
+  catch {
+    return ''
+  }
+})
 
 // ---------- Воспроизведение ----------
 
@@ -92,6 +123,8 @@ const language = computed({
   get: () => (i18n.locale.value === 'en' ? 'en' : 'ru') as 'ru' | 'en',
   set: (v: 'ru' | 'en') => {
     void i18n.setLocale(v)
+    // Миксы сервера («Микс дня») — на новом языке после перезагрузки данных
+    setContentLocale(v)
     document.documentElement.lang = v
     bridge.setLocale(v)
     try {
@@ -228,7 +261,7 @@ const language = computed({
       </SettingsRow>
       <!-- Как клип показан в полном плеере: квадратом, целиком, фоном, «кино» или никак -->
       <!-- Отдельным блоком под заголовком: пяти схемам нужна вся ширина -->
-      <template v-if="prefs.motion">
+      <template v-if="prefs.motion && server.downloader">
         <SettingsRow :title="t('clipStyle')" />
         <SettingsRow indent>
           <MusicClipStylePicker v-model="prefs.clipStyle" :label="t('clipStyle')" />
@@ -280,11 +313,20 @@ const language = computed({
       <SettingsRow v-if="health && !bridge.isDesktopApp" :title="t('version')">
         <span class="value tnum">{{ health.version }}</span>
       </SettingsRow>
+      <!-- Приложение — клиент своего сервера: к какому подключено и «Сменить» -->
+      <SettingsRow v-if="bridge.appServer" as="button" :title="t('server')" :description="serverHost" @click="navigateTo('/server')">
+        <span class="value">{{ t('serverChange') }}</span>
+        <Icon name="ph:caret-right" class="set__chev" aria-hidden="true" />
+      </SettingsRow>
+      <SettingsRow as="button" :title="t('privacy')" @click="navigateTo('/privacy')">
+        <Icon name="ph:caret-right" class="set__chev" aria-hidden="true" />
+      </SettingsRow>
     </SettingsGroup>
 
     <!-- Выход — отдельно в самом низу, как в Spotify и Apple Music -->
     <SettingsGroup :aria-label="t('logout')">
       <SettingsRow as="button" :title="t('logout')" danger @click="logout" />
+      <SettingsRow as="button" :title="t('deleteAccount')" danger @click="deleteAccount" />
     </SettingsGroup>
   </div>
 </template>
@@ -378,6 +420,14 @@ const language = computed({
     "about": "О приложении",
     "desktopAppsDesc": "Mac, Windows и Stream Deck",
     "server": "Сервер",
+    "serverChange": "Сменить",
+    "privacy": "Конфиденциальность",
+    "deleteAccount": "Удалить аккаунт",
+    "deleteTitle": "Удалить аккаунт?",
+    "deleteText": "С сервера уйдут медиатека, плейлисты, история и все устройства. Вернуть их не получится",
+    "deleteConfirm": "Удалить",
+    "deleteLastAdmin": "Вы единственный администратор. Сначала назначьте другого",
+    "deleteFailed": "Не получилось удалить аккаунт — попробуйте ещё раз",
     "serverDown": "Не отвечает",
     "version": "Версия"
   },
@@ -428,6 +478,14 @@ const language = computed({
     "about": "About",
     "desktopAppsDesc": "Mac, Windows and Stream Deck",
     "server": "Server",
+    "serverChange": "Change",
+    "privacy": "Privacy",
+    "deleteAccount": "Delete account",
+    "deleteTitle": "Delete your account?",
+    "deleteText": "Your library, playlists, history and all devices will be removed from the server. This can't be undone",
+    "deleteConfirm": "Delete",
+    "deleteLastAdmin": "You're the only administrator. Appoint another one first",
+    "deleteFailed": "Couldn't delete the account — try again",
     "serverDown": "Not responding",
     "version": "Version"
   }

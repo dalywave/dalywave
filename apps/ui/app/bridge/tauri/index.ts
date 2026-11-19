@@ -16,6 +16,35 @@ import { createTauriRecognizer } from './recognize'
 import { createBeat, createScreensaver } from './extras'
 import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell, type UpdateState } from './shell'
 
+// Адрес, выбранный в этом запуске: скрипт оболочки (`__DALYWAVE_SHELL__`) задан при создании окна и
+// после перезагрузки страницы отдаёт прежний адрес — новый ждёт здесь до следующего запуска
+const SERVER_KEY = 'dalywave.shell.server'
+
+function serverOverride(): string | null {
+  try {
+    return sessionStorage.getItem(SERVER_KEY)
+  }
+  catch {
+    return null
+  }
+}
+
+function rememberServer(url: string) {
+  try {
+    sessionStorage.setItem(SERVER_KEY, url)
+  }
+  catch {
+    // Без хранилища новый адрес подхватится при следующем запуске
+  }
+}
+
+/** Выбран ли сервер (для экрана «Адрес сервера» при первом запуске) — без ожидания оболочки */
+export function shellServerChosen(): boolean {
+  const info = shellInfo()
+  if (!info || serverOverride()) return true
+  return info.serverChosen !== false
+}
+
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && ('__DALYWAVE_SHELL__' in window || '__TAURI_INTERNALS__' in window)
 }
@@ -84,8 +113,9 @@ export function createTauriBridge(): Bridge {
       ? { controls: platform === 'macos' ? 'mac-inset' : 'windows', height: platform === 'macos' ? 48 : 32, inset: null, backdrop: 'none' }
       : { controls: 'none', height: 0, inset: null, backdrop: 'none' }
 
-  // В `cargo tauri dev` страница открыта с dev-сервера, и /api проксируется — адрес не нужен
-  const server = (info?.serverUrl ?? '').replace(/\/$/, '')
+  // В `cargo tauri dev` страница открыта с dev-сервера, и /api проксируется — адрес не нужен.
+  // Сервер сменили в этом запуске: скрипт оболочки до страницы ещё помнит прежний (serverOverride)
+  const server = (serverOverride() ?? info?.serverUrl ?? '').replace(/\/$/, '')
   const baseUrl = server && server !== location.origin ? server : ''
 
   // Токен держим в памяти и обновляем, когда оболочка сообщает о входе или выходе
@@ -118,7 +148,10 @@ export function createTauriBridge(): Bridge {
     document.documentElement.dataset.backdrop = chrome.backdrop
     void loadShell().then((shell) => {
       // Новый адрес сервера — перезагрузка: все запросы и сокет пойдут туда
-      void shell.on('server:changed', () => location.reload())
+      void shell.on('server:changed', ({ serverUrl }) => {
+        rememberServer(serverUrl)
+        location.reload()
+      })
     }).catch(() => {})
   }
 
@@ -156,6 +189,24 @@ export function createTauriBridge(): Bridge {
     downloader: platform === 'macos' || platform === 'windows' ? createTauriDownloader(loadShell) : null,
     // Обучение рекомендаций на этом компьютере (apps/shell/src/trainer.rs)
     trainer: platform === 'macos' || platform === 'windows' ? createTauriTrainer(loadShell) : null,
+    // Адрес сервера: экран выбора, недавние, ссылка dalywave://server (apps/shell/src/server.rs)
+    appServer: {
+      state: async () => {
+        const s = await (await loadShell()).server.state()
+        // В разработке страница с dev-сервера, сервер выбран всегда
+        return serverOverride() ? { ...s, chosen: true } : s
+      },
+      check: async url => (await loadShell()).server.check(url),
+      use: async (url, name) => {
+        await (await loadShell()).server.set(url, name ?? null)
+      },
+      forget: async url => (await loadShell()).server.forget(url),
+      onLink(cb) {
+        const take = (shell: Shell) => void shell.server.linkTake().then(url => url && cb(url)).catch(() => {})
+        void loadShell().then(take).catch(() => {})
+        return on(shell => shell.on('server:link', () => take(shell)))
+      },
+    },
     outputs: createTauriOutputs(platform, loadShell),
     // Простой системы — для «где заиграет музыка, выбранная на другом устройстве» (stores/connect.ts)
     systemIdle: desktop ? async () => (await loadShell()).system.idleMs() : null,

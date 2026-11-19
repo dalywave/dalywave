@@ -9,7 +9,8 @@ struct DalyWaveTVApp: App {
         WindowGroup {
             Group {
                 if store.credentials == nil {
-                    SignInView()
+                    // Сервер — с iPhone (iCloud), из этой сети, вручную или демо; затем вход кодом
+                    ConnectView()
                 } else {
                     MainView()
                 }

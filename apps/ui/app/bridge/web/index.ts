@@ -2,7 +2,7 @@
 // Чего сервер ещё не умеет (волна, звук этапа 1b, устройства), в разработке отдаёт мок; в сборке мока нет.
 import type { EventResult, ImportItem, ImportSummary, LikedTrackPage, NetworkKind, PlaylistSummary, Track, WaveSession } from '~/api/types'
 import { syntheticPeaks } from '~/utils/peaks'
-import type { AppPush, AppUpdateState, AudioEngine, AudioRoutes, BeatHaptics, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, ScreensaverBridge, Section, SourceResult, StoryMoment, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
+import type { AppPush, AppServer, AppServerRecent, AppUpdateState, AudioEngine, AudioRoutes, BeatHaptics, Bridge, Downloader, HapticKind, MediaCommand, NowPlayingInfo, OfflineBridge, PlaybackDevice, Platform, SaveResult, ScreensaverBridge, Section, SourceResult, StoryMoment, StreamResponse, SystemNotify, Trainer, WaveStart, WaveTrack, WindowChrome } from '../types'
 import type { DevMock } from '../mock'
 import { createDevOffline } from '../mock/offline'
 import { lazyDownloader } from '../tauri/downloader'
@@ -64,6 +64,7 @@ export interface WebBridgeOptions extends HttpOptions {
   downloader?: Downloader | null
   /** Обучение рекомендаций на компьютере (приложение); у сайта его нет */
   trainer?: Trainer | null
+  appServer?: AppServer | null
   /** Вывод звука приложения; на сайте — окно AirPlay Safari, если оно есть */
   outputs?: AudioRoutes | null
   systemIdle?: (() => Promise<number | null>) | null
@@ -113,6 +114,33 @@ export async function shareOrSaveBlob(blob: Blob, name: string): Promise<SaveRes
   browserDownload(url, name)
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
   return 'saved'
+}
+
+/** Только разработка: экран «Адрес сервера» приложения в браузере — `?appServer` (`?appServer=fresh` —
+ *  первый запуск). Проверка адреса изображается: `demo…` и `wave…` — DalyWave, `down…` — без базы,
+ *  `example.com` — не DalyWave, остальное не отвечает */
+function devAppServer(): AppServer | null {
+  if (!import.meta.dev || typeof location === 'undefined') return null
+  const q = new URLSearchParams(location.search).get('appServer')
+  if (q === null) return null
+  const recent: AppServerRecent[] = q === 'fresh' ? [] : [{ url: 'https://wave.daly.rest', name: 'DalyWave', usedAt: 1 }]
+  const fail = (code: string) => Object.assign(new Error(code), { code, message: code })
+  return {
+    state: async () => ({ url: 'https://wave.daly.rest', chosen: q !== 'fresh', recent, demo: 'https://demo.wave.daly.rest' }),
+    async check(url) {
+      await new Promise(r => setTimeout(r, 600))
+      const raw = url.trim()
+      if (!/^(https?:\/\/)?[\w.-]+(:\d+)?\/?$/.test(raw)) throw fail('invalid')
+      const host = raw.replace(/^https?:\/\//, '').replace(/\/$/, '')
+      if (host.startsWith('down')) throw fail('down')
+      if (host === 'example.com') throw fail('not_dalywave')
+      if (!host.startsWith('demo') && !host.startsWith('wave')) throw fail('unreachable')
+      return { url: `https://${host}`, name: host.startsWith('demo') ? 'DalyWave Demo' : 'DalyWave', version: '0.1.17' }
+    },
+    async use() {},
+    async forget() {},
+    onLink: () => () => {},
+  }
 }
 
 /** Только разработка: обучение на компьютере изображает мок — `?trainer=idle|active|kept|on-battery|…` */
@@ -371,6 +399,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
     downloader: opts.downloader !== undefined ? opts.downloader : devDownloader(),
     trainer: opts.trainer !== undefined ? opts.trainer : devTrainer(),
     systemIdle: opts.systemIdle ?? null,
+    appServer: opts.appServer !== undefined ? opts.appServer : devAppServer(),
     outputs: opts.outputs !== undefined ? opts.outputs : devOutputsFromQuery() ?? (audio instanceof WebAudioEngine ? safariOutputs(audio) : null),
     offline: opts.offline !== undefined ? opts.offline : devOffline(),
     haptic: opts.haptic ?? (() => {}),
@@ -413,6 +442,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
       resetInfo: token => unwrap(api.GET('/api/auth/reset/{token}', { params: { path: { token } } })),
       resetPassword: (token, body) => unwrap(api.POST('/api/auth/reset/{token}', { params: { path: { token } }, body })),
       account: () => unwrap(api.GET('/api/auth/account')),
+      deleteAccount: () => done(api.DELETE('/api/auth/me')),
       changePassword: body => done(api.POST('/api/auth/account/password', { body })),
       unlinkIdentity: id => done(api.DELETE('/api/auth/account/identities/{id}', { params: { path: { id } } })),
       onSignedOut(cb) {

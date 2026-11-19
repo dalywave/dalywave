@@ -7,7 +7,7 @@ struct LibraryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 64) {
-                shelf("Любимые") {
+                shelf(String(localized: "Любимые")) {
                     Button { store.playLiked() } label: {
                         VStack(alignment: .leading, spacing: 10) {
                             Image(systemName: "heart.fill").font(.system(size: 54)).foregroundStyle(Theme.accent)
@@ -27,14 +27,14 @@ struct LibraryView: View {
                     }
                 }
                 if !store.recent.isEmpty {
-                    shelf("Недавнее") {
+                    shelf(String(localized: "Недавнее")) {
                         ForEach(store.recent) { item in
                             Tile(title: item.title, subtitle: item.subtitle, cover: item.cover) { store.play(item) }
                         }
                     }
                 }
                 if !store.playlists.isEmpty {
-                    shelf("Плейлисты") {
+                    shelf(String(localized: "Плейлисты")) {
                         ForEach(store.playlists) { p in
                             Tile(title: p.title, subtitle: p.tracksCount.map(countLabel), cover: p.cover) { store.play(p) }
                         }
@@ -72,11 +72,7 @@ struct LibraryView: View {
     }
 }
 
-/// «12 треков»
+/// «12 треков» / "12 tracks": падежи и plural — в Localizable.stringsdict (ru, en)
 func countLabel(_ n: Int) -> String {
-    let mod10 = n % 10, mod100 = n % 100
-    let word = if mod10 == 1, mod100 != 11 { "трек" }
-        else if (2...4).contains(mod10), !(12...14).contains(mod100) { "трека" }
-        else { "треков" }
-    return "\(n) \(word)"
+    String(localized: "\(n) треков")
 }

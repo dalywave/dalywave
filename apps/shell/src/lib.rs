@@ -31,6 +31,9 @@ mod mini;
 // Системные уведомления компьютеров, пока приложение открыто (уведомления сервера по WebSocket)
 mod notify;
 mod offline;
+// Apple TV рядом (iPhone, iPad): список серверов в iCloud и «Подключить с iPhone» по Bonjour
+#[cfg(target_os = "ios")]
+mod pairing;
 mod platform;
 mod player;
 // Экран компьютера заблокирован — для подхвата музыки на другом устройстве
@@ -40,6 +43,8 @@ mod push;
 mod recognize;
 // Заставка для Mac: установка и «что играет» для неё на 127.0.0.1
 mod screensaver;
+// Адрес сервера: выбор при первом запуске, недавние, ссылка dalywave://server
+mod server;
 mod settings;
 // Siri и «Команды» (iPhone, iPad): App Intents и SiriKit в Swift зовут сюда
 mod siri;
@@ -58,8 +63,7 @@ mod widgets;
 mod watch;
 mod window;
 
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -142,6 +146,7 @@ pub fn run() {
             beat::init(handle);
             screensaver::init(handle);
             links::init(handle);
+            server::init(handle);
             #[cfg(desktop)]
             discord::init(handle);
             #[cfg(desktop)]
@@ -283,8 +288,12 @@ pub fn run() {
             discord::discord_state,
             #[cfg(desktop)]
             discord::discord_set_enabled,
-            server_url_get,
-            server_url_set,
+            server::server_url_get,
+            server::server_url_set,
+            server::server_state,
+            server::server_forget,
+            server::server_check,
+            server::server_link_take,
             shell_set_locale,
             #[cfg(desktop)]
             updates::update_check,
@@ -318,6 +327,9 @@ pub fn run() {
     // Apple Watch: часы могут разбудить iPhone в фоне просьбой о ключе — приложение нужно сразу
     #[cfg(target_os = "ios")]
     watch::install(app.handle());
+    // Apple TV рядом: Swift спрашивает сервер и подтверждает вход телевизора
+    #[cfg(target_os = "ios")]
+    pairing::install(app.handle());
 
     app.run(|app, event| {
         match event {
@@ -360,37 +372,6 @@ fn open_external(app: AppHandle, url: String) -> ShellResult<()> {
     app.opener()
         .open_url(parsed.as_str(), None::<&str>)
         .map_err(ShellError::internal)
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ServerChanged {
-    server_url: String,
-}
-
-#[tauri::command]
-fn server_url_get(app: AppHandle) -> String {
-    app.state::<Settings>().server_url()
-}
-
-/// `null` — вернуть адрес по умолчанию. Вход на каждом сервере свой.
-#[tauri::command]
-fn server_url_set(app: AppHandle, url: Option<String>) -> ShellResult<String> {
-    let server_url = app.state::<Settings>().set_server_url(url.as_deref())?;
-    app.state::<player::Player>().forget_token();
-    // Загрузчик переходит на новый сервер со своим токеном
-    #[cfg(desktop)]
-    downloader::changed(&app);
-    #[cfg(desktop)]
-    trainer::changed(&app);
-    let _ = app.emit_to(
-        MAIN,
-        EVENT_SERVER,
-        ServerChanged {
-            server_url: server_url.clone(),
-        },
-    );
-    Ok(server_url)
 }
 
 /// Язык системных частей: меню в трее и строке меню.

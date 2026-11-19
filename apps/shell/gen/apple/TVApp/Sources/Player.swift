@@ -120,7 +120,7 @@ final class Player: ObservableObject {
                 guard !entries.isEmpty else {
                     self.pending = nil
                     self.playing = false
-                    self.notice = "Волна не собралась"
+                    self.notice = String(localized: "Волна не собралась")
                     self.onChange?(true)
                     return
                 }
@@ -136,7 +136,7 @@ final class Player: ObservableObject {
                 guard let self, !Task.isCancelled else { return }
                 self.pending = nil
                 self.playing = false
-                self.notice = "Не удалось включить волну"
+                self.notice = String(localized: "Не удалось включить волну")
                 self.onChange?(true)
             }
         }
@@ -413,7 +413,7 @@ final class Player: ObservableObject {
             self.pending = nil
             guard let url else {
                 // Трека нет в источниках или не дождались — следующий
-                self.notice = "Трек недоступен"
+                self.notice = String(localized: "Трек недоступен")
                 self.advance("error")
                 return
             }

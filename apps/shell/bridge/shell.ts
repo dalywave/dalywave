@@ -37,6 +37,8 @@ export interface PlatformInfo {
   dev: boolean
   /** Адрес сервера при запуске; дальше — `server.get()` и событие `server:changed` */
   serverUrl: string
+  /** Сервер выбран; нет — первый запуск начинается с экрана «Адрес сервера» (сборки для App Store) */
+  serverChosen: boolean
   locale: Locale
 }
 
@@ -75,6 +77,22 @@ export interface ShellError {
 
 export function isShellError(e: unknown): e is ShellError {
   return typeof e === 'object' && e !== null && 'code' in e && 'message' in e
+}
+
+/** Ответ сервера на проверку адреса (`server.check`) */
+export interface AppServerInfo {
+  url: string
+  name: string
+  version: string
+}
+
+/** Адрес сервера, выбран ли он и недавние серверы */
+export interface AppServerState {
+  url: string
+  chosen: boolean
+  recent: { url: string, name?: string | null, usedAt: number }[]
+  /** Демо-сервер для «Попробовать демо» */
+  demo: string
 }
 
 /** `User` и `Device` — типы API сервера (`~/api/types`) */
@@ -274,6 +292,18 @@ export interface DownloaderStatus {
   pot: { state: 'starting' | 'ready' | 'failed' | 'off', version?: string, message?: string }
 }
 
+/** Обучение сети вкуса на этом компьютере (apps/shell/src/trainer.rs) */
+export type TrainerPhase = 'off' | 'idle' | 'on-battery' | 'busy' | 'signed-out' | 'fetching' | 'training' | 'sending'
+
+export interface TrainerSnapshot {
+  /** «Помогать учить рекомендации»: null — по умолчанию (учат только компьютеры администраторов) */
+  enabled: boolean | null
+  phase: TrainerPhase
+  /** Последний раз: `active` — сеть с этого компьютера теперь подбирает музыку, `kept` — проверку
+   *  сервера не прошла, `failed` — обучение не удалось */
+  last: { atMs: number, outcome: 'active' | 'kept' | 'failed', rows: number, tookMs: number, note: string } | null
+}
+
 export interface DownloaderSnapshot {
   /** «Скачивать на этом Mac» */
   enabled: boolean
@@ -335,6 +365,8 @@ export interface ShellEvents {
   /** Список устройств вывода или маршрут звука поменялся (AirPlay, наушники, Bluetooth) */
   'audio:outputs': AudioOutputs
   'server:changed': { serverUrl: string }
+  /** Ссылка `dalywave://server?url=…`: адрес забирать `server.linkTake()` */
+  'server:link': string
   'update:available': UpdateInfo
   'update:progress': { downloadedBytes: number, totalBytes: number | null }
   /** Обновление скачано и проверено — можно предложить «Перезапустить» */
@@ -346,6 +378,8 @@ export interface ShellEvents {
   'deep-link:open': { url: string }
   /** macOS: загрузчик на этом Mac — при каждой перемене, ход задания — до 4 раз в секунду */
   'downloader:state': DownloaderSnapshot
+  /** Компьютеры: обучение сети вкуса — при каждой перемене */
+  'trainer:state': TrainerSnapshot
   /** Открыть экран «Распознать»: пункт трея macOS, быстрое действие на значке iPhone. Просьбу забрать
    *  `recognize.takePending()` — и при запуске (приложение открыли этим действием) */
   'recognize:open': null
@@ -484,8 +518,14 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
     },
     server: {
       get: () => call<string>('server_url_get'),
-      /** null — адрес по умолчанию */
-      set: (url: string | null) => call<string>('server_url_set', { url }),
+      /** null — адрес по умолчанию; `name` — название сервера для недавних */
+      set: (url: string | null, name?: string | null) => call<string>('server_url_set', { url, name: name ?? null }),
+      state: () => call<AppServerState>('server_state'),
+      /** Ошибки: `invalid`, `unreachable`, `not_dalywave`, `down` */
+      check: (url: string) => call<AppServerInfo>('server_check', { url }),
+      forget: (url: string) => call<void>('server_forget', { url }),
+      /** Адрес из последней ссылки `dalywave://server?url=…` (и забыть её) */
+      linkTake: () => call<string | null>('server_link_take'),
     },
     /** Язык меню в трее и строке меню */
     setLocale: (locale: Locale) => call<void>('shell_set_locale', { locale }),
@@ -507,6 +547,12 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       recreateToken: () => call<DownloaderSnapshot>('downloader_recreate_token'),
       /** Журнал загрузчика — в «Консоли» */
       openLog: () => call<void>('downloader_open_log'),
+    },
+    /** Обучение сети вкуса на этом компьютере (macOS и Windows) */
+    trainer: {
+      state: () => call<TrainerSnapshot>('trainer_state'),
+      /** null — по умолчанию (только компьютеры администраторов) */
+      setEnabled: (enabled: boolean | null) => call<TrainerSnapshot>('trainer_set_enabled', { enabled }),
     },
     on<E extends keyof ShellEvents>(event: E, handler: (payload: ShellEvents[E]) => void): Promise<() => void> {
       return tauri.listen<ShellEvents[E]>(event, e => handler(e.payload))

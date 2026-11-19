@@ -82,7 +82,7 @@ struct NowPlayingView: View {
     }
 
     private func contextLabel(_ now: NowShown) -> String? {
-        if !now.local, let name = now.deviceName { return "Играет на «\(name)»" }
+        if !now.local, let name = now.deviceName { return String(localized: "Играет на «\(name)»") }
         guard let ctx = now.context, !ctx.title.isEmpty else { return nil }
         return ctx.title
     }
@@ -104,7 +104,7 @@ struct NowPlayingView: View {
             .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: index)
             .padding(.vertical, 30)
         } else if let pending = now.pending {
-            Text(pending == "waiting_for_downloader" ? "Ждём загрузчик…" : "Готовим трек…")
+            Text(pending == "waiting_for_downloader" ? String(localized: "Ждём загрузчик…") : String(localized: "Готовим трек…"))
                 .font(.system(size: 30))
                 .foregroundStyle(Theme.text3)
                 .padding(.vertical, 30)

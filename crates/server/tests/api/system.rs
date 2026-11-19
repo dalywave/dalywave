@@ -23,6 +23,12 @@ async fn health_and_unknown_routes(db: PgPool) {
     assert!(res.body["uptimeS"].is_u64());
     assert!(res.headers.contains_key("x-request-id"));
     assert_eq!(res.headers[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+    // Экран «Адрес сервера» в приложениях узнаёт DalyWave по `app` и показывает название и версию
+    let res = app.get("/api/config", &Auth::None).await;
+    assert_eq!(res.status, StatusCode::OK);
+    assert_eq!(res.body["app"], "dalywave");
+    assert_eq!(res.body["name"], "DalyWave");
+    assert_eq!(res.body["version"], env!("CARGO_PKG_VERSION"));
 
     let res = app.get("/api/nope", &Auth::None).await;
     assert_eq!(res.status, StatusCode::NOT_FOUND);
@@ -605,4 +611,48 @@ async fn idle_transactions_are_cut_by_postgres() {
         .await
         .unwrap();
     assert_eq!(timeout, "1min");
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn account_can_be_deleted_by_its_owner(db: PgPool) {
+    let app = TestApp::new(db.clone()).await;
+    // Единственный администратор не удаляется: сервером некому было бы управлять
+    let (_, first) = app.admin("first-boss").await;
+    let res = app.delete("/api/auth/me", &first).await;
+    assert_eq!(res.status, StatusCode::CONFLICT);
+    assert_eq!(res.code(), "last_admin");
+
+    let listener = app.listener("leaving").await;
+    let id = app.user_id(&listener).await;
+    let res = app.delete("/api/auth/me", &listener).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    assert_eq!(
+        app.get("/api/auth/me", &listener).await.status,
+        StatusCode::UNAUTHORIZED,
+        "сессия ушла вместе с аккаунтом"
+    );
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM users WHERE id::text = $1")
+        .bind(&id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    assert_eq!(left, 0);
+    let audit: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit_events WHERE kind = 'user.deleted' AND subject = $1",
+    )
+    .bind(&id)
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    assert_eq!(audit, 1);
+
+    // Администраторов теперь двое (listener() позвал ещё одного): первый может уйти
+    assert_eq!(
+        app.delete("/api/auth/me", &first).await.status,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        app.delete("/api/auth/me", &Auth::None).await.status,
+        StatusCode::UNAUTHORIZED
+    );
 }

@@ -24,8 +24,11 @@ const MODES: { value: Mode, icon: string }[] = [
   { value: 'list', icon: 'ph:list-bullets' },
   { value: 'files', icon: 'ph:waveform' },
 ]
+// YouTube Music переносится через серверный загрузчик: без него этого способа нет
+const server = useServerStore()
+const modes = computed(() => MODES.filter(m => m.value !== 'youtube' || server.downloader))
 const initial = route.query.mode
-const mode = ref<Mode>(MODES.find(m => m.value === initial)?.value ?? 'spotify')
+const mode = ref<Mode>(modes.value.find(m => m.value === initial)?.value ?? 'spotify')
 watch(mode, m => void navigateTo({ query: { ...route.query, mode: m } }, { replace: true }))
 
 // На телефоне ряд способов листается вбок: выбранный всегда целиком на виду
@@ -500,7 +503,7 @@ const showHistory = computed(() => history.value.filter(h => h.id !== current.va
       <!-- Откуда переносить: один ряд, как сегменты, но с зоной касания 44 -->
       <div ref="modesEl" class="imp__modes" role="radiogroup" :aria-label="t('how')">
         <button
-          v-for="m in MODES"
+          v-for="m in modes"
           :key="m.value"
           type="button"
           role="radio"

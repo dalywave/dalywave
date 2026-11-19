@@ -51,6 +51,7 @@ pub fn config() -> Config {
             deezer: true,
             downloader: true,
         },
+        identity: Default::default(),
         deezer: DeezerConfig::default(),
         // Long-poll загрузчика в тестах — доли секунды, а не 25 с
         fetcher: FetcherConfig {

@@ -220,6 +220,9 @@ const fetcherVersion = computed(() => {
         </dl>
       </AdminSection>
     </div>
+
+    <!-- QR-код со ссылкой dalywave://server на этот сервер — для приложения на телефоне -->
+    <AdminConnectApp />
   </div>
 </template>
 

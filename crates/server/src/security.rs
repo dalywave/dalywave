@@ -193,6 +193,7 @@ mod tests {
             storage: Default::default(),
             library: Default::default(),
             features: Default::default(),
+            identity: Default::default(),
             deezer: Default::default(),
             fetcher: Default::default(),
             ml: Default::default(),

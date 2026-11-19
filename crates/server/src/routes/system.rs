@@ -55,6 +55,8 @@ pub async fn healthz(State(st): State<AppState>) -> (StatusCode, Json<Health>) {
 pub async fn config(State(st): State<AppState>) -> Json<ServerConfig> {
     let f = st.config.features;
     Json(ServerConfig {
+        app: "dalywave".into(),
+        name: st.config.identity.name.clone(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         deezer: f.deezer,
         downloader: f.downloader,

@@ -58,6 +58,8 @@ targets:
         CFBundleDisplayName: DalyWave
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Языки приложения: окна разрешений — Sources/…/en.lproj и ru.lproj/InfoPlist.strings
+        CFBundleLocalizations: [en, ru]
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64, metal]
@@ -83,6 +85,10 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
+        # «Подключить с iPhone» (Sources/…/TVPairing.swift): Apple TV на экране подключения объявляет
+        # себя в локальной сети, iPhone с входом находит его и спрашивает разрешения
+        NSLocalNetworkUsageDescription: Чтобы подключать Apple TV в этой сети к DalyWave
+        NSBonjourServices: [_dalywave-pair._tcp]
         # «Распознать» (ShazamKit): микрофон — только пока открыт экран распознавания
         NSMicrophoneUsageDescription: Чтобы узнать, какая песня играет рядом
         # Быстрое действие на значке: долгое нажатие → «Распознать» (src/recognize.rs)
@@ -109,6 +115,9 @@ targets:
         # development; при экспорте для App Store/TestFlight Xcode берёт значение из профиля
         # дистрибуции — production
         aps-environment: development
+        # iCloud (ключ-значение): недавние серверы для Apple TV на том же Apple ID. Хранилище —
+        # общее у iPhone и Apple TV: тот же bundle id rest.daly.wave. Возможность iCloud у App ID (IOS.md)
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)rest.daly.wave
     settings:
       base:
         ENABLE_BITCODE: false
@@ -408,7 +417,10 @@ targets:
       path: TVApp/Info.plist
       properties:
         CFBundleDisplayName: DalyWave
-        CFBundleDevelopmentRegion: ru
+        # Языки: английский (он же для прочих систем) и русский. Тексты — TVShared/*.lproj
+        # (Localizable.strings, plural — .stringsdict), окно разрешения — TVApp/*.lproj/InfoPlist.strings
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ru]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen:
@@ -424,11 +436,18 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
+        # Экран подключения (TVApp/Sources/ConnectView.swift): серверы DalyWave в этой сети
+        # (`_dalywave._tcp`) и «Подключить с iPhone» (`_dalywave-pair._tcp`).
+        # Перевод — TVApp/en.lproj и ru.lproj/InfoPlist.strings
+        NSLocalNetworkUsageDescription: Чтобы найти сервер DalyWave и iPhone в этой сети
+        NSBonjourServices: [_dalywave._tcp, _dalywave-pair._tcp]
     entitlements:
       path: TVApp/DalyWaveTV.entitlements
       properties:
         # Снимок для Top Shelf (TVShared/TopShelfSnapshot.swift)
         com.apple.security.application-groups: [group.rest.daly.wave]
+        # iCloud (ключ-значение): серверы, выбранные на iPhone с тем же Apple ID
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)rest.daly.wave
     dependencies:
       - target: dalywave-tv-topshelf
       - sdk: AVFoundation.framework
@@ -463,6 +482,9 @@ targets:
       path: TVTopShelf/Info.plist
       properties:
         CFBundleDisplayName: DalyWave
+        # Подписи полки — TVShared/*.lproj, как у приложения
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ru]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:

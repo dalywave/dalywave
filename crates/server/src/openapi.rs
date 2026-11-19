@@ -33,6 +33,7 @@ use crate::routes::{
         auth::password_login,
         auth::logout,
         auth::me,
+        auth::delete_me,
         auth::app_start,
         auth::app_token,
         auth::app_pair,

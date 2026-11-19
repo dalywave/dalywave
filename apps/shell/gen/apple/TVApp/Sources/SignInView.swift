@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Вход без клавиатуры: короткий код и QR на экране, подтверждение — на телефоне или сайте, где
 /// человек уже вошёл (`/tv?code=…`). Телевизор раз в пару секунд спрашивает, подтверждён ли вход;
@@ -10,14 +11,14 @@ final class SignInModel: ObservableObject {
 
     private var task: Task<Void, Never>?
 
-    func start(_ done: @escaping (Credentials) -> Void) {
+    func start(server: String, _ done: @escaping (Credentials) -> Void) {
         task?.cancel()
-        let api = Api(server: Credentials.server)
+        let api = Api(server: server)
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         task = Task { [weak self] in
             while !Task.isCancelled {
                 do {
-                    let code = try await api.tvCode(deviceName: "Apple TV")
+                    let code = try await api.tvCode(deviceName: UIDevice.current.name)
                     self?.code = code
                     self?.failed = false
                     // Опрос до подтверждения или конца срока кода
@@ -25,7 +26,7 @@ final class SignInModel: ObservableObject {
                         try await Task.sleep(for: .seconds(max(2, code.intervalSecs)))
                         guard let reply = try await api.tvToken(code.deviceCode, appVersion: version) else { break }
                         if reply.status == "ready", let token = reply.token {
-                            done(Credentials(server: Credentials.server, token: token, userName: reply.user?.name))
+                            done(Credentials(server: server, token: token, userName: reply.user?.name))
                             return
                         }
                     }
@@ -47,6 +48,11 @@ final class SignInModel: ObservableObject {
 struct SignInView: View {
     @EnvironmentObject private var store: Store
     @StateObject private var model = SignInModel()
+    /// Выбранный на экране подключения сервер
+    let server: String
+    var serverName: String?
+    /// «Другой сервер» — назад к выбору
+    var back: () -> Void
 
     var body: some View {
         HStack(spacing: 120) {
@@ -79,6 +85,13 @@ struct SignInView: View {
                         .font(.system(size: 28))
                         .foregroundStyle(Theme.text3)
                 }
+                HStack(spacing: 24) {
+                    Text(serverName.map { "\($0) · \(ServerAddress.host(server))" } ?? ServerAddress.host(server))
+                        .font(.system(size: 26))
+                        .foregroundStyle(Theme.text3)
+                    Button("Другой сервер", action: back)
+                }
+                .padding(.top, 8)
             }
             .frame(maxWidth: 900, alignment: .leading)
             Group {
@@ -91,12 +104,12 @@ struct SignInView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ink.ignoresSafeArea())
-        .onAppear { model.start { store.signedIn($0) } }
+        .onAppear { model.start(server: server) { store.signedIn($0) } }
         .onDisappear { model.stop() }
     }
 
     private var shortURL: String {
-        guard let url = model.code.flatMap({ URL(string: $0.verificationUrl) }) else { return "wave.daly.rest/tv" }
+        guard let url = model.code.flatMap({ URL(string: $0.verificationUrl) }) else { return ServerAddress.host(server) + "/tv" }
         return (url.host ?? "") + (url.port.map { ":\($0)" } ?? "") + url.path
     }
 }

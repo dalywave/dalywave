@@ -196,6 +196,8 @@ pub fn handle_urls(app: &AppHandle, urls: Vec<Url>) {
         }
         if url.host_str() == Some("auth") && matches!(url.path(), "" | "/") {
             app.state::<Auth>().deliver(&url);
+        } else if crate::server::handle_link(app, &url) {
+            // dalywave://server?url=… — экран «Адрес сервера» с этим адресом
         } else if crate::widgets::open_link(app, &url) {
             // Кнопки виджетов на iOS 15–16: волна и пульт — без интерфейса
             log::info!("widget link {url}");
@@ -669,6 +671,9 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
     // Часы получают свой ключ сразу, а не при следующем открытии
     #[cfg(target_os = "ios")]
     crate::watch::account_changed(true);
+    // Apple TV рядом: вход есть — iPhone ищет телевизоры, сервер — в списке iCloud
+    #[cfg(target_os = "ios")]
+    crate::pairing::servers_changed(&app);
     // Загрузчик на компьютере работает, пока вход выполнен
     #[cfg(desktop)]
     crate::downloader::changed(&app);
@@ -738,6 +743,8 @@ pub async fn auth_logout(app: AppHandle) -> ShellResult<()> {
     // Сессия часов отозвана сервером вместе с этой; часы узнают сразу
     #[cfg(target_os = "ios")]
     crate::watch::account_changed(false);
+    #[cfg(target_os = "ios")]
+    crate::pairing::servers_changed(&app);
     #[cfg(desktop)]
     crate::downloader::changed(&app);
     Ok(())
