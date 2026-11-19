@@ -846,7 +846,8 @@ onBeforeUnmount(() => {
    картинка уходит под клип. «Фон» и «Кино»: клип на весь плеер, волны нет, название с кнопками —
    внизу слева поверх затемнения, обложка — маленькая рядом с названием */
 .clip-wide :is(.fp__art, .pp__art, .tp__art) { transition: width var(--dur-4) var(--ease-out), height var(--dur-4) var(--ease-out); }
-.clip-wide :is(.fp__art, .pp__art, .tp__art) > :deep(.art) { visibility: hidden; }
+/* Пока кадры не пошли — обычная обложка, клип проявляется поверх и раскрывает блок */
+.clip-wide.clip-shown :is(.fp__art, .pp__art, .tp__art) > :deep(.art) { visibility: hidden; }
 /* Волна — тише: вокруг клипа светятся его цвета */
 .clip-wide.clip-shown :is(.fp__wave, .pp__wave) { opacity: 0.35; }
 .fp.clip-land .fp__art { width: min(520px, 56vh, 100%); }
@@ -884,10 +885,15 @@ onBeforeUnmount(() => {
 }
 .pp.is-lyrics.clip-screen :deep(.pcs__shade) { background: rgba(0, 0, 0, 0.68); }
 .pp.clip-screen .pp__kicker { color: var(--text-2); }
+/* Обложка, пока клип не пошёл, — не под текстом песни */
+:is(.fp--lyrics, .pp.is-lyrics) :deep(.pcs__art) { display: none; }
+/* iPad: обложка до клипа — над названием (вертикально) или в левой колонке (горизонтально) */
+@media (orientation: portrait) { .pp--tablet.clip-screen { --pcs-art-inset: calc(var(--safe-top, 0px) + 72px) 24px 62%; } }
+@media (orientation: landscape) { .pp--tablet.clip-screen { --pcs-art-inset: calc(var(--safe-top, 0px) + 72px) calc(100% - 510px) 40% 32px; } }
 /* iPad вертикально: низ закрыт листом «Текст / Очередь» — клип во всю ширину над ним, а не
    обрезанной серединой на весь экран; название и кнопки — на затемнении ниже клипа */
 @media (orientation: portrait) {
-  .pp--tablet.clip-screen :deep(.pcs video) {
+  .pp--tablet.clip-screen :deep(.pcs__stage) {
     height: 64%;
     -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
     mask-image: linear-gradient(180deg, #000 70%, transparent);

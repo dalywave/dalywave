@@ -227,9 +227,13 @@ const language = computed({
         <UiSwitch v-model="prefs.motion" :label="t('motion')" hide-label />
       </SettingsRow>
       <!-- Как клип показан в полном плеере: квадратом, целиком, фоном, «кино» или никак -->
-      <SettingsRow v-if="prefs.motion" :title="t('clipStyle')" stack>
-        <MusicClipStylePicker v-model="prefs.clipStyle" :label="t('clipStyle')" />
-      </SettingsRow>
+      <!-- Отдельным блоком под заголовком: пяти схемам нужна вся ширина -->
+      <template v-if="prefs.motion">
+        <SettingsRow :title="t('clipStyle')" />
+        <SettingsRow indent>
+          <MusicClipStylePicker v-model="prefs.clipStyle" :label="t('clipStyle')" />
+        </SettingsRow>
+      </template>
       <SettingsRow v-if="prefs.motion && (ui.isTouchUi || offline.available)" :title="t('motionWifi')">
         <UiSwitch v-model="prefs.motionWifiOnly" :label="t('motionWifi')" hide-label />
       </SettingsRow>

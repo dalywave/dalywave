@@ -14,7 +14,11 @@ const props = withDefaults(defineProps<{
   fit?: 'cover' | 'contain'
   /** Клип целиком в такт с треком: видео ведётся по его позиции */
   follow?: ClipFollow | null
-}>(), { active: true, cycle: 0, fit: 'cover', follow: null })
+  /** Не проявлять, даже когда кадры пошли: снаружи ещё смотрят, что в кадре (плеер) */
+  hold?: boolean
+  /** Кадры читаются снаружи (поиск вшитых полос): видео запрашивается с CORS, как и звук */
+  probe?: boolean
+}>(), { active: true, cycle: 0, fit: 'cover', follow: null, hold: false, probe: false })
 const emit = defineEmits<{ ready: [boolean] }>()
 
 const bridge = useBridge()
@@ -104,9 +108,10 @@ function onError() {
     ref="el"
     :key="url"
     class="lv"
-    :class="{ 'is-shown': shown && !outside }"
+    :class="{ 'is-shown': shown && !outside && !hold }"
     :style="fit === 'contain' ? { objectFit: 'contain' } : undefined"
     :src="url"
+    :crossorigin="probe ? 'anonymous' : undefined"
     muted
     :loop="!follow"
     playsinline

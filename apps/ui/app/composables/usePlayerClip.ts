@@ -2,11 +2,16 @@ import type { Ref } from 'vue'
 import type { Track } from '~/api/types'
 import type { ClipStyle } from '~/stores/prefs'
 import type { ClipFollow } from '~/utils/clip-follow'
+import type { ClipCrop } from '~/utils/clip-frame'
+import { FULL_CROP, probed, probeKey, usefulRatio } from '~/utils/clip-frame'
 
 export type ClipLayout = Exclude<ClipStyle, 'off'>
 
 /** Через столько без движения «Кино» прячет интерфейс */
 const IDLE_MS = 3000
+
+/** Клипы, оказавшиеся картинкой (кадры не меняются), — до перезагрузки вместо них обложка */
+const stills = reactive(new Set<string>())
 
 /**
  * Клип в полном плеере: как он показан (настройка «Клипы в плеере») и что из этого следует для
@@ -15,8 +20,9 @@ const IDLE_MS = 3000
  * прячется без движения. Живая обложка альбома — всегда квадратом: это и есть обложка.
  *
  * Раскладка держится, пока про новый трек ничего не известно: смена песни не дёргает плеер
- * между обложкой и клипом. Видео — в `<MusicPlayerClip>`: он же сообщает, что кадры пошли
- * (`setShown`) и какие у клипа пропорции (`setRatio`)
+ * между обложкой и клипом. Видео — в `<MusicPlayerClip>`: он смотрит первые кадры (вшитые чёрные
+ * полосы — `setCrop`, «клип» из одной картинки — `markStill`) и сообщает, что кадры пошли
+ * (`setShown`) и какие у видео пропорции (`setRatio`). Пока кадров нет — обычная обложка
  */
 export function usePlayerClip(opts: {
   track: Ref<Track | null>
@@ -37,7 +43,16 @@ export function usePlayerClip(opts: {
     if (on) motion.prefetch(id)
   }, { immediate: true })
 
-  const kind = computed(() => (enabled.value ? motion.kind(opts.track.value) : 'none'))
+  const kind = computed(() => {
+    if (!enabled.value) return 'none'
+    const k = motion.kind(opts.track.value)
+    // Клип-картинка (обложка на размытом фоне) — не клип: обычная обложка
+    if (k === 'clip') {
+      const url = motion.src(opts.track.value)
+      if (url && stills.has(probeKey(url))) return 'none'
+    }
+    return k
+  })
   const known = ref<ClipLayout | null>(null)
   watchEffect(() => {
     const k = kind.value
@@ -59,13 +74,22 @@ export function usePlayerClip(opts: {
 
   const shown = ref(false)
   const ratio = ref(16 / 9)
-  watch([src, layout], () => (shown.value = false))
+  /** Полезная часть кадра — без вшитых чёрных полос */
+  const crop = shallowRef<ClipCrop>(FULL_CROP)
+  watch([src, layout], () => {
+    shown.value = false
+    const p = probed(src.value)
+    crop.value = p?.state === 'show' ? p.crop : FULL_CROP
+  })
+  /** Пропорции того, что видно, — без полос */
+  const visibleRatio = computed(() => usefulRatio(ratio.value, crop.value))
 
-  // «Широкий»: горизонтальный клип — блок обложки по его пропорциям, вертикальный — в квадрате
+  // «Широкий»: горизонтальный клип — блок обложки по его пропорциям, вертикальный — в квадрате.
+  // Пока кадры не пошли — квадрат с обложкой, клип раскрывает его плавно
   const { width: artWidth } = useElementSize(opts.art)
   const artStyle = computed(() => {
-    if (layout.value !== 'wide' || !artWidth.value) return undefined
-    return { height: `${Math.round(artWidth.value / Math.max(1, ratio.value))}px` }
+    if (layout.value !== 'wide' || !shown.value || !artWidth.value) return undefined
+    return { height: `${Math.round(artWidth.value / Math.max(1, visibleRatio.value))}px` }
   })
 
   // ---------- «Кино»: интерфейс уходит без движения, возвращается от мыши, касания, клавиши ----------
@@ -85,7 +109,7 @@ export function usePlayerClip(opts: {
 
   const classes = computed(() => ({
     [`clip-${layout.value}`]: !!layout.value,
-    'clip-land': layout.value === 'wide' && ratio.value > 1,
+    'clip-land': layout.value === 'wide' && shown.value && visibleRatio.value > 1,
     'clip-screen': screen.value,
     'clip-shown': shown.value,
     'clip-idle': idle.value,
@@ -101,6 +125,10 @@ export function usePlayerClip(opts: {
     playing,
     shown,
     ratio,
+    crop,
+    visibleRatio,
+    /** Настоящий клип, а не живая обложка: только его проверяем на «картинку» */
+    isClip: computed(() => kind.value === 'clip'),
     idle,
     artStyle,
     classes,
@@ -109,6 +137,11 @@ export function usePlayerClip(opts: {
     setShown: (v: boolean) => (shown.value = v),
     setRatio: (r: number) => {
       if (Number.isFinite(r) && r > 0) ratio.value = r
+    },
+    setCrop: (c: ClipCrop) => (crop.value = c),
+    markStill: (url: string) => {
+      shown.value = false
+      stills.add(probeKey(url))
     },
     wake,
   })
