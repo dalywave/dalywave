@@ -67,7 +67,7 @@ export function usePlayerClip(opts: {
   const follow = computed<ClipFollow | null>(() => {
     const s = layout.value ? motion.sync(opts.track.value) : null
     if (!s) return null
-    return { offsetMs: s.offsetMs, rate: s.rate, position: () => player.positionMs, playing: () => player.playing }
+    return { offsetMs: s.offsetMs, rate: s.rate, segments: s.segments, position: () => player.positionMs, playing: () => player.playing }
   })
   /** Играет вместе с музыкой: пауза — и клип стоит */
   const playing = computed(() => opts.open.value && player.playing)

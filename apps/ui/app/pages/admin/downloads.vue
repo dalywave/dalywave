@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ViewPreset, ViewState } from '~/components/admin/SavedViews.vue'
 import type { AcquisitionStatus, AdminAcquisition, Job, JobStatus, Lane } from '~/api/types'
 
 // Загрузки: что качается прямо сейчас (живой шаг), полосы очереди с паузой, задачи с повтором
@@ -119,9 +120,42 @@ useAdminLive({
   },
 }, loadAll)
 
-const jobOptions = computed(() => JOB_FILTERS.map(v => ({ value: v, label: v === 'all' ? t('all') : L.jobStatus(v) })))
+// ---------- Таблицы задач и истории: поиск по загруженному, виды и свои сохранённые ----------
+// Задачи фильтруются на сервере (состояние, полоса), поиск — по загруженным строкам
+const jobView = useTableView(jobs, {
+  search: j => [j.kind, L.jobKind(j.kind), j.lastError, j.lane, laneTitles.value[j.lane], j.id],
+})
+const jobState = computed<ViewState>(() => ({ q: jobView.q.trim(), status: jobFilter.value === 'all' ? '' : jobFilter.value, lane: laneFilter.value }))
+function applyJobs(v: ViewState) {
+  jobView.q = typeof v.q === 'string' ? v.q : ''
+  jobFilter.value = JOB_FILTERS.includes(v.status as JobFilter) ? v.status as JobFilter : 'all'
+  laneFilter.value = typeof v.lane === 'string' ? v.lane : ''
+}
+const jobPresets = computed<ViewPreset[]>(() => [
+  { key: 'all', label: t('all'), state: {} },
+  { key: 'failed', label: L.jobStatus('failed'), state: { status: 'failed' } },
+  { key: 'running', label: L.jobStatus('running'), state: { status: 'running' } },
+  { key: 'queued', label: L.jobStatus('queued'), state: { status: 'queued' } },
+  { key: 'done', label: L.jobStatus('done'), state: { status: 'done' } },
+])
+const historyView = useTableView(history, {
+  search: a => [a.track?.title, a.track ? artistNames(a.track.artists) : null, a.acquisition.error],
+})
+const historyState = computed<ViewState>(() => ({ q: historyView.q.trim(), status: historyFilter.value === 'all' ? '' : historyFilter.value }))
+function applyHistory(v: ViewState) {
+  historyView.q = typeof v.q === 'string' ? v.q : ''
+  historyFilter.value = typeof v.status === 'string' && v.status ? v.status as HistoryFilter : 'all'
+}
+const historyPresets = computed<ViewPreset[]>(() => [
+  { key: 'all', label: t('all'), state: {} },
+  { key: 'ready', label: L.acqStatus('ready'), state: { status: 'ready' } },
+  { key: 'failed', label: L.acqStatus('failed'), state: { status: 'failed' } },
+  { key: 'disputed', label: L.acqStatus('disputed'), state: { status: 'disputed' } },
+  { key: 'unavailable', label: L.acqStatus('unavailable'), state: { status: 'unavailable' } },
+  { key: 'cancelled', label: L.acqStatus('cancelled'), state: { status: 'cancelled' } },
+])
+
 const laneOptions = computed(() => [{ value: '', label: t('jobs.anyLane') }, ...(lanes.value ?? []).map(l => ({ value: l.lane, label: l.title }))])
-const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable', 'failed', 'cancelled'] as HistoryFilter[]).map(v => ({ value: v, label: v === 'all' ? t('all') : L.acqStatus(v) })))
 </script>
 
 <template>
@@ -153,25 +187,29 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
     <AdminSection :title="t('jobs.title')">
       <template #tools>
         <AdminSelect v-model="laneFilter" :options="laneOptions" :label="t('jobs.lane')" align="end" />
-        <UiSegmentedControl v-model="jobFilter" :options="jobOptions" :label="t('jobs.filter')" size="sm" />
       </template>
-      <AdminState :loading="!jobs && !failed.jobs" :error="failed.jobs && !jobs" :empty="!!jobs && !jobs.length" empty-icon="ph:check-circle" :empty-title="t('jobs.empty')" @retry="loadJobs">
+      <AdminSavedViews storage-key="jobs" :presets="jobPresets" :state="jobState" @apply="applyJobs" />
+      <div class="ap-filters dl__filters">
+        <input v-model="jobView.q" class="ap-input dl__search" type="search" :placeholder="t('jobs.search')" :aria-label="t('jobs.search')">
+      </div>
+      <AdminState :loading="!jobs && !failed.jobs" :error="failed.jobs && !jobs" :empty="!!jobs && !jobView.shown.length" empty-icon="ph:check-circle" :empty-title="t('jobs.empty')" @retry="loadJobs">
         <div class="ap-table">
           <AdminJobRow header />
-          <AdminJobRow v-for="j in jobs" :key="j.id" :job="j" :lanes="laneTitles" :names="names" />
+          <AdminJobRow v-for="j in jobView.shown" :key="j.id" :job="j" :lanes="laneTitles" :names="names" />
           <div v-if="jobsCursor" class="ap-more"><UiButton variant="ghost" size="sm" :loading="moreJobs" @click="loadMoreJobs">{{ t('more') }}</UiButton></div>
         </div>
       </AdminState>
     </AdminSection>
 
     <AdminSection :title="t('history.title')" :hint="t('history.hint')">
-      <template #tools>
-        <UiSegmentedControl v-model="historyFilter" :options="historyOptions" :label="t('history.filter')" size="sm" />
-      </template>
-      <AdminState :loading="!history && !failed.history" :error="failed.history && !history" :empty="!!history && !history.length" empty-icon="ph:clock-counter-clockwise" :empty-title="t('history.empty')" @retry="loadHistory">
+      <AdminSavedViews storage-key="acq-history" :presets="historyPresets" :state="historyState" @apply="applyHistory" />
+      <div class="ap-filters dl__filters">
+        <input v-model="historyView.q" class="ap-input dl__search" type="search" :placeholder="t('history.search')" :aria-label="t('history.search')">
+      </div>
+      <AdminState :loading="!history && !failed.history" :error="failed.history && !history" :empty="!!history && !historyView.shown.length" empty-icon="ph:clock-counter-clockwise" :empty-title="t('history.empty')" @retry="loadHistory">
         <div class="ap-table">
           <AdminAcqRow header />
-          <AdminAcqRow v-for="a in history" :key="a.acquisition.id" :acq="a" :names="names" />
+          <AdminAcqRow v-for="a in historyView.shown" :key="a.acquisition.id" :acq="a" :names="names" />
           <div v-if="historyCursor" class="ap-more"><UiButton variant="ghost" size="sm" :loading="moreHistory" @click="loadMoreHistory">{{ t('more') }}</UiButton></div>
         </div>
       </AdminState>
@@ -181,6 +219,8 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
 </template>
 
 <style scoped>
+.dl__filters { margin: -4px 0 0; }
+.dl__search { flex: 1 1 220px; max-width: 320px; }
 .dl__notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 10px 0; font-size: var(--fs-small); color: var(--warning); }
 .dl__notice :deep(.iconify) { font-size: 18px; }
 .dl__link { color: var(--text-1); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
@@ -206,8 +246,8 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
       "count": "Качается: {n}"
     },
     "lanes": { "title": "Полосы", "hint": "Полосы работают независимо: пауза одной не задерживает остальные" },
-    "jobs": { "title": "Задачи", "filter": "Какие задачи", "lane": "Полоса", "anyLane": "Все полосы", "empty": "Таких задач нет" },
-    "history": { "title": "История скачиваний", "hint": "Чем закончились: кандидаты, оценки, проверка отпечатком", "filter": "Чем закончилось", "empty": "Пока ничего не скачивалось" }
+    "jobs": { "title": "Задачи", "filter": "Какие задачи", "lane": "Полоса", "anyLane": "Все полосы", "empty": "Таких задач нет", "search": "Вид задачи или ошибка" },
+    "history": { "title": "История скачиваний", "hint": "Чем закончились: кандидаты, оценки, проверка отпечатком", "filter": "Чем закончилось", "empty": "Пока ничего не скачивалось", "search": "Название, артист или ошибка" }
   },
   "en": {
     "title": "Downloads",
@@ -226,8 +266,8 @@ const historyOptions = computed(() => (['all', 'ready', 'disputed', 'unavailable
       "count": "Downloading: {n}"
     },
     "lanes": { "title": "Lanes", "hint": "Lanes run independently: pausing one doesn't hold up the others" },
-    "jobs": { "title": "Jobs", "filter": "Which jobs", "lane": "Lane", "anyLane": "All lanes", "empty": "No such jobs" },
-    "history": { "title": "Download history", "hint": "How downloads ended: candidates, scores, fingerprint check", "filter": "Outcome", "empty": "Nothing has been downloaded yet" }
+    "jobs": { "title": "Jobs", "filter": "Which jobs", "lane": "Lane", "anyLane": "All lanes", "empty": "No such jobs", "search": "Job kind or error" },
+    "history": { "title": "Download history", "hint": "How downloads ended: candidates, scores, fingerprint check", "filter": "Outcome", "empty": "Nothing has been downloaded yet", "search": "Title, artist or error" }
   }
 }
 </i18n>

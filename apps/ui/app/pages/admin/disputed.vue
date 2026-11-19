@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdminAcquisition, ClipReportItem, ResolveRequest } from '~/api/types'
+import type { ViewPreset } from '~/components/admin/SavedViews.vue'
 
 // Спорные: слева очередь записей, справа ожидаемый трек с превью Deezer и кандидаты с плеером
 // и разбором оценки. Выбрать кандидата, вставить ссылку, «нет в источниках», искать заново.
@@ -42,11 +43,46 @@ onMounted(() => {
 const reloadSoon = useDebounced(() => void load(), 1500)
 useAdminLive({ 'acquisition.updated': e => (e.status === 'disputed' ? reloadSoon() : undefined) }, load)
 
-const index = computed(() => items.value?.findIndex(i => i.acquisition.id === currentId.value) ?? -1)
-const current = computed(() => (index.value >= 0 ? items.value![index.value]! : null))
+// Очередь — общей таблицей админки: поиск, порядок (по оценке, по свежести) и виды — «почти уверенные»
+// разбираются быстро, «сомнительные» — внимательно
+const bestOf = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, c.score ?? 0), 0)
+const view = useTableView(items, {
+  search: a => [a.track?.title, a.track ? artistNames(a.track.artists) : null, a.track?.isrc],
+  sorts: { score: bestOf, newest: a => new Date(a.acquisition.updatedAt).getTime() },
+  filters: { score: (a, v) => (v === 'sure' ? bestOf(a) >= 0.7 : v === 'doubt' ? bestOf(a) < 0.4 && a.candidates.length > 0 : v === 'empty' ? !a.candidates.length : true) },
+  initial: { sort: 'score', desc: true },
+})
+const viewPresets = computed<ViewPreset[]>(() => [
+  { key: 'all', label: t('view.all'), state: { sort: 'score', desc: true } },
+  { key: 'sure', label: t('view.sure'), state: { sort: 'score', desc: true, score: 'sure' } },
+  { key: 'doubt', label: t('view.doubt'), state: { sort: 'score', desc: false, score: 'doubt' } },
+  { key: 'empty', label: t('view.empty'), state: { sort: 'newest', desc: true, score: 'empty' } },
+  { key: 'newest', label: t('view.newest'), state: { sort: 'newest', desc: true } },
+])
+const sortOptions = computed(() => [
+  { value: 'score:1', label: t('sort.scoreDesc') },
+  { value: 'score:0', label: t('sort.scoreAsc') },
+  { value: 'newest:1', label: t('sort.newest') },
+  { value: 'newest:0', label: t('sort.oldest') },
+])
+const sortValue = computed({
+  get: () => `${view.sort}:${view.desc ? 1 : 0}`,
+  set: (v: string) => {
+    const [k, d] = v.split(':')
+    view.sort = k ?? 'score'
+    view.desc = d === '1'
+  },
+})
+// Выбранная запись вне вида — первая из вида
+watch(() => view.shown, (list) => {
+  if (list.length && !list.some(i => i.acquisition.id === currentId.value)) currentId.value = list[0]!.acquisition.id
+})
+
+const index = computed(() => view.shown.findIndex(i => i.acquisition.id === currentId.value))
+const current = computed(() => (index.value >= 0 ? view.shown[index.value]! : null))
 const track = computed(() => current.value?.track ?? null)
 function go(delta: number) {
-  const list = items.value
+  const list = view.shown
   if (!list?.length) return
   const i = Math.min(list.length - 1, Math.max(0, index.value + delta))
   currentId.value = list[i]!.acquisition.id
@@ -156,7 +192,7 @@ onBeforeUnmount(() => {
   audio.value?.pause()
 })
 
-const best = (a: AdminAcquisition) => a.candidates.reduce((m, c) => Math.max(m, c.score ?? 0), 0)
+const best = bestOf
 
 // ---------- Клипы, которые слушатели скрыли у себя ----------
 const clipReports = ref<ClipReportItem[]>([])
@@ -204,12 +240,22 @@ watch(clipSheet.open, (v) => {
       </button>
     </section>
 
+    <template v-if="items?.length">
+      <AdminSavedViews storage-key="disputed" :presets="viewPresets" :state="view.state" @apply="view.apply" />
+      <div class="ap-filters dp__filters">
+        <input v-model="view.q" class="ap-input dp__search" type="search" :placeholder="t('search')" :aria-label="t('search')">
+        <AdminSelect v-model="sortValue" :options="sortOptions" :label="t('sort.label')" />
+        <span class="ap-muted tnum dp__count">{{ t('shown', { n: view.shown.length, total: items.length }) }}</span>
+      </div>
+    </template>
+
     <AdminState :loading="!items && !failed" :error="failed" :empty="!!items && !items.length" empty-icon="ph:check-circle" :empty-title="t('empty')" :empty-text="t('emptyText')" @retry="load">
       <div class="dp__grid">
         <!-- Очередь спорных -->
         <nav v-if="!ui.isPhone" class="dp__list thin-scrollbar" :aria-label="t('queue')">
+          <p v-if="!view.shown.length" class="ap-hint dp__more">{{ t('nothing') }}</p>
           <button
-            v-for="a in items"
+            v-for="a in view.shown"
             :key="a.acquisition.id"
             type="button"
             class="dp__item"
@@ -227,8 +273,8 @@ watch(clipSheet.open, (v) => {
         </nav>
         <div v-else class="dp__pager">
           <UiIconButton icon="ph:caret-left" :label="t('prev')" :disabled="index <= 0" @click="go(-1)" />
-          <span class="tnum">{{ t('of', { i: index + 1, n: items?.length ?? 0 }) }}</span>
-          <UiIconButton icon="ph:caret-right" :label="t('next')" :disabled="index >= (items?.length ?? 0) - 1" @click="go(1)" />
+          <span class="tnum">{{ t('of', { i: index + 1, n: view.shown.length }) }}</span>
+          <UiIconButton icon="ph:caret-right" :label="t('next')" :disabled="index >= view.shown.length - 1" @click="go(1)" />
         </div>
 
         <!-- Ожидаемый трек и решения -->
@@ -281,6 +327,9 @@ watch(clipSheet.open, (v) => {
 </template>
 
 <style scoped>
+.dp__filters { margin-bottom: -16px; }
+.dp__search { flex: 1 1 220px; max-width: 320px; }
+.dp__count { margin-left: auto; font-size: var(--fs-small); }
 .dp { max-width: 1320px; }
 .dp__keys { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-caption); color: var(--text-3); }
 .dp__keys span { display: inline-flex; align-items: center; gap: 6px; }
@@ -351,6 +400,11 @@ watch(clipSheet.open, (v) => {
 <i18n lang="json">
 {
   "ru": {
+    "view": { "all": "Все", "sure": "Почти уверенные", "doubt": "Сомнительные", "empty": "Без кандидатов", "newest": "Свежие" },
+    "sort": { "label": "Порядок", "scoreDesc": "Сначала уверенные", "scoreAsc": "Сначала сомнительные", "newest": "Сначала свежие", "oldest": "Сначала давние" },
+    "search": "Название, артист или ISRC",
+    "shown": "{n} из {total}",
+    "nothing": "Под этот вид записей нет",
     "title": "Спорные",
     "clips": "Клипы, которые скрыли",
     "clipReports": "Сколько слушателей скрыли клип у себя",
@@ -384,6 +438,11 @@ watch(clipSheet.open, (v) => {
     "keys": { "move": "запись", "choose": "выбрать", "preview": "превью", "link": "ссылка", "none": "нет в источниках" }
   },
   "en": {
+    "view": { "all": "All", "sure": "Almost sure", "doubt": "Doubtful", "empty": "No candidates", "newest": "Recent" },
+    "sort": { "label": "Order", "scoreDesc": "Sure first", "scoreAsc": "Doubtful first", "newest": "Recent first", "oldest": "Oldest first" },
+    "search": "Title, artist or ISRC",
+    "shown": "{n} of {total}",
+    "nothing": "No recordings in this view",
     "title": "Disputed",
     "clips": "Videos listeners hid",
     "clipReports": "How many listeners hid the video",

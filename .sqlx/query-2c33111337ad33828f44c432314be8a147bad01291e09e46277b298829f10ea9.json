@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, duration_ms,\n                                          clip_start_ms, video_duration_ms, width, height, video_title, channel,\n                                          source, score, candidates, candidates_at, reviewed_at, checked_at, last_used_at,\n                                          whole, sync_offset_ms, sync_rate, sync_segments)\n                 VALUES ($1, 'ready', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,\n                         CASE WHEN jsonb_array_length($14) > 0 THEN now() END, now(), now(), now(), $15, $16, $17, $18)\n                 ON CONFLICT (track_id) DO UPDATE SET state = 'ready', video_id = EXCLUDED.video_id,\n                     storage_key = EXCLUDED.storage_key, size_bytes = EXCLUDED.size_bytes,\n                     duration_ms = EXCLUDED.duration_ms, clip_start_ms = EXCLUDED.clip_start_ms,\n                     video_duration_ms = EXCLUDED.video_duration_ms, width = EXCLUDED.width,\n                     height = EXCLUDED.height, video_title = EXCLUDED.video_title, channel = EXCLUDED.channel,\n                     source = EXCLUDED.source, score = EXCLUDED.score,\n                     candidates = CASE WHEN jsonb_array_length(EXCLUDED.candidates) > 0\n                                       THEN EXCLUDED.candidates ELSE track_clips.candidates END,\n                     candidates_at = COALESCE(EXCLUDED.candidates_at, track_clips.candidates_at),\n                     reviewed_at = now(), checked_at = now(), last_used_at = now(),\n                     whole = EXCLUDED.whole, sync_offset_ms = EXCLUDED.sync_offset_ms, sync_rate = EXCLUDED.sync_rate,\n                     sync_segments = EXCLUDED.sync_segments",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Float4",
+        "Jsonb",
+        "Bool",
+        "Int4",
+        "Float4",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2c33111337ad33828f44c432314be8a147bad01291e09e46277b298829f10ea9"
+}

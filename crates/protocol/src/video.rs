@@ -136,9 +136,24 @@ fn default_clip_height() -> i32 {
 }
 
 /// Клип целиком в такт с треком: позиция трека = `offset_ms` + позиция видео × `rate`.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, ToSchema)]
+/// Сценка посреди клипа или вырезанный куплет сдвигают остаток — тогда кусков несколько
+/// (`segments`), у каждого своя прямая; `offset_ms` и `rate` — у самого длинного.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipSync {
+    pub offset_ms: i32,
+    pub rate: f64,
+    /// Пусто — весь клип на одной прямой.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub segments: Vec<ClipSegment>,
+}
+
+/// Кусок клипа `[video_start_ms, video_end_ms)` на своей прямой.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipSegment {
+    pub video_start_ms: i32,
+    pub video_end_ms: i32,
     pub offset_ms: i32,
     pub rate: f64,
 }

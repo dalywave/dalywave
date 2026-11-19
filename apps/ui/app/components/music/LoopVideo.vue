@@ -59,15 +59,16 @@ function track() {
   const v = el.value
   const f = props.follow
   if (!v || !f) return
-  const at = followTarget(f, v.duration)
-  outside.value = at === null
-  if (at === null) {
+  const target = followTarget(f, v.duration)
+  outside.value = target === null
+  if (target === null) {
     if (!v.paused) v.pause()
     return
   }
-  const rate = 1 / f.rate
+  // Кусок клипа на своей прямой: при переходе через сценку видео перескакивает
+  const rate = 1 / target.rate
   if (Math.abs(v.playbackRate - rate) > 0.001) v.playbackRate = rate
-  if (Math.abs(v.currentTime - at) > FOLLOW_TOLERANCE_S) v.currentTime = at
+  if (Math.abs(v.currentTime - target.at) > FOLLOW_TOLERANCE_S) v.currentTime = target.at
   if (run.value && f.playing() && v.paused) void v.play().catch(() => {})
   if (!f.playing() && !v.paused) v.pause()
 }

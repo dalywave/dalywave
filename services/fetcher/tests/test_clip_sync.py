@@ -60,3 +60,27 @@ def test_envelope_from_audio_finds_offset() -> None:
     # Клип в 0 — трек на 10 с минус 4 с тишины
     assert abs(a.offset_ms - 6000) < 60
     assert envelope(np.zeros(10, np.float32)).size == 0
+
+
+def test_skit_in_the_middle_makes_two_segments() -> None:
+    """Сценка на 20 с посреди клипа: после неё видео отстаёт от трека — второй кусок."""
+    track = spikes(200, 8)
+    video = np.concatenate([track[: 100 * FPS], spikes(20, 9), track[100 * FPS : 190 * FPS]])
+    a = align_envelopes(track, video)
+    assert a is not None
+    assert len(a.segments) == 2
+    first, second = a.segments
+    assert abs(first.offset_ms) < 60 and abs(second.offset_ms + 20_000) < 60
+    # Стык — где-то в сценке
+    assert 95_000 <= first.video_end_ms == second.video_start_ms <= 125_000
+    assert a.to_json()["segments"][1]["offsetMs"] == second.offset_ms
+
+
+def test_repeated_chorus_is_not_a_segment() -> None:
+    """Клип повторяет кусок трека в конце: это совпадение, а не новый кусок — прямая одна."""
+    track = spikes(180, 10)
+    video = np.concatenate([track[: 170 * FPS], track[60 * FPS : 90 * FPS]])
+    a = align_envelopes(track, video)
+    assert a is not None
+    assert len(a.segments) == 1
+    assert "segments" not in a.to_json()

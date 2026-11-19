@@ -67,7 +67,7 @@ def video_format(height: int = 480) -> str:
 
 VIDEO_FORMAT = video_format(480)
 # Звук ролика для сопоставления с треком: любой, лишь бы ffmpeg прочёл по ссылке
-AUDIO_FORMAT = "ba[protocol=https]/ba[protocol^=m3u8]/ba"
+AUDIO_FORMAT = "ba[protocol=https]/ba"
 # Клип целиком — не длиннее (полнометражные «фильмы» не режем целиком)
 MAX_WHOLE_S = 600.0
 SEARCH_LIMIT = 8
@@ -490,33 +490,43 @@ class ClipMaker:
             return self._fetch_range(video_id, start_s, end_s, out_dir, fallback, height)
 
     def video_audio(self, video_id: str) -> Any:
-        """Звук ролика (моно, 8 кГц) — для сопоставления клипа с треком."""
-        opts = self.downloader.options(self.work_root, "raw")
-        collector = _Collector()
-        opts.update({"format": AUDIO_FORMAT, "logger": collector, "skip_download": True})
-        with self.downloader.paced():
-            try:
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    info = ydl.extract_info(
-                        f"https://www.youtube.com/watch?v={video_id}", download=False
-                    )
-                    fmt = ((info or {}).get("requested_formats") or [info or {}])[0]
-                    url = str(fmt.get("url") or "")
-                    cookies = (
-                        "".join(
-                            f"{c.name}={c.value}; path={c.path}; domain={c.domain};\r\n"
-                            for c in ydl.cookiejar.get_cookies_for_url(url)
+        """Звук ролика (моно, 8 кГц) — для сопоставления клипа с треком. Поток YouTube отвечает 403,
+        пока ссылка не ожила (`available_at`) или если клиент не тот: ждём и пробуем другим клиентом,
+        как при скачивании видео."""
+        try:
+            return self._video_audio(video_id, None)
+        except (DownloadError, RuntimeError) as e:
+            fallback = self.downloader.fallback_clients()
+            code = e.code if isinstance(e, DownloadError) else classify_error(str(e))
+            if code not in RETRY_WITH_FALLBACK or not fallback:
+                raise
+            return self._video_audio(video_id, fallback)
+
+    def _video_audio(self, video_id: str, clients: tuple[str, ...] | None) -> Any:
+        """Звук ролика качает yt-dlp (кусками, как аудио трека: поток звука YouTube не отдаёт ffmpeg
+        целиком одним запросом — 403), затем ffmpeg сводит его к моно 8 кГц."""
+        self.work_root.mkdir(parents=True, exist_ok=True)
+        work = Path(tempfile.mkdtemp(prefix="sync-", dir=self.work_root))
+        try:
+            opts = self.downloader.options(work, "audio", clients)
+            collector = _Collector()
+            opts.update({"format": AUDIO_FORMAT, "logger": collector, "http_chunk_size": 1 << 20})
+            with self.downloader.paced():
+                try:
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        ydl.extract_info(
+                            f"https://www.youtube.com/watch?v={video_id}", download=True
                         )
-                        if url
-                        else ""
-                    )
-            except YoutubeDLError as e:
-                message = str(e).removeprefix("ERROR: ")
-                raise DownloadError(classify_error(message), message, collector.warnings) from e
-        if not url:
-            raise DownloadError("format_unavailable", "yt-dlp не дал ссылку на звук ролика")
-        headers = fmt.get("http_headers") or (info or {}).get("http_headers") or {}
-        return clip_sync.decode_audio(url, headers, cookies or None)
+                except YoutubeDLError as e:
+                    message = str(e).removeprefix("ERROR: ")
+                    text = " ".join([message, *collector.warnings])
+                    raise DownloadError(classify_error(text), message, collector.warnings) from e
+            files = [f for f in work.iterdir() if f.is_file() and f.stat().st_size > 0]
+            if not files:
+                raise DownloadError("format_unavailable", "yt-dlp не скачал звук ролика")
+            return clip_sync.decode_audio(str(files[0]))
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
 
     def _fetch_range(
         self,
@@ -793,7 +803,9 @@ class ClipMaker:
             t = time.monotonic()
             try:
                 track_audio = clip_sync.decode_audio(sync_audio_url)
-                sync = clip_sync.align(track_audio, self.video_audio(pick.video_id))
+                diag: dict[str, Any] = {}
+                details["syncDiag"] = diag
+                sync = clip_sync.align(track_audio, self.video_audio(pick.video_id), diag)
             except (DownloadError, RuntimeError, OSError, subprocess.SubprocessError) as e:
                 details["syncError"] = str(e)[:200]
             timings["sync"] = _ms(t)

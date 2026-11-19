@@ -4899,6 +4899,17 @@ export interface components {
             /** Format: int32 */
             width?: number | null;
         };
+        /** @description Кусок клипа `[video_start_ms, video_end_ms)` на своей прямой. */
+        ClipSegment: {
+            /** Format: int32 */
+            offsetMs: number;
+            /** Format: double */
+            rate: number;
+            /** Format: int32 */
+            videoEndMs: number;
+            /** Format: int32 */
+            videoStartMs: number;
+        };
         /** @description Клипы вместо обложки: качество, что качать, сроки хранения и потолок места. */
         ClipSettings: {
             /** @description Искать клипы сами, когда трек показывается. Выкл. — только выбранные администратором. */
@@ -4972,12 +4983,18 @@ export interface components {
          * @enum {string}
          */
         ClipSource: "chorus" | "preview";
-        /** @description Клип целиком в такт с треком: позиция трека = `offset_ms` + позиция видео × `rate`. */
+        /**
+         * @description Клип целиком в такт с треком: позиция трека = `offset_ms` + позиция видео × `rate`.
+         *     Сценка посреди клипа или вырезанный куплет сдвигают остаток — тогда кусков несколько
+         *     (`segments`), у каждого своя прямая; `offset_ms` и `rate` — у самого длинного.
+         */
         ClipSync: {
             /** Format: int32 */
             offsetMs: number;
             /** Format: double */
             rate: number;
+            /** @description Пусто — весь клип на одной прямой. */
+            segments?: components["schemas"]["ClipSegment"][];
         };
         /** @description Клип трека для листа «Клип». */
         ClipView: {

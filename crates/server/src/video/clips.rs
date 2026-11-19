@@ -89,7 +89,7 @@ pub async fn prepare(
 ) -> Result<Vec<TrackClip>, sqlx::Error> {
     let tracks = sqlx::query!(
         r#"SELECT t.id AS "id!", t.album_id, c.state AS "state?", c.storage_key, c.duration_ms AS "clip_ms?",
-                  c.sync_offset_ms, c.sync_rate,
+                  c.sync_offset_ms, c.sync_rate, c.sync_segments,
                   (c.checked_at < now() - make_interval(days => $2)) AS "stale?",
                   (p.track_id IS NOT NULL AND p.video_id IS NULL) AS "off!",
                   EXISTS (SELECT 1 FROM clip_hidden h
@@ -140,6 +140,11 @@ pub async fn prepare(
                 .map(|(offset_ms, rate)| ClipSync {
                     offset_ms,
                     rate: f64::from(rate),
+                    segments: t
+                        .sync_segments
+                        .clone()
+                        .and_then(|v| serde_json::from_value(v).ok())
+                        .unwrap_or_default(),
                 }),
             url,
             motion: t.album_id.and_then(|a| motions.get(&a).cloned()),
@@ -460,9 +465,9 @@ pub async fn settle(
                 "INSERT INTO track_clips (track_id, state, video_id, storage_key, size_bytes, duration_ms,
                                           clip_start_ms, video_duration_ms, width, height, video_title, channel,
                                           source, score, candidates, candidates_at, reviewed_at, checked_at, last_used_at,
-                                          whole, sync_offset_ms, sync_rate)
+                                          whole, sync_offset_ms, sync_rate, sync_segments)
                  VALUES ($1, 'ready', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                         CASE WHEN jsonb_array_length($14) > 0 THEN now() END, now(), now(), now(), $15, $16, $17)
+                         CASE WHEN jsonb_array_length($14) > 0 THEN now() END, now(), now(), now(), $15, $16, $17, $18)
                  ON CONFLICT (track_id) DO UPDATE SET state = 'ready', video_id = EXCLUDED.video_id,
                      storage_key = EXCLUDED.storage_key, size_bytes = EXCLUDED.size_bytes,
                      duration_ms = EXCLUDED.duration_ms, clip_start_ms = EXCLUDED.clip_start_ms,
@@ -473,7 +478,8 @@ pub async fn settle(
                                        THEN EXCLUDED.candidates ELSE track_clips.candidates END,
                      candidates_at = COALESCE(EXCLUDED.candidates_at, track_clips.candidates_at),
                      reviewed_at = now(), checked_at = now(), last_used_at = now(),
-                     whole = EXCLUDED.whole, sync_offset_ms = EXCLUDED.sync_offset_ms, sync_rate = EXCLUDED.sync_rate",
+                     whole = EXCLUDED.whole, sync_offset_ms = EXCLUDED.sync_offset_ms, sync_rate = EXCLUDED.sync_rate,
+                     sync_segments = EXCLUDED.sync_segments",
                 p.track_id,
                 r.video_id,
                 key,
@@ -489,8 +495,15 @@ pub async fn settle(
                 score,
                 candidates,
                 r.whole,
-                r.sync.map(|s| s.offset_ms),
-                r.sync.map(|s| s.rate as f32).filter(|r| (0.5..=2.0).contains(r)),
+                r.sync.as_ref().map(|s| s.offset_ms),
+                r.sync
+                    .as_ref()
+                    .map(|s| s.rate as f32)
+                    .filter(|r| (0.5..=2.0).contains(r)),
+                r.sync
+                    .as_ref()
+                    .filter(|s| !s.segments.is_empty())
+                    .and_then(|s| serde_json::to_value(&s.segments).ok()),
             )
             .execute(&mut *tx)
             .await;

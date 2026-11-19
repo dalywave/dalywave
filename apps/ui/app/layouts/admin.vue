@@ -151,7 +151,7 @@ onMounted(() => void nextTick(revealTab))
 .adm__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 4px; }
 .adm__brand-sub { font-size: var(--fs-small); font-weight: 600; color: var(--text-3); }
 .adm__nav { display: flex; flex: 1; flex-direction: column; gap: 16px; }
-.adm__search { display: flex; align-items: center; gap: 12px; height: 36px; margin-bottom: -4px; padding: 0 8px 0 12px; border: 0; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; transition: color var(--dur-1), box-shadow var(--dur-1); }
+.adm__search { display: flex; flex: none; align-items: center; gap: 12px; height: 36px; margin-bottom: -4px; padding: 0 8px 0 12px; border: 0; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; transition: color var(--dur-1), box-shadow var(--dur-1); }
 .adm__search :deep(.iconify) { flex: none; font-size: 17px; }
 .adm__search:hover { color: var(--text-1); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .adm__search:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
@@ -265,7 +265,7 @@ onMounted(() => void nextTick(revealTab))
 .ap-chip:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .ap-chip.is-active { background: var(--text-1); color: var(--on-light); }
 /* Виды прямо над фильтрами — одной группой, без большого отступа страницы */
-.ap-chips + .ap-filters { margin-top: -28px; }
+.ap > .ap-chips + .ap-filters { margin-top: -28px; }
 
 /* Поле ввода админки */
 .ap-input { height: 36px; min-width: 0; padding: 0 12px; border: 0; border-radius: var(--r-3); background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-1); font: inherit; font-size: var(--fs-small); transition: box-shadow var(--dur-1); }

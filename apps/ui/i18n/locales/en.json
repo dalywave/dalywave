@@ -532,7 +532,9 @@
         "import_match": "Import matching",
         "import_apply": "Import apply",
         "import_file": "Own file",
-        "lyrics": "Lyrics"
+        "lyrics": "Lyrics",
+        "clip": "Clip",
+        "taste_model": "Taste model"
       }
     },
     "acq": {

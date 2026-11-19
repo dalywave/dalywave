@@ -194,7 +194,9 @@ async fn clip_settings_shape_the_jobs(db: PgPool) {
             json!({ "workerId": "test-mac", "result": {
                 "status": "ready", "videoId": "dQw4w9WgXcQ", "videoDurationMs": 215_000,
                 "clipStartMs": 0, "durationMs": 215_000, "sizeBytes": 4, "height": 720,
-                "whole": true, "sync": { "offsetMs": -12_300, "rate": 1.02 } } }),
+                "whole": true, "sync": { "offsetMs": -12_300, "rate": 1.02, "segments": [
+                    { "videoStartMs": 0, "videoEndMs": 132_000, "offsetMs": -12_300, "rate": 1.02 },
+                    { "videoStartMs": 132_000, "videoEndMs": 215_000, "offsetMs": -17_700, "rate": 1.0 }] } } }),
             &Auth::Bearer(token.clone()),
         )
         .await;
@@ -207,6 +209,8 @@ async fn clip_settings_shape_the_jobs(db: PgPool) {
     assert_eq!(items[0]["state"], "ready");
     assert_eq!(items[0]["sync"]["offsetMs"], -12_300);
     assert!((items[0]["sync"]["rate"].as_f64().unwrap() - 1.02).abs() < 1e-4);
+    // Сценка посреди клипа: второй кусок со своим сдвигом
+    assert_eq!(items[0]["sync"]["segments"][1]["offsetMs"], -17_700);
 
     let s = app.get("/api/admin/settings", &admin).await;
     assert_eq!(s.body["clips"]["stored"], 1);

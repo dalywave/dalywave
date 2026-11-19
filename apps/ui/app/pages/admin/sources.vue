@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AdminAcquisition, Downloader, Sources } from '~/api/types'
 import type { BarDay, BarSeries } from '~/components/admin/Bars.vue'
+import type { ViewPreset } from '~/components/admin/SavedViews.vue'
 import type { MenuEntry } from '~/types/ui'
 
 // Источники: домашние загрузчики (на связи, когда был, версии, работа за сутки, отзыв),
@@ -29,9 +30,25 @@ onMounted(load)
 // «На связи» — две минуты с последнего обращения: список освежается сам
 useIntervalFn(() => void load(), 30_000)
 const names = computed(() => Object.fromEntries((data.value?.downloaders ?? []).map(d => [d.id, d.name])))
-const live = computed(() => data.value?.downloaders.filter(d => !d.revokedAt) ?? [])
-const revoked = computed(() => data.value?.downloaders.filter(d => d.revokedAt) ?? [])
-const showRevoked = ref(false)
+// Загрузчики — общей таблицей админки: поиск, сортировка по колонкам, виды (на связи, рабочие,
+// отозванные) и свои сохранённые
+const downloaders = computed(() => data.value?.downloaders ?? [])
+const live = computed(() => downloaders.value.filter(d => !d.revokedAt))
+const seenAt = (d: Downloader) => (d.online ? Number.MAX_SAFE_INTEGER : d.lastSeenAt ? new Date(d.lastSeenAt).getTime() : 0)
+const view = useTableView(downloaders, {
+  search: d => [d.name, d.workerId, d.version, d.ytDlpVersion],
+  sorts: { name: d => d.name.toLowerCase(), seen: seenAt, running: d => d.running, ok: d => d.ok24h, failed: d => d.failed24h },
+  filters: { state: (d, v) => (v === 'online' ? d.online && !d.revokedAt : v === 'active' ? !d.revokedAt : v === 'revoked' ? !!d.revokedAt : true) },
+  initial: { sort: 'seen', desc: true, filters: { state: 'active' } },
+})
+const BASE = { sort: 'seen', desc: true }
+const viewPresets = computed<ViewPreset[]>(() => [
+  { key: 'active', label: t('view.active'), state: { ...BASE, state: 'active' } },
+  { key: 'online', label: t('view.online'), state: { ...BASE, state: 'online' } },
+  { key: 'failing', label: t('view.failing'), state: { sort: 'failed', desc: true, state: 'active' } },
+  { key: 'revoked', label: t('view.revoked'), state: { ...BASE, state: 'revoked' } },
+  { key: 'all', label: t('view.all'), state: { ...BASE } },
+])
 
 // ---------- Проверка скачивания ----------
 
@@ -147,19 +164,25 @@ const rate = computed(() => {
 
     <AdminSection :title="t('dl.title')" :hint="t('dl.hint')">
       <AdminState :loading="!data && !failed" :error="failed && !data" :rows="3" @retry="load">
-        <div v-if="live.length" class="ap-table src__table">
-          <div class="ap-tr ap-tr--head">
-            <span>{{ t('dl.name') }}</span>
-            <span>{{ t('dl.state') }}</span>
-            <span class="ap-hide-phone">{{ t('dl.versions') }}</span>
-            <span class="ap-num">{{ t('dl.running') }}</span>
-            <span class="ap-num">{{ t('dl.ok') }}</span>
-            <span class="ap-num">{{ t('dl.failed') }}</span>
+        <template v-if="downloaders.length">
+          <AdminSavedViews storage-key="downloaders" :presets="viewPresets" :state="view.state" @apply="view.apply" />
+          <div class="ap-filters src__filters">
+            <input v-model="view.q" class="ap-input src__search" type="search" :placeholder="t('dl.search')" :aria-label="t('dl.search')">
+          </div>
+        </template>
+        <div v-if="view.shown.length" class="ap-table src__table" role="table" :aria-label="t('dl.title')">
+          <div class="ap-tr ap-tr--head" role="row">
+            <AdminSortHead :label="t('dl.name')" k="name" :view="view" text />
+            <AdminSortHead :label="t('dl.state')" k="seen" :view="view" />
+            <span class="ap-hide-phone" role="columnheader">{{ t('dl.versions') }}</span>
+            <AdminSortHead :label="t('dl.running')" k="running" :view="view" num />
+            <AdminSortHead :label="t('dl.ok')" k="ok" :view="view" num />
+            <AdminSortHead :label="t('dl.failed')" k="failed" :view="view" num />
             <span />
           </div>
-          <div v-for="d in live" :key="d.id" class="ap-tr">
+          <div v-for="d in view.shown" :key="d.id" class="ap-tr" :class="{ 'src__rev': d.revokedAt }" role="row">
             <span class="ap-cell"><b>{{ d.name }}</b><small>{{ d.workerId ?? t('dl.noMachine') }}</small></span>
-            <AdminStatus :tone="d.online ? 'ok' : 'idle'">{{ seen(d) }}</AdminStatus>
+            <AdminStatus :tone="d.revokedAt ? 'idle' : d.online ? 'ok' : 'idle'">{{ seen(d) }}</AdminStatus>
             <span class="ap-cell ap-hide-phone">
               <b>{{ d.ytDlpVersion ? `yt-dlp ${d.ytDlpVersion}` : '—' }}</b>
               <small>{{ [d.version ? `fetcher ${d.version}` : null, abilities(d)].filter(Boolean).join(' · ') }}</small>
@@ -168,11 +191,12 @@ const rate = computed(() => {
             <span class="ap-num">{{ d.ok24h || '—' }}</span>
             <span class="ap-num" :class="{ 'ap-bad': d.failed24h }">{{ d.failed24h || '—' }}</span>
             <span class="ap-end">
-              <UiMenu :items="menu(d)"><UiIconButton icon="ph:dots-three" :label="t('dl.actions')" size="sm" :tooltip="false" /></UiMenu>
+              <UiMenu v-if="!d.revokedAt" :items="menu(d)"><UiIconButton icon="ph:dots-three" :label="t('dl.actions')" size="sm" :tooltip="false" /></UiMenu>
             </span>
           </div>
         </div>
-        <div v-else class="src__none">
+        <p v-else-if="downloaders.length" class="ap-hint src__empty">{{ t('dl.nothing') }}</p>
+        <div v-if="!live.length" class="src__none">
           <Icon name="ph:plugs" />
           <span class="ap-cell"><b>{{ t('dl.none') }}</b><small>{{ t('dl.noneHint') }}</small></span>
         </div>
@@ -186,15 +210,6 @@ const rate = computed(() => {
             <code class="ap-mono">{{ token }}</code>
             <UiButton size="sm" icon="ph:copy" @click="copyToken">{{ t('dl.copy') }}</UiButton>
             <UiIconButton icon="ph:x" :label="t('dl.hideToken')" size="sm" @click="token = null" />
-          </div>
-        </div>
-        <div v-if="revoked.length" class="src__revoked">
-          <UiButton variant="ghost" size="sm" :icon-right="showRevoked ? 'ph:caret-up' : 'ph:caret-down'" :aria-expanded="showRevoked" @click="showRevoked = !showRevoked">{{ t('dl.revokedList', { n: revoked.length }) }}</UiButton>
-          <div v-if="showRevoked" class="ap-table">
-            <div v-for="d in revoked" :key="d.id" class="ap-tr src__rev">
-              <span class="ap-cell"><b>{{ d.name }}</b><small>{{ d.workerId ?? '' }}</small></span>
-              <span class="ap-muted">{{ seen(d) }}</span>
-            </div>
           </div>
         </div>
       </AdminState>
@@ -230,6 +245,10 @@ const rate = computed(() => {
 </template>
 
 <style scoped>
+.src__filters { margin-bottom: 0; }
+.src__search { flex: 1 1 220px; max-width: 320px; }
+.src__empty { padding: 12px 0; }
+.src__rev { opacity: 0.6; }
 .src__table { --cols: minmax(140px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.2fr) 64px 64px 64px 40px; }
 .src__none { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-small); }
 .src__none > .iconify { flex: none; font-size: 22px; color: var(--text-3); }
@@ -256,6 +275,7 @@ const rate = computed(() => {
 <i18n lang="json">
 {
   "ru": {
+    "view": { "active": "Рабочие", "online": "На связи", "failing": "С ошибками", "revoked": "Отозванные", "all": "Все" },
     "title": "Источники",
     "failed": "Не получилось — попробуйте ещё раз",
     "check": {
@@ -277,6 +297,8 @@ const rate = computed(() => {
       "seen": "был {when}",
       "never": "ещё не подключался",
       "revokedAt": "отозван {when}",
+      "search": "Имя, машина или версия",
+      "nothing": "Под этот вид загрузчиков нет",
       "noMachine": "машина неизвестна",
       "pot": "PO-токены",
       "cookies": "cookies",
@@ -321,6 +343,7 @@ const rate = computed(() => {
     }
   },
   "en": {
+    "view": { "active": "Active", "online": "Online", "failing": "With errors", "revoked": "Revoked", "all": "All" },
     "title": "Sources",
     "failed": "Didn't work — try again",
     "check": {
@@ -342,6 +365,8 @@ const rate = computed(() => {
       "seen": "seen {when}",
       "never": "never connected",
       "revokedAt": "revoked {when}",
+      "search": "Name, machine or version",
+      "nothing": "No downloaders in this view",
       "noMachine": "unknown machine",
       "pot": "PO tokens",
       "cookies": "cookies",
