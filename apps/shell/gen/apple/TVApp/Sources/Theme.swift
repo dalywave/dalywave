@@ -35,10 +35,10 @@ enum Mood: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .energetic: "Бодрое"
-        case .happy: "Весёлое"
-        case .calm: "Спокойное"
-        case .sad: "Грустное"
+        case .energetic: String(localized: "Бодрое")
+        case .happy: String(localized: "Весёлое")
+        case .calm: String(localized: "Спокойное")
+        case .sad: String(localized: "Грустное")
         }
     }
 

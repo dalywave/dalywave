@@ -40,6 +40,8 @@ export interface PlatformInfo {
   dev: boolean
   /** Адрес сервера при запуске; дальше — `server.get()` и событие `server:changed` */
   serverUrl: string
+  /** Сервер выбран; нет — первый запуск начинается с экрана «Адрес сервера» (сборки для App Store) */
+  serverChosen: boolean
   locale: Locale
 }
 
@@ -78,6 +80,22 @@ export interface ShellError {
 
 export function isShellError(e: unknown): e is ShellError {
   return typeof e === 'object' && e !== null && 'code' in e && 'message' in e
+}
+
+/** Ответ сервера на проверку адреса (`server.check`) */
+export interface AppServerInfo {
+  url: string
+  name: string
+  version: string
+}
+
+/** Адрес сервера, выбран ли он и недавние серверы */
+export interface AppServerState {
+  url: string
+  chosen: boolean
+  recent: { url: string, name?: string | null, usedAt: number }[]
+  /** Демо-сервер для «Попробовать демо» */
+  demo: string
 }
 
 /** `User` и `Device` — типы API сервера (`~/api/types`) */
@@ -350,6 +368,8 @@ export interface ShellEvents {
   /** Список устройств вывода или маршрут звука поменялся (AirPlay, наушники, Bluetooth) */
   'audio:outputs': AudioOutputs
   'server:changed': { serverUrl: string }
+  /** Ссылка `dalywave://server?url=…`: адрес забирать `server.linkTake()` */
+  'server:link': string
   'update:available': UpdateInfo
   'update:progress': { downloadedBytes: number, totalBytes: number | null }
   /** Обновление скачано и проверено — можно предложить «Перезапустить» */
@@ -501,8 +521,14 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
     },
     server: {
       get: () => call<string>('server_url_get'),
-      /** null — адрес по умолчанию */
-      set: (url: string | null) => call<string>('server_url_set', { url }),
+      /** null — адрес по умолчанию; `name` — название сервера для недавних */
+      set: (url: string | null, name?: string | null) => call<string>('server_url_set', { url, name: name ?? null }),
+      state: () => call<AppServerState>('server_state'),
+      /** Ошибки: `invalid`, `unreachable`, `not_dalywave`, `down` */
+      check: (url: string) => call<AppServerInfo>('server_check', { url }),
+      forget: (url: string) => call<void>('server_forget', { url }),
+      /** Адрес из последней ссылки `dalywave://server?url=…` (и забыть её) */
+      linkTake: () => call<string | null>('server_link_take'),
     },
     /** Язык меню в трее и строке меню */
     setLocale: (locale: Locale) => call<void>('shell_set_locale', { locale }),

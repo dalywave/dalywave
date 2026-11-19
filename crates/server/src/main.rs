@@ -61,7 +61,10 @@ async fn main() -> anyhow::Result<()> {
     let listener = TcpListener::bind(state.config.listen)
         .await
         .with_context(|| format!("listen on {}", state.config.listen))?;
-    tracing::info!("listening on {}", listener.local_addr()?);
+    let addr = listener.local_addr()?;
+    tracing::info!("listening on {addr}");
+    // Объявление в локальной сети (`_dalywave._tcp`) живёт, пока работает API
+    let _mdns = dalywave_server::mdns::announce(&state.config, addr.port());
     let hub = Arc::clone(&state.hub);
     axum::serve(
         listener,

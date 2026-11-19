@@ -63,7 +63,7 @@ pub fn routes() -> Router<AppState> {
         .route("/oidc/{provider}/callback", get(provider_callback))
         .route("/password", post(password_login))
         .route("/logout", post(logout))
-        .route("/me", get(me))
+        .route("/me", get(me).delete(delete_me))
         .route("/app/start", get(app_start))
         .route("/app/token", post(app_token))
         .route("/app/pair", post(app_pair))
@@ -816,6 +816,64 @@ pub async fn me(State(st): State<AppState>, principal: Principal) -> AppResult<J
         session_id: principal.session_id,
         device,
     }))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/auth/me",
+    tag = "auth",
+    security(("session" = []), ("device" = [])),
+    responses(
+        (status = 204, description = "Аккаунт удалён вместе со всем, что с ним связано: медиатекой, \
+                                      плейлистами, историей, устройствами и сессиями"),
+        (status = 401, description = "Нет сессии", body = ErrorBody),
+        (status = 409, description = "Это последний администратор (`last_admin`): сначала назначьте другого", body = ErrorBody),
+    ),
+)]
+pub async fn delete_me(
+    State(st): State<AppState>,
+    ClientIp(ip): ClientIp,
+    principal: Principal,
+) -> AppResult<StatusCode> {
+    let user_id = principal.user.id;
+    let mut tx = st.db.begin().await?;
+    // Последний администратор не уходит: иначе сервером некому управлять (а на пустом сервере
+    // мастер первого запуска открылся бы любому)
+    sqlx::query!("SELECT pg_advisory_xact_lock(hashtext('dalywave.admins'))")
+        .execute(&mut *tx)
+        .await?;
+    let other_admins = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM users
+           WHERE 'admin' = ANY(roles) AND NOT disabled AND id <> $1"#,
+        user_id
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    let is_admin = principal
+        .roles
+        .contains(&dalywave_protocol::auth::Role::Admin);
+    if is_admin && other_admins == 0 {
+        return Err(AppError::Conflict {
+            code: "last_admin",
+            message: "это единственный администратор сервера".into(),
+        });
+    }
+    // Остальное уходит каскадом (сессии, устройства, медиатека, плейлисты, история); в журнале
+    // действий — только факт удаления без данных аккаунта
+    sqlx::query!("DELETE FROM users WHERE id = $1", user_id)
+        .execute(&mut *tx)
+        .await?;
+    audit::record(
+        &mut *tx,
+        None,
+        audit::USER_DELETED,
+        Some(user_id.to_string()),
+        json!({ "reason": "self", "ip": ip.to_string() }),
+    )
+    .await?;
+    tx.commit().await?;
+    tracing::info!(%user_id, "account deleted by its owner");
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ---------- вход приложений ----------

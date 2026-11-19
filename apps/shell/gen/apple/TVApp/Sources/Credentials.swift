@@ -11,13 +11,20 @@ struct Credentials: Codable, Equatable {
     private static let service = "rest.daly.wave.tv"
     private static let account = "device-token"
 
-    /// Сервер DalyWave. Только симулятор: свой сервер на Mac — `DALYWAVE_DEV_SERVER`.
-    static var server: String {
-        #if targetEnvironment(simulator)
-        if let dev = ProcessInfo.processInfo.environment["DALYWAVE_DEV_SERVER"], !dev.isEmpty { return dev }
-        #endif
-        return "https://wave.daly.rest"
+    /// Последний выбранный сервер: после выхода экран подключения предлагает его первым.
+    /// Только симулятор: свой сервер на Mac — `DALYWAVE_DEV_SERVER`.
+    static var lastServer: String? {
+        get {
+            #if targetEnvironment(simulator)
+            if let dev = ProcessInfo.processInfo.environment["DALYWAVE_DEV_SERVER"], !dev.isEmpty { return dev }
+            #endif
+            return UserDefaults.standard.string(forKey: "tv.lastServer")
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "tv.lastServer") }
     }
+
+    /// Сервер для ключа из окружения симулятора
+    private static var server: String { lastServer ?? "http://localhost:8400" }
 
     static func load() -> Credentials? {
         #if targetEnvironment(simulator)

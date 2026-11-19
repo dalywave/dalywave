@@ -30,6 +30,8 @@ pub const APNS_PRODUCTION_URL: &str = "https://api.push.apple.com";
 pub const APNS_SANDBOX_URL: &str = "https://api.sandbox.push.apple.com";
 /// Bundle ID приложения на iPhone и iPad — топик APNs.
 pub const DEFAULT_APNS_TOPIC: &str = "rest.daly.wave";
+/// Название сервера по умолчанию.
+pub const DEFAULT_SERVER_NAME: &str = "DalyWave";
 /// Папка хранилища `fs` по умолчанию (том docker).
 pub const DEFAULT_STORAGE_PATH: &str = "/data";
 
@@ -60,6 +62,8 @@ pub struct Config {
     pub library: LibraryConfig,
     /// Что включено на этом сервере: каталог Deezer, загрузчик с YouTube.
     pub features: Features,
+    /// Как сервер называет себя приложениям: название и объявление в локальной сети (mDNS).
+    pub identity: IdentityConfig,
     pub deezer: DeezerConfig,
     pub fetcher: FetcherConfig,
     pub ml: MlConfig,
@@ -121,6 +125,26 @@ pub struct Features {
     /// Загрузчик: скачивание записей с YouTube (загрузчик на Mac, серверный fetcher), «Спорные», подписки
     /// с докачкой.
     pub downloader: bool,
+}
+
+/// Название сервера (экран «Адрес сервера» в приложениях, `/api/config`) и объявление
+/// `_dalywave._tcp` в локальной сети: Apple TV и приложения находят сервер без ввода адреса.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IdentityConfig {
+    /// `DALYWAVE_SERVER_NAME`, по умолчанию «DalyWave».
+    pub name: String,
+    /// `DALYWAVE_MDNS`, по умолчанию включено. В docker без сети хоста объявление в локальную сеть
+    /// не выходит — там его лучше выключить.
+    pub mdns: bool,
+}
+
+impl Default for IdentityConfig {
+    fn default() -> Self {
+        Self {
+            name: DEFAULT_SERVER_NAME.into(),
+            mdns: false,
+        }
+    }
 }
 
 /// Каналы push: APNs (iPhone, iPad) и Web Push (сайт). Android (FCM) добавится сюда же.
@@ -696,6 +720,13 @@ impl Config {
             downloader: flag("DOWNLOADER", var("DOWNLOADER"), false)?,
         };
 
+        let identity = IdentityConfig {
+            name: var("SERVER_NAME")
+                .map(|n| n.chars().take(63).collect())
+                .unwrap_or_else(|| DEFAULT_SERVER_NAME.into()),
+            mdns: flag("MDNS", var("MDNS"), true)?,
+        };
+
         let rate = |name: &str, default: u32| -> anyhow::Result<u32> {
             match var(name) {
                 None => Ok(default),
@@ -799,6 +830,7 @@ impl Config {
             storage,
             library,
             features,
+            identity,
             deezer,
             fetcher,
             ml,
@@ -1111,6 +1143,20 @@ mod tests {
         );
         assert_eq!(c.deezer.rate_worker, 10);
         assert!(parse(&[("DEEZER_RATE_API", "100")]).is_err());
+    }
+
+    #[test]
+    fn server_name_and_mdns() {
+        let c = parse(&[]).unwrap();
+        assert_eq!(c.identity.name, "DalyWave");
+        assert!(
+            c.identity.mdns,
+            "в локальной сети сервер объявляет себя по умолчанию"
+        );
+        let c = parse(&[("SERVER_NAME", " Дом "), ("MDNS", "false")]).unwrap();
+        assert_eq!(c.identity.name, "Дом");
+        assert!(!c.identity.mdns);
+        assert!(parse(&[("MDNS", "maybe")]).is_err());
     }
 
     #[test]

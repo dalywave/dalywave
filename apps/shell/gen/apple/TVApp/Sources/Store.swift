@@ -23,11 +23,11 @@ enum Tab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .now: "Сейчас играет"
-        case .wave: "Моя волна"
-        case .library: "Медиатека"
-        case .search: "Поиск"
-        case .party: "Вечеринка"
+        case .now: String(localized: "Сейчас играет")
+        case .wave: String(localized: "Моя волна")
+        case .library: String(localized: "Медиатека")
+        case .search: String(localized: "Поиск")
+        case .party: String(localized: "Вечеринка")
         }
     }
 }
@@ -439,11 +439,11 @@ final class Store: ObservableObject {
     func playLiked(from index: Int = 0) {
         let tracks = liked
         if !tracks.isEmpty {
-            player.playTracks(tracks, index: index, context: PlayContext(type: "library", id: "liked", title: "Любимые"))
+            player.playTracks(tracks, index: index, context: PlayContext(type: "library", id: "liked", title: String(localized: "Любимые")))
             tab = .now
             return
         }
-        load { api in (try await api.likedTracks(), PlayContext(type: "library", id: "liked", title: "Любимые")) }
+        load { api in (try await api.likedTracks(), PlayContext(type: "library", id: "liked", title: String(localized: "Любимые"))) }
     }
 
     func play(_ playlist: PlaylistSummary) {
@@ -492,7 +492,7 @@ final class Store: ObservableObject {
             do {
                 let (tracks, context) = try await fetch(api)
                 guard !tracks.isEmpty else {
-                    notice = "Здесь пока пусто"
+                    notice = String(localized: "Здесь пока пусто")
                     return
                 }
                 player.playTracks(tracks, context: context)
@@ -500,7 +500,7 @@ final class Store: ObservableObject {
             } catch ApiError.unauthorized {
                 unauthorized()
             } catch {
-                notice = "Не удалось загрузить"
+                notice = String(localized: "Не удалось загрузить")
             }
         }
     }
@@ -529,7 +529,7 @@ final class Store: ObservableObject {
                 party = try await api.updateParty(patch)
                 await loadJam()
             } catch {
-                notice = "Не удалось сохранить"
+                notice = String(localized: "Не удалось сохранить")
             }
         }
     }
@@ -583,7 +583,7 @@ final class Store: ObservableObject {
                     }
                 case let a where a.hasPrefix("track:"):
                     if let api, let tracks = try? await api.lookup(a.dropFirst(6).split(separator: "+").map(String.init)) {
-                        play(tracks, index: 0, context: PlayContext(type: "search", id: nil, title: "Поиск"))
+                        play(tracks, index: 0, context: PlayContext(type: "search", id: nil, title: String(localized: "Поиск")))
                     }
                 default: break
                 }

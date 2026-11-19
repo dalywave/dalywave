@@ -63,3 +63,9 @@
 "Work" = "Работа";
 "Road" = "Дорога";
 "Night" = "Ночь";
+
+/* Apple TV рядом (TVPairing.swift) */
+"%@ wants to connect" = "%@ хочет подключиться";
+"The Apple TV will sign in to DalyWave with your account on this server." = "Apple TV войдёт в DalyWave под вашим аккаунтом на этом сервере.";
+"Not now" = "Не сейчас";
+"Allow" = "Разрешить";

@@ -19,16 +19,16 @@ struct SearchView: View {
                             .padding(.top, 80)
                     }
                     if !r.tracks.isEmpty {
-                        shelf("Треки") {
+                        shelf(String(localized: "Треки")) {
                             ForEach(Array(r.tracks.enumerated()), id: \.element.id) { i, t in
                                 Tile(title: t.fullTitle, subtitle: t.artistLine, cover: t.thumb, size: 260) {
-                                    store.play(r.tracks, index: i, context: PlayContext(type: "search", id: nil, title: "Поиск"))
+                                    store.play(r.tracks, index: i, context: PlayContext(type: "search", id: nil, title: String(localized: "Поиск")))
                                 }
                             }
                         }
                     }
                     if !r.albums.isEmpty {
-                        shelf("Альбомы") {
+                        shelf(String(localized: "Альбомы")) {
                             ForEach(r.albums) { a in
                                 Tile(title: a.title, subtitle: a.artist?.name, cover: a.image?.medium, size: 260) {
                                     store.play(album: a)
@@ -37,7 +37,7 @@ struct SearchView: View {
                         }
                     }
                     if !r.artists.isEmpty {
-                        shelf("Артисты") {
+                        shelf(String(localized: "Артисты")) {
                             ForEach(r.artists) { a in
                                 Tile(title: a.name, cover: a.image?.medium, size: 220) { store.play(artist: a) }
                             }

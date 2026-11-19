@@ -44,6 +44,8 @@ pub struct PlatformInfo {
     /// Запущено через `cargo tauri dev` с dev-сервера интерфейса.
     pub dev: bool,
     pub server_url: String,
+    /// Сервер выбран; нет — первый запуск начинается с экрана «Адрес сервера»
+    pub server_chosen: bool,
     pub locale: &'static str,
 }
 
@@ -151,6 +153,7 @@ pub fn initial(app: &AppHandle, backdrop: &'static str) -> PlatformInfo {
         backdrop,
         dev: tauri::is_dev(),
         server_url: settings.server_url(),
+        server_chosen: settings.server_chosen(),
         locale: settings.locale().as_str(),
     }
 }

@@ -36,6 +36,8 @@ ipnet = "2"
 # Теги своей музыки: ID3, Vorbis comments, MP4, APE, RIFF INFO; встроенные обложки и длительность
 lofty = "0.25"
 # Наблюдение за папками своей музыки
+# Объявление сервера в локальной сети (`_dalywave._tcp`): Apple TV и приложения находят его сами
+mdns-sd = "0.21"
 notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }
 object_store = { version = "0.14", default-features = false, features = ["aws"] }
 # Сеть вкуса на сервере: onnxruntime статически (готовые сборки pyke, в том числе linux aarch64),

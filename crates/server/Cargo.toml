@@ -37,6 +37,7 @@ hmac.workspace = true
 image.workspace = true
 ipnet.workspace = true
 lofty.workspace = true
+mdns-sd.workspace = true
 notify.workspace = true
 object_store.workspace = true
 ort.workspace = true

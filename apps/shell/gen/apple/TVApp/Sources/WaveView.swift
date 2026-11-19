@@ -24,7 +24,7 @@ struct WaveView: View {
                 }
                 .buttonStyle(.card)
 
-                section("Настроение") {
+                section(String(localized: "Настроение")) {
                     HStack(spacing: 40) {
                         ForEach(Mood.allCases) { mood in
                             Button { store.startWave(WaveSettings(mood: mood.rawValue)) } label: {
@@ -43,7 +43,7 @@ struct WaveView: View {
                 }
 
                 if !store.presets.isEmpty {
-                    section("Сочетания") {
+                    section(String(localized: "Сочетания")) {
                         ScrollView(.horizontal) {
                             HStack(spacing: 40) {
                                 ForEach(store.presets) { preset in

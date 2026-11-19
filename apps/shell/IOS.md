@@ -323,6 +323,30 @@ generation)' build`, установить `DalyWaveTV.app`. Без входа к
 файл), `DALYWAVE_TV_SIGNED_OUT=1` — экран входа. В симуляторе звук всегда выключен
 (`DALYWAVE_TV_SOUND=1` — включить); в журнал раз в 3 с пишется состояние AVPlayer (`DWTV player`).
 
+## Адрес сервера и Apple TV рядом
+
+Приложение — клиент любого сервера DalyWave (как Jellyfin). Сборки по умолчанию (Xcode Run, `make app`,
+Windows) сразу смотрят на wave.daly.rest; сборка для TestFlight/App Store
+(`scripts/testflight.sh`) собирается с `DALYWAVE_DEFAULT_SERVER=none` — чистая установка начинается с
+экрана «Адрес сервера» (проверка `/api/config` и `/api/healthz`, недавние серверы, «Попробовать демо» —
+demo.wave.daly.rest). Уже вошедшие на устройстве ничего не заметят. Сменить сервер — «Настройки» →
+«О приложении» → «Сервер» (выход на прежнем). Ссылка `dalywave://server?url=https://…` (QR-код в
+админке и на странице входа сайта) открывает тот же экран с адресом.
+
+Apple TV: экран подключения предлагает серверы с iPhone (iCloud, ключ-значение, ключ `servers`), из
+этой сети (`_dalywave._tcp`, сервер объявляет себя сам, `DALYWAVE_MDNS`), ручной ввод и демо. «Подключить
+с iPhone»: Apple TV объявляет `_dalywave-pair._tcp`, iPhone с входом спрашивает «Apple TV … хочет
+подключиться» и подтверждает его код входа сам (`Sources/dalywave-shell/TVPairing.swift`, `src/pairing.rs`).
+
+### Что включить в Apple Developer (один раз)
+
+1. developer.apple.com → Identifiers → `rest.daly.wave` → включить **iCloud** (галочка «Include
+   CloudKit support» не нужна — только ключ-значение) → Save. Профили перевыпустятся сами при следующей
+   сборке с `-allowProvisioningUpdates` (testflight.sh, Xcode с автоматической подписью).
+2. В Xcode ничего добавлять не нужно: право `com.apple.developer.ubiquity-kvstore-identifier` уже в
+   project.yml у iPhone и у Apple TV (общее хранилище — тот же bundle id).
+3. Пока возможность не включена, сборка с подписью упадёт на профиле: включить её до `make testflight`.
+
 ## Уведомления (push)
 
 Сервер присылает уведомления через APNs: новые релизы подписок, перенос музыки завершён, «Итоги года»

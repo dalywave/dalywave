@@ -6,14 +6,17 @@ final class ContentProvider: TVTopShelfContentProvider {
     override func loadTopShelfContent() async -> TVTopShelfContent? {
         var sections: [TVTopShelfItemCollection<TVTopShelfSectionedItem>] = []
 
-        let moods: [(String, String)] = [("energetic", "Бодрое"), ("happy", "Весёлое"), ("calm", "Спокойное"), ("sad", "Грустное")]
-        let wave = TVTopShelfItemCollection(items: [item(id: "wave", title: "Моя волна", image: bundled("wave"), link: "dalywave-tv://wave")]
+        let moods: [(String, String)] = [
+            ("energetic", String(localized: "Бодрое")), ("happy", String(localized: "Весёлое")),
+            ("calm", String(localized: "Спокойное")), ("sad", String(localized: "Грустное")),
+        ]
+        let wave = TVTopShelfItemCollection(items: [item(id: "wave", title: String(localized: "Моя волна"), image: bundled("wave"), link: "dalywave-tv://wave")]
             + moods.map { item(id: "wave-\($0.0)", title: $0.1, image: bundled("mood-\($0.0)"), link: "dalywave-tv://wave?mood=\($0.0)") })
-        wave.title = "Моя волна"
+        wave.title = String(localized: "Моя волна")
         sections.append(wave)
 
         if let snap = TopShelfSnapshot.load() {
-            for (title, list) in [("Недавнее", snap.recent), ("Плейлисты", snap.playlists)] where !list.isEmpty {
+            for (title, list) in [(String(localized: "Недавнее"), snap.recent), (String(localized: "Плейлисты"), snap.playlists)] where !list.isEmpty {
                 let c = TVTopShelfItemCollection(items: list.prefix(12).map { item(id: $0.id, title: $0.title, image: $0.imageURL, link: $0.link) })
                 c.title = title
                 sections.append(c)

@@ -1,0 +1,2 @@
+/* Окно разрешения tvOS: локальная сеть (ConnectView: серверы DalyWave и «Подключить с iPhone») */
+"NSLocalNetworkUsageDescription" = "Чтобы найти сервер DalyWave и iPhone в этой сети";

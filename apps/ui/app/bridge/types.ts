@@ -372,6 +372,45 @@ export interface Downloader {
 
 /** Обучение сети вкуса на этом компьютере (macOS, Windows): приложение берёт задание сервера, учит
  *  на своём железе (на питании и без нагрузки) и отправляет веса — apps/shell/src/trainer.rs */
+/** Сервер, к которому подключено приложение: ответ его `/api/config` */
+export interface AppServerInfo {
+  url: string
+  name: string
+  version: string
+}
+
+export interface AppServerRecent {
+  url: string
+  name?: string | null
+  /** Когда выбран последний раз, секунды Unix */
+  usedAt: number
+}
+
+export interface AppServerState {
+  url: string
+  /** Сервер выбран; нет — первый запуск начинается с экрана «Адрес сервера» */
+  chosen: boolean
+  recent: AppServerRecent[]
+  /** Демо-сервер для «Попробовать демо» */
+  demo: string
+}
+
+/** Ошибки проверки адреса: не адрес, не отвечает, отвечает не DalyWave, DalyWave без базы */
+export type AppServerError = 'invalid' | 'unreachable' | 'not_dalywave' | 'down'
+
+/** Адрес сервера в приложении (apps/shell/src/server.rs): выбор, проверка, недавние, ссылка
+ *  `dalywave://server?url=…`. На сайте — null: сайт и есть сервер */
+export interface AppServer {
+  state(): Promise<AppServerState>
+  /** Проверить адрес; отказ — `AppServerError` в `code` ошибки */
+  check(url: string): Promise<AppServerInfo>
+  /** Переключиться на сервер: интерфейс перезагрузится уже с ним */
+  use(url: string, name?: string | null): Promise<void>
+  forget(url: string): Promise<void>
+  /** Ссылка `dalywave://server?url=…` (QR-код): адрес — при запуске ею и потом */
+  onLink(cb: (url: string) => void): () => void
+}
+
 export interface Trainer {
   state(): Promise<TrainerSnapshot>
   onState(cb: (state: TrainerSnapshot) => void): () => void
@@ -586,6 +625,9 @@ export interface Bridge {
   /** Обучение рекомендаций на этом компьютере — приложение macOS и Windows; на сайте и телефонах — null */
   readonly trainer: Trainer | null
 
+  /** Адрес сервера в приложении; на сайте — null */
+  readonly appServer: AppServer | null
+
   /** Куда идёт звук (AirPlay, Bluetooth, динамики); null — платформа не умеет, строки нет */
   readonly outputs: AudioRoutes | null
 
@@ -645,6 +687,8 @@ export interface Bridge {
     resetPassword(token: string, body: ResetPassword): Promise<SignInResult>
     /** «Вход» в настройках: логин, пароль, привязанные провайдеры */
     account(): Promise<Account>
+    /** Удалить свой аккаунт со всем, что с ним связано. 409 `last_admin` — единственный администратор */
+    deleteAccount(): Promise<void>
     changePassword(body: PasswordChange): Promise<void>
     unlinkIdentity(id: string): Promise<void>
     /** Сессия кончилась не по нашей кнопке: сервер ответил 401 или вышли в другом окне */

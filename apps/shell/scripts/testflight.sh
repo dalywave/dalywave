@@ -31,6 +31,11 @@ case "${EXPORT:-upload}" in
   *) echo "EXPORT: upload или local"; exit 1 ;;
 esac
 
+# Сборка для App Store — клиент любого сервера: чистая установка начинается с экрана «Адрес сервера»
+# (src/settings.rs). Уже вошедшие на устройстве (обновление) ничего не заметят. Сборка, сразу
+# смотрящая на wave.daly.rest, как раньше: DALYWAVE_DEFAULT_SERVER=https://wave.daly.rest testflight.sh
+export DALYWAVE_DEFAULT_SERVER="${DALYWAVE_DEFAULT_SERVER-none}"
+
 BUILD="${BUILD_NUMBER:-$(date +%Y%m%d%H%M)}"
 OUT="target/testflight/$BUILD-$PLATFORM"
 mkdir -p "$OUT"

@@ -6,6 +6,8 @@
 	<string>development</string>
 	<key>com.apple.developer.siri</key>
 	<true/>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)rest.daly.wave</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.rest.daly.wave</string>
