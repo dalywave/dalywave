@@ -203,7 +203,9 @@ security problems privately, as described in [SECURITY.md](SECURITY.md).
 ## License
 
 DalyWave is free software under the [GNU Affero General Public License v3.0](LICENSE). If you run a
-modified version for other people over a network, you must offer them its source code.
+modified version for other people over a network, you must offer them its source code. An
+[additional permission](APP-STORE-EXCEPTION.md) allows conveying DalyWave through app stores such as
+the App Store, as long as its source code stays available under the same license.
 
 The `ml` service downloads third-party model weights when its image is built. They are not part of
 this repository and keep their own licenses; the MTG models (Discogs-EffNet and its classifier heads)

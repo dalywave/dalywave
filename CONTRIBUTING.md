@@ -108,4 +108,7 @@ screen goes through. In short:
 - Commit messages: a short summary line, then a paragraph on what changed and why.
 
 By submitting a pull request you agree that your contribution is licensed under the
-[GNU Affero General Public License v3.0](LICENSE), the license of this project.
+[GNU Affero General Public License v3.0](LICENSE) together with the
+[additional permission for app stores](APP-STORE-EXCEPTION.md), the license of this project. The
+permission is what lets the iPhone, iPad and Apple TV apps, including your changes, ship in the App
+Store.
