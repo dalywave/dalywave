@@ -177,8 +177,9 @@ NSIS при этом закрывает приложение и открывае
 Завести один раз (значение не печатается):
 
 ```sh
-ssh ubuntu@129.159.27.88 'cd ~/dalywave && echo "DALYWAVE_RELEASE_TOKEN=$(openssl rand -hex 32)" >> .env && chmod 600 .env'
-# на сервере: docker compose … up -d api; затем то же значение — в связку ключей Mac и в GitHub
+# на сервере, из папки с compose:
+echo "DALYWAVE_RELEASE_TOKEN=$(openssl rand -hex 32)" >> .env && chmod 600 .env && docker compose up -d api
+# то же значение — в связку ключей Mac и в GitHub
 security add-generic-password -s dalywave-release-token -a "$USER" -w   # спросит значение
 ```
 

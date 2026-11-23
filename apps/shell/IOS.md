@@ -373,20 +373,18 @@ WebSocket, просто без push на заблокированный теле
    `rest.daly.wave` уже содержит `aps-environment`, возможность включена — достаточно проверить
    галочку. Без этого шага сборка падает с ошибкой
    «Provisioning profile … doesn't include the aps-environment entitlement».
-3. **Ключ на сервер** (с Mac, из папки с файлом):
+3. **Ключ на сервер** — в папку `secrets` рядом с compose (права 700 у папки, 600 у файла):
    ```sh
-   ssh ubuntu@129.159.27.88 'mkdir -p ~/dalywave/secrets && chmod 700 ~/dalywave/secrets'
-   scp AuthKey_XXXXXXXXXX.p8 ubuntu@129.159.27.88:~/dalywave/secrets/
-   ssh ubuntu@129.159.27.88 'chmod 600 ~/dalywave/secrets/AuthKey_*.p8'
+   mkdir -p secrets && chmod 700 secrets
+   cp AuthKey_XXXXXXXXXX.p8 secrets/ && chmod 600 secrets/AuthKey_*.p8
    ```
-4. **Настройки сервера** — в `~/dalywave/.env` (папку `~/dalywave/secrets` воркер видит как `/secrets`):
+4. **Настройки сервера** — в `.env` рядом с compose (папку `secrets` воркер видит как `/secrets`):
    ```sh
    DALYWAVE_APNS_KEY_PATH=/secrets/AuthKey_XXXXXXXXXX.p8
    DALYWAVE_APNS_KEY_ID=XXXXXXXXXX
    DALYWAVE_APNS_TEAM_ID=Y5KR5JPCRG
    ```
-   Топик по умолчанию — `rest.daly.wave`. Затем перезапустить воркер и API:
-   `docker compose --env-file .env -f infra/docker-compose.prod.yml up -d`.
+   Топик по умолчанию — `rest.daly.wave`. Затем перезапустить воркер и API: `docker compose up -d`.
 
 ### Среда APNs
 

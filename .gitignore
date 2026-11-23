@@ -44,3 +44,6 @@ xcuserdata/
 .DS_Store
 *.log
 /services/fetcher/data/
+
+# Приватная выкладка (репозиторий dalywave/ops)
+/ops/

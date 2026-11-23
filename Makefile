@@ -161,8 +161,9 @@ lint: ## проверки стиля
 	@if [ -d apps/ui ]; then cd apps/ui && bun run lint; fi
 	@if [ -d services/fetcher ]; then cd services/fetcher && uv run ruff check . && uv run ruff format --check .; fi
 
-deploy: ## выложить текущий коммит на wave.daly.rest (сборка на сервере)
-	bash infra/deploy.sh
+deploy: ## выложить текущий коммит на wave.daly.rest (скрипт — в приватном ops/, см. ops/README.md)
+	@test -f ops/deploy.sh || { echo "Нет ops/deploy.sh: выкладка wave.daly.rest — в приватном репозитории dalywave/ops"; exit 1; }
+	bash ops/deploy.sh
 
 fmt: ## отформатировать код
 	cargo fmt --all

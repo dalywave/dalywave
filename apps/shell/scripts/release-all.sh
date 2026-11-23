@@ -15,7 +15,7 @@ git add -A
 git commit -q -m "Версия $version${notes:+: $notes}"
 git push -q
 
-bash infra/deploy.sh
+bash ops/deploy.sh
 
 gh workflow run "Приложения" -f publish=true -f notes="$notes"
 sleep 8
