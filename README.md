@@ -1,12 +1,7 @@
-<p align="center">
-  <img src="design/brand/icon-rounded-512.png" width="96" height="96" alt="DalyWave icon">
-</p>
-
-<h1 align="center">DalyWave</h1>
-
-<p align="center">
-  A self-hosted music server with apps for the web, iPhone, iPad, Apple TV, Apple Watch, macOS and Windows.
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.webp">
+  <img alt="DalyWave: a music server you run yourself, with apps for every screen you own" src="docs/images/banner-light.webp">
+</picture>
 
 <p align="center">
   English · <a href="README.ru.md">Русский</a>
@@ -104,8 +99,9 @@ DalyWave is young (version 0.1). Expect rough edges and changes between releases
 - File storage in a local folder or in S3-compatible storage (Cloudflare R2, MinIO, SeaweedFS).
 - Admin panel: library scan and skipped files, health of every component, people and sessions, who
   is listening now, audit log, storage use, per-listener recommendation details.
-- Notifications in the app and through Web Push; push to iPhone and iPad through APNs when an Apple
-  push key is configured.
+- Notifications in the app and through Web Push. Push to iPhone and iPad goes through APNs and needs
+  the Apple key of the team that signed the app, so it works with your own build of the iOS app, not
+  with the App Store version.
 - The server announces itself on the local network (mDNS), so the apps can find it without typing an
   address. In Docker this needs host networking.
 - OpenAPI 3.1 description at `/api/openapi.json`.

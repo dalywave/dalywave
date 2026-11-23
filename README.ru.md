@@ -1,12 +1,7 @@
-<p align="center">
-  <img src="design/brand/icon-rounded-512.png" width="96" height="96" alt="Значок DalyWave">
-</p>
-
-<h1 align="center">DalyWave</h1>
-
-<p align="center">
-  Музыкальный сервер, который ставят себе, и приложения для сайта, iPhone, iPad, Apple TV, Apple Watch, macOS и Windows.
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark-ru.webp">
+  <img alt="DalyWave: музыкальный сервер, который вы ставите себе, и приложения для всех ваших экранов" src="docs/images/banner-light-ru.webp">
+</picture>
 
 <p align="center">
   <a href="README.md">English</a> · Русский
@@ -106,7 +101,9 @@ DalyWave молод (версия 0.1): возможны шероховатос�
 - Файлы сервера — в своей папке или в S3-совместимом хранилище (Cloudflare R2, MinIO, SeaweedFS).
 - Админка: сканирование медиатеки и пропущенные файлы, здоровье каждой части, люди и сессии, кто
   слушает сейчас, журнал действий, занятое место, рекомендации по каждому слушателю.
-- Уведомления в приложении и через Web Push; push на iPhone и iPad через APNs, если задан ключ Apple.
+- Уведомления в приложении и через Web Push. Push на iPhone и iPad идёт через APNs и требует ключа
+  Apple той команды, что подписала приложение: он работает со своей сборкой приложения для iOS, но не
+  с версией из App Store.
 - Сервер объявляет себя в локальной сети (mDNS), и приложения находят его без ввода адреса. В Docker
   для этого нужна сеть хоста.
 - Описание API в OpenAPI 3.1 — `/api/openapi.json`.
