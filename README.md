@@ -136,7 +136,7 @@ plain HTTP only for `localhost`.
 mkdir dalywave && cd dalywave
 curl -fsSLO https://raw.githubusercontent.com/dalywave/dalywave/main/infra/selfhost/docker-compose.yml
 curl -fsSL -o .env https://raw.githubusercontent.com/dalywave/dalywave/main/infra/selfhost/.env.example
-# edit .env: the public address, the secret key and the path to your music folder
+# edit .env: the public address, the secret key, a database password and the path to your music folder
 docker compose up -d
 ```
 
@@ -207,7 +207,9 @@ modified version for other people over a network, you must offer them its source
 [additional permission](APP-STORE-EXCEPTION.md) allows conveying DalyWave through app stores such as
 the App Store, as long as its source code stays available under the same license.
 
-The `ml` service downloads third-party model weights when its image is built. They are not part of
-this repository and keep their own licenses; the MTG models (Discogs-EffNet and its classifier heads)
-are licensed CC BY-NC-SA 4.0, for non-commercial use only. The list of models and licenses is in
-[services/ml/README.md](services/ml/README.md).
+The `ml` service uses third-party models that keep their own licenses. CLAP, Beat This! and S-KEY
+ship in its image, with their license texts in `/usr/share/doc/dalywave-ml`. The MTG models
+(Discogs-EffNet and its classifier heads) are licensed CC BY-NC-SA 4.0, for non-commercial use only,
+so they are not in the image: the container downloads them from their authors on first start, into
+the `ml-models` volume, and writes their attribution next to them. The list of models and licenses is
+in [services/ml/README.md](services/ml/README.md).

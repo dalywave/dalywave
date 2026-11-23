@@ -137,7 +137,7 @@ DalyWave молод (версия 0.1): возможны шероховатос�
 mkdir dalywave && cd dalywave
 curl -fsSLO https://raw.githubusercontent.com/dalywave/dalywave/main/infra/selfhost/docker-compose.yml
 curl -fsSL -o .env https://raw.githubusercontent.com/dalywave/dalywave/main/infra/selfhost/.env.example
-# в .env: публичный адрес, секретный ключ и путь к папке с музыкой
+# в .env: публичный адрес, секретный ключ, пароль базы и путь к папке с музыкой
 docker compose up -d
 ```
 
@@ -206,7 +206,8 @@ DalyWave — свободная программа под лицензией [GN
 [Дополнительное разрешение](APP-STORE-EXCEPTION.md) позволяет распространять DalyWave через магазины
 приложений, например App Store, если исходный код остаётся доступен под той же лицензией.
 
-Сервис `ml` при сборке образа скачивает веса чужих моделей. Они не входят в этот репозиторий и
-остаются под своими лицензиями; модели MTG (Discogs-EffNet и его классификаторы) — под CC BY-NC-SA 4.0,
-только для некоммерческого использования. Список моделей и лицензий — в
-[services/ml/README.md](services/ml/README.md).
+Сервис `ml` использует чужие модели, у них свои лицензии. CLAP, Beat This! и S-KEY лежат в его
+образе, тексты лицензий — в `/usr/share/doc/dalywave-ml`. Модели MTG (Discogs-EffNet и его
+классификаторы) — под CC BY-NC-SA 4.0, только для некоммерческого использования, поэтому в образе их
+нет: контейнер при первом запуске скачивает их у авторов в том `ml-models` и кладёт рядом указание
+авторства. Список моделей и лицензий — в [services/ml/README.md](services/ml/README.md).
