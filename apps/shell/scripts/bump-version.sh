@@ -28,7 +28,11 @@ fi
 sed -i '' "/^\[package\]/,/^\[/s/^version = \"$current\"/version = \"$version\"/" Cargo.toml
 sed -i '' "s/^\( *MARKETING_VERSION:\) .*/\1 $version/" gen/apple/project.yml
 sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $version;/" gen/apple/dalywave-shell.xcodeproj/project.pbxproj
-# Cargo.lock: запись самой оболочки — без сети и без обновления зависимостей
+# Та же версия у сервера и общих крейтов ([workspace.package] корня): её отдают /api/healthz и mDNS,
+# с ней же тег образов v$version
+sed -i '' "/^\[workspace.package\]/,/^\[/s/^version = \".*\"/version = \"$version\"/" ../../Cargo.toml
+# Cargo.lock корня и оболочки — без сети и без обновления зависимостей
+(cd ../.. && { cargo metadata --format-version 1 --offline >/dev/null 2>&1 || cargo metadata --format-version 1 >/dev/null; })
 cargo metadata --format-version 1 --offline >/dev/null 2>&1 || cargo metadata --format-version 1 >/dev/null
 
 echo "Версия приложения: $current → $version"

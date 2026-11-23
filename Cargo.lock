@@ -635,7 +635,7 @@ dependencies = [
 
 [[package]]
 name = "dalywave-protocol"
-version = "0.1.0"
+version = "0.1.19"
 dependencies = [
  "chrono",
  "serde",
@@ -646,7 +646,7 @@ dependencies = [
 
 [[package]]
 name = "dalywave-server"
-version = "0.1.0"
+version = "0.1.19"
 dependencies = [
  "aes-gcm",
  "anyhow",
