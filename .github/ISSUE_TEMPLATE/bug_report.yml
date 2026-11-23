@@ -1,0 +1,60 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first. Security problems go through a private report, see SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Server / installation
+        - Website
+        - macOS app
+        - Windows app
+        - iPhone or iPad
+        - Apple TV
+        - Apple Watch
+        - Stream Deck plugin
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Server image tag or commit, and the app version shown in the app's settings.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: |
+        How the server runs (docker compose, other), storage (fs or s3), sign-in (own accounts, OIDC provider),
+        which optional modules are enabled. Do not paste secrets.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from the server logs (`docker compose logs`) or the app log. Remove tokens and addresses you do not want to share.
+      render: text
