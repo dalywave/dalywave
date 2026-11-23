@@ -1,13 +1,13 @@
 # Соглашения DalyWave
 
-Обязательны для всего кода в репозитории. План продукта — `docs/plan.md`, принятые решения — `docs/decisions.md`.
+Обязательны для всего кода в репозитории. Принятые решения — `docs/decisions.md`, как ставить сервер — `docs/self-hosting/`.
 
 ## Общее
 
-- Продукт личный: один владелец, вход через daly.rest. Интерфейс на русском (основной) и английском.
+- Вход — свои аккаунты сервера и любые провайдеры OpenID Connect. Интерфейс на русском и английском.
 - Идентификаторы и имена в коде — по-английски. Комментарии — по-русски, коротко, объясняют «почему», а не «что». Без комментариев-пересказов кода.
 - Spotify API и любые интеграции со Spotify не используются (кроме разового импорта архива данных, который пользователь скачал сам). Сервисы с DRM не подключаются.
-- Секреты только в `.env` (локально — в корне репозитория, на сервере — `~/dalywave/.env`, права 600). Ни в код, ни в логи, ни в ответы API.
+- Секреты только в `.env` (локально — в корне репозитория, на сервере — рядом с compose, права 600). Ни в код, ни в логи, ни в ответы API.
 
 ## Порты локальной разработки
 
@@ -28,9 +28,9 @@
 
 Все — с префиксом `DALYWAVE_`.
 
-- `DATABASE_URL`, `PUBLIC_URL` (`https://wave.daly.rest`, локально `http://localhost:3400`), `LISTEN` (адрес API, по умолчанию `0.0.0.0:8400`), `SECRET_KEY` (64 hex), `STATIC_DIR`.
+- `DATABASE_URL`, `PUBLIC_URL` (например, `https://music.example.com`, локально `http://localhost:3400`), `LISTEN` (адрес API, по умолчанию `0.0.0.0:8400`), `SECRET_KEY` (64 hex), `STATIC_DIR`.
 - Локально все значения лежат в `.env` в корне (не коммитится); `cargo test` берёт оттуда `DATABASE_URL`, если выполнить `set -a; . ./.env; set +a` или запускать через `make test`.
-- Вход (подробно — `docs/self-hosting/auth.md`): провайдеры OIDC `OIDC_<ID>_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET`, `_NAME`, `_ICON`, `_SCOPES`, `_ADMIN_CLAIM`, `_ADMIN_VALUE`, `_AUTO_REGISTER`, `_TRUST_EMAIL`, `_AUTH_METHOD`, порядок кнопок — `OIDC_PROVIDERS`; прежние `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_TITLE`, `OIDC_ADMIN_ROLES` дают провайдера `dalyrest` со старым адресом возврата `/api/auth/oidc/callback`. `LOCAL_AUTH` (свои аккаунты, по умолчанию `true`; на wave.daly.rest — `false`), `ADMIN_EMAILS`, `ADMIN_PASSWORD` (аварийный вход; пусто или короче 32 символов — выключен).
+- Вход (подробно — `docs/self-hosting/auth.md`): провайдеры OIDC `OIDC_<ID>_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET`, `_NAME`, `_ICON`, `_SCOPES`, `_ADMIN_CLAIM`, `_ADMIN_VALUE`, `_AUTO_REGISTER`, `_TRUST_EMAIL`, `_AUTH_METHOD`, порядок кнопок — `OIDC_PROVIDERS`; прежние `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_TITLE`, `OIDC_ADMIN_ROLES` дают провайдера `dalyrest` со старым адресом возврата `/api/auth/oidc/callback`. `LOCAL_AUTH` (свои аккаунты, по умолчанию `true`), `ADMIN_EMAILS`, `ADMIN_PASSWORD` (аварийный вход; пусто или короче 32 символов — выключен).
 - Хранилище: `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT` (если адрес для подписанных ссылок отличается от внутреннего), `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. Облегчённые копии для сотовой («Экономия») — не больше `RENDITIONS_MAX_GB` (по умолчанию 20), лишние, давно не игравшие, воркер удаляет.
 - Сервисы: `FETCHER_URL`, `ML_URL`, `LRCLIB_URL` (тексты песен, по умолчанию `https://lrclib.net`), `LOG` (фильтр tracing), `LOG_FORMAT` (`pretty` | `json`).
 - Выпуски приложений: `RELEASE_TOKEN` (токен конвейера выпусков, не короче 32 символов; пусто — выпускать нельзя).
@@ -39,11 +39,11 @@
 
 - Edition 2024, toolchain из `rust-toolchain.toml`. `cargo fmt` и `cargo clippy --all-targets -- -D warnings` без замечаний.
 - Стек: tokio, axum 0.8, sqlx 0.9 (Postgres, макросы `query!`/`query_as!` с офлайн-данными в `.sqlx/`), tracing, thiserror, serde, utoipa для OpenAPI. `anyhow` — только в бинарниках и тестах.
-- Образец стиля — код daly.rest: `~/Documents/Develop/personal-website/api/src` (`error.rs`, `state.rs`, `routes/`). Ошибки — один тип `AppError` с `IntoResponse`; `AppResult<T>`.
+- Ошибки — один тип `AppError` с `IntoResponse`; `AppResult<T>` (`crates/server/src/error.rs`). Общее состояние — `AppState`, маршруты — по файлу на раздел в `routes/`.
 - В обработчиках запросов нет `unwrap`/`expect`/`panic!`.
 - Миграции — `crates/server/migrations/`, применяются при старте (`sqlx::migrate!`). Только вперёд; старые миграции не меняются.
 - База: PostgreSQL 18 + pgvector. Первичные ключи — `uuid DEFAULT uuidv7()`. Время — `timestamptz`. Внешние ключи с явным `ON DELETE`. Индексы под реальные запросы.
-- Тесты: `#[sqlx::test]` на временной базе; внешние сервисы (daly.rest, Deezer, fetcher) — заглушками на локальном порту, без сети.
+- Тесты: `#[sqlx::test]` на временной базе; внешние сервисы (провайдер OIDC, Deezer, fetcher) — заглушками на локальном порту, без сети.
 
 ## HTTP API
 
@@ -79,4 +79,4 @@
 
 ## Git
 
-- Сообщения коммитов — по-русски, как в истории SkinGen: заголовок по существу изменения, затем абзац о сути и мотивах.
+- Сообщение коммита — заголовок по существу изменения, затем абзац о сути и мотивах. История ведётся по-русски, участники могут писать по-английски.
