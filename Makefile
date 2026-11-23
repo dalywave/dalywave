@@ -27,7 +27,7 @@ worker: ## исполнитель очереди задач (скачивани�
 ML_IMAGE ?= dalywave-ml:0.1.0
 ml: ## сервис анализа звука на 127.0.0.1:8403 (docker)
 	@docker rm -f dalywave-ml-dev >/dev/null 2>&1 || true
-	docker run -d --name dalywave-ml-dev --cpus 6 -p 127.0.0.1:8403:8403 $(ML_IMAGE)
+	docker run -d --name dalywave-ml-dev --cpus 6 -p 127.0.0.1:8403:8403 -v dalywave-ml-models:/models $(ML_IMAGE)
 
 # Аудио качает этот Mac: YouTube не отдаёт его серверу. Токен dwk_… — из админки («Источники»):
 # TOKEN=… или файл ~/.config/dalywave/downloader-token. В автозапуск: services/fetcher/launchd/install.sh
