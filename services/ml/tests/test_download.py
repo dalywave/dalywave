@@ -12,7 +12,8 @@ onnx = pytest.importorskip("onnx")
 from onnx import TensorProto, helper, numpy_helper  # noqa: E402
 
 from dalywave_ml import download  # noqa: E402
-from dalywave_ml.manifest import CLAP_CHECKPOINT, ModelFile  # noqa: E402
+from dalywave_ml.config import Settings  # noqa: E402
+from dalywave_ml.manifest import CLAP_CHECKPOINT, MODELS, Model, ModelFile, image_files  # noqa: E402
 
 EXPORT = Path(__file__).resolve().parents[1] / "export"
 
@@ -102,3 +103,51 @@ def test_exporter_pins_same_checkpoint_as_manifest():
     assert consts["CHECKPOINT_URL"] == CLAP_CHECKPOINT["url"]
     assert consts["CHECKPOINT_SHA256"] == CLAP_CHECKPOINT["sha256"]
     assert consts["CHECKPOINT_SIZE"] == CLAP_CHECKPOINT["size"]
+
+
+def test_mtg_models_are_not_in_image():
+    # Модели MTG (CC BY-NC-SA) публичный образ не содержит: их качает сервис при запуске
+    mtg = {m.key for m in MODELS if m.on_start}
+    assert "effnet" in mtg and all(k == "effnet" or k.startswith("head:") for k in mtg)
+    assert not any(f.path.startswith(("effnet/", "heads/")) for f in image_files())
+
+
+def test_mtg_dir_defaults_to_models_dir(tmp_path):
+    assert Settings(models_dir=tmp_path).mtg_dir == tmp_path
+    mtg = tmp_path / "mtg"
+    assert Settings(models_dir=tmp_path, mtg_models_dir=mtg).mtg_dir == mtg
+
+
+def test_start_models_download_once_with_attribution(tmp_path, monkeypatch):
+    blobs = {"https://example.invalid/e.onnx": b"effnet", "https://example.invalid/h.onnx": b"head"}
+    files = [
+        ModelFile(f"{d}/{n}", u, hashlib.sha256(b).hexdigest(), len(b))
+        for (u, b), d, n in zip(
+            blobs.items(), ("effnet", "heads"), ("e.onnx", "h.onnx"), strict=True
+        )
+    ]
+    model = Model(
+        key="effnet",
+        name="e",
+        version="1",
+        license="CC BY-NC-SA 4.0",
+        source="https://example.invalid",
+        files=tuple(files),
+        on_start=True,
+    )
+    monkeypatch.setattr(download, "MODELS", (model,))
+    monkeypatch.setattr(download, "start_files", lambda: files)
+    fetched = []
+
+    def fake_fetch(url, dest, size, **_):
+        fetched.append(url)
+        dest.write_bytes(blobs[url])
+
+    monkeypatch.setattr(download, "_fetch", fake_fetch)
+    download.ensure_start_models(tmp_path)
+    assert sorted(fetched) == sorted(blobs)
+    notice = (tmp_path / download.ATTRIBUTION_NAME).read_text()
+    assert "non-commercial use only" in notice and "effnet/e.onnx" in notice
+    # Второй запуск берёт файлы из папки (тома)
+    download.ensure_start_models(tmp_path)
+    assert len(fetched) == 2

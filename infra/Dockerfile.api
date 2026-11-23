@@ -30,10 +30,13 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo build --release -p dalywave-server --bins
 
 FROM debian:trixie-slim
+# /data — папка хранилища fs по умолчанию (infra/selfhost): новый именованный том docker берёт
+# владельца из образа, иначе он принадлежал бы root и сервер не смог бы в него писать
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl tini ffmpeg libchromaprint-tools libstdc++6 \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --system --uid 10001 --home-dir /nonexistent dalywave
+ && useradd --system --uid 10001 --home-dir /nonexistent dalywave \
+ && install -d -o dalywave /data
 COPY --from=builder /src/target/release/dalywave-api /src/target/release/dalywave-worker /usr/local/bin/
 COPY --from=ui /src/apps/ui/.output/public /srv/ui
 ENV DALYWAVE_STATIC_DIR=/srv/ui \

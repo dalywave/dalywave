@@ -1,7 +1,7 @@
 name: Приложения
 
 # Сборка DalyWave для Windows и macOS вместе с загрузчиком музыки (services/fetcher/SIDECAR.md):
-# вручную или по тегу v*. FFmpeg для Windows собирается накрест на Linux (ffmpeg-windows.sh),
+# вручную или из `make release`. FFmpeg для Windows собирается накрест на Linux (ffmpeg-windows.sh),
 # остальной загрузчик — на своей системе (build.sh, build-windows.ps1). Секреты (Settings → Secrets):
 #   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD — подпись обновлений
 #     (содержимое ~/.tauri/dalywave-updater.key и пароль из связки ключей, см. apps/shell/README.md);
@@ -9,10 +9,14 @@ name: Приложения
 #     подпись Developer ID для macOS. Без них macOS собирается с подписью ad-hoc,
 #     а без ключа обновлений — без файлов автообновления;
 #   DALYWAVE_RELEASE_TOKEN — выпуск на сервер обновлений (тот же, что в ~/dalywave/.env сервера).
-# Тег v* (или ручной запуск с «Выпустить») выпускает собранное на сервер обновлений: архив — в R2
+# Запуск с «Выпустить» выпускает собранное на сервер обновлений: архив — в R2
 # по ссылке от сервера, затем регистрация выпуска (apps/shell/README.md, «Выпуск»). Установщик
 # (.dmg, на Windows — тот же setup.exe) уходит вместе с ним: его скачивают с сайта. macOS
 # выпускается отсюда, только если есть сертификат Developer ID, иначе — make release-mac на Mac.
+# Тег v* этот процесс не запускает: тег ставит `make release` для образов (images.yml), а Windows
+# запускает сам — с NOTES; иначе та же версия выпустилась бы второй раз без «Что нового». Запуск
+# вручную на теге (gh workflow run «Приложения» --ref v0.2.0 -f publish=true) сверяет тег с версией
+# и кладёт сборки в черновик релиза GitHub.
 
 on:
   workflow_dispatch:
@@ -25,8 +29,6 @@ on:
         description: Что нового (видно в настройках приложения)
         type: string
         default: ''
-  push:
-    tags: ['v*']
 
 concurrency:
   group: desktop-${{ github.ref }}

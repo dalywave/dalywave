@@ -176,4 +176,6 @@ def test_models_endpoint_lists_licenses(setup):
     assert licenses["effnet"] == "CC BY-NC-SA 4.0"
     assert licenses["clap"].startswith("CC0-1.0")
     assert licenses["beat_this"] == licenses["skey"] == "MIT"
+    on_start = {m["key"]: m["onStart"] for m in body["models"]}
+    assert on_start["effnet"] and not on_start["clap"]
     assert body["versions"]["sound"] == "discogs-effnet-bsdynamic-1"

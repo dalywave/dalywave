@@ -1,0 +1,179 @@
+name: Образы
+
+# Образы для установки у себя (infra/selfhost, docs/self-hosting/install.md) в GHCR:
+#   ghcr.io/<владелец>/server  — infra/Dockerfile.api: API, воркер и интерфейс
+#   ghcr.io/<владелец>/fetcher — services/fetcher: загрузчик (у новых установок выключен)
+#   ghcr.io/<владелец>/ml      — services/ml: анализ звука
+# Каждая архитектура собирается на своём раннере (amd64 — ubuntu-24.04, arm64 — ubuntu-24.04-arm),
+# без QEMU: эмуляция собирала бы Rust часами. Раннер выкладывает образ по digest, последнее задание
+# склеивает два digest в один мульти-арх тег.
+# Теги: v0.1.19 → 0.1.19, 0.1 и latest; push в main → edge; любой запуск — sha-<коммит>.
+# Тег v<версия> ставит `make release` (apps/shell/scripts/release-all.sh).
+# Пока репозиторий приватный, задания пропускаются: раннеры arm64 бесплатны только публичным.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: images-${{ github.ref }}
+  # Новый push в main отменяет сборку прежнего; выпуск по тегу доводится до конца
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+
+permissions:
+  contents: read
+  packages: write
+
+# Описание и лицензия образов (метки OCI; GHCR показывает их на странице пакета). Моделей MTG
+# (CC BY-NC-SA 4.0) в образе ml нет: их качает сам сервис при первом запуске; авторство и лицензии
+# того, что в образе есть, — /usr/share/doc/dalywave-ml (services/ml/licenses)
+env:
+  DESCRIPTIONS: >-
+    {"server": "DalyWave music server: API, background worker and web interface",
+     "fetcher": "DalyWave downloader: yt-dlp, ffmpeg, chromaprint",
+     "ml": "DalyWave sound analysis: tempo, key, mood, beat grid and sound vectors. MTG models (CC BY-NC-SA 4.0, non-commercial use only) are downloaded on first start, not shipped. Licenses: /usr/share/doc/dalywave-ml"}
+  LICENSES: >-
+    {"server": "AGPL-3.0-only", "fetcher": "AGPL-3.0-only", "ml": "AGPL-3.0-only"}
+
+jobs:
+  build:
+    name: ${{ matrix.image }} ${{ matrix.platform }}
+    if: ${{ !github.event.repository.private }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [server, fetcher, ml]
+        platform: [linux/amd64, linux/arm64]
+        include:
+          - image: server
+            context: .
+            file: infra/Dockerfile.api
+          - image: fetcher
+            context: services/fetcher
+            file: services/fetcher/Dockerfile
+          - image: ml
+            context: services/ml
+            file: services/ml/Dockerfile
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - name: Имя образа
+        run: |
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}" >> "$GITHUB_ENV"
+          platform='${{ matrix.platform }}'
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
+      # Сборке Rust в release и чекпойнту CLAP (2,35 ГБ) в ml мало свободного места раннера
+      - name: Место на диске
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - uses: actions/checkout@v5
+
+      - name: Метки
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.title=dalywave-${{ matrix.image }}
+            org.opencontainers.image.description=${{ fromJSON(env.DESCRIPTIONS)[matrix.image] }}
+            org.opencontainers.image.licenses=${{ fromJSON(env.LICENSES)[matrix.image] }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Сборка
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          # mode=max — со слоями промежуточных стадий: зависимости Rust (cargo chef) и модели ml
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,scope=${{ matrix.image }}-${{ env.PLATFORM_PAIR }},mode=max
+          provenance: false
+
+      - name: Digest
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          digest='${{ steps.build.outputs.digest }}'
+          touch "$RUNNER_TEMP/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.image }}-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: ${{ matrix.image }}
+    needs: build
+    if: ${{ !github.event.repository.private }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [server, fetcher, ml]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Имя образа
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Теги
+        id: meta
+        uses: docker/metadata-action@v5
+        env:
+          # Описание мульти-арх образа GHCR берёт из аннотации индекса, а не из меток платформ
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=edge,branch=main
+            type=sha
+          annotations: |
+            org.opencontainers.image.title=dalywave-${{ matrix.image }}
+            org.opencontainers.image.description=${{ fromJSON(env.DESCRIPTIONS)[matrix.image] }}
+            org.opencontainers.image.licenses=${{ fromJSON(env.LICENSES)[matrix.image] }}
+
+      # latest ставит flavor latest=auto (по умолчанию) — только на тег выпуска без суффикса (-rc…)
+      - name: Мульти-арх тег
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          args=()
+          while IFS= read -r tag; do args+=(-t "$tag"); done < <(jq -r '.tags[]' <<<"$DOCKER_METADATA_OUTPUT_JSON")
+          while IFS= read -r note; do args+=(--annotation "$note"); done < <(jq -r '.annotations[]' <<<"$DOCKER_METADATA_OUTPUT_JSON")
+          for digest in *; do args+=("$IMAGE@sha256:$digest"); done
+          docker buildx imagetools create "${args[@]}"
+
+      - name: Проверка
+        run: docker buildx imagetools inspect "$IMAGE:${{ steps.meta.outputs.version }}"

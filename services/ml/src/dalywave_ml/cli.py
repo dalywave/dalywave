@@ -28,9 +28,14 @@ def _settings(args: argparse.Namespace) -> Settings:
 def cmd_serve(args: argparse.Namespace) -> None:
     import uvicorn
 
+    from .download import ensure_start_models
     from .server import create_app
 
-    uvicorn.run(create_app(_settings(args)), host=args.host, port=args.port, log_level="info")
+    settings = _settings(args)
+    # Модели MTG — до HTTP: пока они качаются, проверка здоровья не зелёная, а сбой скачивания
+    # завершает процесс, и docker перезапускает его (restart: unless-stopped) — новая попытка
+    ensure_start_models(settings.mtg_dir)
+    uvicorn.run(create_app(settings), host=args.host, port=args.port, log_level="info")
 
 
 def _load_audio(source: str, settings: Settings):
@@ -66,18 +71,24 @@ def cmd_embed_text(args: argparse.Namespace) -> None:
 
 
 def cmd_models(args: argparse.Namespace) -> None:
-    from .download import download, verify
+    from .download import download, verify, write_attribution
+    from .manifest import image_files, start_files
 
-    dest = Path(args.dest) if args.dest else Settings.from_env().models_dir
+    settings = Settings.from_env()
+    # --dest — всё в одну папку; иначе модели MTG — в ML_MTG_MODELS_DIR, если она задана
+    dest = Path(args.dest) if args.dest else settings.models_dir
+    mtg = Path(args.dest) if args.dest else settings.mtg_dir
     if args.action == "download":
         only = set(args.only.split(",")) if args.only else None
-        download(dest, only=only, force=args.force)
-    problems = verify(dest)
+        download(dest, only=only, force=args.force, on_start=False)
+        download(mtg, only=only, force=args.force, on_start=True)
+        write_attribution(mtg)
+    problems = verify(dest, image_files()) + verify(mtg, start_files())
     for p in problems:
         print(p, file=sys.stderr)
     if problems:
         sys.exit(1)
-    print(f"модели в порядке: {dest}")
+    print(f"модели в порядке: {dest}" + (f", MTG — {mtg}" if mtg != dest else ""))
 
 
 def cmd_bench(args: argparse.Namespace) -> None:
@@ -147,7 +158,9 @@ def main() -> None:
 
     p = sub.add_parser("models", help="скачать или проверить файлы моделей")
     p.add_argument("action", choices=["download", "verify"])
-    p.add_argument("--dest", help="папка (по умолчанию ML_MODELS_DIR или ./models)")
+    p.add_argument(
+        "--dest", help="папка (по умолчанию ML_MODELS_DIR или ./models, MTG — ML_MTG_MODELS_DIR)"
+    )
     p.add_argument("--only", help="через запятую: effnet,head,clap,beat_this,skey")
     p.add_argument("--force", action="store_true", help="скачать заново, даже если файлы есть")
     p.set_defaults(func=cmd_models)

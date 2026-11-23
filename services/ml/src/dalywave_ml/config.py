@@ -38,6 +38,8 @@ def available_cpus() -> int:
 @dataclass(frozen=True)
 class Settings:
     models_dir: Path = field(default_factory=lambda: Path("models"))
+    # Модели MTG (качаются при запуске, см. manifest.on_start). Пусто — та же папка, что models_dir
+    mtg_models_dir: Path | None = None
     # Потоки onnxruntime на одну модель; модели идут по очереди, так что это ≈ ядра на запрос.
     threads: int = field(default_factory=available_cpus)
     # Дольше — анализируется только начало (длинные миксы и подкасты).
@@ -54,8 +56,10 @@ class Settings:
     def from_env(cls) -> Settings:
         root = _env("ML_FILES_ROOT")
         work = _env("ML_WORK_DIR")
+        mtg = _env("ML_MTG_MODELS_DIR")
         return cls(
             models_dir=Path(_env("ML_MODELS_DIR") or "models"),
+            mtg_models_dir=Path(mtg) if mtg else None,
             threads=_int_env("ML_THREADS", available_cpus()),
             max_duration_s=_float_env("ML_MAX_DURATION_S", 900.0),
             download_timeout_s=_float_env("ML_DOWNLOAD_TIMEOUT_S", 60.0),
@@ -65,9 +69,14 @@ class Settings:
             work_dir=Path(work) if work else None,
         )
 
+    @property
+    def mtg_dir(self) -> Path:
+        return self.mtg_models_dir or self.models_dir
+
     def describe(self) -> dict[str, object]:
         return {
             "modelsDir": str(self.models_dir),
+            "mtgModelsDir": str(self.mtg_dir),
             "threads": self.threads,
             "maxDurationS": self.max_duration_s,
             "filesRoot": str(self.files_root) if self.files_root else None,

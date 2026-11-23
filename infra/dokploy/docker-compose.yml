@@ -1,0 +1,121 @@
+# Dokploy template for DalyWave — goes to blueprints/dalywave/ in github.com/Dokploy/templates (canary).
+# Same setup as infra/selfhost/docker-compose.yml, in Dokploy's rules: no ports, networks or container
+# names (Dokploy routes the domain to the `dalywave` service), no YAML anchors, relative bind mounts.
+# Music: copy it to ../files/music (on the host: /etc/dokploy/compose/<app>/files/music) or replace
+# that mount with your music folder. The Deezer catalog is DALYWAVE_DEEZER=true in Environment; the
+# YouTube downloader is not part of this template (docs/self-hosting/install.md).
+services:
+  dalywave:
+    image: ghcr.io/dalywave/server:0.1.19
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DALYWAVE_PUBLIC_URL: ${DALYWAVE_PUBLIC_URL}
+      DALYWAVE_SECRET_KEY: ${DALYWAVE_SECRET_KEY}
+      DALYWAVE_DATABASE_URL: postgres://dalywave:${POSTGRES_PASSWORD}@dalywave-db:5432/dalywave
+      DALYWAVE_STORAGE: fs
+      DALYWAVE_STORAGE_PATH: /data
+      DALYWAVE_MUSIC_DIRS: /music
+      DALYWAVE_STORAGE_ML_URL: http://dalywave:8400
+      DALYWAVE_ML_URL: http://dalywave-ml:8403
+      DALYWAVE_BACKUP_DIR: /backup
+      DALYWAVE_MDNS: "false"
+    volumes:
+      - dalywave-data:/data
+      - ../files/music:/music:ro
+      - dalywave-backups:/backup:ro
+    expose:
+      - 8400
+    depends_on:
+      dalywave-db:
+        condition: service_healthy
+
+  # Background jobs: folder scans, covers, loudness, analysis queue. Same image, no HTTP
+  dalywave-worker:
+    image: ghcr.io/dalywave/server:0.1.19
+    restart: unless-stopped
+    command: ["dalywave-worker"]
+    env_file:
+      - .env
+    environment:
+      DALYWAVE_PUBLIC_URL: ${DALYWAVE_PUBLIC_URL}
+      DALYWAVE_SECRET_KEY: ${DALYWAVE_SECRET_KEY}
+      DALYWAVE_DATABASE_URL: postgres://dalywave:${POSTGRES_PASSWORD}@dalywave-db:5432/dalywave
+      DALYWAVE_STORAGE: fs
+      DALYWAVE_STORAGE_PATH: /data
+      DALYWAVE_MUSIC_DIRS: /music
+      DALYWAVE_STORAGE_ML_URL: http://dalywave:8400
+      DALYWAVE_ML_URL: http://dalywave-ml:8403
+      DALYWAVE_BACKUP_DIR: /backup
+      DALYWAVE_MDNS: "false"
+    volumes:
+      - dalywave-data:/data
+      - ../files/music:/music:ro
+    depends_on:
+      dalywave-db:
+        condition: service_healthy
+      dalywave:
+        condition: service_started
+    healthcheck:
+      disable: true
+    stop_grace_period: 40s
+
+  # Sound analysis for the wave, radio, DJ transitions and search by sound. ~1.3–2 GB RAM.
+  # First start downloads the MTG models (23 MB, CC BY-NC-SA 4.0 — non-commercial use only) from
+  # essentia.upf.edu into the volume, with ATTRIBUTION.md next to them; the image doesn't ship them
+  dalywave-ml:
+    image: ghcr.io/dalywave/ml:0.1.19
+    restart: unless-stopped
+    cpus: 2
+    mem_limit: 3g
+    environment:
+      ML_MAX_DURATION_S: "900"
+    volumes:
+      - dalywave-ml-models:/models
+
+  dalywave-db:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dalywave
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: dalywave
+    volumes:
+      - dalywave-postgres:/var/lib/postgresql
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dalywave -d dalywave"]
+      interval: 5s
+      retries: 20
+
+  # Daily database dump, the last 14 kept; listed in Admin → Backups
+  dalywave-backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: dalywave-db
+      PGUSER: dalywave
+      PGDATABASE: dalywave
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -u -o pipefail
+        while true; do
+          f="/backup/dalywave-$$(date +%F).sql.gz"
+          if pg_dump --no-owner | gzip > "$$f.tmp"; then mv "$$f.tmp" "$$f"; else rm -f "$$f.tmp"; echo "pg_dump failed" >&2; fi
+          find /backup -name 'dalywave-*.sql.gz' -mtime +13 -delete
+          sleep 86400
+        done
+    volumes:
+      - dalywave-backups:/backup
+    depends_on:
+      dalywave-db:
+        condition: service_healthy
+
+volumes:
+  dalywave-data: {}
+  dalywave-postgres: {}
+  dalywave-backups: {}
+  dalywave-ml-models: {}

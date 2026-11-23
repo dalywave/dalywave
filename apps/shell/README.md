@@ -158,10 +158,12 @@ NSIS при этом закрывает приложение и открывае
    архив `DalyWave.app.tar.gz` с `.sig` и образ `.dmg` уходят в R2 по ссылке от сервера, выпуск
    регистрируется (`apps/shell/scripts/release.ts`). Другой сервер — `SERVER=http://localhost:8400`.
    Что уйдёт, без сервера: `bun apps/shell/scripts/release.ts --dry-run`.
-3. Windows: тег `git tag v0.2.0 && git push origin v0.2.0` — CI («Приложения») собирает установщик и
-   выпускает его так же (тег обязан совпадать с версией в `Cargo.toml`). Без тега — Run workflow с
-   флажком «Выпустить на сервер обновлений». macOS CI выпускает, только если в секретах есть
-   сертификат Developer ID, иначе — шаг 2.
+3. Windows: `gh workflow run "Приложения" -f publish=true -f notes="Что нового"` (или Actions →
+   «Приложения» → Run workflow с флажком «Выпустить на сервер обновлений») — CI собирает установщик и
+   выпускает его так же. На теге (`--ref v0.2.0`) CI сверяет тег с версией в `Cargo.toml` и кладёт
+   сборки в черновик релиза GitHub. macOS CI выпускает, только если в секретах есть сертификат
+   Developer ID, иначе — шаг 2. Сам тег `v0.2.0` (`make release` ставит его после коммита версии)
+   «Приложения» не запускает — только сборку образов сервера (`.github/workflows/images.yml`).
 4. Stream Deck: `make release-streamdeck NOTES="…"` — плагин той же версии (`apps/streamdeck`,
    `bun run pack`) уходит как платформа `streamdeck/universal`, без подписи; на сайте — карточка
    «Stream Deck». `make release` делает это сам после Mac.
@@ -232,7 +234,7 @@ security add-generic-password -s dalywave-release-token -a "$USER" -w   # спр
 
 ## Windows
 
-Сборка — на GitHub Actions (`.github/workflows/desktop.yml`, вручную или по тегу `v*`):
+Сборка — на GitHub Actions (`.github/workflows/desktop.yml`, вручную или из `make release`):
 установщик NSIS для текущего пользователя, ссылки `dalywave://` регистрирует он же. Загрузчик
 собирается там же: задание «FFmpeg для Windows» (Ubuntu) кросс-собирает LGPL-сборку FFmpeg только
 для звука (`services/fetcher/sidecar/ffmpeg-windows.sh`), затем на Windows
@@ -240,8 +242,9 @@ security add-generic-password -s dalywave-release-token -a "$USER" -w   # спр
 Deno, fpcalc и сервер PO-токенов и проверяет запуск; Tauri упаковывает всё в установщик.
 Подписи кода для Windows нет — SmartScreen предупредит при первом запуске.
 
-**Обновления.** Установленное приложение обновляется само (раздел «Выпуск»): тег `v*` собирает и
-выпускает новую версию, после «Перезапустить» установщик ставит её поверх.
+**Обновления.** Установленное приложение обновляется само (раздел «Выпуск»): запуск «Приложения» с
+«Выпустить» (его делает `make release`) собирает и выпускает новую версию, после «Перезапустить»
+установщик ставит её поверх.
 
 **Запуск сборки.** GitHub → Actions → «Приложения» → Run workflow (ветка main). Через ~25 минут
 в итогах запуска — артефакт `DalyWave-x86_64-pc-windows-msvc` с `DalyWave_0.1.0_x64-setup.exe`.

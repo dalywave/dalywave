@@ -32,4 +32,4 @@ sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $version;/" gen/appl
 cargo metadata --format-version 1 --offline >/dev/null 2>&1 || cargo metadata --format-version 1 >/dev/null
 
 echo "Версия приложения: $current → $version"
-echo "Дальше: make release-mac (macOS) и тег v$version для сборки Windows в CI"
+echo "Дальше: make release-mac (macOS), gh workflow run \"Приложения\" -f publish=true (Windows) и тег v$version (образы сервера)"

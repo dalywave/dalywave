@@ -53,7 +53,8 @@ RUN set -eux; \
 
 # --- Остальные модели: качаются с проверкой sha256 ---
 # Слой зависит только от манифеста и загрузчика, а не от остального кода: правка анализа
-# не перекачивает модели.
+# не перекачивает модели. Модели MTG (CC BY-NC-SA 4.0) в образ не кладутся (`--image`): их качает
+# сам сервис при первом запуске в /models (ML_MTG_MODELS_DIR).
 FROM ${PYTHON_IMAGE} AS models
 COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /usr/local/bin/uv
 ENV UV_LINK_MODE=copy \
@@ -64,7 +65,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-default-groups
 COPY src/dalywave_ml/__init__.py src/dalywave_ml/manifest.py src/dalywave_ml/download.py ./dalywave_ml/
 COPY --from=clap /models /models
-RUN /opt/dl/bin/python -m dalywave_ml.download /models
+RUN /opt/dl/bin/python -m dalywave_ml.download /models --image
 
 # --- Python-окружение сервиса: uv нужен только при сборке ---
 FROM ${PYTHON_IMAGE} AS build
@@ -85,16 +86,24 @@ FROM ${PYTHON_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:${PATH}" \
-    ML_MODELS_DIR=/app/models
+    ML_MODELS_DIR=/app/models \
+    ML_MTG_MODELS_DIR=/models
 COPY --from=ffmpeg /opt/ffmpeg/bin/ffmpeg /usr/local/bin/ffmpeg
 COPY --from=models /models /app/models
 COPY --from=build /app/.venv /app/.venv
-RUN useradd --create-home --uid 10001 ml
+# Авторство и лицензии того, что лежит в образе (CLAP, Beat This!, S-KEY, ffmpeg): образ раздаётся
+# публично, тексты лицензий едут вместе с файлами
+COPY licenses/ /usr/share/doc/dalywave-ml/
+# /models — модели MTG, которые сервис качает при первом запуске (~23 МБ). Владелец — ml: новый
+# именованный том берёт его из образа. Без тома они качаются заново в каждый новый контейнер
+RUN useradd --create-home --uid 10001 ml \
+ && install -d -o ml /models
 USER ml
 WORKDIR /app
 EXPOSE 8403
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8403/v1/healthz', timeout=8)"]
+# Зелёная, только когда модели загружены: при первом запуске сначала качаются модели MTG
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+    CMD ["python", "-c", "import json, sys, urllib.request; sys.exit(0 if json.load(urllib.request.urlopen('http://127.0.0.1:8403/v1/healthz', timeout=8))['ok'] else 1)"]
 
 CMD ["ml", "serve", "--host", "0.0.0.0", "--port", "8403"]

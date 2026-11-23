@@ -15,6 +15,12 @@ git add -A
 git commit -q -m "Версия $version${notes:+: $notes}"
 git push -q
 
+# Тег v<версия> собирает образы для установки у себя (.github/workflows/images.yml: 0.1.19, 0.1, latest).
+# «Приложения» по тегу не запускаются — Windows запускается ниже с NOTES. Тег не ушёл — выпуск идёт дальше
+tag="v$version"
+git rev-parse -q --verify "refs/tags/$tag" >/dev/null || git tag -a "$tag" -m "Версия $version${notes:+: $notes}"
+git push -q origin "refs/tags/$tag" || echo "Тег $tag не отправлен: git push origin $tag — после выпуска"
+
 bash ops/deploy.sh
 
 gh workflow run "Приложения" -f publish=true -f notes="$notes"

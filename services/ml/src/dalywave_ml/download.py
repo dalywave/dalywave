@@ -14,11 +14,21 @@ from pathlib import Path
 
 import httpx
 
-from .manifest import MODELS, ModelFile, all_files
+from .manifest import (
+    MODELS,
+    MTG_AUTHORS,
+    MTG_LICENSE_URL,
+    MTG_PAPER,
+    ModelFile,
+    all_files,
+    start_files,
+)
 
 log = logging.getLogger("dalywave_ml.download")
 
 LOCK_NAME = "manifest.lock.json"
+# Авторство и лицензия моделей MTG — рядом с их файлами (CC BY-NC-SA 4.0 требует указать)
+ATTRIBUTION_NAME = "ATTRIBUTION.md"
 
 
 class DownloadError(Exception):
@@ -56,7 +66,7 @@ def _fetch(url: str, dest: Path, size: int, attempts: int = 6, timeout_s: float 
             if attempt == attempts:
                 raise DownloadError(f"не удалось скачать {url}: {e}") from e
             wait = min(60, 2**attempt)
-            log.warning("скачивание прервалось (%s), повтор через %d с", e, wait)
+            log.warning("download interrupted (%s), retrying in %d s", e, wait)
             time.sleep(wait)
     part.replace(dest)
 
@@ -76,11 +86,11 @@ def _ensure(file: ModelFile, root: Path, lock: dict[str, dict[str, object]], for
         and known.get("sourceSha256") == file.sha256
         and sha256_file(dest) == known.get("sha256")
     ):
-        log.info("уже есть: %s", file.path)
+        log.info("already present: %s", file.path)
         return
     # Файл, скачанный раньше без записи в lock, не качается заново, если сумма сходится.
     if force or not dest.exists() or sha256_file(dest) != file.sha256:
-        log.info("качаю %s", file.url)
+        log.info("downloading %s (%.1f MB) from %s", file.path, file.size / 1e6, file.url)
         _fetch(file.url, dest, file.size)
     actual = sha256_file(dest)
     if actual != file.sha256:
@@ -104,22 +114,31 @@ def read_lock(root: Path) -> dict[str, dict[str, object]]:
     return json.loads(path.read_text())
 
 
-def download(root: Path, *, only: set[str] | None = None, force: bool = False) -> None:
+def download(
+    root: Path,
+    *,
+    only: set[str] | None = None,
+    force: bool = False,
+    on_start: bool | None = None,
+) -> None:
+    """`on_start`: None — все модели, False — те, что кладёт в образ сборка, True — модели MTG."""
     root.mkdir(parents=True, exist_ok=True)
     lock = read_lock(root)
     for model in MODELS:
         if only and model.key.split(":")[0] not in only:
+            continue
+        if on_start is not None and model.on_start != on_start:
             continue
         for file in model.files:
             _ensure(file, root, lock, force)
             (root / LOCK_NAME).write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n")
 
 
-def verify(root: Path) -> list[str]:
-    """Пустой список — все файлы на месте и совпадают с записанными суммами."""
+def verify(root: Path, files: list[ModelFile] | None = None) -> list[str]:
+    """Пустой список — файлы (по умолчанию все) на месте и совпадают с записанными суммами."""
     lock = read_lock(root)
     problems = []
-    for file in all_files():
+    for file in all_files() if files is None else files:
         dest = root / file.path
         known = lock.get(file.path)
         hint = " — его собирает export/export_clap.py" if file.exported else ""
@@ -132,16 +151,66 @@ def verify(root: Path) -> list[str]:
     return problems
 
 
+def write_attribution(root: Path) -> None:
+    """ATTRIBUTION.md рядом с моделями MTG: чьё, откуда, под какой лицензией."""
+    lines = [
+        "# Models in this folder",
+        "",
+        "Downloaded by DalyWave on first start from the official MTG/Essentia site.",
+        f"Authors: {MTG_AUTHORS}.",
+        f"License: CC BY-NC-SA 4.0 ({MTG_LICENSE_URL}) — **non-commercial use only**; "
+        "a commercial license is available from MTG: https://www.upf.edu/web/mtg/contact.",
+        "License file of the model directory: https://essentia.upf.edu/models/LICENSE.",
+        f"Paper: {MTG_PAPER}.",
+        "The files are used unmodified and provided as is, without warranties.",
+        "",
+    ]
+    for model in MODELS:
+        if not model.on_start:
+            continue
+        lines.append(
+            f"- **{model.name}** (version {model.version}), {model.license}, {model.source}"
+        )
+        lines.extend(f"  - `{f.path}` — {f.url} (sha256 `{f.sha256}`)" for f in model.files)
+    (root / ATTRIBUTION_NAME).write_text("\n".join(lines) + "\n")
+
+
+def ensure_start_models(root: Path) -> None:
+    """Модели MTG перед запуском сервиса: есть и сходятся суммы — ничего не качается."""
+    files = start_files()
+    if verify(root, files):
+        total = sum(f.size for f in files)
+        log.info(
+            "MTG models: first start, downloading %d files (%.1f MB) from essentia.upf.edu "
+            "into %s. They are licensed CC BY-NC-SA 4.0: non-commercial use only",
+            len(files),
+            total / 1e6,
+            root,
+        )
+        started = time.perf_counter()
+        download(root, on_start=True)
+        problems = verify(root, files)
+        if problems:
+            raise DownloadError("; ".join(problems))
+        log.info("MTG models: ready in %.0f s", time.perf_counter() - started)
+    else:
+        log.info("MTG models: present in %s", root)
+    write_attribution(root)
+
+
 def main() -> None:
-    """`python -m dalywave_ml.download <папка>` — так модели качаются при сборке образа."""
+    """`python -m dalywave_ml.download <папка> [--image]` — так модели качаются при сборке образа.
+    `--image` — только те, что можно раздавать в образе: без моделей MTG."""
     import sys
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     # httpx на INFO печатает каждую подписанную ссылку CDN — в логе сборки это шум.
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    root = Path(sys.argv[1] if len(sys.argv) > 1 else "models")
-    download(root)
-    problems = verify(root)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    image = "--image" in sys.argv[1:]
+    root = Path(args[0] if args else "models")
+    download(root, on_start=False if image else None)
+    problems = verify(root, [f for m in MODELS if not (image and m.on_start) for f in m.files])
     if problems:
         raise SystemExit("\n".join(problems))
 

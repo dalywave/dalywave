@@ -82,7 +82,8 @@ class Analyzer:
         root = settings.models_dir
         opts = session_options(settings.threads)
         # Головы — крошечные MLP на [патчи, 1280]: им хватает одного потока.
-        self.effnet = Effnet(root / "effnet", root / "heads", opts, session_options(1))
+        mtg = settings.mtg_dir
+        self.effnet = Effnet(mtg / "effnet", mtg / "heads", opts, session_options(1))
         self.clap = Clap(root / "clap", opts)
         self.beat_this = BeatThis(root / "beat_this", opts)
         self.skey = SKey(root / "skey", opts)

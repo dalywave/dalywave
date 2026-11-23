@@ -1,0 +1,26 @@
+[variables]
+main_domain = "${domain}"
+# DALYWAVE_SECRET_KEY must be 64 hex characters
+secret_key = "${hash:64}"
+# Letters and digits only: it becomes part of the database URL
+db_password = "${password:32}"
+
+[config]
+# DALYWAVE_PUBLIC_URL must be exactly the address people open: switch to https:// once the domain
+# has HTTPS. Sign-in providers (DALYWAVE_OIDC_<ID>_*) and other settings can be added here later:
+# https://github.com/dalywave/dalywave/blob/main/infra/selfhost/.env.example
+env = [
+  "DALYWAVE_PUBLIC_URL=http://${main_domain}",
+  "DALYWAVE_SECRET_KEY=${secret_key}",
+  "POSTGRES_PASSWORD=${db_password}",
+  "DALYWAVE_LOCAL_AUTH=true",
+  "DALYWAVE_DEEZER=false",
+  "DALYWAVE_DOWNLOADER=false",
+  "DALYWAVE_LOG_FORMAT=pretty",
+]
+mounts = []
+
+[[config.domains]]
+serviceName = "dalywave"
+port = 8400
+host = "${main_domain}"

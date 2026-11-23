@@ -25,7 +25,7 @@ from .analysis import Analyzer, TooShortError
 from .audio import AudioError, decode, ffmpeg_version
 from .config import Settings
 from .download import read_lock, verify
-from .manifest import MODELS, versions
+from .manifest import MODELS, image_files, start_files, versions
 
 log = logging.getLogger("dalywave_ml")
 
@@ -172,10 +172,12 @@ def create_app(settings: Settings | None = None, analyzer: Analyzer | None = Non
 
     @app.get("/v1/models")
     def models() -> dict[str, Any]:
-        lock = read_lock(settings.models_dir)
+        locks = {False: read_lock(settings.models_dir), True: read_lock(settings.mtg_dir)}
         # Суммы ~600 МБ файлов считаются один раз: модели во время работы не меняются.
         if state["problems"] is None:
-            state["problems"] = verify(settings.models_dir)
+            state["problems"] = verify(settings.models_dir, image_files()) + verify(
+                settings.mtg_dir, start_files()
+            )
         return {
             "versions": versions(),
             "problems": state["problems"],
@@ -186,13 +188,14 @@ def create_app(settings: Settings | None = None, analyzer: Analyzer | None = Non
                     "version": m.version,
                     "license": m.license,
                     "source": m.source,
+                    "onStart": m.on_start,
                     "files": [
                         {
                             "path": f.path,
                             "url": f.url,
                             "sourceSha256": f.sha256,
-                            "sha256": (lock.get(f.path) or {}).get("sha256"),
-                            "size": (lock.get(f.path) or {}).get("size"),
+                            "sha256": (locks[m.on_start].get(f.path) or {}).get("sha256"),
+                            "size": (locks[m.on_start].get(f.path) or {}).get("size"),
                             "fp16Storage": f.fp16_storage,
                         }
                         for f in m.files

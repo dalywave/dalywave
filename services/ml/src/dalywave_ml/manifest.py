@@ -8,6 +8,10 @@ LAION (веса `laion/larger_clap_music` на Hugging Face сконвертир
 Такие файлы помечены `exported`: загрузчик их не качает, а проверяет запись экспортёра в
 `manifest.lock.json`. Веса CLAP хранятся в float16, считаются в float32 — onnxruntime
 сворачивает Cast при загрузке, а файлы и образ вдвое меньше.
+
+Модели MTG (EffNet и головы) — CC BY-NC-SA 4.0, только некоммерческое использование: публичный
+образ их не содержит. Они помечены `on_start` и качаются при запуске сервиса (`ml serve`) в свою
+папку (`ML_MTG_MODELS_DIR`, в образе — том `/models`), рядом пишется ATTRIBUTION.md.
 """
 
 from __future__ import annotations
@@ -22,6 +26,12 @@ BEAT_THIS_REV = "4e971bd43753023e1bf961c34a0cb74985cfcb88"
 SKEY_REV = "9d90d2a9ff6679df1d64000f4fa750643f247643"
 
 MTG_LICENSE = "CC BY-NC-SA 4.0"
+MTG_LICENSE_URL = "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+MTG_AUTHORS = "Music Technology Group, Universitat Pompeu Fabra"
+MTG_PAPER = (
+    'P. Alonso-Jiménez, X. Serra, D. Bogdanov. "Music Representation Learning Based on '
+    'Editorial Metadata from Discogs". ISMIR 2022'
+)
 
 # Исходный чекпойнт «larger CLAP, music» (HTSAT-base + RoBERTa), CC0.
 CLAP_CHECKPOINT = {
@@ -50,6 +60,8 @@ class Model:
     license: str
     source: str
     files: tuple[ModelFile, ...]
+    # Качается при запуске сервиса, а не при сборке (модели MTG: в публичном образе их нет)
+    on_start: bool = False
 
 
 def _head(
@@ -67,6 +79,7 @@ def _head(
             ModelFile(f"heads/{stem}.onnx", f"{base}.onnx", onnx_sha, onnx_size),
             ModelFile(f"heads/{stem}.json", f"{base}.json", json_sha, json_size),
         ),
+        on_start=True,
     )
 
 
@@ -91,6 +104,7 @@ MODELS: tuple[Model, ...] = (
                 14986,
             ),
         ),
+        on_start=True,
     ),
     _head(
         "mood_happy",
@@ -242,6 +256,16 @@ MODELS: tuple[Model, ...] = (
 
 def all_files() -> list[ModelFile]:
     return [f for m in MODELS for f in m.files]
+
+
+def image_files() -> list[ModelFile]:
+    """Файлы, которые кладёт в образ сборка."""
+    return [f for m in MODELS if not m.on_start for f in m.files]
+
+
+def start_files() -> list[ModelFile]:
+    """Файлы моделей MTG: качаются при запуске сервиса."""
+    return [f for m in MODELS if m.on_start for f in m.files]
 
 
 def versions() -> dict[str, str]:

@@ -1,0 +1,19 @@
+{
+  "id": "dalywave",
+  "name": "DalyWave",
+  "version": "0.1.19",
+  "description": "DalyWave is a self-hosted music server for your own music folder: a mood-aware radio, DJ-style transitions, playlists and apps for the web, iPhone, iPad, Apple TV, macOS and Windows.",
+  "logo": "dalywave.svg",
+  "links": {
+    "github": "https://github.com/dalywave/dalywave",
+    "website": "",
+    "docs": "https://github.com/dalywave/dalywave/blob/main/docs/self-hosting/install.md"
+  },
+  "tags": [
+    "music",
+    "streaming",
+    "media-server",
+    "self-hosted",
+    "audio"
+  ]
+}

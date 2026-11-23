@@ -52,8 +52,8 @@ Essentia не используется: её колёс нет для linux aarc
 
 | Модель | Откуда | Лицензия | Размер в образе |
 |---|---|---|---|
-| Discogs-EffNet `discogs-effnet-bsdynamic-1` (MTG) | essentia.upf.edu, готовый ONNX | **CC BY-NC-SA 4.0** | 18 МБ |
-| Головы MTG `*-discogs-effnet-1`: mood_happy, mood_sad, mood_aggressive, mood_relaxed, mood_party, danceability, voice_instrumental, approachability_regression, engagement_regression | essentia.upf.edu, ONNX | **CC BY-NC-SA 4.0** | 9 × 0,5 МБ |
+| Discogs-EffNet `discogs-effnet-bsdynamic-1` (MTG) | essentia.upf.edu, готовый ONNX | **CC BY-NC-SA 4.0** | нет, качается при запуске (18 МБ) |
+| Головы MTG `*-discogs-effnet-1`: mood_happy, mood_sad, mood_aggressive, mood_relaxed, mood_party, danceability, voice_instrumental, approachability_regression, engagement_regression | essentia.upf.edu, ONNX | **CC BY-NC-SA 4.0** | нет, качаются при запуске (9 × 0,5 МБ) |
 | CLAP «larger CLAP, music» (`music_audioset_epoch_15_esc_90.14.pt`, HTSAT-base + RoBERTa) | исходный чекпойнт LAION (lukewys/laion_clap), ONNX собирает `export/export_clap.py` | CC0-1.0 (веса), Apache-2.0 (токенизатор из `laion/larger_clap_music`) | 142 + 251 МБ |
 | Beat This! `final0` (CPJKU) | ONNX от musetric (HF `musetric/beat-this-onnx`, ревизия `4e971bd` — исходный динамический граф; поздние ревизии переписаны под мобильные GPU: 190 МБ, фиксированные 1500 кадров) | MIT | 83 МБ |
 | S-KEY (Deezer) | ONNX от musetric (HF `musetric/skey-onnx`) | MIT | 0,3 МБ |
@@ -64,6 +64,11 @@ Essentia не используется: её колёс нет для linux aarc
 EffNet и головы придётся заменить. Атрибуция: Alonso-Jiménez, Serra, Bogdanov, «Music
 Representation Learning Based on Editorial Metadata from Discogs», ISMIR 2022; модели —
 Music Technology Group, Universitat Pompeu Fabra.
+
+Образ раздаётся публично (`ghcr.io/dalywave/ml`), поэтому модели MTG в нём нет — их качает сам
+сервис при первом запуске (раздел «Docker»). У MTG расхождение: страница моделей говорит
+CC BY-NC-SA 4.0, а файл LICENSE их каталога — CC BY-NC-ND 4.0; файлы берутся без изменений и для
+некоммерческого использования — это разрешают обе.
 
 Все адреса закреплены на ревизиях, sha256 проверяется (`src/dalywave_ml/manifest.py`);
 фактические суммы файлов после скачивания и экспорта — в `models/manifest.lock.json` и в
@@ -226,6 +231,7 @@ Mytch (стили Metalcore, Post-Hardcore), «house music» → Sayfalse (Elect
 cd services/ml
 uv sync
 uv run ml models download                       # всё, кроме CLAP, в ./models (sha256, докачка)
+                                                # (модели MTG — в ML_MTG_MODELS_DIR, если задана)
 uv run --with torch==2.11.0 --with transformers==4.57.6 \
   python export/export_clap.py --out models     # CLAP: скачает чекпойнт 2,35 ГБ и соберёт ONNX
 uv run ml models verify
@@ -253,19 +259,33 @@ uv run pytest -m models -q        # на настоящих моделях и п
 
 ```sh
 docker build -t dalywave-ml:0.1.0 services/ml
-docker run -d --name ml --cpus 6 -p 127.0.0.1:8403:8403 dalywave-ml:0.1.0
+docker run -d --name ml --cpus 6 -p 127.0.0.1:8403:8403 -v ml-models:/models dalywave-ml:0.1.0
 ```
 
-Модели вшиты в образ при сборке: стадия `clap` ставит torch (CPU-индекс PyTorch), качает
-чекпойнт LAION и экспортирует ONNX, всё временное удаляется в том же слое; стадия `models`
-качает остальное с проверкой sha256 и докачкой (essentia.upf.edu иногда рвёт соединение).
+CLAP, Beat This! и S-KEY вшиты в образ при сборке: стадия `clap` ставит torch (CPU-индекс
+PyTorch), качает чекпойнт LAION и экспортирует ONNX, всё временное удаляется в том же слое; стадия
+`models` качает остальное с проверкой sha256 и докачкой (essentia.upf.edu иногда рвёт соединение).
+
+**Модели MTG в образе нет** (CC BY-NC-SA 4.0 — только некоммерческое использование, а образ
+публичный): `ml serve` при запуске проверяет `ML_MTG_MODELS_DIR` (в образе `/models`) и, если
+файлов нет или суммы не сходятся, качает их с essentia.upf.edu (20 файлов, 22,7 МБ), сверяет
+sha256 и пишет рядом `ATTRIBUTION.md` — авторство, адреса и лицензию каждой модели. Пока они
+качаются, HTTP не поднят и проверка здоровья не зелёная; в журнале — `MTG models: first start,
+downloading 20 files (22.7 MB)…` и строка на каждый файл. Сбой скачивания (после 6 повторов с
+докачкой) завершает процесс — docker перезапускает его по `restart`. Том на `/models` — чтобы
+не качать заново в каждый новый контейнер (папка в образе принадлежит `ml`, новый том берёт
+владельца из неё); без тома всё тоже работает. Первый запуск с чистой папкой — 159 с (два обрыва TLS
+у essentia.upf.edu, докачка), затем анализ превью — BPM 110,06, 10A, как в `tests/test_models.py`;
+второй запуск — «MTG models: present», готов за 4 с. Авторство и лицензии того, что лежит
+в образе, — `licenses/` → `/usr/share/doc/dalywave-ml/`.
 Стадия `clap` зависит только от `export/`, стадия `models` — от манифеста и загрузчика:
 правка анализа модели не перекачивает. ffmpeg собирается из исходников (8.1.3, sha256 и подпись релиза проверены) только
 с нужными демультиплексорами и декодерами: MP3, AAC/M4A, Opus и Vorbis в MP4/Ogg/WebM,
 FLAC, ALAC, WAV/AIFF — 3 МБ вместо ~420 МБ пакета Debian. Первая сборка на сервере — около
 10 минут (в основном скачивание чекпойнта CLAP 2,35 ГБ), дальше — секунды.
 
-Образ — 818 МБ на диске (564 МБ сжатого содержимого): модели 502 МБ (CLAP 393, Beat This!
+Образ — 818 МБ на диске (564 МБ сжатого содержимого; замер, когда модели MTG ещё лежали в
+образе, без них — на 23 МБ меньше): модели 502 МБ (CLAP 393, Beat This!
 83, EffNet и головы 23), Python-окружение 198 МБ (onnxruntime 59, numpy 68, tokenizers),
 база python:3.13-slim, ffmpeg 3 МБ. Сборка с нуля на этом Mac — 9,5 мин (CLAP 6 мин,
 остальные модели 3,5 мин из-за медленного essentia.upf.edu), повторная после правки кода —
@@ -280,6 +300,7 @@ float32, Beat This! на время куска держит матрицы вн�
 | Переменная | По умолчанию | Что задаёт |
 |---|---|---|
 | `ML_MODELS_DIR` | `./models` (в образе `/app/models`) | папка моделей |
+| `ML_MTG_MODELS_DIR` | `ML_MODELS_DIR` (в образе `/models`) | папка моделей MTG: `ml serve` качает их туда при запуске, если их нет |
 | `ML_THREADS` | доступные ядра (квота cgroup `--cpus` учитывается) | потоки onnxruntime на модель; модели идут по очереди |
 | `ML_FILES_ROOT` | — | папка, внутри которой разрешён `path`; без неё — только `url` |
 | `ML_MAX_DURATION_S` | `900` | дольше — анализируется начало |

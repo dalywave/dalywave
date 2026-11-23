@@ -1,0 +1,158 @@
+# DalyWave on your own server: prebuilt images, your music folder, files on your own disk.
+# Guide: docs/self-hosting/install.md. Settings live in .env next to this file (copy .env.example).
+#
+#   docker compose up -d    → open DALYWAVE_PUBLIC_URL and create the administrator right away
+#
+# One port is published (HTTP_PORT, 8400 by default) and it speaks plain HTTP: there is no TLS here.
+# To serve it on the internet, put any reverse proxy in front (Caddy, nginx, Traefik, Cloudflare Tunnel):
+#   - HTTP_PORT=127.0.0.1:8400 so only the proxy on this host can reach it;
+#   - DALYWAVE_PUBLIC_URL=https://music.example.com — exactly the address people open;
+#   - pass WebSocket upgrades (/api/ws), allow request bodies up to 1 GB (uploads), don't buffer
+#     responses (audio streams with Range), and set X-Forwarded-For to the client address.
+#   Caddy:  music.example.com { reverse_proxy 127.0.0.1:8400 }
+# A proxy running in Docker can join this project's network instead and use http://api:8400.
+name: dalywave
+
+x-server: &server
+  image: ghcr.io/dalywave/server:${IMAGE_TAG:-latest}
+  restart: unless-stopped
+  # Everything from .env reaches the server: DALYWAVE_* settings, any DALYWAVE_OIDC_<ID>_* providers
+  env_file: [.env]
+  # Wiring inside this project; .env can't override these (except DALYWAVE_STORAGE)
+  environment:
+    # Required: the API and the worker must share the key — it signs the file links they hand out
+    DALYWAVE_PUBLIC_URL: ${DALYWAVE_PUBLIC_URL:?set DALYWAVE_PUBLIC_URL in .env}
+    DALYWAVE_SECRET_KEY: ${DALYWAVE_SECRET_KEY:?set DALYWAVE_SECRET_KEY in .env (openssl rand -hex 32)}
+    DALYWAVE_DATABASE_URL: postgres://dalywave:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/dalywave
+    # Server files (covers, copies for slow networks and for formats browsers can't play, clips):
+    # the `data` volume. s3 is the other option — docs/self-hosting/storage.md
+    DALYWAVE_STORAGE: ${DALYWAVE_STORAGE:-fs}
+    DALYWAVE_STORAGE_PATH: /data
+    # Your music, read-only. More folders: mount them as /music2 … and list them here as /music:/music2
+    DALYWAVE_MUSIC_DIRS: /music
+    # The analysis service downloads files from the API over this project's network
+    DALYWAVE_STORAGE_ML_URL: http://api:8400
+    DALYWAVE_ML_URL: http://ml:8403
+    # Used only with the downloader (profile "downloader" below)
+    DALYWAVE_FETCHER_URL: http://fetcher:8402
+    # Database dumps of the backup service: Admin → Backups
+    DALYWAVE_BACKUP_DIR: /backup
+    # mDNS announcements don't leave a Docker bridge network
+    DALYWAVE_MDNS: "false"
+  volumes:
+    - data:/data
+    - ${MUSIC_DIR:?set MUSIC_DIR in .env}:/music:ro
+    - backups:/backup:ro
+  depends_on:
+    db: { condition: service_healthy }
+
+services:
+  # API, web interface and file links for players
+  api:
+    <<: *server
+    ports:
+      - ${HTTP_PORT:-8400}:8400
+
+  # Background jobs: music folder scans, loudness and waveforms, covers, sound analysis queue.
+  # Same image, another command; no HTTP of its own
+  worker:
+    <<: *server
+    command: ["dalywave-worker"]
+    depends_on:
+      db: { condition: service_healthy }
+      api: { condition: service_started }
+    # The image's health check calls the API, which the worker doesn't serve
+    healthcheck:
+      disable: true
+    stop_grace_period: 40s
+
+  # Sound analysis: tempo, key, mood, beat grid and sound vectors. "My wave", radio, DJ transitions
+  # and search by sound are built on it. Without it music still plays and the wave falls back to
+  # shuffling your library, search by sound answers 503 and Admin → Health shows ml as down.
+  # ~1.3 GB RAM (up to ~2 GB on long tracks), one track at a time; the first pass over a big library
+  # keeps 2 cores busy for a while. Off on small machines: ML_REPLICAS=0 in .env.
+  # First start downloads the MTG models (Discogs-EffNet and its heads, 23 MB) from essentia.upf.edu
+  # into the ml-models volume — they are CC BY-NC-SA 4.0, non-commercial use only, so the image
+  # doesn't ship them; ATTRIBUTION.md is written next to them. Needs internet once; until then the
+  # container isn't healthy. Later starts use the volume.
+  ml:
+    image: ghcr.io/dalywave/ml:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    cpus: 2
+    mem_limit: 3g
+    environment:
+      # Longer tracks are analysed from the start up to this many seconds
+      ML_MAX_DURATION_S: "900"
+    volumes:
+      - ml-models:/models
+    deploy:
+      replicas: ${ML_REPLICAS:-1}
+
+  db:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dalywave
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: dalywave
+    volumes:
+      - postgres:/var/lib/postgresql
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dalywave -d dalywave"]
+      interval: 5s
+      retries: 20
+
+  # Daily database dump to the `backups` volume, the last 14 are kept.
+  # Copy them off this machine: docker compose cp backup:/backup ./backups
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: dalywave
+      PGDATABASE: dalywave
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -u -o pipefail
+        while true; do
+          f="/backup/dalywave-$$(date +%F).sql.gz"
+          if pg_dump --no-owner | gzip > "$$f.tmp"; then mv "$$f.tmp" "$$f"; else rm -f "$$f.tmp"; echo "pg_dump failed" >&2; fi
+          find /backup -name 'dalywave-*.sql.gz' -mtime +13 -delete
+          sleep 86400
+        done
+    volumes:
+      - backups:/backup
+    depends_on:
+      db: { condition: service_healthy }
+
+  # ─── Downloader: off ───
+  # Downloading recordings from YouTube may break its terms of service — turn it on only for yourself
+  # and knowing that. Needs all three in .env:
+  #   COMPOSE_PROFILES=downloader  DALYWAVE_DOWNLOADER=true  DALYWAVE_FETCHER_MODE=remote,server
+  # The Deezer catalog is a separate switch (DALYWAVE_DEEZER) with no extra services.
+  fetcher:
+    profiles: [downloader]
+    image: ghcr.io/dalywave/fetcher:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      FETCHER_POT_URL: http://pot:4416
+      FETCHER_PROXY: ${FETCHER_PROXY:-}
+    volumes:
+      - fetcher:/data
+    depends_on: [pot]
+
+  # PO tokens for yt-dlp; only the fetcher talks to it
+  pot:
+    profiles: [downloader]
+    image: brainicism/bgutil-ytdlp-pot-provider:2.0.2-deno
+    restart: unless-stopped
+
+volumes:
+  postgres:
+  data:
+  backups:
+  ml-models:
+  fetcher:
