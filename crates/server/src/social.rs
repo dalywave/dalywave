@@ -260,7 +260,7 @@ async fn now_playing(db: &PgPool, user: Uuid) -> AppResult<Option<PlaybackState>
     }
     let online = sqlx::query_scalar!(
         r#"SELECT EXISTS (SELECT 1 FROM connect_devices
-                          WHERE user_id = $1 AND id = $2 AND connection IS NOT NULL
+                          WHERE scope = $1 AND id = $2 AND connection IS NOT NULL
                             AND last_seen_at > now() - make_interval(secs => $3)) AS "e!""#,
         user,
         active,

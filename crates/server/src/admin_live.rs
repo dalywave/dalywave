@@ -66,7 +66,9 @@ pub async fn people(db: &PgPool, only: Option<Uuid>) -> AppResult<Vec<LivePerson
                   EXISTS (SELECT 1 FROM private_sessions s
                           WHERE s.user_id = u.id AND s.started_at <= now() AND s.ended_at > now()) AS "private!"
            FROM users u
-           LEFT JOIN playback_state p ON p.user_id = u.id
+           -- У общего аккаунта демо снимков несколько (по входу гостя): последний
+           LEFT JOIN LATERAL (SELECT active_connect_id, state FROM playback_state
+                              WHERE user_id = u.id ORDER BY updated_at DESC LIMIT 1) p ON true
            WHERE u.id = ANY($1) AND NOT u.disabled"#,
         &ids,
     )

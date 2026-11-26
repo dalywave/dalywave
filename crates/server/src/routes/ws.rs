@@ -102,10 +102,11 @@ pub async fn ws(
 
 fn allowed(principal: &Principal, link: &Link, to: &Audience) -> bool {
     match to {
-        Audience::User(id) => *id == principal.user.id,
+        // Человеку и его области «Где играть»: у гостя демо это только его вход, у остальных — он сам
+        Audience::User(id) => *id == principal.user.id || *id == principal.scope().id,
         Audience::Admins => principal.roles.contains(&Role::Admin),
         Audience::All => true,
-        Audience::Device { .. } => connect::addressed(link, principal.user.id, to),
+        Audience::Device { .. } => connect::addressed(link, principal.scope().id, to),
         Audience::Jam { host, .. } => *host == principal.user.id,
     }
 }
@@ -136,7 +137,7 @@ async fn recheck(st: &AppState, principal: &mut Principal) -> bool {
     .await;
     match row {
         Ok(Some(r)) => {
-            principal.roles = parse_roles(&r.roles);
+            principal.roles = auth::effective_roles(parse_roles(&r.roles), principal.demo);
             !principal.roles.is_empty()
         }
         Ok(None) => false,
@@ -216,7 +217,7 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
                 Some(Message::Ping(Default::default()))
             }
             _ = presence.tick() => {
-                connect::check(&st, principal.user.id, &mut link).await;
+                connect::check(&st, principal.scope(), &mut link).await;
                 None
             }
             _ = session.tick() => {
@@ -239,6 +240,6 @@ async fn connection(st: AppState, mut principal: Principal, socket: WebSocket) {
         }
     }
     let _ = sink.close().await;
-    connect::release(&st, principal.user.id, &link).await;
+    connect::release(&st, principal.scope(), &link).await;
     tracing::debug!(user = %principal.user.id, "websocket closed");
 }

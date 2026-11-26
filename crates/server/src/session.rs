@@ -58,6 +58,8 @@ pub struct NewSession<'a> {
     pub method: Method,
     pub user_agent: Option<&'a str>,
     pub ip: IpAddr,
+    /// Сессия от другой сессии гостя демо (часы, телевизор): корневая сессия этого входа
+    pub guest: Option<Uuid>,
 }
 
 fn ttl_days(kind: SessionKind) -> i32 {
@@ -82,8 +84,8 @@ pub async fn create(conn: &mut PgConnection, new: NewSession<'_>) -> AppResult<(
     .execute(&mut *conn)
     .await?;
     let id = sqlx::query_scalar!(
-        "INSERT INTO sessions (user_id, device_id, kind, auth_method, token_hash, expires_at, user_agent, ip)
-         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6), $7, $8)
+        "INSERT INTO sessions (user_id, device_id, kind, auth_method, token_hash, expires_at, user_agent, ip, guest)
+         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6), $7, $8, $9)
          RETURNING id",
         new.user_id,
         new.device_id,
@@ -93,6 +95,7 @@ pub async fn create(conn: &mut PgConnection, new: NewSession<'_>) -> AppResult<(
         ttl_days(kind),
         user_agent,
         IpNet::from(new.ip),
+        new.guest,
     )
     .fetch_one(&mut *conn)
     .await?;
@@ -119,6 +122,8 @@ pub struct Found {
     pub disabled: bool,
     /// Логин своего аккаунта: по нему узнаётся общий аккаунт демо
     pub username: Option<String>,
+    /// Корневая сессия входа гостя демо, если эта выдана от неё
+    pub guest: Option<Uuid>,
 }
 
 /// Ищет живую сессию по токену и сдвигает её срок. Токен сайта не годится как токен приложения и наоборот.
@@ -126,7 +131,7 @@ pub async fn find(db: &PgPool, token: &str, kind: SessionKind) -> AppResult<Opti
     let found = sqlx::query_as!(
         Found,
         r#"SELECT s.id, s.user_id, s.device_id, s.auth_method, s.last_seen_at,
-                  u.name AS user_name, u.email, u.avatar_url, u.roles, u.disabled, u.username
+                  u.name AS user_name, u.email, u.avatar_url, u.roles, u.disabled, u.username, s.guest
            FROM sessions s
            JOIN users u ON u.id = s.user_id
            LEFT JOIN devices d ON d.id = s.device_id

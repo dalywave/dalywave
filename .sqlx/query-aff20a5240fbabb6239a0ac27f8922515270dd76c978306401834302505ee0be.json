@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT active_connect_id, state FROM playback_state WHERE user_id = $1",
+  "query": "SELECT active_connect_id, (state ->> 'playing')::boolean AS \"playing?\"\n           FROM playback_state WHERE scope = $1 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -16,14 +16,9 @@
       },
       {
         "ordinal": 1,
-        "name": "state",
-        "type_info": "Jsonb",
-        "origin": {
-          "Table": {
-            "table": "playback_state",
-            "name": "state"
-          }
-        }
+        "name": "playing?",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -33,8 +28,8 @@
     },
     "nullable": [
       true,
-      false
+      null
     ]
   },
-  "hash": "d248d56d6c7ea930e99e9e6473926f676c04058ee094c795eaeb666e137be846"
+  "hash": "aff20a5240fbabb6239a0ac27f8922515270dd76c978306401834302505ee0be"
 }

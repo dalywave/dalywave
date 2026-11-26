@@ -509,6 +509,7 @@ async fn app_device_takes_its_name_from_login(db: PgPool) {
             method: dalywave_server::session::Method::Oidc,
             user_agent: None,
             ip: std::net::Ipv4Addr::LOCALHOST.into(),
+            guest: None,
         },
     )
     .await

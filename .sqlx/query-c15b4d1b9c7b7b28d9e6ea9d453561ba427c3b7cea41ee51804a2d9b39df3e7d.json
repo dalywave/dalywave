@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT active_connect_id, state FROM playback_state WHERE user_id = $1 FOR UPDATE",
+  "query": "SELECT active_connect_id, state FROM playback_state WHERE scope = $1 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -36,5 +36,5 @@
       false
     ]
   },
-  "hash": "720a162e0b735e0c42a01654c3474280d39cd502b23f0313d9785146ccd15947"
+  "hash": "c15b4d1b9c7b7b28d9e6ea9d453561ba427c3b7cea41ee51804a2d9b39df3e7d"
 }

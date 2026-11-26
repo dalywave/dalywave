@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT from_id, to_id, decided, streak_dir, streak, prefer FROM connect_choices\n         WHERE user_id = $1 AND decided_at > now() - make_interval(secs => $2)\n         ORDER BY decided_at DESC LIMIT 1 FOR UPDATE",
+  "query": "SELECT from_id, to_id, decided, streak_dir, streak, prefer FROM connect_choices\n         WHERE scope = $1 AND decided_at > now() - make_interval(secs => $2)\n         ORDER BY decided_at DESC LIMIT 1 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -85,5 +85,5 @@
       true
     ]
   },
-  "hash": "3674ec1eb2b4c6216b3be94d567e471b799c721d70098c25182c8b5e51164bf9"
+  "hash": "89d0d747d697675990bec9b4ea96e9c2bdfdad89e68a98f6f5ea6f5f354cd1b0"
 }

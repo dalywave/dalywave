@@ -38,7 +38,7 @@ use crate::{
     extract::{Json, Path},
     jam, party,
     realtime::{self, Audience},
-    routes::{accounts::demo_user, auth::open_web_session},
+    routes::{accounts::demo_user, auth::open_guest_web_session},
     session::{self, Method, NewSession},
     state::{AppState, ClientIp},
     users,
@@ -225,7 +225,7 @@ pub async fn token(
     let claimed = sqlx::query!(
         "UPDATE tv_logins SET used_at = now()
          WHERE device_code_hash = $1 AND used_at IS NULL AND approved_at IS NOT NULL AND expires_at > now()
-         RETURNING id, user_id, auth_method, platform, device_name",
+         RETURNING id, user_id, auth_method, platform, device_name, guest",
         &hash[..],
     )
     .fetch_optional(&mut *tx)
@@ -257,7 +257,8 @@ pub async fn token(
     let platform: Platform = row.platform.parse().map_err(anyhow::Error::from)?;
     if platform == Platform::Web {
         tx.commit().await?;
-        let (jar, session_id) = open_web_session(&st, jar, &headers, ip, user.id, method).await?;
+        let (jar, session_id) =
+            open_guest_web_session(&st, jar, &headers, ip, user.id, method, row.guest).await?;
         sqlx::query!(
             "UPDATE tv_logins SET session_id = $2 WHERE id = $1",
             row.id,
@@ -291,6 +292,8 @@ pub async fn token(
         method,
         user_agent: user_agent(&headers),
         ip,
+        // Подтвердил гость демо — телевизор в его входе, остальным гостям не виден
+        guest: row.guest,
     };
     let (session_id, token) = session::create(&mut tx, new).await?;
     sqlx::query!(
@@ -411,11 +414,12 @@ pub async fn approve(
     .await?
     .unwrap_or_else(|| "oidc".into());
     let approved = sqlx::query!(
-        "UPDATE tv_logins SET user_id = $2, auth_method = $3, approved_at = now()
+        "UPDATE tv_logins SET user_id = $2, auth_method = $3, approved_at = now(), guest = $4
          WHERE user_code = $1 AND used_at IS NULL AND approved_at IS NULL AND expires_at > now()",
         code,
         principal.user.id,
         method,
+        principal.guest,
     )
     .execute(&st.db)
     .await?;

@@ -696,6 +696,19 @@ pub(crate) async fn open_web_session(
     user_id: Uuid,
     method: Method,
 ) -> AppResult<(CookieJar, Uuid)> {
+    open_guest_web_session(st, jar, headers, ip, user_id, method, None).await
+}
+
+/// То же, но сессия выдана от другой сессии гостя демо (браузер телевизора по коду) — в том же входе.
+pub(crate) async fn open_guest_web_session(
+    st: &AppState,
+    jar: CookieJar,
+    headers: &HeaderMap,
+    ip: IpAddr,
+    user_id: Uuid,
+    method: Method,
+    guest: Option<Uuid>,
+) -> AppResult<(CookieJar, Uuid)> {
     let mut tx = st.db.begin().await?;
     if let Some(old) = jar.get(SESSION_COOKIE) {
         session::revoke_token(&mut tx, old.value()).await?;
@@ -706,6 +719,7 @@ pub(crate) async fn open_web_session(
         method,
         user_agent: user_agent(headers),
         ip,
+        guest,
     };
     let (session_id, token) = session::create(&mut tx, new).await?;
     let payload = json!({ "via": method.as_str(), "sessionId": session_id, "ip": ip.to_string() });
@@ -1130,6 +1144,7 @@ pub async fn app_token(
         method: Method::parse(row.auth_method.as_deref().unwrap_or_default()),
         user_agent: user_agent(&headers),
         ip,
+        guest: None,
     };
     let (session_id, token) = session::create(&mut tx, new).await?;
     sqlx::query!(
@@ -1244,6 +1259,8 @@ pub async fn app_pair(
         method,
         user_agent: user_agent(&headers),
         ip,
+        // Часы гостя демо — в его же входе: видят только его устройства
+        guest: principal.guest,
     };
     let (session_id, token) = session::create(&mut tx, new).await?;
     let payload = json!({

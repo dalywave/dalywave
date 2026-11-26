@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE connect_devices\n         SET last_input_at = now() - make_interval(secs => $4), input_source = $5, headphones = $6,\n             presence_at = now()\n         WHERE scope = $1 AND id = $2 AND connection = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Float8",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9973a0d6af4c9d1c89bf44cd1f2a044a0772e247161dc91867f7f1b6daacc5b0"
+}

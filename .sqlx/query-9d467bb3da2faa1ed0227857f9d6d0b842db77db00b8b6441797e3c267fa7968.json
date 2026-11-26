@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE tv_logins SET used_at = now()\n         WHERE device_code_hash = $1 AND used_at IS NULL AND approved_at IS NOT NULL AND expires_at > now()\n         RETURNING id, user_id, auth_method, platform, device_name",
+  "query": "UPDATE tv_logins SET used_at = now()\n         WHERE device_code_hash = $1 AND used_at IS NULL AND approved_at IS NOT NULL AND expires_at > now()\n         RETURNING id, user_id, auth_method, platform, device_name, guest",
   "describe": {
     "columns": [
       {
@@ -57,6 +57,17 @@
             "name": "device_name"
           }
         }
+      },
+      {
+        "ordinal": 5,
+        "name": "guest",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tv_logins",
+            "name": "guest"
+          }
+        }
       }
     ],
     "parameters": {
@@ -69,8 +80,9 @@
       true,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "9dd28963d144434a0e6e310ad05f442d4fe3802107b99bb904faef7f004f703f"
+  "hash": "9d467bb3da2faa1ed0227857f9d6d0b842db77db00b8b6441797e3c267fa7968"
 }

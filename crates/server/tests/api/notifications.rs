@@ -124,7 +124,7 @@ async fn fake_apns() -> (Fake, SocketAddr) {
     (fake.clone(), serve(router).await)
 }
 
-fn vapid() -> VapidConfig {
+pub(crate) fn vapid() -> VapidConfig {
     let (public, private) = webpush::generate_keys().unwrap();
     let mut key = [0u8; 32];
     key.copy_from_slice(&b64_decode(&private).unwrap());

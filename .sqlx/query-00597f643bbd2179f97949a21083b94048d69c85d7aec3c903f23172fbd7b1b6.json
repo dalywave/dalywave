@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT active_connect_id FROM playback_state WHERE user_id = $1",
+  "query": "SELECT active_connect_id, state FROM playback_state WHERE scope = $1",
   "describe": {
     "columns": [
       {
@@ -13,6 +13,17 @@
             "name": "active_connect_id"
           }
         }
+      },
+      {
+        "ordinal": 1,
+        "name": "state",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "playback_state",
+            "name": "state"
+          }
+        }
       }
     ],
     "parameters": {
@@ -21,8 +32,9 @@
       ]
     },
     "nullable": [
-      true
+      true,
+      false
     ]
   },
-  "hash": "e2bafcdfd036ede2ff67808a7ceddcaa2b5b84a9e1f6df2a38b0f16b1d4b4484"
+  "hash": "00597f643bbd2179f97949a21083b94048d69c85d7aec3c903f23172fbd7b1b6"
 }

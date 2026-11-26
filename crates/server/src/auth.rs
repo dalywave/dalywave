@@ -55,6 +55,9 @@ pub struct Principal {
     pub device_id: Option<Uuid>,
     /// Общий аккаунт публичного демо (`DALYWAVE_DEMO_ACCOUNT`)
     pub demo: bool,
+    /// Вход гостя демо — id корневой сессии (часы и телевизор, вошедшие от неё, — в том же входе).
+    /// У остальных — `None`
+    pub guest: Option<Uuid>,
 }
 
 impl Principal {
@@ -82,6 +85,14 @@ impl Principal {
             )));
         }
         Ok(())
+    }
+
+    /// Чьи устройства и «что играет»: человек, а у гостя демо — только его вход.
+    pub fn scope(&self) -> crate::connect::Scope {
+        crate::connect::Scope {
+            user: self.user.id,
+            id: self.guest.unwrap_or(self.user.id),
+        }
     }
 
     /// 403 `demo_account`: пароль, логин, входы и сам аккаунт демо общие для всех гостей.
@@ -166,6 +177,7 @@ fn principal_from(
             via,
             device_id: s.device_id,
             demo,
+            guest: demo.then(|| s.guest.unwrap_or(s.id)),
         }
     })
 }

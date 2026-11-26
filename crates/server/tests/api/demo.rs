@@ -435,3 +435,258 @@ async fn demo_sign_in_is_rate_limited(db: PgPool) {
     let res = demo_login(&app, "203.0.113.21").await;
     assert_eq!(res.status, StatusCode::OK);
 }
+
+fn device_ids(overview: &Value) -> Vec<String> {
+    let mut ids: Vec<String> = overview["devices"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d["id"].as_str().unwrap().to_string())
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// Пульт по HTTP (часы, телевизор): отметиться устройством `id`.
+async fn remote_hello(app: &TestApp, auth: &Auth, id: &str, kind: &str, platform: &str) -> Resp {
+    let res = app
+        .post(
+            "/api/devices/remote",
+            json!({ "deviceId": id, "name": format!("Устройство {id}"), "kind": kind,
+                    "platform": platform, "capabilities": { "volume": false, "remote": kind == "watch" } }),
+            auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    res
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn demo_guests_do_not_see_or_control_each_other(db: PgPool) {
+    use crate::connect::{device, next_of, none_of, send, state};
+
+    let app = demo_app(db).await;
+    let admin = set_up(&app).await;
+    create_demo(&app, &admin).await;
+    let ann = demo_cookie(&app, "203.0.113.1").await;
+    let bob = demo_cookie(&app, "203.0.113.2").await;
+    let addr = app.serve().await;
+
+    let mut a = device(addr, &ann, "tab-a", "web").await;
+    assert_eq!(
+        device_ids(&next_of(&mut a, "connect.devices").await),
+        ["tab-a"]
+    );
+    let mut b = device(addr, &bob, "tab-b", "web").await;
+    assert_eq!(
+        device_ids(&next_of(&mut b, "connect.devices").await),
+        ["tab-b"]
+    );
+    // Ни список, ни события чужого входа не приходят
+    none_of(&mut a, "connect.devices").await;
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &ann).await.body),
+        ["tab-a"]
+    );
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &bob).await.body),
+        ["tab-b"]
+    );
+
+    // Аня слушает: у Бори — ни активного устройства, ни её снимка
+    send(&mut a, json!({ "type": "connect.claim" })).await;
+    assert_eq!(next_of(&mut a, "connect.active").await["deviceId"], "tab-a");
+    send(
+        &mut a,
+        json!({ "type": "connect.state", "state": state(1000, true) }),
+    )
+    .await;
+    next_of(&mut a, "connect.state").await;
+    none_of(&mut b, "connect.active").await;
+    none_of(&mut b, "connect.state").await;
+    let overview = app.get("/api/devices", &bob).await;
+    assert_eq!(overview.body["activeDeviceId"], Value::Null);
+    assert_eq!(overview.body["state"], Value::Null);
+
+    // Команды и перенос на чужое устройство: «не в сети», до Ани ничего не доходит
+    send(
+        &mut b,
+        json!({ "type": "connect.command", "id": "c1", "to": "tab-a", "command": { "action": "pause" } }),
+    )
+    .await;
+    assert_eq!(next_of(&mut b, "connect.ack").await["error"], "offline");
+    send(
+        &mut b,
+        json!({ "type": "connect.transfer", "id": "t1", "to": "tab-a" }),
+    )
+    .await;
+    assert_eq!(next_of(&mut b, "connect.ack").await["error"], "offline");
+    let res = app
+        .post(
+            "/api/devices/remote/command",
+            json!({ "id": "c2", "to": "tab-a", "command": { "action": "next" } }),
+            &bob,
+        )
+        .await;
+    assert_eq!(res.body["ok"], false, "{}", res.text);
+    assert_eq!(res.body["error"], "offline");
+    let res = app
+        .post(
+            "/api/devices/remote/transfer",
+            json!({ "id": "t2", "to": "tab-a" }),
+            &bob,
+        )
+        .await;
+    assert_eq!(res.body["error"], "offline", "{}", res.text);
+    let res = app
+        .call(
+            Method::PATCH,
+            "/api/devices/tab-a",
+            Some(json!({ "mediaPlayer": true })),
+            &bob,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
+    none_of(&mut a, "connect.command").await;
+    none_of(&mut a, "connect.active").await;
+
+    // Тот же id устройства у Бори — своё устройство: Анино не забирает и её музыку не трогает
+    let mut b2 = device(addr, &bob, "tab-a", "web").await;
+    send(&mut b2, json!({ "type": "connect.claim" })).await;
+    assert_eq!(
+        next_of(&mut b2, "connect.active").await["deviceId"],
+        "tab-a"
+    );
+    send(
+        &mut b2,
+        json!({ "type": "connect.state", "state": state(9, false) }),
+    )
+    .await;
+    none_of(&mut a, "connect.state").await;
+    let mine = app.get("/api/devices", &ann).await;
+    assert_eq!(device_ids(&mine.body), ["tab-a"]);
+    assert!(mine.body["state"]["positionMs"].as_u64().unwrap() >= 1000);
+    assert_eq!(mine.body["devices"][0]["online"], true);
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &bob).await.body),
+        ["tab-a", "tab-b"]
+    );
+    drop((a, b, b2));
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn demo_child_devices_stay_in_their_sign_in(db: PgPool) {
+    let app = demo_app(db).await;
+    let admin = set_up(&app).await;
+    create_demo(&app, &admin).await;
+    let ann = demo_cookie(&app, "203.0.113.1").await;
+
+    // iPhone гостя («Войти в демо» в приложении) и его часы — один вход
+    let res = app.get(&app_start("s1", true), &Auth::None).await;
+    let phone = Auth::Bearer(exchange(&app, &res.location()).await);
+    let res = app
+        .post(
+            "/api/auth/app/pair",
+            json!({ "platform": "watchos" }),
+            &phone,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text);
+    let watch = Auth::Bearer(res.body["token"].as_str().unwrap().to_string());
+    remote_hello(&app, &watch, "watch-1", "watch", "watchos").await;
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &phone).await.body),
+        ["watch-1"]
+    );
+    assert_eq!(app.get("/api/auth/me", &watch).await.body["demo"], true);
+
+    // Телевизор, которому код подтвердила Аня на сайте, — в её входе
+    let code = tv_code(&app).await;
+    let res = app
+        .post(
+            "/api/auth/tv/approve",
+            json!({ "userCode": code["userCode"] }),
+            &ann,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.text);
+    let res = app
+        .post(
+            "/api/auth/tv/token",
+            json!({ "deviceCode": code["deviceCode"] }),
+            &Auth::None,
+        )
+        .await;
+    let tv = Auth::Bearer(res.body["token"].as_str().unwrap().to_string());
+    remote_hello(&app, &tv, "tv-1", "tv", "tvos").await;
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &ann).await.body),
+        ["tv-1"]
+    );
+
+    // Чужие часы и телевизор не видны ни Ане, ни iPhone, ни новому гостю
+    let bob = demo_cookie(&app, "203.0.113.2").await;
+    assert!(device_ids(&app.get("/api/devices", &bob).await.body).is_empty());
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &phone).await.body),
+        ["watch-1"]
+    );
+    let res = remote_hello(&app, &tv, "tv-1", "tv", "tvos").await;
+    assert_eq!(device_ids(&res.body), ["tv-1"]);
+
+    // Обычный человек по-прежнему видит все свои устройства: область — он сам
+    remote_hello(&app, &admin, "owner-tv", "tv", "tvos").await;
+    assert_eq!(
+        device_ids(&app.get("/api/devices", &admin).await.body),
+        ["owner-tv"]
+    );
+}
+
+#[sqlx::test(migrator = "dalywave_server::MIGRATOR")]
+async fn demo_push_is_not_registered(db: PgPool) {
+    let vapid = crate::notifications::vapid();
+    let app = TestApp::with(db, move |c| {
+        c.local_auth = true;
+        c.demo_account = Some("demo".into());
+        c.push.vapid = Some(vapid);
+    })
+    .await;
+    let admin = set_up(&app).await;
+    create_demo(&app, &admin).await;
+    let guest = demo_cookie(&app, "203.0.113.1").await;
+
+    // Владельцу Web Push предлагается, гостю — нет
+    assert!(app.get("/api/notifications/push", &admin).await.body["webPushKey"].is_string());
+    let info = app.get("/api/notifications/push", &guest).await;
+    assert_eq!(info.status, StatusCode::OK);
+    assert_eq!(
+        info.body,
+        json!({ "webPushKey": null, "apns": false, "fcm": false, "devices": [] })
+    );
+    let res = app
+        .post(
+            "/api/notifications/push",
+            json!({
+                "channel": "webpush",
+                "subscription": { "endpoint": "https://push.example.com/send/abc",
+                                  "keys": { "p256dh": "BN", "auth": "x" } },
+            }),
+            &guest,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::FORBIDDEN, "{}", res.text);
+    assert_eq!(res.code(), "demo_account");
+    let res = app
+        .post(
+            "/api/notifications/push",
+            json!({ "channel": "apns", "token": "abcdef" }),
+            &guest,
+        )
+        .await;
+    assert_eq!(res.code(), "demo_account");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM push_subscriptions")
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    assert_eq!(n, 0);
+}

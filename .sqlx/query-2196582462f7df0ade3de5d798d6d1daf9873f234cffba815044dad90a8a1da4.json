@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, kind, platform, app_version, capabilities, last_seen_at, choice, media_player,\n                  (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices\n           WHERE user_id = $1\n             AND (id = $2\n                  OR (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3))\n                  OR (kind <> 'web' AND last_seen_at > now() - interval '30 days'))\n           ORDER BY (id = $2) DESC NULLS LAST,\n                    (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) DESC,\n                    last_seen_at DESC\n           LIMIT 30",
+  "query": "SELECT id, name, kind, platform, app_version, capabilities, last_seen_at, choice, media_player,\n                  (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices\n           WHERE scope = $1\n             AND (id = $2\n                  OR (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3))\n                  OR (kind <> 'web' AND last_seen_at > now() - interval '30 days'))\n           ORDER BY (id = $2) DESC NULLS LAST,\n                    (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) DESC,\n                    last_seen_at DESC\n           LIMIT 30",
   "describe": {
     "columns": [
       {
@@ -129,5 +129,5 @@
       null
     ]
   },
-  "hash": "6ade3290e52bfd9f51d91c4635e00984cdd8a366bfb81be27e75c1e521ab7cfc"
+  "hash": "2196582462f7df0ade3de5d798d6d1daf9873f234cffba815044dad90a8a1da4"
 }

@@ -33,10 +33,9 @@ use dalywave_protocol::{
     },
     realtime::ServerEvent,
 };
-use uuid::Uuid;
 
 use crate::{
-    connect::{self, Link},
+    connect::{self, Link, Scope},
     error::{AppError, AppResult},
     realtime::{self, Audience},
     state::AppState,
@@ -187,7 +186,7 @@ pub fn is_new_music(cmd: &RemoteCommand) -> bool {
 /// Пульт `from` выбрал музыку: решить, где ей играть, и ответить `connect.placed`.
 pub async fn pick(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     from: String,
     send: ConnectSend,
     pick: ConnectPick,
@@ -196,8 +195,8 @@ pub async fn pick(
     // Блокировка — на всё решение: второй пульт ждёт и видит уже новое активное устройство
     let row = sqlx::query!(
         r#"SELECT active_connect_id, (state ->> 'playing')::boolean AS "playing?"
-           FROM playback_state WHERE user_id = $1 FOR UPDATE"#,
-        user,
+           FROM playback_state WHERE scope = $1 FOR UPDATE"#,
+        scope.id,
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -222,8 +221,8 @@ pub async fn pick(
         r#"SELECT id, kind, choice, media_player, last_input_at, headphones, presence_at,
                   coalesce((capabilities->>'remote')::boolean, false) AS "remote!",
                   (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS "online!"
-           FROM connect_devices WHERE user_id = $1 AND id = ANY($2)"#,
-        user,
+           FROM connect_devices WHERE scope = $1 AND id = ANY($2)"#,
+        scope.id,
         &[from.clone(), active.clone()][..],
         dalywave_protocol::connect::ONLINE_WINDOW_SECS as f64,
     )
@@ -233,7 +232,7 @@ pub async fn pick(
     let there = rows.iter().find(|r| r.id == active);
     // Пульт без звука (часы) играть не может; активное пропало — играть здесь
     let Some(me) = me.filter(|m| !m.remote) else {
-        return forward(st, user, from, send, &active, PlaceReason::Setting);
+        return forward(st, scope, from, send, &active, PlaceReason::Setting);
     };
     let Some(there) = there.filter(|t| t.online) else {
         tx.rollback().await?;
@@ -241,8 +240,8 @@ pub async fn pick(
     };
     let learned = sqlx::query_scalar!(
         "SELECT prefer FROM connect_choices
-         WHERE user_id = $1 AND from_id = $2 AND to_id = $3 AND prefer_until > now()",
-        user,
+         WHERE scope = $1 AND from_id = $2 AND to_id = $3 AND prefer_until > now()",
+        scope.id,
         from,
         active,
     )
@@ -269,16 +268,16 @@ pub async fn pick(
         now,
     };
     let p = decide(&facts);
-    tracing::info!(%user, %from, to = %active, here = p.here, reason = %p.reason, "music placed");
+    tracing::info!(user = %scope.user, %from, to = %active, here = p.here, reason = %p.reason, "music placed");
     if p.reason != PlaceReason::Setting {
         // Решение автоматики — чтобы узнать поправку. Прежнее решение никто не поправил: серия прервалась
         sqlx::query!(
-            "INSERT INTO connect_choices (user_id, from_id, to_id, decided, decided_at)
+            "INSERT INTO connect_choices (scope, from_id, to_id, decided, decided_at)
              VALUES ($1, $2, $3, $4, now())
-             ON CONFLICT (user_id, from_id, to_id) DO UPDATE SET
+             ON CONFLICT (scope, from_id, to_id) DO UPDATE SET
                  streak = CASE WHEN connect_choices.decided_at IS NOT NULL THEN 0 ELSE connect_choices.streak END,
                  decided = EXCLUDED.decided, decided_at = now()",
-            user,
+            scope.id,
             from,
             active,
             dir(p.here),
@@ -288,12 +287,12 @@ pub async fn pick(
     }
     if !p.here {
         tx.commit().await?;
-        return forward(st, user, from, send, &active, p.reason);
+        return forward(st, scope, from, send, &active, p.reason);
     }
     // Здесь: пульт сразу становится активным (снимок прежнего остаётся до первого своего)
     sqlx::query!(
-        "UPDATE playback_state SET active_connect_id = $2 WHERE user_id = $1",
-        user,
+        "UPDATE playback_state SET active_connect_id = $2 WHERE scope = $1",
+        scope.id,
         from,
     )
     .execute(&mut *tx)
@@ -301,7 +300,7 @@ pub async fn pick(
     tx.commit().await?;
     realtime::deliver(
         &st.hub,
-        Audience::User(user),
+        Audience::User(scope.id),
         ServerEvent::ConnectActive(ConnectActive {
             device_id: Some(from.clone()),
             from: Some(active.clone()),
@@ -309,14 +308,14 @@ pub async fn pick(
             state: None,
         }),
     );
-    connect::announce(&st.db, &st.hub, user).await?;
+    connect::announce(&st.db, &st.hub, scope).await?;
     Ok(placed(true, &from, &active, p.reason))
 }
 
 /// Музыка играет там: команда — активному устройству, пульту — где она заиграет.
 fn forward(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     from: String,
     send: ConnectSend,
     active: &str,
@@ -325,7 +324,7 @@ fn forward(
     realtime::deliver(
         &st.hub,
         Audience::Device {
-            user,
+            user: scope.id,
             device: active.to_string(),
         },
         ServerEvent::ConnectCommand(ConnectCommand {
@@ -344,13 +343,13 @@ fn forward(
 }
 
 /// Музыку перенесли на `to` по просьбе устройства `by`: если это поправка недавнего решения — учесть.
-pub async fn transferred(st: &AppState, user: Uuid, by: &str, to: &str) -> AppResult<()> {
+pub async fn transferred(st: &AppState, scope: Scope, by: &str, to: &str) -> AppResult<()> {
     let mut tx = st.db.begin().await?;
     let row = sqlx::query!(
         "SELECT from_id, to_id, decided, streak_dir, streak, prefer FROM connect_choices
-         WHERE user_id = $1 AND decided_at > now() - make_interval(secs => $2)
+         WHERE scope = $1 AND decided_at > now() - make_interval(secs => $2)
          ORDER BY decided_at DESC LIMIT 1 FOR UPDATE",
-        user,
+        scope.id,
         CORRECTION_WINDOW.num_seconds() as f64,
     )
     .fetch_optional(&mut *tx)
@@ -374,8 +373,8 @@ pub async fn transferred(st: &AppState, user: Uuid, by: &str, to: &str) -> AppRe
     sqlx::query!(
         "UPDATE connect_choices SET decided_at = NULL, streak_dir = $4, streak = $5, prefer = $6,
              prefer_until = CASE WHEN $7 THEN $8 WHEN $6::text IS NULL THEN NULL ELSE prefer_until END
-         WHERE user_id = $1 AND from_id = $2 AND to_id = $3",
-        user,
+         WHERE scope = $1 AND from_id = $2 AND to_id = $3",
+        scope.id,
         r.from_id,
         r.to_id,
         c.streak_here.map(dir),
@@ -387,12 +386,12 @@ pub async fn transferred(st: &AppState, user: Uuid, by: &str, to: &str) -> AppRe
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    tracing::info!(%user, from = %r.from_id, to = %r.to_id, here, learned = c.learned, "music placement corrected");
+    tracing::info!(user = %scope.user, from = %r.from_id, to = %r.to_id, here, learned = c.learned, "music placement corrected");
     if c.learned {
         realtime::deliver(
             &st.hub,
             Audience::Device {
-                user,
+                user: scope.id,
                 device: by.to_string(),
             },
             ServerEvent::ConnectLearned(ConnectLearned {
@@ -409,7 +408,7 @@ pub async fn transferred(st: &AppState, user: Uuid, by: &str, to: &str) -> AppRe
 /// `connect.presence`: как давно трогали устройство, где играет звук.
 pub async fn presence(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     link: &Link,
     p: ConnectPresence,
 ) -> AppResult<Option<ServerEvent>> {
@@ -421,8 +420,8 @@ pub async fn presence(
         "UPDATE connect_devices
          SET last_input_at = now() - make_interval(secs => $4), input_source = $5, headphones = $6,
              presence_at = now()
-         WHERE user_id = $1 AND id = $2 AND connection = $3",
-        user,
+         WHERE scope = $1 AND id = $2 AND connection = $3",
+        scope.id,
         device,
         link.connection,
         idle,
@@ -437,14 +436,14 @@ pub async fn presence(
 /// Настройки устройства `id`: видны и меняются с любого устройства человека.
 pub async fn update_device(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     id: &str,
     patch: ConnectDevicePatch,
 ) -> AppResult<ConnectDevices> {
     let done = sqlx::query!(
         "UPDATE connect_devices SET choice = coalesce($3, choice), media_player = coalesce($4, media_player)
-         WHERE user_id = $1 AND id = $2",
-        user,
+         WHERE scope = $1 AND id = $2",
+        scope.id,
         id,
         patch.choice.map(PlayChoice::as_str),
         patch.media_player,
@@ -454,8 +453,8 @@ pub async fn update_device(
     if done.rows_affected() == 0 {
         return Err(AppError::NotFound);
     }
-    connect::announce(&st.db, &st.hub, user).await?;
-    connect::devices(&st.db, user).await
+    connect::announce(&st.db, &st.hub, scope).await?;
+    connect::devices(&st.db, scope.id).await
 }
 
 #[cfg(test)]

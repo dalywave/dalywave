@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT prefer FROM connect_choices\n         WHERE user_id = $1 AND from_id = $2 AND to_id = $3 AND prefer_until > now()",
+  "query": "SELECT prefer FROM connect_choices\n         WHERE scope = $1 AND from_id = $2 AND to_id = $3 AND prefer_until > now()",
   "describe": {
     "columns": [
       {
@@ -26,5 +26,5 @@
       true
     ]
   },
-  "hash": "931df4e2d9c4c780892f7d976219ad6e4747c8a9403a45136d718867fff93874"
+  "hash": "c08e40d19d3b375118db2ffad7c756e4c60f98d5fac055dbbc708a55ec2e8bf1"
 }

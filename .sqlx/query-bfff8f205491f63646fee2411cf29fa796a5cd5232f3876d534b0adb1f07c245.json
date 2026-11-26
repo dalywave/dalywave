@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT state -> 'current' -> 'track' ->> 'id' AS \"track?\", (state ->> 'playing')::boolean AS \"playing?\"\n           FROM playback_state WHERE user_id = $1",
+  "query": "SELECT state -> 'current' -> 'track' ->> 'id' AS \"track?\", (state ->> 'playing')::boolean AS \"playing?\"\n           FROM playback_state WHERE scope = $1",
   "describe": {
     "columns": [
       {
@@ -26,5 +26,5 @@
       null
     ]
   },
-  "hash": "f440302e1836ec96eafcbd060600e2322173cda62d7b38ab60223aa980aed89f"
+  "hash": "bfff8f205491f63646fee2411cf29fa796a5cd5232f3876d534b0adb1f07c245"
 }

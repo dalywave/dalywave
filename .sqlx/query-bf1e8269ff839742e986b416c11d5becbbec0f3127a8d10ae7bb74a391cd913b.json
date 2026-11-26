@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices WHERE user_id = $1 AND id = $2",
+  "query": "SELECT (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices WHERE scope = $1 AND id = $2",
   "describe": {
     "columns": [
       {
@@ -21,5 +21,5 @@
       null
     ]
   },
-  "hash": "567988b38ef61350414b89845778a7992990b13f1d74b72a7affb08e0307d3da"
+  "hash": "bf1e8269ff839742e986b416c11d5becbbec0f3127a8d10ae7bb74a391cd913b"
 }

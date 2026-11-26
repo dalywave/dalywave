@@ -17118,7 +17118,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Каналы push на сервере и подписанные устройства человека */
+            /** @description Каналы push на сервере и подписанные устройства человека. У общего аккаунта демо каналов нет: push у гостей не включается */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -17153,6 +17153,15 @@ export interface operations {
             };
             /** @description Нет токена или подписки браузера, канал на сервере выключен */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Общий аккаунт демо (`demo_account`): push у гостей не включается */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

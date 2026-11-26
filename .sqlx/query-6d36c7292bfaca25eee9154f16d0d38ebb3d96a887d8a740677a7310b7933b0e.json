@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO sessions (user_id, device_id, kind, auth_method, token_hash, expires_at, user_agent, ip)\n         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6), $7, $8)\n         RETURNING id",
+  "query": "INSERT INTO sessions (user_id, device_id, kind, auth_method, token_hash, expires_at, user_agent, ip, guest)\n         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6), $7, $8, $9)\n         RETURNING id",
   "describe": {
     "columns": [
       {
@@ -24,12 +24,13 @@
         "Bytea",
         "Int4",
         "Text",
-        "Inet"
+        "Inet",
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "de8bb5886b9d1c23ae30e46096b4fcd28ba4c708e0f1b4115f069ea8f89b9284"
+  "hash": "6d36c7292bfaca25eee9154f16d0d38ebb3d96a887d8a740677a7310b7933b0e"
 }
