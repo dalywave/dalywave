@@ -117,6 +117,8 @@ services:
     command:
       - |
         set -u -o pipefail
+        # The API applies migrations on start: the first dump waits so it isn't an empty schema
+        sleep 600
         while true; do
           f="/backup/dalywave-$$(date +%F).sql.gz"
           if pg_dump --no-owner | gzip > "$$f.tmp"; then mv "$$f.tmp" "$$f"; else rm -f "$$f.tmp"; echo "pg_dump failed" >&2; fi
