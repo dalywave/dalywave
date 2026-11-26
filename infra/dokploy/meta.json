@@ -6,7 +6,7 @@
   "logo": "dalywave.svg",
   "links": {
     "github": "https://github.com/dalywave/dalywave",
-    "website": "",
+    "website": "https://daly.rest/projects/dalywave",
     "docs": "https://github.com/dalywave/dalywave/blob/main/docs/self-hosting/install.md"
   },
   "tags": [
