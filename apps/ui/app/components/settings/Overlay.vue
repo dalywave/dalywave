@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { OverlayLink } from '~/api/types'
 import type { PlateSide, PlateSize, PlateStyle, PlateTrack } from '~/components/overlay/Plate.vue'
+import { copyText } from '~/utils/web-api'
 
 // «Оверлей для стрима»: плашка «Сейчас играет» для OBS (страница /overlay, прозрачный фон). Ссылка
 // секретная и даёт только «что играет»; «Сменить ссылку» — прежняя перестаёт работать. Вид (строка или
@@ -110,7 +111,7 @@ async function copy() {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('plugin:clipboard-manager|write_text', { text: url.value })
     }
-    else await navigator.clipboard.writeText(url.value)
+    else await copyText(url.value)
     bridge.haptic('light')
     toast.show({ text: t('copied'), icon: 'ph:link' })
   }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { copyText } from '~/utils/web-api'
 // Одноразовая ссылка (приглашение, новый пароль): показывается один раз — скопировать и передать
 // человеку самому. Почты сервер не рассылает
 defineProps<{
@@ -12,7 +13,7 @@ const { t } = useI18n({ useScope: 'local' })
 
 async function copy(url: string) {
   try {
-    await navigator.clipboard.writeText(url)
+    await copyText(url)
     toast.show({ text: t('copied'), icon: 'ph:link' })
   }
   catch {

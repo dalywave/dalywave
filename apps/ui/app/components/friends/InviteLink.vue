@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { copyText } from '~/utils/web-api'
 // Ссылка-приглашение с QR-кодом: «Добавить в друзья» и вход в совместный плейлист. Как у «Слушать
 // вместе»: QR для телефона рядом, ссылка — скопировать или отправить; «Новая ссылка» — прежняя
 // перестаёт работать
@@ -20,7 +21,7 @@ async function copy() {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('plugin:clipboard-manager|write_text', { text: props.url })
     }
-    else await navigator.clipboard.writeText(props.url)
+    else await copyText(props.url)
     bridge.haptic('light')
     toast.show({ text: tg('share.copied'), icon: 'ph:link' })
   }

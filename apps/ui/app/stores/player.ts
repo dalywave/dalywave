@@ -6,6 +6,7 @@ import { coverColors } from '~/utils/cover-colors'
 import { afterTrack, mixIn, nextRepeat, previousAction, restoreQueue, roundsNeeded, shuffleQueue, shuffled } from '~/utils/queue-order'
 import { resamplePeaks, syntheticRhythm } from '~/utils/peaks'
 import { sameSettings } from '~/utils/wave-options'
+import { uuid } from '~/utils/web-api'
 
 export type TransitionMode = 'gapless' | 'smooth' | 'smart' | 'dj'
 export type QueueSource = 'manual' | 'context' | 'wave'
@@ -162,7 +163,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   // ---------- Очередь ----------
 
-  const entryOf = (track: Track, src: QueueSource, reason?: string): QueueEntry => ({ uid: crypto.randomUUID(), track, source: src, reason })
+  const entryOf = (track: Track, src: QueueSource, reason?: string): QueueEntry => ({ uid: uuid(), track, source: src, reason })
 
   function takeNext(): QueueEntry | null {
     return manual.value.shift() ?? upcoming.value.shift() ?? null
@@ -443,7 +444,7 @@ export const usePlayerStore = defineStore('player', () => {
     const share = durationMs.value ? Math.min(1, positionMs.value / durationMs.value) : 0
     const wasPlaying = playing.value
     finishListen('stopped')
-    const entry: QueueEntry = { ...cur, uid: crypto.randomUUID(), track }
+    const entry: QueueEntry = { ...cur, uid: uuid(), track }
     const startMs = Math.max(0, Math.round(share * track.durationMs))
     await startEntry(entry, wasPlaying && !native
       ? { startMs, crossfade: true, fadeMs: VERSION_FADE_MS }
@@ -455,7 +456,7 @@ export const usePlayerStore = defineStore('player', () => {
     for (const list of [manual, upcoming]) {
       const i = list.value.findIndex(e => e.uid === uid)
       if (i < 0) continue
-      list.value.splice(i, 1, { ...list.value[i]!, uid: crypto.randomUUID(), track })
+      list.value.splice(i, 1, { ...list.value[i]!, uid: uuid(), track })
       if (prefetched?.uid === uid) prefetched = null
       prefetchNext()
       return

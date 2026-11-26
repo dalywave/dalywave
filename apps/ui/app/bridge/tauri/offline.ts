@@ -14,6 +14,7 @@ import type {
   WaveSettings, WaveStart, WaveTrack,
 } from '../types'
 import { gainFor } from '../web'
+import { uuid } from '~/utils/web-api'
 
 type Invoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>
 type Listen = <T>(event: string, handler: (e: { payload: T }) => void) => Promise<() => void>
@@ -212,7 +213,7 @@ export function withOffline(bridge: Bridge, offline: OfflineBridge): Bridge {
       // Без сети — волна из скачанного запаса; сессия живёт в оболочке
       async start(settings, seed) {
         const startOffline = async (): Promise<WaveStart> => {
-          const id = `${OFFLINE_WAVE}${crypto.randomUUID()}`
+          const id = `${OFFLINE_WAVE}${uuid()}`
           const queue = await offlineWave(id, settings, 6, [])
           return { id, state: 'ready', ready: queue.length, need: 0, queue }
         }

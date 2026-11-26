@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AuthOverview } from '~/api/types'
+import { copyText } from '~/utils/web-api'
 
 // «Способы входа» в «Доступе» — только чтение: провайдеры и свои аккаунты настраиваются переменными
 // окружения сервера (docs/self-hosting/auth.md). Адрес возврата — тот, что регистрируют у провайдера
@@ -9,7 +10,7 @@ const { t } = useI18n({ useScope: 'local' })
 
 async function copy(text: string) {
   try {
-    await navigator.clipboard.writeText(text)
+    await copyText(text)
     toast.show({ text: t('copied'), icon: 'ph:link' })
   }
   catch {

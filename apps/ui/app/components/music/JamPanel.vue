@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { copyText } from '~/utils/web-api'
 // «Слушать вместе» у хозяина: QR-код и ссылка для гостей, кто слушает, треки на одобрении и
 // настройки. Правая панель на компьютере, лист на телефоне (`sheet`)
 withDefaults(defineProps<{ variant?: 'panel' | 'sheet', back?: boolean }>(), { variant: 'panel' })
@@ -27,7 +28,7 @@ async function copy() {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('plugin:clipboard-manager|write_text', { text: url.value })
     }
-    else await navigator.clipboard.writeText(url.value)
+    else await copyText(url.value)
     bridge.haptic('light')
     toast.show({ text: t('copied'), icon: 'ph:link' })
   }

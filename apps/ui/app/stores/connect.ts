@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { ConnectDevice, ConnectDevicePatch, ConnectKind, PlaybackState, RemoteCommand, ServerEvent, Track } from '~/api/types'
 import type { PlaybackDevice, Platform } from '~/bridge/types'
 import type { TransitionMode } from './player'
+import { uuid } from '~/utils/web-api'
 
 // Управление между устройствами, как Spotify Connect (сервер — crates/server/src/connect.rs).
 // Каждая вкладка и приложение — устройство. Звук играет одно активное: оно владеет очередью и
@@ -40,7 +41,7 @@ function storage(kind: 'local' | 'session'): Storage | null {
 }
 
 function newId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`
+  return `${prefix}-${uuid()}`
 }
 
 /** Приложение — постоянный id установки; вкладка — свой id на время её жизни (переживает перезагрузку) */
@@ -252,7 +253,7 @@ export const useConnectStore = defineStore('connect', () => {
   function command(cmd: RemoteCommand): boolean {
     const to = activeId.value
     if (!to) return false
-    const id = crypto.randomUUID()
+    const id = uuid()
     if (!bridge.live.send({ type: 'connect.command', id, to, command: cmd })) {
       toast.error(t('connect.noLink'))
       return true
@@ -322,7 +323,7 @@ export const useConnectStore = defineStore('connect', () => {
   }
 
   function transferTo(d: Pick<PlaybackDevice, 'id' | 'name'>) {
-    const id = crypto.randomUUID()
+    const id = uuid()
     if (!bridge.live.send({ type: 'connect.transfer', id, to: d.id })) {
       toast.error(t('connect.noLink'))
       return
@@ -367,7 +368,7 @@ export const useConnectStore = defineStore('connect', () => {
   function pick(cmd: RemoteCommand, local: () => unknown): boolean {
     const to = activeId.value
     if (!to) return false
-    const id = crypto.randomUUID()
+    const id = uuid()
     void (handheld ? headphonesOn() : Promise.resolve(false)).then((headphones) => {
       if (!bridge.live.send({ type: 'connect.command', id, to, command: cmd, pick: { headphones } })) {
         toast.error(t('connect.noLink'))
@@ -387,7 +388,7 @@ export const useConnectStore = defineStore('connect', () => {
 
   /** Перенести сюда то, что играет там: продолжит с позиции сервера, когда придёт `connect.active` */
   function bringHere() {
-    const id = crypto.randomUUID()
+    const id = uuid()
     if (!bridge.live.send({ type: 'connect.transfer', id, to: deviceId.value, play: true })) {
       toast.error(t('connect.noLink'))
       return
@@ -603,7 +604,7 @@ export const useConnectStore = defineStore('connect', () => {
 
     // Вкладку продублировали — у копии тот же id из sessionStorage: она берёт новый
     if (!app && 'BroadcastChannel' in window) {
-      const nonce = crypto.randomUUID()
+      const nonce = uuid()
       const ch = new BroadcastChannel('dw.connect')
       ch.onmessage = (m: MessageEvent<{ type: string, id: string, nonce: string }>) => {
         const d = m.data

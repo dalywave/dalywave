@@ -1,4 +1,5 @@
 import type { MenuAction } from '~/types/ui'
+import { copyText } from '~/utils/web-api'
 
 export type ShareKind = 'track' | 'album' | 'artist' | 'playlist'
 
@@ -33,7 +34,7 @@ export function useShare() {
       await invoke('plugin:clipboard-manager|write_text', { text })
       return
     }
-    await navigator.clipboard.writeText(text)
+    await copyText(text)
   }
 
   /** `text` — цитата перед ссылкой (строка песни); `copyOnly` — сразу в буфер, без системного меню */

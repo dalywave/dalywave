@@ -1,6 +1,7 @@
 // События прослушивания и реакции копятся и уходят пачкой. clientEventId делает повтор безопасным:
 // при обрыве связи пачка просто отправится ещё раз. Очередь переживает перезагрузку вкладки.
 import type { EventBatch, EventResult, FeedbackEvent, PlayEvent } from '~/api/types'
+import { uuid } from '~/utils/web-api'
 
 const STORAGE_KEY = 'dw.events.v1'
 const FLUSH_MS = 10_000
@@ -45,13 +46,13 @@ export class EventQueue {
   }
 
   play(event: Omit<PlayEvent, 'clientEventId'>) {
-    this.store.plays.push({ ...event, clientEventId: crypto.randomUUID() } as PlayEvent)
+    this.store.plays.push({ ...event, clientEventId: uuid() } as PlayEvent)
     this.persist()
     this.schedule()
   }
 
   feedback(event: Omit<FeedbackEvent, 'clientEventId' | 'at'>) {
-    this.store.feedback.push({ ...event, clientEventId: crypto.randomUUID(), at: new Date().toISOString() } as FeedbackEvent)
+    this.store.feedback.push({ ...event, clientEventId: uuid(), at: new Date().toISOString() } as FeedbackEvent)
     this.persist()
     if (this.store.feedback.length >= 20) void this.flush()
     else this.schedule()

@@ -3,6 +3,7 @@ import type { AdminAcquisition, Downloader, Sources } from '~/api/types'
 import type { BarDay, BarSeries } from '~/components/admin/Bars.vue'
 import type { ViewPreset } from '~/components/admin/SavedViews.vue'
 import type { MenuEntry } from '~/types/ui'
+import { copyText } from '~/utils/web-api'
 
 // Источники: домашние загрузчики (на связи, когда был, версии, работа за сутки, отзыв),
 // серверный загрузчик, доля успеха по дням и «проверить скачивание» — трек вне очереди
@@ -122,7 +123,7 @@ async function create() {
 }
 async function copyToken() {
   if (!token.value) return
-  await navigator.clipboard.writeText(token.value).then(() => toast.show({ text: t('dl.copied'), icon: 'ph:copy' }), () => toast.error(t('failed')))
+  await copyText(token.value).then(() => toast.show({ text: t('dl.copied'), icon: 'ph:copy' }), () => toast.error(t('failed')))
 }
 
 // ---------- Серверный загрузчик ----------

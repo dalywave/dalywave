@@ -15,6 +15,7 @@ import { createLive } from './live'
 import { createParty } from './party'
 import { devOutputs, safariOutputs } from './outputs'
 import { devRecognizer } from '../mock/recognize'
+import { uuid } from '~/utils/web-api'
 
 // По каким путям OpenAPI видно, что раздел уже на сервере
 const SECTION_READY: Record<Section, (paths: string[]) => boolean> = {
@@ -670,7 +671,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         await ready()
         if (mock && mocked('wave')) {
           const queue = await mock.waveNext(settings, 6, [])
-          return { id: crypto.randomUUID(), state: 'ready', ready: queue.length, need: 0, queue }
+          return { id: uuid(), state: 'ready', ready: queue.length, need: 0, queue }
         }
         return waveStart(await unwrap(api.POST('/api/wave/sessions', { body: { settings: seed ? { ...settings, seed } : settings } })))
       },
