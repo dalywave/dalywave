@@ -5,6 +5,7 @@ import type { NotificationKind, NotificationSettings, NotificationSettingsPatch,
 // переключателю), какие виды присылать (админские сервер отдаёт только администраторам), тихие часы.
 // Часовой пояс уходит с каждой правкой: тихие часы считаются по времени человека
 const store = useNotificationsStore()
+const auth = useAuthStore()
 const bridge = useBridge()
 const toast = useToast()
 const { tg, te } = useGlobalT()
@@ -65,7 +66,8 @@ const device = computed({
   set: (v: boolean) => void (v ? store.enable() : store.disable()),
 })
 const denied = computed(() => store.permission === 'denied')
-const showDevice = computed(() => store.available || (denied.value && !!store.push))
+// Гостю демо push не предлагается совсем: аккаунт общий
+const showDevice = computed(() => !auth.isDemo && (store.available || (denied.value && !!store.push)))
 const deniedText = computed(() => (bridge.appPush ? tg('notify.deniedApp') : tg('notify.deniedWeb')))
 const kindDesc = (k: string) => (te(`notify.kindDesc.${k}`) ? tg(`notify.kindDesc.${k}`) : undefined)
 </script>

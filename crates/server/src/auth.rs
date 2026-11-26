@@ -37,6 +37,14 @@ pub fn permissions(roles: &[Role]) -> Vec<Permission> {
     out
 }
 
+/// Роли общего аккаунта демо — без admin, даже если роль попала в базу по ошибке.
+pub fn effective_roles(mut roles: Vec<Role>, demo: bool) -> Vec<Role> {
+    if demo {
+        roles.retain(|r| *r != Role::Admin);
+    }
+    roles
+}
+
 #[derive(Debug, Clone)]
 pub struct Principal {
     pub user: User,
@@ -45,6 +53,11 @@ pub struct Principal {
     pub kind: SessionKind,
     pub via: AuthVia,
     pub device_id: Option<Uuid>,
+    /// Общий аккаунт публичного демо (`DALYWAVE_DEMO_ACCOUNT`)
+    pub demo: bool,
+    /// Вход гостя демо — id корневой сессии (часы и телевизор, вошедшие от неё, — в том же входе).
+    /// У остальных — `None`
+    pub guest: Option<Uuid>,
 }
 
 impl Principal {
@@ -56,8 +69,12 @@ impl Principal {
         self.permissions().contains(&perm)
     }
 
-    /// 403 `no_access`, пока ролей нет; 403 `forbidden`, если нет именно этого права.
+    /// 403 `no_access`, пока ролей нет; 403 `forbidden`, если нет именно этого права
+    /// (у демо-аккаунта на админку — `demo_account`).
     pub fn need(&self, perm: Permission) -> AppResult<()> {
+        if self.demo && perm == Permission::Admin {
+            return Err(AppError::DemoAccount);
+        }
         if self.roles.is_empty() {
             return Err(AppError::NoAccess);
         }
@@ -68,6 +85,23 @@ impl Principal {
             )));
         }
         Ok(())
+    }
+
+    /// Чьи устройства и «что играет»: человек, а у гостя демо — только его вход.
+    pub fn scope(&self) -> crate::connect::Scope {
+        crate::connect::Scope {
+            user: self.user.id,
+            id: self.guest.unwrap_or(self.user.id),
+        }
+    }
+
+    /// 403 `demo_account`: пароль, логин, входы и сам аккаунт демо общие для всех гостей.
+    pub fn not_demo(&self) -> AppResult<()> {
+        if self.demo {
+            Err(AppError::DemoAccount)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -91,7 +125,7 @@ pub async fn authenticate_token(st: &AppState, token: &str) -> AppResult<Option<
         return Err(AppError::Unauthorized);
     };
     let found = session::find(&st.db, token, kind).await?;
-    Ok(principal_from(kind, found))
+    Ok(principal_from(st, kind, found))
 }
 
 /// Сессия запроса. Заблокированный человек — всё равно что без сессии.
@@ -113,10 +147,14 @@ pub async fn authenticate(st: &AppState, headers: &HeaderMap) -> AppResult<Optio
         };
         (SessionKind::Web, found)
     };
-    Ok(principal_from(kind, found))
+    Ok(principal_from(st, kind, found))
 }
 
-fn principal_from(kind: SessionKind, found: Option<session::Found>) -> Option<Principal> {
+fn principal_from(
+    st: &AppState,
+    kind: SessionKind,
+    found: Option<session::Found>,
+) -> Option<Principal> {
     found.filter(|s| !s.disabled).map(|s| {
         let via = match (kind, s.auth_method.as_str()) {
             (SessionKind::Device, _) => AuthVia::Device,
@@ -124,6 +162,8 @@ fn principal_from(kind: SessionKind, found: Option<session::Found>) -> Option<Pr
             (_, "local") => AuthVia::Local,
             _ => AuthVia::Oidc,
         };
+        let demo = st.config.is_demo(s.username.as_deref());
+        let roles = effective_roles(parse_roles(&s.roles), demo);
         Principal {
             user: User {
                 id: s.user_id,
@@ -131,11 +171,13 @@ fn principal_from(kind: SessionKind, found: Option<session::Found>) -> Option<Pr
                 email: s.email,
                 avatar_url: s.avatar_url,
             },
-            roles: parse_roles(&s.roles),
+            roles,
             session_id: s.id,
             kind,
             via,
             device_id: s.device_id,
+            demo,
+            guest: demo.then(|| s.guest.unwrap_or(s.id)),
         }
     })
 }

@@ -14,6 +14,7 @@ mod catalog;
 mod common;
 mod connect;
 mod deezer;
+mod demo;
 mod describe;
 mod device_choice;
 mod events;

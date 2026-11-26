@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT state -> 'current' -> 'track' ->> 'id' AS \"track?\", (state ->> 'playing')::boolean AS \"playing?\"\n           FROM playback_state WHERE scope = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "track?",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "playing?",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "bfff8f205491f63646fee2411cf29fa796a5cd5232f3876d534b0adb1f07c245"
+}

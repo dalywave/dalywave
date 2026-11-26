@@ -141,7 +141,7 @@ const shell = createShell({ invoke, listen })
 | `window.setTheme(theme)` | `window_set_theme { theme }` | — `'dark'`, `'light'` или `null` (как в системе); все окна, запоминается. Есть и на iPhone, iPad |
 | `window.setBackSwipe(enabled)` | `window_set_back_swipe { enabled }` | — iPhone, iPad: «назад» смахиванием от левого края (штатный жест WKWebView со снимком предыдущей страницы). Интерфейс включает его на вложенных страницах с историей позади; на корневых вкладках, под листом и полным плеером — выключает. «Вперёд» от правого края выключен всегда. На других системах — ничего |
 | `window.setSnapArea(rect)` | `window_set_snap_area { rect }` | — (только Windows; `trackSnapArea` вызывает сам) |
-| `auth.login()` | `auth_login` | `Session` — ждёт возврата из браузера до 10 минут |
+| `auth.login({ demo? })` | `auth_login { demo }` | `Session` — ждёт возврата из браузера до 10 минут. `demo: true` — вход в общий аккаунт публичного демо (`/api/auth/app/start?demo=1`): сервер сразу отдаёт код, экран входа не открывается |
 | `auth.cancel()` | `auth_cancel` | `boolean` — был ли незаконченный вход |
 | `auth.logout()` | `auth_logout` | — |
 | `auth.getToken()` | `auth_token` | `string \| null` — токен устройства `dwd_…` |

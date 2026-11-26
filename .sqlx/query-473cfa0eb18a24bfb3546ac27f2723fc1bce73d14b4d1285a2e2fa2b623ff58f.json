@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE connect_devices SET last_seen_at = now() WHERE scope = $1 AND id = $2 AND connection = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "473cfa0eb18a24bfb3546ac27f2723fc1bce73d14b4d1285a2e2fa2b623ff58f"
+}

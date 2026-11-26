@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT active_connect_id, (state ->> 'playing')::boolean AS \"playing?\"\n           FROM playback_state WHERE scope = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "active_connect_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playback_state",
+            "name": "active_connect_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "playing?",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      null
+    ]
+  },
+  "hash": "aff20a5240fbabb6239a0ac27f8922515270dd76c978306401834302505ee0be"
+}

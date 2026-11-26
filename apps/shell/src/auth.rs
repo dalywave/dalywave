@@ -7,6 +7,9 @@
 //! (`POST /api/auth/app/token`, PKCE S256) и кладёт токен в связку ключей ОС.
 //! Verifier PKCE не покидает Rust; интерфейс получает пользователя и устройство.
 //!
+//! «Войти в демо» на публичном демо-сервере — тот же путь с `demo=1`: сервер сразу возвращает код
+//! входа в общий аккаунт, экран входа в браузере не открывается.
+//!
 //! На iPhone и iPad страница входа открывается поверх приложения (ASWebAuthenticationSession,
 //! ios.rs) и возвращает ссылку сама; если окно не открылось — Safari и ссылка dalywave://.
 
@@ -280,6 +283,7 @@ fn start_url(
     challenge: &str,
     state: &str,
     device_name: &str,
+    demo: bool,
 ) -> ShellResult<Url> {
     let mut url =
         Url::parse(&format!("{server}/api/auth/app/start")).map_err(ShellError::internal)?;
@@ -290,6 +294,9 @@ fn start_url(
         .append_pair("state", state)
         .append_pair("device_name", device_name)
         .append_pair("platform", platform::os());
+    if demo {
+        url.query_pairs_mut().append_pair("demo", "1");
+    }
     Ok(url)
 }
 
@@ -585,9 +592,10 @@ async fn open_sheet(_app: &AppHandle, _start: &Url) -> bool {
     false
 }
 
-/// Войти: открыть браузер, дождаться возврата, получить токен устройства.
+/// Войти: открыть браузер, дождаться возврата, получить токен устройства. `demo` — в общий
+/// аккаунт публичного демо, без экрана входа.
 #[tauri::command]
-pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
+pub async fn auth_login(app: AppHandle, demo: Option<bool>) -> ShellResult<Session> {
     let auth = app.state::<Auth>();
     let server = app.state::<Settings>().server_url();
     let verifier = random_token()?;
@@ -607,6 +615,7 @@ pub async fn auth_login(app: AppHandle) -> ShellResult<Session> {
         &pkce_challenge(&verifier),
         &state,
         &device_name(),
+        demo.unwrap_or(false),
     )?;
 
     let (tx, rx) = oneshot::channel();
@@ -783,6 +792,7 @@ mod tests {
             "challenge",
             "st",
             "MacBook Захара",
+            false,
         )
         .unwrap();
         let q: BTreeMap<String, String> = url.query_pairs().into_owned().collect();
@@ -792,6 +802,17 @@ mod tests {
         assert_eq!(q["state"], "st");
         assert_eq!(q["device_name"], "MacBook Захара");
         assert_eq!(q["platform"], platform::os());
+        assert!(!q.contains_key("demo"));
+        let demo = start_url(
+            "https://demo.wave.daly.rest",
+            REDIRECT_DEEP_LINK,
+            "c",
+            "s",
+            "iPhone",
+            true,
+        )
+        .unwrap();
+        assert!(demo.query_pairs().any(|(k, v)| k == "demo" && v == "1"));
     }
 
     #[test]

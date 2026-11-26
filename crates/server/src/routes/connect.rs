@@ -44,7 +44,7 @@ pub async fn devices(
     principal: Principal,
 ) -> AppResult<Json<ConnectOverview>> {
     Ok(Json(
-        crate::connect::overview(&st.db, principal.user.id).await?,
+        crate::connect::overview(&st.db, principal.scope().id).await?,
     ))
 }
 
@@ -134,6 +134,6 @@ pub async fn update_device(
     Json(patch): Json<ConnectDevicePatch>,
 ) -> AppResult<Json<ConnectDevices>> {
     Ok(Json(
-        crate::choice::update_device(&st, principal.user.id, &id, patch).await?,
+        crate::choice::update_device(&st, principal.scope(), &id, patch).await?,
     ))
 }

@@ -1,0 +1,133 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, kind, platform, app_version, capabilities, last_seen_at, choice, media_player,\n                  (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS \"online!\"\n           FROM connect_devices\n           WHERE scope = $1\n             AND (id = $2\n                  OR (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3))\n                  OR (kind <> 'web' AND last_seen_at > now() - interval '30 days'))\n           ORDER BY (id = $2) DESC NULLS LAST,\n                    (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) DESC,\n                    last_seen_at DESC\n           LIMIT 30",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "platform"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "app_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "app_version"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "capabilities",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "capabilities"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "last_seen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "choice",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "choice"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "media_player",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "connect_devices",
+            "name": "media_player"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "online!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "2196582462f7df0ade3de5d798d6d1daf9873f234cffba815044dad90a8a1da4"
+}

@@ -32,6 +32,7 @@ async fn iphone(app: &TestApp, auth: &Auth) -> String {
             method: dalywave_server::session::Method::Oidc,
             user_agent: None,
             ip: std::net::Ipv4Addr::LOCALHOST.into(),
+            guest: None,
         },
     )
     .await

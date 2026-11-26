@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT coalesce((capabilities->>'remote')::boolean, false) AS \"remote!\"\n           FROM connect_devices WHERE scope = $1 AND id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "remote!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "72e4d079a21ac81a1824c4a80393a05a42eeaafcf9983fdf5fb898021ffc43b6"
+}

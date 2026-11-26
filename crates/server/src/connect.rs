@@ -30,6 +30,18 @@ use crate::{
     state::AppState,
 };
 
+/// Чьи устройства и «что играет» (`connect_devices.scope`, `playback_state.scope`): человек, а у общего
+/// аккаунта демо — один вход гостя. Гости демо не видят устройств друг друга и не переключают друг
+/// другу музыку; медиатека и настройки у них общие (они по `user`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Scope {
+    /// Человек: настройки, друзья, админка «Сейчас»
+    pub user: Uuid,
+    /// Ключ устройств и снимка: у обычного человека — тот же `user`, у гостя демо — id корневой
+    /// сессии его входа. События устройствам — `Audience::User(id)` и `Audience::Device { user: id }`
+    pub id: Uuid,
+}
+
 /// Без сообщений от устройства дольше этого — оно пропало (пульты предложат «Продолжить здесь»).
 pub const STALE: Duration = Duration::from_secs(ONLINE_WINDOW_SECS as u64);
 /// Как часто соединение проверяет, не пропало ли его устройство.
@@ -84,20 +96,23 @@ pub async fn handle(
         return None;
     }
     link.last_seen = Instant::now();
-    let user = principal.user.id;
+    let scope = principal.scope();
     let result = match msg {
         ClientMessage::Ping(_) => return None,
         ClientMessage::ConnectHello(hello) => hello_device(st, principal, link, hello).await,
         // Без hello остальное бессмысленно: устройство неизвестно
         _ if link.device.is_none() => return None,
-        ClientMessage::ConnectHeartbeat(_) => heartbeat(st, user, link).await.map(|_| None),
-        ClientMessage::ConnectState(p) => publish(st, user, link, *p.state).await,
-        ClientMessage::ConnectCommand(send) => command(st, user, link, send).await,
+        ClientMessage::ConnectHeartbeat(_) => heartbeat(st, scope, link).await.map(|_| None),
+        ClientMessage::ConnectState(p) => publish(st, scope, link, *p.state).await,
+        ClientMessage::ConnectCommand(send) => command(st, scope, link, send).await,
         ClientMessage::ConnectAck(ack) => {
             if let (Some(to), Some(from)) = (ack.to.clone(), link.device.clone()) {
                 realtime::deliver(
                     &st.hub,
-                    Audience::Device { user, device: to },
+                    Audience::Device {
+                        user: scope.id,
+                        device: to,
+                    },
                     ServerEvent::ConnectAck(ConnectAck {
                         to: None,
                         from: Some(from),
@@ -107,13 +122,13 @@ pub async fn handle(
             }
             Ok(None)
         }
-        ClientMessage::ConnectClaim(_) => claim(st, user, link).await.map(|_| None),
+        ClientMessage::ConnectClaim(_) => claim(st, scope, link).await.map(|_| None),
         ClientMessage::ConnectTransfer(t) => {
             let by = link.device.clone();
-            transfer_by(st, user, by.as_deref(), t).await
+            transfer_by(st, scope, by.as_deref(), t).await
         }
-        ClientMessage::ConnectSignal(s) => crate::handoff::signal(st, user, link, s).await,
-        ClientMessage::ConnectPresence(p) => crate::choice::presence(st, user, link, p).await,
+        ClientMessage::ConnectSignal(s) => crate::handoff::signal(st, scope, link, s).await,
+        ClientMessage::ConnectPresence(p) => crate::choice::presence(st, scope, link, p).await,
     };
     result.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "connect message failed");
@@ -142,18 +157,18 @@ async fn hello_device(
     if !valid_id(&hello.device_id) {
         return Ok(None);
     }
-    let user = principal.user.id;
+    let scope = principal.scope();
     // То же соединение представилось другим id (вкладка сменила id после совпадения с соседней)
     if link.device.as_deref().is_some_and(|d| d != hello.device_id) {
-        release(st, user, link).await;
+        release(st, scope, link).await;
     }
     upsert(st, principal, &hello, link.connection).await?;
     link.device = Some(hello.device_id);
     link.stale = false;
     link.remote = hello.capabilities.remote;
-    announce(&st.db, &st.hub, user).await?;
+    announce(&st.db, &st.hub, scope).await?;
     // Новому устройству — кто играет и что: пульт сразу показывает трек и позицию
-    let (active, state) = playback(&st.db, user).await?;
+    let (active, state) = playback(&st.db, scope.id).await?;
     Ok(Some(ServerEvent::ConnectActive(ConnectActive {
         device_id: active,
         from: None,
@@ -169,7 +184,7 @@ async fn upsert(
     hello: &ConnectHello,
     connection: Uuid,
 ) -> AppResult<()> {
-    let user = principal.user.id;
+    let scope = principal.scope();
     // У приложения имя — из входа: так оно и в админке, и в списке одно
     let app_name = match principal.device_id {
         Some(id) => {
@@ -197,14 +212,14 @@ async fn upsert(
         .as_ref()
         .map(|v| v.chars().take(40).collect::<String>());
     sqlx::query!(
-        "INSERT INTO connect_devices (user_id, id, device_id, name, kind, platform, app_version, capabilities,
-                                      connection, last_seen_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
-         ON CONFLICT (user_id, id) DO UPDATE SET
+        "INSERT INTO connect_devices (scope, id, device_id, name, kind, platform, app_version, capabilities,
+                                      connection, last_seen_at, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), $10)
+         ON CONFLICT (scope, id) DO UPDATE SET
              device_id = EXCLUDED.device_id, name = EXCLUDED.name, kind = EXCLUDED.kind,
              platform = EXCLUDED.platform, app_version = EXCLUDED.app_version,
              capabilities = EXCLUDED.capabilities, connection = EXCLUDED.connection, last_seen_at = now()",
-        user,
+        scope.id,
         hello.device_id,
         principal.device_id,
         name,
@@ -213,27 +228,28 @@ async fn upsert(
         version,
         capabilities,
         connection,
+        scope.user,
     )
     .execute(&st.db)
     .await?;
     // Закрытые вкладки не копятся: через сутки их уже нет и в «недавних»
     sqlx::query!(
         "DELETE FROM connect_devices
-         WHERE user_id = $1 AND kind = 'web' AND connection IS NULL AND last_seen_at < now() - interval '1 day'",
-        user,
+         WHERE scope = $1 AND kind = 'web' AND connection IS NULL AND last_seen_at < now() - interval '1 day'",
+        scope.id,
     )
     .execute(&st.db)
     .await?;
     Ok(())
 }
 
-async fn heartbeat(st: &AppState, user: Uuid, link: &mut Link) -> AppResult<()> {
+async fn heartbeat(st: &AppState, scope: Scope, link: &mut Link) -> AppResult<()> {
     let Some(device) = link.device.as_deref() else {
         return Ok(());
     };
     sqlx::query!(
-        "UPDATE connect_devices SET last_seen_at = now() WHERE user_id = $1 AND id = $2 AND connection = $3",
-        user,
+        "UPDATE connect_devices SET last_seen_at = now() WHERE scope = $1 AND id = $2 AND connection = $3",
+        scope.id,
         device,
         link.connection,
     )
@@ -241,14 +257,14 @@ async fn heartbeat(st: &AppState, user: Uuid, link: &mut Link) -> AppResult<()> 
     .await?;
     if link.stale {
         link.stale = false;
-        announce(&st.db, &st.hub, user).await?;
+        announce(&st.db, &st.hub, scope).await?;
     }
     Ok(())
 }
 
 /// Раз в [`CHECK`]: устройство молчит дольше [`STALE`] — объявить его пропавшим (соединение не рвётся:
 /// вкладка в фоне может просто притормозить таймеры, а вернувшись — снова напомнить о себе).
-pub async fn check(st: &AppState, user: Uuid, link: &mut Link) {
+pub async fn check(st: &AppState, scope: Scope, link: &mut Link) {
     let Some(device) = link.device.as_deref() else {
         return;
     };
@@ -260,8 +276,8 @@ pub async fn check(st: &AppState, user: Uuid, link: &mut Link) {
     // запросе списка — по базе, поэтому отметка сдвигается на его границу
     let res = sqlx::query!(
         "UPDATE connect_devices SET last_seen_at = least(last_seen_at, now() - make_interval(secs => $4))
-         WHERE user_id = $1 AND id = $2 AND connection = $3",
-        user,
+         WHERE scope = $1 AND id = $2 AND connection = $3",
+        scope.id,
         device,
         link.connection,
         ONLINE_WINDOW_SECS as f64,
@@ -269,7 +285,7 @@ pub async fn check(st: &AppState, user: Uuid, link: &mut Link) {
     .execute(&st.db)
     .await;
     let res = match res {
-        Ok(_) => announce(&st.db, &st.hub, user).await,
+        Ok(_) => announce(&st.db, &st.hub, scope).await,
         Err(e) => Err(e.into()),
     };
     if let Err(e) = res {
@@ -278,15 +294,15 @@ pub async fn check(st: &AppState, user: Uuid, link: &mut Link) {
 }
 
 /// Соединение закрылось: устройство не в сети (если строку не забрало более новое соединение).
-pub async fn release(st: &AppState, user: Uuid, link: &Link) {
+pub async fn release(st: &AppState, scope: Scope, link: &Link) {
     let Some(device) = link.device.as_deref() else {
         return;
     };
     let res = sqlx::query!(
         "UPDATE connect_devices
          SET connection = NULL, last_seen_at = CASE WHEN $4 THEN last_seen_at ELSE now() END
-         WHERE user_id = $1 AND id = $2 AND connection = $3",
-        user,
+         WHERE scope = $1 AND id = $2 AND connection = $3",
+        scope.id,
         device,
         link.connection,
         link.stale,
@@ -295,8 +311,8 @@ pub async fn release(st: &AppState, user: Uuid, link: &Link) {
     .await;
     let res = match res {
         Ok(r) if r.rows_affected() > 0 => {
-            friends_see_stop(st, user, device).await;
-            announce(&st.db, &st.hub, user).await
+            friends_see_stop(st, scope, device).await;
+            announce(&st.db, &st.hub, scope).await
         }
         Ok(_) => Ok(()),
         Err(e) => Err(e.into()),
@@ -307,10 +323,10 @@ pub async fn release(st: &AppState, user: Uuid, link: &Link) {
 }
 
 /// Пропало активное устройство — у друзей «сейчас играет» сменится на «последнее».
-async fn friends_see_stop(st: &AppState, user: Uuid, device: &str) {
+async fn friends_see_stop(st: &AppState, scope: Scope, device: &str) {
     let active = sqlx::query_scalar!(
-        "SELECT active_connect_id FROM playback_state WHERE user_id = $1",
-        user
+        "SELECT active_connect_id FROM playback_state WHERE scope = $1",
+        scope.id
     )
     .fetch_optional(&st.db)
     .await
@@ -319,7 +335,7 @@ async fn friends_see_stop(st: &AppState, user: Uuid, device: &str) {
     .flatten();
     if active.as_deref() == Some(device) {
         let st = st.clone();
-        tokio::spawn(async move { crate::social::announce_activity(&st, user).await });
+        tokio::spawn(async move { crate::social::announce_activity(&st, scope.user).await });
     }
 }
 
@@ -346,7 +362,7 @@ fn prefetch_lyrics(st: &AppState, state: &PlaybackState) {
 
 async fn publish(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     link: &Link,
     state: PlaybackState,
 ) -> AppResult<Option<ServerEvent>> {
@@ -362,29 +378,30 @@ async fn publish(
     // Что играло до этого снимка: друзьям сообщается только смена трека или паузы
     let before = sqlx::query!(
         r#"SELECT state -> 'current' -> 'track' ->> 'id' AS "track?", (state ->> 'playing')::boolean AS "playing?"
-           FROM playback_state WHERE user_id = $1"#,
-        user
+           FROM playback_state WHERE scope = $1"#,
+        scope.id
     )
     .fetch_optional(&st.db)
     .await?;
     // Снимок принимается от активного устройства; если активного нет — отправитель им становится
     let row = sqlx::query!(
-        r#"WITH prev AS (SELECT active_connect_id FROM playback_state WHERE user_id = $1 FOR UPDATE)
-           INSERT INTO playback_state (user_id, active_connect_id, state, updated_at)
-           VALUES ($1, $2, $3, now())
-           ON CONFLICT (user_id) DO UPDATE SET state = EXCLUDED.state, updated_at = now(),
+        r#"WITH prev AS (SELECT active_connect_id FROM playback_state WHERE scope = $1 FOR UPDATE)
+           INSERT INTO playback_state (scope, user_id, active_connect_id, state, updated_at)
+           VALUES ($1, $4, $2, $3, now())
+           ON CONFLICT (scope) DO UPDATE SET state = EXCLUDED.state, updated_at = now(),
                active_connect_id = EXCLUDED.active_connect_id
            WHERE playback_state.active_connect_id IS NULL OR playback_state.active_connect_id = $2
            RETURNING (SELECT active_connect_id FROM prev) AS "prev""#,
-        user,
+        scope.id,
         device,
         json,
+        scope.user,
     )
     .fetch_optional(&st.db)
     .await?;
     let Some(row) = row else {
         // Активно другое устройство (снимок опоздал после переноса): пусть отправитель остановится
-        let (active, _) = playback(&st.db, user).await?;
+        let (active, _) = playback(&st.db, scope.id).await?;
         return Ok(Some(ServerEvent::ConnectActive(ConnectActive {
             device_id: active,
             from: None,
@@ -396,12 +413,12 @@ async fn publish(
     let was = before.map(|b| (b.track, b.playing.unwrap_or(false)));
     if was != Some((track, state.playing)) {
         let st = st.clone();
-        tokio::spawn(async move { crate::social::announce_activity(&st, user).await });
+        tokio::spawn(async move { crate::social::announce_activity(&st, scope.user).await });
     }
     if row.prev.as_deref() != Some(device.as_str()) {
         realtime::deliver(
             &st.hub,
-            Audience::User(user),
+            Audience::User(scope.id),
             ServerEvent::ConnectActive(ConnectActive {
                 device_id: Some(device.clone()),
                 from: row.prev,
@@ -409,11 +426,11 @@ async fn publish(
                 state: None,
             }),
         );
-        announce(&st.db, &st.hub, user).await?;
+        announce(&st.db, &st.hub, scope).await?;
     }
     realtime::deliver(
         &st.hub,
-        Audience::User(user),
+        Audience::User(scope.id),
         ServerEvent::ConnectState(ConnectState {
             device_id: device,
             state: Box::new(state),
@@ -424,7 +441,7 @@ async fn publish(
 
 async fn command(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     link: &Link,
     send: ConnectSend,
 ) -> AppResult<Option<ServerEvent>> {
@@ -436,9 +453,9 @@ async fn command(
         .pick
         .filter(|_| crate::choice::is_new_music(&send.command))
     {
-        return crate::choice::pick(st, user, from, send, pick).await;
+        return crate::choice::pick(st, scope, from, send, pick).await;
     }
-    if !is_online(&st.db, user, &send.to).await? {
+    if !is_online(&st.db, scope.id, &send.to).await? {
         return Ok(Some(ServerEvent::ConnectAck(ConnectAck {
             id: send.id,
             to: None,
@@ -450,7 +467,7 @@ async fn command(
     realtime::deliver(
         &st.hub,
         Audience::Device {
-            user,
+            user: scope.id,
             device: send.to,
         },
         ServerEvent::ConnectCommand(ConnectCommand {
@@ -462,15 +479,15 @@ async fn command(
     Ok(None)
 }
 
-async fn claim(st: &AppState, user: Uuid, link: &Link) -> AppResult<()> {
+async fn claim(st: &AppState, scope: Scope, link: &Link) -> AppResult<()> {
     let Some(device) = link.device.clone().filter(|_| !link.remote) else {
         return Ok(());
     };
-    let prev = set_active(&st.db, user, &device).await?;
+    let prev = set_active(&st.db, scope, &device).await?;
     if prev.as_deref() != Some(device.as_str()) {
         realtime::deliver(
             &st.hub,
-            Audience::User(user),
+            Audience::User(scope.id),
             ServerEvent::ConnectActive(ConnectActive {
                 device_id: Some(device),
                 from: prev,
@@ -478,21 +495,22 @@ async fn claim(st: &AppState, user: Uuid, link: &Link) -> AppResult<()> {
                 state: None,
             }),
         );
-        announce(&st.db, &st.hub, user).await?;
+        announce(&st.db, &st.hub, scope).await?;
     }
     Ok(())
 }
 
 /// Делает устройство активным и возвращает прежнее активное.
-async fn set_active(db: &PgPool, user: Uuid, device: &str) -> AppResult<Option<String>> {
+async fn set_active(db: &PgPool, scope: Scope, device: &str) -> AppResult<Option<String>> {
     let row = sqlx::query!(
-        r#"WITH prev AS (SELECT active_connect_id FROM playback_state WHERE user_id = $1 FOR UPDATE)
-           INSERT INTO playback_state (user_id, active_connect_id, state, updated_at)
-           VALUES ($1, $2, '{}', now())
-           ON CONFLICT (user_id) DO UPDATE SET active_connect_id = EXCLUDED.active_connect_id
+        r#"WITH prev AS (SELECT active_connect_id FROM playback_state WHERE scope = $1 FOR UPDATE)
+           INSERT INTO playback_state (scope, user_id, active_connect_id, state, updated_at)
+           VALUES ($1, $3, $2, '{}', now())
+           ON CONFLICT (scope) DO UPDATE SET active_connect_id = EXCLUDED.active_connect_id
            RETURNING (SELECT active_connect_id FROM prev) AS "prev""#,
-        user,
+        scope.id,
         device,
+        scope.user,
     )
     .fetch_one(db)
     .await?;
@@ -502,16 +520,16 @@ async fn set_active(db: &PgPool, user: Uuid, device: &str) -> AppResult<Option<S
 /// Перенос, который решил сам сервер (подхват на другом устройстве) или пульт по HTTP.
 pub async fn transfer(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     t: ConnectTransfer,
 ) -> AppResult<Option<ServerEvent>> {
-    transfer_by(st, user, None, t).await
+    transfer_by(st, scope, None, t).await
 }
 
 /// Перенос по просьбе устройства `by`: он же может оказаться поправкой автоматики (crate::choice).
 async fn transfer_by(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     by: Option<&str>,
     t: ConnectTransfer,
 ) -> AppResult<Option<ServerEvent>> {
@@ -526,17 +544,17 @@ async fn transfer_by(
             })
         })
     };
-    if !is_online(&st.db, user, &t.to).await? {
+    if !is_online(&st.db, scope.id, &t.to).await? {
         return Ok(ack(false, Some("offline")));
     }
     // Звук на часах не играет: перенос туда оставил бы человека в тишине
-    if is_remote(&st.db, user, &t.to).await? {
+    if is_remote(&st.db, scope.id, &t.to).await? {
         return Ok(ack(false, Some("unsupported")));
     }
     let mut tx = st.db.begin().await?;
     let row = sqlx::query!(
-        "SELECT active_connect_id, state FROM playback_state WHERE user_id = $1 FOR UPDATE",
-        user,
+        "SELECT active_connect_id, state FROM playback_state WHERE scope = $1 FOR UPDATE",
+        scope.id,
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -557,19 +575,21 @@ async fn transfer_by(
         None => serde_json::json!({}),
     };
     sqlx::query!(
-        "INSERT INTO playback_state (user_id, active_connect_id, state, updated_at) VALUES ($1, $2, $3, now())
-         ON CONFLICT (user_id) DO UPDATE SET active_connect_id = EXCLUDED.active_connect_id,
+        "INSERT INTO playback_state (scope, user_id, active_connect_id, state, updated_at)
+         VALUES ($1, $4, $2, $3, now())
+         ON CONFLICT (scope) DO UPDATE SET active_connect_id = EXCLUDED.active_connect_id,
              state = EXCLUDED.state, updated_at = now()",
-        user,
+        scope.id,
         t.to,
         json,
+        scope.user,
     )
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
     realtime::deliver(
         &st.hub,
-        Audience::User(user),
+        Audience::User(scope.id),
         ServerEvent::ConnectActive(ConnectActive {
             device_id: Some(t.to.clone()),
             from: prev,
@@ -577,20 +597,20 @@ async fn transfer_by(
             state: state.map(Box::new),
         }),
     );
-    announce(&st.db, &st.hub, user).await?;
+    announce(&st.db, &st.hub, scope).await?;
     if let Some(by) = by
-        && let Err(e) = crate::choice::transferred(st, user, by, &t.to).await
+        && let Err(e) = crate::choice::transferred(st, scope, by, &t.to).await
     {
         tracing::warn!(error = %e, "placement correction failed");
     }
     Ok(ack(true, None))
 }
 
-async fn is_online(db: &PgPool, user: Uuid, device: &str) -> AppResult<bool> {
+async fn is_online(db: &PgPool, scope: Uuid, device: &str) -> AppResult<bool> {
     let online = sqlx::query_scalar!(
         r#"SELECT (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS "online!"
-           FROM connect_devices WHERE user_id = $1 AND id = $2"#,
-        user,
+           FROM connect_devices WHERE scope = $1 AND id = $2"#,
+        scope,
         device,
         ONLINE_WINDOW_SECS as f64,
     )
@@ -599,11 +619,11 @@ async fn is_online(db: &PgPool, user: Uuid, device: &str) -> AppResult<bool> {
     Ok(online.unwrap_or(false))
 }
 
-async fn is_remote(db: &PgPool, user: Uuid, device: &str) -> AppResult<bool> {
+async fn is_remote(db: &PgPool, scope: Uuid, device: &str) -> AppResult<bool> {
     let remote = sqlx::query_scalar!(
         r#"SELECT coalesce((capabilities->>'remote')::boolean, false) AS "remote!"
-           FROM connect_devices WHERE user_id = $1 AND id = $2"#,
-        user,
+           FROM connect_devices WHERE scope = $1 AND id = $2"#,
+        scope,
         device,
     )
     .fetch_optional(db)
@@ -620,14 +640,14 @@ fn parse_state(json: serde_json::Value) -> Option<PlaybackState> {
         .ok()
 }
 
-/// Активное устройство и последний снимок.
+/// Активное устройство и последний снимок области `scope` ([`Scope::id`]; у обычного человека — его id).
 pub async fn playback(
     db: &PgPool,
-    user: Uuid,
+    scope: Uuid,
 ) -> AppResult<(Option<String>, Option<PlaybackState>)> {
     let row = sqlx::query!(
-        "SELECT active_connect_id, state FROM playback_state WHERE user_id = $1",
-        user,
+        "SELECT active_connect_id, state FROM playback_state WHERE scope = $1",
+        scope,
     )
     .fetch_optional(db)
     .await?;
@@ -639,10 +659,10 @@ pub async fn playback(
 
 /// Список устройств: активное первым, затем в сети, затем недавние. Закрытая вкладка не вернётся
 /// (новая вкладка — новое устройство), поэтому её нет в списке; приложения не в сети видны месяц.
-pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
+pub async fn devices(db: &PgPool, scope: Uuid) -> AppResult<ConnectDevices> {
     let active = sqlx::query_scalar!(
-        "SELECT active_connect_id FROM playback_state WHERE user_id = $1",
-        user,
+        "SELECT active_connect_id FROM playback_state WHERE scope = $1",
+        scope,
     )
     .fetch_optional(db)
     .await?
@@ -651,7 +671,7 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
         r#"SELECT id, name, kind, platform, app_version, capabilities, last_seen_at, choice, media_player,
                   (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) AS "online!"
            FROM connect_devices
-           WHERE user_id = $1
+           WHERE scope = $1
              AND (id = $2
                   OR (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3))
                   OR (kind <> 'web' AND last_seen_at > now() - interval '30 days'))
@@ -659,7 +679,7 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
                     (connection IS NOT NULL AND last_seen_at > now() - make_interval(secs => $3)) DESC,
                     last_seen_at DESC
            LIMIT 30"#,
-        user,
+        scope,
         active.as_deref().unwrap_or(""),
         ONLINE_WINDOW_SECS as f64,
     )
@@ -688,18 +708,22 @@ pub async fn devices(db: &PgPool, user: Uuid) -> AppResult<ConnectDevices> {
     })
 }
 
-/// Свежий список — всем устройствам человека.
-pub async fn announce(db: &PgPool, hub: &realtime::Hub, user: Uuid) -> AppResult<()> {
-    let list = devices(db, user).await?;
-    realtime::deliver(hub, Audience::User(user), ServerEvent::ConnectDevices(list));
-    crate::admin_live::notify(hub, user);
+/// Свежий список — всем устройствам человека (у гостя демо — только его входа).
+pub async fn announce(db: &PgPool, hub: &realtime::Hub, scope: Scope) -> AppResult<()> {
+    let list = devices(db, scope.id).await?;
+    realtime::deliver(
+        hub,
+        Audience::User(scope.id),
+        ServerEvent::ConnectDevices(list),
+    );
+    crate::admin_live::notify(hub, scope.user);
     Ok(())
 }
 
 /// `GET /api/devices`.
-pub async fn overview(db: &PgPool, user: Uuid) -> AppResult<ConnectOverview> {
-    let list = devices(db, user).await?;
-    let (_, state) = playback(db, user).await?;
+pub async fn overview(db: &PgPool, scope: Uuid) -> AppResult<ConnectOverview> {
+    let list = devices(db, scope).await?;
+    let (_, state) = playback(db, scope).await?;
     Ok(ConnectOverview {
         devices: list.devices,
         active_device_id: list.active_device_id,
@@ -724,15 +748,15 @@ pub async fn remote_presence(
     principal: &Principal,
     hello: ConnectHello,
 ) -> AppResult<ConnectOverview> {
-    let user = principal.user.id;
+    let scope = principal.scope();
     if valid_id(&hello.device_id) {
-        let was_online = is_online(&st.db, user, &hello.device_id).await?;
+        let was_online = is_online(&st.db, scope.id, &hello.device_id).await?;
         upsert(st, principal, &hello, principal.session_id).await?;
         if !was_online {
-            announce(&st.db, &st.hub, user).await?;
+            announce(&st.db, &st.hub, scope).await?;
         }
     }
-    let mut overview = overview(&st.db, user).await?;
+    let mut overview = overview(&st.db, scope.id).await?;
     if let Some(s) = overview.state.as_mut() {
         s.manual.clear();
         s.upcoming.clear();
@@ -745,9 +769,9 @@ pub async fn remote_presence(
 /// Id устройства «Где играть», которым отмечалась эта сессия (пульт по HTTP).
 async fn remote_id(st: &AppState, principal: &Principal) -> AppResult<String> {
     let id = sqlx::query_scalar!(
-        "SELECT id FROM connect_devices WHERE user_id = $1 AND connection = $2
+        "SELECT id FROM connect_devices WHERE scope = $1 AND connection = $2
          ORDER BY last_seen_at DESC LIMIT 1",
-        principal.user.id,
+        principal.scope().id,
         principal.session_id,
     )
     .fetch_optional(&st.db)
@@ -761,7 +785,7 @@ pub async fn remote_command(
     principal: &Principal,
     send: ConnectSend,
 ) -> AppResult<ConnectAck> {
-    let user = principal.user.id;
+    let scope = principal.scope().id;
     let from = remote_id(st, principal).await?;
     let answer = |ok: bool, error: Option<&str>| ConnectAck {
         id: send.id.clone(),
@@ -770,7 +794,7 @@ pub async fn remote_command(
         ok,
         error: error.map(str::to_string),
     };
-    if !is_online(&st.db, user, &send.to).await? {
+    if !is_online(&st.db, scope, &send.to).await? {
         return Ok(answer(false, Some("offline")));
     }
     // Подписка — до отправки: быстрое подтверждение не проскочит мимо
@@ -778,7 +802,7 @@ pub async fn remote_command(
     realtime::deliver(
         &st.hub,
         Audience::Device {
-            user,
+            user: scope,
             device: send.to.clone(),
         },
         ServerEvent::ConnectCommand(ConnectCommand {
@@ -791,7 +815,7 @@ pub async fn remote_command(
         loop {
             match events.recv().await {
                 Ok(env) => {
-                    let mine = matches!(&env.to, Audience::Device { user: u, device } if *u == user && *device == from);
+                    let mine = matches!(&env.to, Audience::Device { user: u, device } if *u == scope && *device == from);
                     if let (true, ServerEvent::ConnectAck(ack)) = (mine, &env.event)
                         && ack.id == send.id
                     {
@@ -821,7 +845,7 @@ pub async fn remote_transfer(
         id: Some(id.clone()),
         ..t
     };
-    Ok(match transfer(st, principal.user.id, t).await? {
+    Ok(match transfer(st, principal.scope(), t).await? {
         Some(ServerEvent::ConnectAck(ack)) => ack,
         _ => ConnectAck {
             id,

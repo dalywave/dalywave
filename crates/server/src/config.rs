@@ -54,6 +54,9 @@ pub struct Config {
     pub admin_emails: Vec<String>,
     /// Пароль аварийного входа. `None` — вход паролем выключен.
     pub admin_password: Option<String>,
+    /// Логин (в нижнем регистре) общего аккаунта публичного демо: в него входят без пароля, а сменить
+    /// пароль, логин, входы, удалить его или сделать админом нельзя. `None` — демо нет.
+    pub demo_account: Option<String>,
     /// Хранилище S3. `None` — файлы живут на диске (`storage.kind = fs`) или в памяти процесса.
     pub s3: Option<S3Config>,
     /// Где хранятся файлы сервера: S3, свой диск или память процесса (разработка и тесты).
@@ -642,6 +645,8 @@ impl Config {
             ok
         });
 
+        let demo_account = var("DEMO_ACCOUNT").map(|name| name.to_lowercase());
+
         let s3 = match (
             var("S3_ENDPOINT"),
             var("S3_ACCESS_KEY_ID"),
@@ -826,6 +831,7 @@ impl Config {
                 .map(|e| e.to_lowercase())
                 .collect(),
             admin_password,
+            demo_account,
             s3,
             storage,
             library,
@@ -843,6 +849,11 @@ impl Config {
             release_token,
             push,
         })
+    }
+
+    /// Общий аккаунт демо: `username` — логин из базы.
+    pub fn is_demo(&self, username: Option<&str>) -> bool {
+        matches!((self.demo_account.as_deref(), username), (Some(demo), Some(name)) if demo == name)
     }
 
     /// Cookie с флагом Secure браузер не вернёт по http, поэтому флаг ставится только для https.
@@ -965,6 +976,15 @@ mod tests {
         assert_eq!(c.public_origin(), "https://wave.daly.rest");
         assert_eq!(c.secret_key, [0xab; 32]);
         assert!(parse(&[("PUBLIC_URL", "ftp://wave.daly.rest")]).is_err());
+    }
+
+    #[test]
+    fn demo_account_is_off_by_default() {
+        let c = parse(&[]).unwrap();
+        assert!(c.demo_account.is_none() && !c.is_demo(Some("demo")));
+        let c = parse(&[("DEMO_ACCOUNT", " Demo ")]).unwrap();
+        assert_eq!(c.demo_account.as_deref(), Some("demo"));
+        assert!(c.is_demo(Some("demo")) && !c.is_demo(Some("owner")) && !c.is_demo(None));
     }
 
     #[test]

@@ -21,6 +21,9 @@ pub enum AppError {
     BadOrigin,
     #[error("вход паролем выключен")]
     PasswordDisabled,
+    /// Общий аккаунт публичного демо (`DALYWAVE_DEMO_ACCOUNT`): вход, пароль и права в нём не меняются.
+    #[error("в демо-аккаунте это недоступно: он общий для всех гостей")]
+    DemoAccount,
     #[error("не найдено")]
     NotFound,
     /// 404 со своим кодом: сущность есть, а нужной части у неё нет — приложение отличает это от «нет такого».
@@ -68,6 +71,7 @@ impl AppError {
             Self::Forbidden(_) => (StatusCode::FORBIDDEN, "forbidden"),
             Self::BadOrigin => (StatusCode::FORBIDDEN, "bad_origin"),
             Self::PasswordDisabled => (StatusCode::FORBIDDEN, "password_disabled"),
+            Self::DemoAccount => (StatusCode::FORBIDDEN, "demo_account"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::Missing { code, .. } => (StatusCode::NOT_FOUND, code),
             Self::BadRequest(_) => (StatusCode::BAD_REQUEST, "bad_request"),

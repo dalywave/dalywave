@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tv_logins SET user_id = $2, auth_method = 'local', approved_at = now()\n         WHERE device_code_hash = $1 AND used_at IS NULL AND approved_at IS NULL AND expires_at > now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dd400a9f2c896a249909103638a545e77aca4e039cb1f5b984380f3951231d45"
+}

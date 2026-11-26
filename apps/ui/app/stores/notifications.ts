@@ -36,6 +36,7 @@ function writeFlag(key: string, on: boolean) {
  */
 export const useNotificationsStore = defineStore('notifications', () => {
   const bridge = useBridge()
+  const auth = useAuthStore()
   const toast = useToast()
   const ui = useUiStore()
   const t = useNuxtApp().$i18n.t
@@ -184,10 +185,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
     && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   const appSupported = ref(false)
 
-  /** Можно ли включить push здесь: платформа умеет, канал на сервере настроен */
+  /** Можно ли включить push здесь: платформа умеет, канал на сервере настроен. Гостю демо — нет:
+   *  аккаунт общий, уведомления пришли бы всем гостям (сервер и сам не даёт каналов) */
   const available = computed(() => {
     const p = push.value
-    if (!p) return false
+    if (!p || auth.isDemo) return false
     if (bridge.appPush) return appSupported.value && p.apns
     return webSupported && !!p.webPushKey
   })

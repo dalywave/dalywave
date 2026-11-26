@@ -288,15 +288,15 @@ async fn activity_respects_privacy_and_private_sessions(db: PgPool) {
         "at": Utc::now(),
     });
     sqlx::query(
-        "INSERT INTO connect_devices (user_id, id, name, kind, platform, connection, last_seen_at)
-         VALUES ($1, 'mac', 'Mac', 'laptop', 'macos', gen_random_uuid(), now())",
+        "INSERT INTO connect_devices (user_id, scope, id, name, kind, platform, connection, last_seen_at)
+         VALUES ($1, $1, 'mac', 'Mac', 'laptop', 'macos', gen_random_uuid(), now())",
     )
     .bind(ann_id.parse::<Uuid>().unwrap())
     .execute(&app.state.db)
     .await
     .unwrap();
     sqlx::query(
-        "INSERT INTO playback_state (user_id, active_connect_id, state) VALUES ($1, 'mac', $2)",
+        "INSERT INTO playback_state (user_id, scope, active_connect_id, state) VALUES ($1, $1, 'mac', $2)",
     )
     .bind(ann_id.parse::<Uuid>().unwrap())
     .bind(&state)

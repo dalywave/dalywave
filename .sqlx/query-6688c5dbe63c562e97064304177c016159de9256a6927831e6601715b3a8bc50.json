@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT active_connect_id FROM playback_state WHERE scope = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "active_connect_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "playback_state",
+            "name": "active_connect_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6688c5dbe63c562e97064304177c016159de9256a6927831e6601715b3a8bc50"
+}

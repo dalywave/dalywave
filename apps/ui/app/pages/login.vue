@@ -8,6 +8,7 @@ import { FALLBACK_PROVIDERS } from '~/stores/auth'
 // Authentik, Google…), форма логина и пароля своих аккаунтов, мастер первого запуска. Один провайдер
 // без своих аккаунтов — одна главная кнопка. Если вход сорвался — тот же экран говорит,
 // что случилось. Аварийный вход паролем из .env — только на сайте и неприметной ссылкой.
+// Публичное демо (`demo`): над всем — главная кнопка «Войти в демо» без пароля, ниже — свой аккаунт.
 // Приложение входит через системный браузер: там открывается этот же экран с ?app=1
 definePageMeta({ layout: 'bare' })
 
@@ -43,6 +44,8 @@ onMounted(loadProviders)
 const list = computed(() => providers.value?.providers ?? [])
 const local = computed(() => !!providers.value?.local)
 const setup = computed(() => local.value && !!providers.value?.setup)
+// Пока администратора нет, демо-аккаунта тоже нет: сначала мастер первого запуска
+const demo = computed(() => !!providers.value?.demo && !setup.value)
 // Один провайдер и без своих аккаунтов — одна главная кнопка
 const single = computed(() => !local.value && list.value.length === 1 ? list.value[0]! : null)
 const signingIn = ref(false)
@@ -53,7 +56,7 @@ function reload() {
 
 // Ошибка возврата от провайдера (сайт: ?error=…) или входа в приложении
 const WEB_ERRORS = ['cancelled', 'expired', 'state', 'disabled', 'provider', 'not_registered']
-const APP_ERRORS = ['cancelled', 'timeout', 'expired', 'state', 'provider', 'disabled', 'not_registered', 'invalid_request', 'invalid_grant', 'forbidden', 'too_many_requests', 'network', 'server', 'keychain']
+const APP_ERRORS = ['cancelled', 'timeout', 'expired', 'state', 'provider', 'disabled', 'not_registered', 'invalid_request', 'invalid_grant', 'forbidden', 'too_many_requests', 'network', 'server', 'keychain', 'demo_unavailable']
 const appError = ref<string | null>(null)
 const failure = computed<string | null>(() => {
   if (appError.value) return appError.value
@@ -76,7 +79,7 @@ const heading = computed(() => {
 const text = computed(() => {
   if (handedOff.value) return t('handoff.text')
   const f = failure.value
-  if (signingIn.value) return single.value ? t('app.wait', { title: single.value.title }) : t('app.waitAny')
+  if (signingIn.value && !demoPending.value) return single.value ? t('app.wait', { title: single.value.title }) : t('app.waitAny')
   if (f) return t(`errors.${f}`)
   if (serverDown.value) return t('down.text')
   if (setup.value) return t('setup.text')
@@ -85,11 +88,14 @@ const text = computed(() => {
 })
 
 // ---------- Приложение: вход в системном окне браузера, токен остаётся в связке ключей ----------
-async function appLogin() {
+// Демо — тот же вход, только сервер сразу возвращает код общего аккаунта, без экрана входа
+const demoPending = ref(false)
+async function appLogin(opts: { demo?: boolean } = {}) {
   signingIn.value = true
+  demoPending.value = !!opts.demo
   appError.value = null
   try {
-    const me = await auth.login(next.value)
+    const me = await auth.login(next.value, opts)
     if (me) await navigateTo(auth.status === 'no-access' ? '/waiting' : next.value)
   }
   catch (e) {
@@ -98,6 +104,7 @@ async function appLogin() {
   }
   finally {
     signingIn.value = false
+    demoPending.value = false
   }
 }
 function cancelAppLogin() {
@@ -138,6 +145,26 @@ async function localLogin(v: { username: string, password: string }) {
   }
   finally {
     busy.value = false
+  }
+}
+
+// ---------- Публичное демо: общий аккаунт без пароля ----------
+const demoBusy = ref(false)
+const demoError = ref<string | null>(null)
+
+async function demoLogin() {
+  demoBusy.value = true
+  demoError.value = null
+  try {
+    await finish(await bridge.auth.demoLogin(appMode.value))
+  }
+  catch (e) {
+    if (e instanceof ApiError && e.status === 429) demoError.value = t('form.rateLimited')
+    else if (e instanceof ApiError && (e.status === 404 || e.status === 403)) demoError.value = t('demo.unavailable')
+    else demoError.value = describe(e)
+  }
+  finally {
+    demoBusy.value = false
   }
 }
 
@@ -215,15 +242,27 @@ async function submit() {
       <UiButton variant="primary" size="lg" block @click="reload">{{ t('down.reload') }}</UiButton>
     </template>
 
-    <!-- Приложение: одна кнопка — системный браузер откроет этот же экран со всеми способами -->
+    <!-- Приложение: одна кнопка — системный браузер откроет этот же экран со всеми способами.
+         На демо над ней «Войти в демо»: браузер сразу возвращает код общего аккаунта -->
     <template v-else-if="inApp && providers">
-      <UiButton variant="primary" size="lg" block :loading="signingIn" @click="appLogin">
+      <template v-if="demo">
+        <UiButton variant="primary" size="lg" block :loading="signingIn && demoPending" :disabled="signingIn && !demoPending" @click="appLogin({ demo: true })">{{ t('demo.button') }}</UiButton>
+        <p class="demo-note">{{ t('demo.note') }}</p>
+        <AuthOr class="demo-or" :label="t('demo.or')" />
+      </template>
+      <UiButton :variant="demo ? 'secondary' : 'primary'" size="lg" block :loading="signingIn && !demoPending" :disabled="signingIn && demoPending" @click="appLogin()">
         {{ failure ? t('retry') : single ? t('oidc', { title: single.title }) : t('signIn') }}
       </UiButton>
       <UiButton v-if="signingIn && bridge.kind === 'tauri'" variant="ghost" size="lg" block @click="cancelAppLogin">{{ t('app.cancel') }}</UiButton>
     </template>
 
     <template v-else-if="providers">
+      <template v-if="demo">
+        <UiButton variant="primary" size="lg" block :loading="demoBusy" :disabled="busy" @click="demoLogin">{{ t('demo.button') }}</UiButton>
+        <p v-if="demoError" class="demo-note demo-note--error" role="alert">{{ demoError }}</p>
+        <p v-else class="demo-note">{{ t('demo.note') }}</p>
+        <AuthOr v-if="local || list.length" class="demo-or" :label="t('demo.or')" />
+      </template>
       <AuthCredentials
         v-if="setup"
         mode="create"
@@ -312,6 +351,11 @@ async function submit() {
 </template>
 
 <style scoped>
+/* Подпись под кнопкой демо: то же место — для ошибки входа в демо. Под разделителем — воздух:
+   дальше другой способ входа, а не продолжение кнопки */
+.demo-note { margin: 0 0 6px; font-size: var(--fs-small); line-height: 1.4; color: var(--text-3); text-align: center; }
+.demo-note--error { color: var(--danger); }
+p.demo-or { margin: 6px 0 20px; }
 /* Ссылка на аварийный вход: неприметная, но с полноценной зоной касания */
 .lf { display: flex; flex-direction: column; align-items: center; width: 100%; }
 .lf__links { display: flex; flex-wrap: wrap; justify-content: center; }
@@ -391,6 +435,7 @@ async function submit() {
       "network": "Нет связи с сервером. Проверьте интернет и попробуйте снова",
       "server": "Сервер ответил неожиданно. Попробуйте чуть позже",
       "keychain": "Связка ключей не сохранила вход. Проверьте доступ приложения к ней",
+      "demo_unavailable": "Демо на этом сервере сейчас недоступно",
       "unknown": "Что-то пошло не так. Попробуйте ещё раз"
     },
     "app": {
@@ -413,6 +458,12 @@ async function submit() {
       "title": "Вход по паролю",
       "placeholder": "Пароль владельца",
       "wrong": "Пароль не подошёл"
+    },
+    "demo": {
+      "button": "Войти в демо",
+      "note": "Без пароля. Ночью всё вернётся как было",
+      "or": "или своим аккаунтом",
+      "unavailable": "Демо сейчас недоступно. Попробуйте позже"
     }
   },
   "en": {
@@ -460,6 +511,7 @@ async function submit() {
       "network": "No connection to the server. Check the internet and try again",
       "server": "The server responded unexpectedly. Try a bit later",
       "keychain": "The keychain didn't save the sign-in. Check the app's access to it",
+      "demo_unavailable": "The demo isn't available on this server right now",
       "unknown": "Something went wrong. Try again"
     },
     "app": {
@@ -482,6 +534,12 @@ async function submit() {
       "title": "Sign in with password",
       "placeholder": "Owner password",
       "wrong": "Wrong password"
+    },
+    "demo": {
+      "button": "Try the demo",
+      "note": "No password. Everything resets every night",
+      "or": "or with your account",
+      "unavailable": "The demo isn't available right now. Try again later"
     }
   }
 }

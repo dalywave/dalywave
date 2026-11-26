@@ -29,8 +29,8 @@ async fn listener(app: &TestApp, admin: &Auth, sub: &str) -> Auth {
 async fn online(app: &TestApp, user: &str, device: &str, playing: bool) {
     let user: Uuid = user.parse().unwrap();
     sqlx::query(
-        "INSERT INTO connect_devices (user_id, id, name, kind, platform, connection, last_seen_at)
-         VALUES ($1, $2, 'Mac', 'laptop', 'macos', gen_random_uuid(), now())",
+        "INSERT INTO connect_devices (user_id, scope, id, name, kind, platform, connection, last_seen_at)
+         VALUES ($1, $1, $2, 'Mac', 'laptop', 'macos', gen_random_uuid(), now())",
     )
     .bind(user)
     .bind(device)
@@ -38,8 +38,8 @@ async fn online(app: &TestApp, user: &str, device: &str, playing: bool) {
     .await
     .unwrap();
     sqlx::query(
-        "INSERT INTO playback_state (user_id, active_connect_id, state) VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE SET active_connect_id = $2, state = $3",
+        "INSERT INTO playback_state (user_id, scope, active_connect_id, state) VALUES ($1, $1, $2, $3)
+         ON CONFLICT (scope) DO UPDATE SET active_connect_id = $2, state = $3",
     )
     .bind(user)
     .bind(device)

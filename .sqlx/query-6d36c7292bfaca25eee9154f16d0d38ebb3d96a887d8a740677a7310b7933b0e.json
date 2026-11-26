@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO sessions (user_id, device_id, kind, auth_method, token_hash, expires_at, user_agent, ip, guest)\n         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6), $7, $8, $9)\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bytea",
+        "Int4",
+        "Text",
+        "Inet",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6d36c7292bfaca25eee9154f16d0d38ebb3d96a887d8a740677a7310b7933b0e"
+}

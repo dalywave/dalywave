@@ -189,12 +189,23 @@ fn channel_enabled(st: &AppState, channel: PushChannel) -> bool {
     path = "/api/notifications/push",
     tag = "notifications",
     security(("session" = []), ("device" = [])),
-    responses((status = 200, description = "Каналы push на сервере и подписанные устройства человека", body = PushInfo)),
+    responses((status = 200, description = "Каналы push на сервере и подписанные устройства человека. \
+                                            У общего аккаунта демо каналов нет: push у гостей не включается", body = PushInfo)),
 )]
 pub async fn push_info(
     State(st): State<AppState>,
     principal: Principal,
 ) -> AppResult<Json<PushInfo>> {
+    // Гость демо не подписывает свои устройства: уведомления общего аккаунта ушли бы всем гостям,
+    // а список подписок показал бы их устройства друг другу
+    if principal.demo {
+        return Ok(Json(PushInfo {
+            web_push_key: None,
+            apns: false,
+            fcm: false,
+            devices: Vec::new(),
+        }));
+    }
     let rows = sqlx::query!(
         "SELECT p.id, p.channel, p.name, p.session_id, p.created_at, p.last_sent_at
          FROM push_subscriptions p LEFT JOIN sessions s ON s.id = p.session_id
@@ -290,6 +301,7 @@ pub fn browser_name(ua: &str) -> String {
     responses(
         (status = 201, description = "Устройство подписано (повтор с тем же токеном обновляет подписку)", body = PushRegistered),
         (status = 400, description = "Нет токена или подписки браузера, канал на сервере выключен", body = ErrorBody),
+        (status = 403, description = "Общий аккаунт демо (`demo_account`): push у гостей не включается", body = ErrorBody),
     ),
 )]
 pub async fn subscribe(
@@ -297,6 +309,7 @@ pub async fn subscribe(
     principal: Principal,
     Json(body): Json<PushRegistration>,
 ) -> AppResult<(StatusCode, Json<PushRegistered>)> {
+    principal.not_demo()?;
     if !channel_enabled(&st, body.channel) {
         return Err(bad("этот канал уведомлений на сервере выключен"));
     }

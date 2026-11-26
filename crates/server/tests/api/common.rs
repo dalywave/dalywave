@@ -43,6 +43,7 @@ pub fn config() -> Config {
         local_auth: false,
         admin_emails: Vec::new(),
         admin_password: None,
+        demo_account: None,
         s3: None,
         storage: StorageConfig::default(),
         library: LibraryConfig::default(),

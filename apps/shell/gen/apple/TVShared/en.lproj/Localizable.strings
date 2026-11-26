@@ -6,7 +6,7 @@
 "Адрес сервера, например music.example.com" = "Server address, e.g. music.example.com";
 "Подключиться" = "Connect";
 "Попробовать демо" = "Try the Demo";
-"Открытая музыка, вход appreview" = "Open music, sign in as appreview";
+"Открытая музыка, без пароля" = "Open music, no password";
 "Подключить с iPhone" = "Connect with iPhone";
 "Прежний сервер" = "Previous server";
 "С вашего iPhone" = "From your iPhone";
@@ -28,6 +28,13 @@
 " и введите код с экрана." = " and enter the code shown on screen.";
 "Нет связи с сервером. Пробуем снова…" = "Can’t reach the server. Trying again…";
 "Другой сервер" = "Other Server";
+
+/* Демо без телефона (SignInView, DemoSignIn) */
+"Войти в демо" = "Try the Demo";
+"На этом сервере нет демо" = "This server has no demo.";
+"Слишком много входов в демо. Попробуйте через минуту" = "Too many demo sign-ins. Try again in a minute.";
+"Демо сейчас закрыто" = "The demo is closed right now.";
+"Не удалось войти в демо" = "Couldn’t sign in to the demo.";
 
 /* Вкладки (Store.Tab) */
 "Сейчас играет" = "Now Playing";

@@ -124,6 +124,16 @@ struct Api {
         }
     }
 
+    func providers() async throws -> AuthProviders {
+        try await get("/api/auth/providers")
+    }
+
+    /// Демо: телевизор сам подтверждает свой код для общего аккаунта демо (204), ключ — обычным
+    /// `tvToken`. Ошибки: 404 — демо нет, 429 — частые входы с адреса, 403 — аккаунт демо закрыт.
+    func approveDemo(_ deviceCode: String) async throws {
+        try await call("POST", "/api/auth/demo/tv", ["deviceCode": deviceCode])
+    }
+
     // MARK: Воспроизведение
 
     func stream(_ trackId: String) async throws -> StreamReply {

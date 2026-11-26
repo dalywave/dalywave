@@ -18,7 +18,7 @@ async fn full_web_flow(db: PgPool) {
     let dalyrest = json!({ "id": "dalyrest", "title": "daly.rest", "icon": null });
     assert_eq!(
         providers.body,
-        json!({ "oidc": dalyrest, "providers": [dalyrest], "password": false, "local": false, "setup": false })
+        json!({ "oidc": dalyrest, "providers": [dalyrest], "password": false, "local": false, "setup": false, "demo": false })
     );
 
     let res = app

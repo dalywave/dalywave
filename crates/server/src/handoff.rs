@@ -39,7 +39,7 @@ use uuid::Uuid;
 
 use crate::{
     audit,
-    connect::{self, Link},
+    connect::{self, Link, Scope},
     error::AppResult,
     realtime::{self, Audience},
     state::AppState,
@@ -308,14 +308,15 @@ impl Memory {
 /// `connect.signal`: запомнить и, если правила сошлись, перенести музыку или предложить перенос.
 pub async fn signal(
     st: &AppState,
-    user: Uuid,
+    scope: Scope,
     link: &Link,
     s: ConnectSignal,
 ) -> AppResult<Option<ServerEvent>> {
     let Some(device) = link.device.clone().filter(|_| !link.remote) else {
         return Ok(None);
     };
-    let list = connect::devices(&st.db, user).await?;
+    let user = scope.user;
+    let list = connect::devices(&st.db, scope.id).await?;
     let Some(me) = list.devices.iter().find(|d| d.id == device) else {
         return Ok(None);
     };
@@ -333,12 +334,12 @@ pub async fn signal(
         at: now,
     };
     tracing::debug!(%user, device = %new.device, signal = %new.signal, "handoff signal");
-    let history = st.handoff.remember(user, new.clone());
+    let history = st.handoff.remember(scope.id, new.clone());
     let settings = crate::routes::settings::of(&st.db, user).await?;
     if settings.handoff == HandoffMode::Off {
         return Ok(None);
     }
-    let (active, state) = connect::playback(&st.db, user).await?;
+    let (active, state) = connect::playback(&st.db, scope.id).await?;
     let targets: Vec<Target> = list
         .devices
         .iter()
@@ -360,7 +361,7 @@ pub async fn signal(
     let Some(d) = decide(&facts, &new) else {
         return Ok(None);
     };
-    if !st.handoff.fresh(user, &d, now) {
+    if !st.handoff.fresh(scope.id, &d, now) {
         return Ok(None);
     }
     let name_of = |id: &str| {
@@ -392,7 +393,7 @@ pub async fn signal(
     if d.transfer {
         connect::transfer(
             st,
-            user,
+            scope,
             ConnectTransfer {
                 id: None,
                 to: d.to.clone(),
@@ -403,10 +404,10 @@ pub async fn signal(
     }
     // Перенос видят оба устройства (тост «музыка перешла»), предложение — только то, куда звать
     let to = if d.transfer {
-        Audience::User(user)
+        Audience::User(scope.id)
     } else {
         Audience::Device {
-            user,
+            user: scope.id,
             device: d.to.clone(),
         }
     };

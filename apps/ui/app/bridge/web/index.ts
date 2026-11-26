@@ -436,6 +436,7 @@ export function createWebBridge(opts: WebBridgeOptions = {}): Bridge {
         invite: o.invite,
       })}`,
       localLogin: (username, password, app = false) => unwrap(api.POST('/api/auth/local/login', { body: { username, password, app } })),
+      demoLogin: (app = false) => unwrap(api.POST('/api/auth/demo', { body: { app } })),
       setup: account => unwrap(api.POST('/api/auth/setup', { body: account })),
       inviteInfo: token => unwrap(api.GET('/api/auth/invites/{token}', { params: { path: { token } } })),
       acceptInvite: (token, account) => unwrap(api.POST('/api/auth/invites/{token}', { params: { path: { token } }, body: account })),

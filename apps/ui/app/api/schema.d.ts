@@ -879,6 +879,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["demo_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/demo/tv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["demo_tv"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/invites/{token}": {
         parameters: {
             query?: never;
@@ -4480,6 +4512,8 @@ export interface components {
         };
         /** @description Какие способы входа включены на сервере. */
         AuthProviders: {
+            /** @description Публичное демо: на экране входа — «Войти в демо» без пароля (`POST /api/auth/demo`). */
+            demo?: boolean;
             /** @description Свои аккаунты: форма логина и пароля. */
             local: boolean;
             oidc: components["schemas"]["OidcProvider"] | null;
@@ -5289,6 +5323,16 @@ export interface components {
          * @enum {string}
          */
         DeezerKind: "artist" | "album" | "track";
+        /** @description Вход в общий аккаунт публичного демо — без логина и пароля. */
+        DemoLogin: {
+            /** @description Вход приложения, начатый в этом браузере: вместо сессии сайта — код для приложения. */
+            app?: boolean;
+        };
+        /** @description Телевизор входит в демо без подтверждения на телефоне: свой код из `/api/auth/tv/code`. */
+        DemoTvLogin: {
+            /** @description `deviceCode` из `/api/auth/tv/code`; сессию телевизор забирает обычным `/api/auth/tv/token`. */
+            deviceCode: string;
+        };
         /**
          * @description Что понято из описания: по этому собирается плейлист. Отдаётся в предпросмотре и приходит обратно
          *     в «Ещё в том же духе» и при сохранении — повторно запрос не разбирается.
@@ -6994,6 +7038,8 @@ export interface components {
         };
         /** @description Кто вошёл. Отвечает и людям без ролей: интерфейс показывает им «ждём доступа». */
         Me: {
+            /** @description Общий аккаунт публичного демо: пароль, логин, входы, удаление аккаунта и админка закрыты. */
+            demo?: boolean;
             device: components["schemas"]["Device"] | null;
             permissions: components["schemas"]["Permission"][];
             roles: components["schemas"]["Role"][];
@@ -10950,7 +10996,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreatedInvite"];
                 };
             };
-            /** @description Нет права admin */
+            /** @description Нет права admin или это общий аккаунт демо (`demo_account`) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -11964,7 +12010,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreatedUser"];
                 };
             };
-            /** @description Свои аккаунты выключены (`password_disabled`) */
+            /** @description Свои аккаунты выключены (`password_disabled`) или админ для аккаунта демо (`demo_account`) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -12133,6 +12179,15 @@ export interface operations {
             };
             /** @description Пустое имя */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Роль admin для общего аккаунта демо (`demo_account`) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12463,6 +12518,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Общий аккаунт демо (`demo_account`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Нет такого входа у этого аккаунта */
             404: {
                 headers: {
@@ -12512,7 +12576,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Свои аккаунты выключены (`password_disabled`) */
+            /** @description Свои аккаунты выключены (`password_disabled`) или это общий аккаунт демо (`demo_account`) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -12624,6 +12688,8 @@ export interface operations {
                 /** @description Имя устройства для списка сессий, например «MacBook Захара». */
                 device_name?: string;
                 platform?: components["schemas"]["Platform"];
+                /** @description `1` — сразу войти в общий аккаунт демо (если он есть на сервере), без экрана входа. */
+                demo?: string;
             };
             header?: never;
             path?: never;
@@ -12631,7 +12697,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description На экран входа сайта (`/login?app=1`, запрос — в cookie `dw_app`) или сразу к провайдеру, если способ входа один; после входа — на redirect_uri с `code` и `state` или с `error` и `state` */
+            /** @description На экран входа сайта (`/login?app=1`, запрос — в cookie `dw_app`) или сразу к провайдеру, если способ входа один; после входа — на redirect_uri с `code` и `state` или с `error` и `state`. `demo=1` — сразу код входа в общий аккаунт демо (без демо — `error=demo_unavailable`) */
             302: {
                 headers: {
                     [name: string]: unknown;
@@ -12682,6 +12748,124 @@ export interface operations {
             };
             /** @description Аккаунт заблокирован */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    demo_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoLogin"];
+            };
+        };
+        responses: {
+            /** @description Вход в общий аккаунт демо: сессия сайта (`me`, cookie `dw_session`) или адрес возврата в приложение */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInResult"];
+                };
+            };
+            /** @description Аккаунт демо заблокирован */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Демо на этом сервере нет (`DALYWAVE_DEMO_ACCOUNT` не задан) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Вход приложения устарел (`app_expired`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 5 входов в минуту с одного адреса */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    demo_tv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoTvLogin"];
+            };
+        };
+        responses: {
+            /** @description Код телевизора подтверждён для общего аккаунта демо: сессию он забирает обычным `/api/auth/tv/token` */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Код неверный, истёк или уже использован (`invalid_grant`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Аккаунт демо заблокирован */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Демо на этом сервере нет (`DALYWAVE_DEMO_ACCOUNT` не задан) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Больше 5 входов в демо в минуту с одного адреса */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12918,6 +13102,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description Общий аккаунт демо (`demo_account`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Это последний администратор (`last_admin`): сначала назначьте другого */
             409: {
                 headers: {
@@ -13066,6 +13259,15 @@ export interface operations {
             };
             /** @description `link=1` без входа на сайте */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `link=1` у общего аккаунта демо (`demo_account`) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16916,7 +17118,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Каналы push на сервере и подписанные устройства человека */
+            /** @description Каналы push на сервере и подписанные устройства человека. У общего аккаунта демо каналов нет: push у гостей не включается */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -16951,6 +17153,15 @@ export interface operations {
             };
             /** @description Нет токена или подписки браузера, канал на сервере выключен */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Общий аккаунт демо (`demo_account`): push у гостей не включается */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
