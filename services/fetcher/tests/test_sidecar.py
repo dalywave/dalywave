@@ -345,6 +345,30 @@ def test_crashed_pot_server_is_restarted_and_yt_dlp_gets_the_new_address(tmp_pat
     assert not pot.started.wait(0.2)
 
 
+def test_pot_server_is_restarted_in_the_first_minute_after_boot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """time.monotonic() считает от загрузки системы: на только что загруженной машине (раннер CI,
+    автозапуск приложения) упавший сервер всё равно поднимается сразу."""
+    import dalywave_fetcher.sidecar as module
+
+    class JustBooted:
+        def __getattr__(self, name: str) -> object:
+            return getattr(time, name)
+
+        @staticmethod
+        def monotonic() -> float:
+            return 5.0
+
+    monkeypatch.setattr(module, "time", JustBooted())
+    sidecar, worker, _ = make(tmp_path, lambda r: httpx.Response(204), StagedFetcher())
+    pot = FakePot()
+    sidecar.pot_server = pot  # type: ignore[assignment]
+    worker.fetcher.downloader = type("D", (), {"settings": worker.fetcher.settings})()
+    sidecar.check_pot()
+    assert pot.started.wait(5)
+
+
 def _wait(cond: Callable[[], bool], timeout: float = 5.0) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

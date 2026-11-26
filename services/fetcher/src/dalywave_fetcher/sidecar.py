@@ -200,7 +200,9 @@ class Sidecar(WorkerEvents):
         self.retry_at: float | None = None
         self.job: dict[str, Any] | None = None
         self.pot: dict[str, Any] = {"state": "off"}
-        self._pot_restarted = 0.0
+        # Не 0.0: monotonic считает от загрузки системы, и в первую минуту после неё перезапуск
+        # считался бы «недавним»
+        self._pot_restarted = float("-inf")
         self._job_started = 0.0
         self._last_status: str | None = None
         self._last_progress = 0.0
