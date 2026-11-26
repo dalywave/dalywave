@@ -10,9 +10,11 @@ FROM ${PYTHON_IMAGE} AS ffmpeg
 ARG FFMPEG_VERSION=8.1.3
 # Подпись релиза проверена ключом FFmpeg (FCF9 86EA 15E6 E293 A564 4F10 B432 2F04 D676 58D8).
 ARG FFMPEG_SHA256=7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3
+# nasm — ассемблерные декодеры на amd64 (без него configure там останавливается); на arm64 не нужен.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends build-essential ca-certificates curl xz-utils; \
+    if [ "$(dpkg --print-architecture)" = amd64 ]; then apt-get install -y --no-install-recommends nasm; fi; \
     curl -fsSL -o /tmp/ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"; \
     echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c -; \
     mkdir /tmp/src; \
