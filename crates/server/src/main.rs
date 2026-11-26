@@ -39,6 +39,7 @@ async fn main() -> anyhow::Result<()> {
         apns = state.config.push.apns.is_some(),
         web_push = state.config.push.vapid.is_some(),
         password = state.config.admin_password.is_some(),
+        demo = ?state.config.demo_account,
         static_dir = ?state.config.static_dir,
         storage = ?state.storage,
         deezer = state.config.features.deezer,
@@ -49,6 +50,12 @@ async fn main() -> anyhow::Result<()> {
     if state.oidc.is_empty() && !state.config.local_auth && state.config.admin_password.is_none() {
         tracing::warn!(
             "no way to sign in: set DALYWAVE_OIDC_*, DALYWAVE_LOCAL_AUTH=true or DALYWAVE_ADMIN_PASSWORD"
+        );
+    }
+    if let Some(name) = &state.config.demo_account {
+        tracing::warn!(
+            account = %name,
+            "DALYWAVE_DEMO_ACCOUNT is set: anyone can sign in to this account without a password"
         );
     }
     if state.storage.is_memory() {

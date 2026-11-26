@@ -664,8 +664,9 @@ export interface Bridge {
     providers(): Promise<AuthProviders>
     /** null — сессии нет */
     me(): Promise<Me | null>
-    /** Вход через daly.rest: на сайте — переход на страницу провайдера, в приложении — системный браузер */
-    login(next: string): Promise<Me | null>
+    /** Вход через daly.rest: на сайте — переход на страницу провайдера, в приложении — системный браузер.
+     *  `demo` (приложение) — сразу в общий аккаунт публичного демо, без экрана входа в браузере */
+    login(next: string, opts?: { demo?: boolean }): Promise<Me | null>
     /** Прервать незаконченный вход в браузере (приложение) */
     cancelLogin(): Promise<void>
     /** Аварийный вход паролем — только на сайте: он открывает cookie-сессию */
@@ -679,6 +680,8 @@ export interface Bridge {
     providerUrl(id: string, opts?: { next?: string, app?: boolean, link?: boolean, invite?: string }): string
     /** Вход своим аккаунтом; `app` — вход приложения, начатый в этом браузере (ответ — адрес возврата) */
     localLogin(username: string, password: string, app?: boolean): Promise<SignInResult>
+    /** Публичное демо (`demo` в способах входа): общий аккаунт без пароля; `app` — как у localLogin */
+    demoLogin(app?: boolean): Promise<SignInResult>
     /** Первый запуск: создать администратора */
     setup(account: NewAccount): Promise<SignInResult>
     inviteInfo(token: string): Promise<InviteInfo>

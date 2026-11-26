@@ -150,8 +150,9 @@ fn user_agent(headers: &HeaderMap) -> Option<&str> {
         .and_then(|v| v.to_str().ok())
 }
 
-pub(crate) fn me_for(user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
-    let roles = user.roles();
+pub(crate) fn me_for(st: &AppState, user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
+    let demo = st.config.is_demo(user.username.as_deref());
+    let roles = auth::effective_roles(user.roles(), demo);
     Me {
         user: user.public(),
         permissions: permissions(&roles),
@@ -159,6 +160,7 @@ pub(crate) fn me_for(user: &UserRow, via: AuthVia, session_id: Uuid) -> Me {
         via,
         session_id,
         device: None,
+        demo,
     }
 }
 
@@ -197,6 +199,7 @@ pub async fn providers(State(st): State<AppState>) -> AppResult<Json<AuthProvide
         password: st.config.admin_password.is_some(),
         local: st.config.local_auth,
         setup,
+        demo: st.config.demo_account.is_some(),
     }))
 }
 
@@ -232,6 +235,7 @@ pub async fn oidc_start(
         (status = 302, description = "На страницу входа провайдера; ставит cookie `dw_oidc` на 10 минут"),
         (status = 400, description = "`next` — не путь на этом сайте", body = ErrorBody),
         (status = 401, description = "`link=1` без входа на сайте", body = ErrorBody),
+        (status = 403, description = "`link=1` у общего аккаунта демо (`demo_account`)", body = ErrorBody),
         (status = 404, description = "Нет такого провайдера", body = ErrorBody),
     ),
 )]
@@ -276,6 +280,7 @@ async fn start(
             .await?
             .filter(|p| p.kind == SessionKind::Web)
             .ok_or(AppError::Unauthorized)?;
+        principal.not_demo()?;
         Some(principal.user.id)
     } else {
         None
@@ -751,7 +756,10 @@ pub async fn password_login(
     let owner = users::owner(&st).await?;
     let (jar, session_id) =
         open_web_session(&st, jar, &headers, ip, owner.id, Method::Password).await?;
-    Ok((jar, Json(me_for(&owner, AuthVia::Password, session_id))))
+    Ok((
+        jar,
+        Json(me_for(&st, &owner, AuthVia::Password, session_id)),
+    ))
 }
 
 // ---------- сессия ----------
@@ -815,6 +823,7 @@ pub async fn me(State(st): State<AppState>, principal: Principal) -> AppResult<J
         via: principal.via,
         session_id: principal.session_id,
         device,
+        demo: principal.demo,
     }))
 }
 
@@ -827,6 +836,7 @@ pub async fn me(State(st): State<AppState>, principal: Principal) -> AppResult<J
         (status = 204, description = "Аккаунт удалён вместе со всем, что с ним связано: медиатекой, \
                                       плейлистами, историей, устройствами и сессиями"),
         (status = 401, description = "Нет сессии", body = ErrorBody),
+        (status = 403, description = "Общий аккаунт демо (`demo_account`)", body = ErrorBody),
         (status = 409, description = "Это последний администратор (`last_admin`): сначала назначьте другого", body = ErrorBody),
     ),
 )]
@@ -835,6 +845,7 @@ pub async fn delete_me(
     ClientIp(ip): ClientIp,
     principal: Principal,
 ) -> AppResult<StatusCode> {
+    principal.not_demo()?;
     let user_id = principal.user.id;
     let mut tx = st.db.begin().await?;
     // Последний администратор не уходит: иначе сервером некому управлять (а на пустом сервере
@@ -886,7 +897,9 @@ pub async fn delete_me(
     responses(
         (status = 302, description = "На экран входа сайта (`/login?app=1`, запрос — в cookie `dw_app`) \
                                       или сразу к провайдеру, если способ входа один; после входа — \
-                                      на redirect_uri с `code` и `state` или с `error` и `state`"),
+                                      на redirect_uri с `code` и `state` или с `error` и `state`. \
+                                      `demo=1` — сразу код входа в общий аккаунт демо (без демо — \
+                                      `error=demo_unavailable`)"),
         (status = 400, description = "redirect_uri не из разрешённых", body = ErrorBody),
     ),
 )]
@@ -943,7 +956,7 @@ pub async fn app_start(
     let Some(platform) = q.platform else {
         return Ok((jar, reject("invalid_request", "platform is required")));
     };
-    if st.oidc.is_empty() && !st.config.local_auth {
+    if st.oidc.is_empty() && !st.config.local_auth && st.config.demo_account.is_none() {
         return Ok((
             jar,
             reject("provider", "sign-in provider is not configured"),
@@ -971,6 +984,31 @@ pub async fn app_start(
     )
     .fetch_one(&st.db)
     .await?;
+    // «Войти в демо» в приложении: экран входа не нужен — код сразу на адрес приложения
+    if q.demo.as_deref().is_some_and(|v| v == "1" || v == "true") {
+        let fail = |e: AppError| {
+            let (_, code) = e.status_and_code();
+            let code = if code == "not_found" {
+                "demo_unavailable"
+            } else {
+                code
+            };
+            reject(code, &e.to_string())
+        };
+        let user = match super::accounts::demo_user(&st, ip).await {
+            Ok(user) if user.disabled => {
+                return Ok((jar, reject("disabled", "account is disabled")));
+            }
+            Ok(user) => user,
+            Err(e) => return Ok((jar, fail(e))),
+        };
+        return Ok(
+            match issue_app_code(&st, id, user.id, Method::Local).await? {
+                Some(location) => (jar, found(&location)),
+                None => (jar, reject("expired", "sign-in request expired")),
+            },
+        );
+    }
     // Способ входа один — провайдер: сразу к нему, как раньше
     if let ([provider], false) = (&st.oidc[..], st.config.local_auth) {
         return begin(&st, jar, provider.clone(), "/".into(), Some(id), None, None).await;

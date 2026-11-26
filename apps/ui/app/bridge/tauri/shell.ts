@@ -431,8 +431,10 @@ export function createShell(tauri: { invoke: InvokeFn, listen: ListenFn }) {
       setSnapArea: (rect: Rect | null) => call<void>('window_set_snap_area', { rect }),
     },
     auth: {
-      /** Открывает браузер и ждёт возврата (до 10 минут); токен остаётся в связке ключей */
-      login: <User = unknown, Device = unknown>() => call<Session<User, Device>>('auth_login'),
+      /** Открывает браузер и ждёт возврата (до 10 минут); токен остаётся в связке ключей.
+       *  `demo` — сразу в общий аккаунт публичного демо: сервер возвращает код без экрана входа */
+      login: <User = unknown, Device = unknown>(opts: { demo?: boolean } = {}) =>
+        call<Session<User, Device>>('auth_login', { demo: !!opts.demo }),
       /** Прервать вход: промис login() отклонится с `cancelled` */
       cancel: () => call<boolean>('auth_cancel'),
       logout: () => call<void>('auth_logout'),

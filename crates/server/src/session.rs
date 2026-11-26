@@ -117,6 +117,8 @@ pub struct Found {
     pub avatar_url: Option<String>,
     pub roles: Vec<String>,
     pub disabled: bool,
+    /// Логин своего аккаунта: по нему узнаётся общий аккаунт демо
+    pub username: Option<String>,
 }
 
 /// Ищет живую сессию по токену и сдвигает её срок. Токен сайта не годится как токен приложения и наоборот.
@@ -124,7 +126,7 @@ pub async fn find(db: &PgPool, token: &str, kind: SessionKind) -> AppResult<Opti
     let found = sqlx::query_as!(
         Found,
         r#"SELECT s.id, s.user_id, s.device_id, s.auth_method, s.last_seen_at,
-                  u.name AS user_name, u.email, u.avatar_url, u.roles, u.disabled
+                  u.name AS user_name, u.email, u.avatar_url, u.roles, u.disabled, u.username
            FROM sessions s
            JOIN users u ON u.id = s.user_id
            LEFT JOIN devices d ON d.id = s.device_id

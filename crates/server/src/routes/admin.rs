@@ -87,6 +87,7 @@ pub async fn list_users(State(st): State<AppState>) -> AppResult<Json<UserList>>
         (status = 200, description = "Пользователь после изменения", body = AdminUser),
         (status = 404, description = "Нет такого пользователя", body = ErrorBody),
         (status = 400, description = "Пустое имя", body = ErrorBody),
+        (status = 403, description = "Роль admin для общего аккаунта демо (`demo_account`)", body = ErrorBody),
         (status = 409, description = "Нельзя снять admin с себя (`cannot_demote_self`), заблокировать себя \
                                       (`cannot_disable_self`) или последнего администратора (`last_admin`)", body = ErrorBody),
     ),
@@ -111,6 +112,15 @@ pub async fn update_user(
     let myself = user.id == principal.user.id;
     let actor = Some(principal.user.id);
     let subject = Some(user.id.to_string());
+    // Общий аккаунт демо открыт всем гостям: админом он не становится
+    if st.config.is_demo(user.username.as_deref())
+        && patch
+            .roles
+            .as_ref()
+            .is_some_and(|r| r.contains(&Role::Admin))
+    {
+        return Err(AppError::DemoAccount);
+    }
     // Единственный незаблокированный администратор: без него админка останется без хозяина
     let last_admin = super::admin_users::is_last_admin(&mut tx, &user).await?;
     let wants_demote = patch

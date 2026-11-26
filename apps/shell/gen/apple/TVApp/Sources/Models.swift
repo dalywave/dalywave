@@ -312,6 +312,12 @@ struct TvToken: Decodable {
     var user: TvUser?
 }
 
+/// Способы входа на сервере (`/api/auth/providers`): телевизору важно только демо. У прежних
+/// серверов поля нет — значит, демо нет.
+struct AuthProviders: Decodable {
+    var demo: Bool?
+}
+
 // MARK: Вечеринка и «Слушать вместе»
 
 struct PartySettings: Codable, Hashable {

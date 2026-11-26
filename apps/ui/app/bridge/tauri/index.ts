@@ -272,10 +272,10 @@ export function createTauriBridge(): Bridge {
     },
     auth: {
       me,
-      async login() {
+      async login(_next, opts) {
         const shell = await loadShell()
         try {
-          await shell.auth.login()
+          await shell.auth.login({ demo: opts?.demo })
         }
         catch (e) {
           if (isShellError(e)) {

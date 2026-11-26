@@ -125,6 +125,9 @@ pub struct AuthProviders {
     pub local: bool,
     /// Первый запуск: людей ещё нет, экран входа предлагает создать администратора.
     pub setup: bool,
+    /// Публичное демо: на экране входа — «Войти в демо» без пароля (`POST /api/auth/demo`).
+    #[serde(default)]
+    pub demo: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -167,6 +170,23 @@ pub struct LocalLogin {
     /// Вход приложения, начатый в этом браузере: вместо сессии сайта — код для приложения.
     #[serde(default)]
     pub app: bool,
+}
+
+/// Вход в общий аккаунт публичного демо — без логина и пароля.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DemoLogin {
+    /// Вход приложения, начатый в этом браузере: вместо сессии сайта — код для приложения.
+    #[serde(default)]
+    pub app: bool,
+}
+
+/// Телевизор входит в демо без подтверждения на телефоне: свой код из `/api/auth/tv/code`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DemoTvLogin {
+    /// `deviceCode` из `/api/auth/tv/code`; сессию телевизор забирает обычным `/api/auth/tv/token`.
+    pub device_code: String,
 }
 
 /// Новый аккаунт: мастер первого запуска, приглашение.
@@ -307,6 +327,9 @@ pub struct Me {
     /// Устройство, если вход через токен приложения.
     #[schema(required = true)]
     pub device: Option<Device>,
+    /// Общий аккаунт публичного демо: пароль, логин, входы, удаление аккаунта и админка закрыты.
+    #[serde(default)]
+    pub demo: bool,
 }
 
 /// Начало входа приложения через системный браузер. Параметры — в духе OAuth (snake_case).
@@ -324,6 +347,8 @@ pub struct AppStartQuery {
     /// Имя устройства для списка сессий, например «MacBook Захара».
     pub device_name: Option<String>,
     pub platform: Option<Platform>,
+    /// `1` — сразу войти в общий аккаунт демо (если он есть на сервере), без экрана входа.
+    pub demo: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

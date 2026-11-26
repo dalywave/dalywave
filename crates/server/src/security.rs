@@ -189,6 +189,7 @@ mod tests {
             local_auth: true,
             admin_emails: Vec::new(),
             admin_password: None,
+            demo_account: None,
             s3: None,
             storage: Default::default(),
             library: Default::default(),

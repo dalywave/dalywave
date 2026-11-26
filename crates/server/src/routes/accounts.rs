@@ -2,6 +2,10 @@
 //! приглашения, одноразовые ссылки сброса пароля, «Вход» в настройках. Админке — способы входа,
 //! новые аккаунты, приглашения и ссылки сброса (`/api/admin/*`, право admin).
 //!
+//! Публичное демо (`DALYWAVE_DEMO_ACCOUNT`): вход в общий аккаунт без пароля — сайт, приложение
+//! (`app: true` или `/api/auth/app/start?demo=1`) и телевизор (`/api/auth/demo/tv`). Пароль, логин,
+//! входы, удаление и админка у этого аккаунта закрыты ошибкой `demo_account`.
+//!
 //! Вход приложения через системный браузер работает и здесь: если в браузере есть cookie `dw_app`
 //! (её ставит `/api/auth/app/start`) и запрос пришёл с `app: true`, вместо сессии сайта ответ несёт
 //! адрес возврата в приложение с одноразовым кодом.
@@ -23,8 +27,8 @@ use dalywave_protocol::{
         NewUser, OneTimeLink, ProviderInfo,
     },
     auth::{
-        Account, AuthVia, InviteInfo, LinkedIdentity, LocalLogin, NewAccount, OidcProvider,
-        PasswordChange, ResetInfo, ResetPassword, Role, SignInResult,
+        Account, AuthVia, DemoLogin, InviteInfo, LinkedIdentity, LocalLogin, NewAccount,
+        OidcProvider, PasswordChange, ResetInfo, ResetPassword, Role, SignInResult,
     },
 };
 use serde_json::json;
@@ -51,6 +55,7 @@ use crate::{
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/local/login", post(local_login))
+        .route("/demo", post(demo_login))
         .route("/setup", post(setup))
         .route("/invites/{token}", get(invite_info).post(accept_invite))
         .route("/reset/{token}", get(reset_info).post(reset_password))
@@ -135,7 +140,7 @@ async fn finish(
         private,
         jar,
         Json(SignInResult {
-            me: Some(me_for(user, AuthVia::Local, session_id)),
+            me: Some(me_for(st, user, AuthVia::Local, session_id)),
             redirect: None,
         }),
     ))
@@ -202,6 +207,63 @@ pub async fn local_login(
         .await?;
     }
     let user = user_row(&st, found.id).await?;
+    finish(&st, ip, &headers, jar, private, &user, body.app).await
+}
+
+/// Общий аккаунт демо для входа без пароля. 404 — демо на этом сервере нет (или аккаунт не создан).
+/// Попыток — не больше 5 в минуту с адреса, как у входа по логину.
+pub(crate) async fn demo_user(st: &AppState, ip: IpAddr) -> AppResult<UserRow> {
+    let Some(username) = st.config.demo_account.as_deref() else {
+        return Err(AppError::NotFound);
+    };
+    limited(
+        st.limiter
+            .check("demo-login", ip, 5, Duration::from_secs(60)),
+    )?;
+    let Some(found) = accounts::find_by_username(&st.db, username).await? else {
+        tracing::warn!(
+            account = username,
+            "DALYWAVE_DEMO_ACCOUNT: no such local account"
+        );
+        return Err(AppError::NotFound);
+    };
+    if found.disabled {
+        let payload = json!({ "via": "demo", "reason": "disabled", "ip": ip.to_string() });
+        audit::record(
+            &st.db,
+            None,
+            audit::SIGN_IN_DENIED,
+            Some(found.id.to_string()),
+            payload,
+        )
+        .await?;
+    }
+    user_row(st, found.id).await
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/demo",
+    tag = "auth",
+    request_body = DemoLogin,
+    responses(
+        (status = 200, description = "Вход в общий аккаунт демо: сессия сайта (`me`, cookie `dw_session`) \
+                                      или адрес возврата в приложение", body = SignInResult),
+        (status = 403, description = "Аккаунт демо заблокирован", body = ErrorBody),
+        (status = 404, description = "Демо на этом сервере нет (`DALYWAVE_DEMO_ACCOUNT` не задан)", body = ErrorBody),
+        (status = 422, description = "Вход приложения устарел (`app_expired`)", body = ErrorBody),
+        (status = 429, description = "Больше 5 входов в минуту с одного адреса", body = ErrorBody),
+    ),
+)]
+pub async fn demo_login(
+    State(st): State<AppState>,
+    ClientIp(ip): ClientIp,
+    headers: HeaderMap,
+    jar: CookieJar,
+    private: PrivateCookieJar,
+    Json(body): Json<DemoLogin>,
+) -> AppResult<(PrivateCookieJar, CookieJar, Json<SignInResult>)> {
+    let user = demo_user(&st, ip).await?;
     finish(&st, ip, &headers, jar, private, &user, body.app).await
 }
 
@@ -574,7 +636,8 @@ pub async fn account(State(st): State<AppState>, principal: Principal) -> AppRes
     responses(
         (status = 204, description = "Пароль задан или сменён"),
         (status = 401, description = "Нынешний пароль не подошёл (`wrong_password`)", body = ErrorBody),
-        (status = 403, description = "Свои аккаунты выключены (`password_disabled`)", body = ErrorBody),
+        (status = 403, description = "Свои аккаунты выключены (`password_disabled`) или это общий аккаунт демо \
+                                      (`demo_account`)", body = ErrorBody),
         (status = 409, description = "Логин занят (`username_taken`)", body = ErrorBody),
         (status = 422, description = "Логин или пароль не подходят", body = ErrorBody),
         (status = 429, description = "Больше 5 попыток в минуту", body = ErrorBody),
@@ -585,6 +648,7 @@ pub async fn change_password(
     principal: Principal,
     Json(body): Json<PasswordChange>,
 ) -> AppResult<StatusCode> {
+    principal.not_demo()?;
     local_enabled(&st)?;
     let user_id = principal.user.id;
     limited(
@@ -650,6 +714,7 @@ pub async fn change_password(
     params(("id" = Uuid, Path, description = "id входа из `/api/auth/account`")),
     responses(
         (status = 204, description = "Вход отвязан"),
+        (status = 403, description = "Общий аккаунт демо (`demo_account`)", body = ErrorBody),
         (status = 404, description = "Нет такого входа у этого аккаунта", body = ErrorBody),
         (status = 409, description = "Это последний способ войти (`last_sign_in_method`)", body = ErrorBody),
     ),
@@ -659,6 +724,7 @@ pub async fn unlink_identity(
     principal: Principal,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    principal.not_demo()?;
     let user_id = principal.user.id;
     let mut tx = st.db.begin().await?;
     let row = sqlx::query!(
@@ -805,7 +871,8 @@ async fn new_reset_link(
     request_body = NewUser,
     responses(
         (status = 200, description = "Аккаунт создан; без пароля — со ссылкой, чтобы задать его", body = CreatedUser),
-        (status = 403, description = "Свои аккаунты выключены (`password_disabled`)", body = ErrorBody),
+        (status = 403, description = "Свои аккаунты выключены (`password_disabled`) или админ для аккаунта демо \
+                                      (`demo_account`)", body = ErrorBody),
         (status = 409, description = "Логин занят (`username_taken`)", body = ErrorBody),
         (status = 422, description = "Логин или пароль не подходят", body = ErrorBody),
     ),
@@ -826,6 +893,9 @@ pub async fn create_user(
     };
     let name = accounts::display_name(body.name.as_deref(), &username);
     let roles = role_names(&parse_roles(&role_names(&body.roles)));
+    if st.config.is_demo(Some(&username)) && body.roles.contains(&Role::Admin) {
+        return Err(AppError::DemoAccount);
+    }
     let actor = principal.user.id;
     let mut tx = st.db.begin().await?;
     if accounts::username_taken(&mut *tx, &username, None).await? {
@@ -954,7 +1024,7 @@ pub async fn list_invites(State(st): State<AppState>) -> AppResult<Json<InviteLi
     request_body = NewInvite,
     responses(
         (status = 200, description = "Ссылка-приглашение; показывается один раз", body = CreatedInvite),
-        (status = 403, description = "Нет права admin", body = ErrorBody),
+        (status = 403, description = "Нет права admin или это общий аккаунт демо (`demo_account`)", body = ErrorBody),
     ),
 )]
 pub async fn create_invite(
@@ -962,6 +1032,7 @@ pub async fn create_invite(
     principal: Principal,
     Json(body): Json<NewInvite>,
 ) -> AppResult<Json<CreatedInvite>> {
+    principal.not_demo()?;
     let days = body
         .days
         .unwrap_or(INVITE_DEFAULT_DAYS)

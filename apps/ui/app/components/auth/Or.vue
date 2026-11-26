@@ -1,10 +1,12 @@
 <script setup lang="ts">
-// «или» между формой пароля и кнопками провайдеров: волосок с подписью по центру
+// «или» между формой пароля и кнопками провайдеров: волосок с подписью по центру.
+// label — своя подпись, например «или своим аккаунтом» под кнопкой демо
+defineProps<{ label?: string }>()
 const { t } = useI18n({ useScope: 'local' })
 </script>
 
 <template>
-  <p class="or"><span>{{ t('or') }}</span></p>
+  <p class="or"><span>{{ label ?? t('or') }}</span></p>
 </template>
 
 <style scoped>

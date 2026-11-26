@@ -42,7 +42,7 @@ onMounted(async () => {
 // ---------- Аккаунт ----------
 
 const initial = computed(() => (auth.user?.name ?? '?').trim().charAt(0).toUpperCase())
-const accountMeta = computed(() => [auth.user?.email, auth.isAdmin ? t('roleAdmin') : null].filter(Boolean).join(' · '))
+const accountMeta = computed(() => [auth.user?.email, auth.isAdmin ? t('roleAdmin') : null, auth.isDemo ? t('demo') : null].filter(Boolean).join(' · '))
 
 async function logout() {
   await auth.logout().catch(() => toast.error(t('logoutFailed')))
@@ -142,7 +142,8 @@ const language = computed({
     <MusicPhoneNav :title="t('title')" :condensed="scrollY > 44" />
     <h1 class="set__title">{{ t('title') }}</h1>
 
-    <SettingsGroup :title="t('account')">
+    <!-- Общий аккаунт демо: пароль, входы и удаление закрыты на сервере — здесь их нет, только сноска -->
+    <SettingsGroup :title="t('account')" :footnote="auth.isDemo ? t('demoNote') : undefined">
       <SettingsRow class="acct" :title="auth.user?.name" :description="accountMeta || undefined">
         <template #lead>
           <span class="acct__avatar">
@@ -154,7 +155,7 @@ const language = computed({
     </SettingsGroup>
 
     <!-- Вход: логин и пароль, привязанные провайдеры (только когда есть что менять) -->
-    <SettingsSignIn />
+    <SettingsSignIn v-if="!auth.isDemo" />
 
     <SettingsGroup :title="t('library')">
       <SettingsRow as="button" :title="t('import')" :description="t('importDesc')" @click="navigateTo('/import')">
@@ -326,7 +327,7 @@ const language = computed({
     <!-- Выход — отдельно в самом низу, как в Spotify и Apple Music -->
     <SettingsGroup :aria-label="t('logout')">
       <SettingsRow as="button" :title="t('logout')" danger @click="logout" />
-      <SettingsRow as="button" :title="t('deleteAccount')" danger @click="deleteAccount" />
+      <SettingsRow v-if="!auth.isDemo" as="button" :title="t('deleteAccount')" danger @click="deleteAccount" />
     </SettingsGroup>
   </div>
 </template>
@@ -377,6 +378,8 @@ const language = computed({
     "title": "Настройки",
     "account": "Аккаунт",
     "roleAdmin": "Администратор",
+    "demo": "Демо",
+    "demoNote": "Общий демо-аккаунт: пароль и способы входа не меняются, удалить его нельзя. Ночью всё вернётся как было",
     "logout": "Выйти",
     "logoutFailed": "Не получилось выйти — попробуйте ещё раз",
     "library": "Медиатека",
@@ -435,6 +438,8 @@ const language = computed({
     "title": "Settings",
     "account": "Account",
     "roleAdmin": "Admin",
+    "demo": "Demo",
+    "demoNote": "Shared demo account: its password and sign-in methods stay as they are, and it can't be deleted. Everything resets every night",
     "logout": "Sign out",
     "logoutFailed": "Couldn't sign out — try again",
     "library": "Library",

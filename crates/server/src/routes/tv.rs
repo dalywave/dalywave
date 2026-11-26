@@ -4,6 +4,8 @@
 //! Вход — как device flow (RFC 8628), но без своего пароля: подтверждает человек, который уже вошёл
 //! через daly.rest на сайте или в приложении. Телевизор получает дочернюю сессию — отдельную строку
 //! в «Доступе»; у Apple TV это устройство с токеном `dwd_…`, у браузера телевизора — cookie сайта.
+//! На публичном демо телевизор подтверждает свой код сам (`/api/auth/demo/tv`) и входит в общий
+//! аккаунт демо без телефона.
 
 use std::time::Duration;
 
@@ -17,7 +19,7 @@ use axum_extra::extract::cookie::CookieJar;
 use chrono::Utc;
 use dalywave_protocol::{
     ErrorBody,
-    auth::{AppToken, Platform},
+    auth::{AppToken, DemoTvLogin, Platform},
     realtime::ServerEvent,
     tv::{
         PARTY_HOURS, Party, PartyPatch, TV_CODE_TTL_SECS, TV_POLL_SECS, TvApprove, TvCode,
@@ -36,7 +38,7 @@ use crate::{
     extract::{Json, Path},
     jam, party,
     realtime::{self, Audience},
-    routes::auth::open_web_session,
+    routes::{accounts::demo_user, auth::open_web_session},
     session::{self, Method, NewSession},
     state::{AppState, ClientIp},
     users,
@@ -54,6 +56,7 @@ pub fn auth_routes() -> Router<AppState> {
         .route("/tv/token", post(token))
         .route("/tv/approve", post(approve))
         .route("/tv/{code}", get(lookup))
+        .route("/demo/tv", post(demo_tv))
 }
 
 /// Под правом play.
@@ -418,6 +421,46 @@ pub async fn approve(
     .await?;
     if approved.rows_affected() == 0 {
         return Err(unknown_code());
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/demo/tv",
+    tag = "auth",
+    request_body = DemoTvLogin,
+    responses(
+        (status = 204, description = "Код телевизора подтверждён для общего аккаунта демо: сессию он \
+                                      забирает обычным `/api/auth/tv/token`"),
+        (status = 400, description = "Код неверный, истёк или уже использован (`invalid_grant`)", body = ErrorBody),
+        (status = 403, description = "Аккаунт демо заблокирован", body = ErrorBody),
+        (status = 404, description = "Демо на этом сервере нет (`DALYWAVE_DEMO_ACCOUNT` не задан)", body = ErrorBody),
+        (status = 429, description = "Больше 5 входов в демо в минуту с одного адреса", body = ErrorBody),
+    ),
+)]
+pub async fn demo_tv(
+    State(st): State<AppState>,
+    ClientIp(ip): ClientIp,
+    Json(body): Json<DemoTvLogin>,
+) -> AppResult<StatusCode> {
+    let user = demo_user(&st, ip).await?;
+    if user.disabled {
+        return Err(AppError::Forbidden("аккаунт заблокирован".into()));
+    }
+    // Код с экрана тут не нужен: deviceCode знает только сам телевизор, подтвердить чужой нельзя
+    let approved = sqlx::query!(
+        "UPDATE tv_logins SET user_id = $2, auth_method = 'local', approved_at = now()
+         WHERE device_code_hash = $1 AND used_at IS NULL AND approved_at IS NULL AND expires_at > now()",
+        &sha256(&body.device_code)[..],
+        user.id,
+    )
+    .execute(&st.db)
+    .await?;
+    if approved.rows_affected() == 0 {
+        return Err(AppError::InvalidGrant(
+            "код неверный, истёк или уже использован".into(),
+        ));
     }
     Ok(StatusCode::NO_CONTENT)
 }

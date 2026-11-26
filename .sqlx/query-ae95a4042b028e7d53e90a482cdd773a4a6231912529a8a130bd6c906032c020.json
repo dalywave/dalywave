@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT s.id, s.user_id, s.device_id, s.auth_method, s.last_seen_at,\n                  u.name AS user_name, u.email, u.avatar_url, u.roles, u.disabled\n           FROM sessions s\n           JOIN users u ON u.id = s.user_id\n           LEFT JOIN devices d ON d.id = s.device_id\n           WHERE s.token_hash = $1 AND s.kind = $2\n             AND s.revoked_at IS NULL AND s.expires_at > now() AND d.revoked_at IS NULL",
+  "query": "SELECT s.id, s.user_id, s.device_id, s.auth_method, s.last_seen_at,\n                  u.name AS user_name, u.email, u.avatar_url, u.roles, u.disabled, u.username\n           FROM sessions s\n           JOIN users u ON u.id = s.user_id\n           LEFT JOIN devices d ON d.id = s.device_id\n           WHERE s.token_hash = $1 AND s.kind = $2\n             AND s.revoked_at IS NULL AND s.expires_at > now() AND d.revoked_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -112,6 +112,17 @@
             "name": "disabled"
           }
         }
+      },
+      {
+        "ordinal": 10,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
       }
     ],
     "parameters": {
@@ -130,8 +141,9 @@
       true,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "7d3fc78c281a59fdbe8de3b8bf12c936687f3823f0d5f90e945dd859b12778ed"
+  "hash": "ae95a4042b028e7d53e90a482cdd773a4a6231912529a8a130bd6c906032c020"
 }

@@ -8,10 +8,46 @@ import UIKit
 final class SignInModel: ObservableObject {
     @Published private(set) var code: TvCode?
     @Published private(set) var failed = false
+    /// На сервере есть демо: рядом с кодом — «Войти в демо»
+    @Published private(set) var demo = false
+    @Published private(set) var demoBusy = false
+    /// Почему не вошли в демо — здесь или ещё на экране подключения
+    @Published private(set) var demoError: String?
 
     private var task: Task<Void, Never>?
+    private var server = ""
+    private var done: ((Credentials) -> Void)?
 
-    func start(server: String, _ done: @escaping (Credentials) -> Void) {
+    func start(server: String, demoError: String? = nil, _ done: @escaping (Credentials) -> Void) {
+        self.server = server
+        self.done = done
+        self.demoError = demoError
+        poll(server, done)
+        Task { [weak self] in
+            let demo = await DemoSignIn.available(server)
+            self?.demo = demo
+        }
+    }
+
+    /// Демо без телефона. Код на экране живёт дальше: не вышло — входят им.
+    func signInDemo() {
+        guard !demoBusy else { return }
+        demoBusy = true
+        demoError = nil
+        Task {
+            do {
+                let creds = try await DemoSignIn.signIn(server: server)
+                task?.cancel()
+                done?(creds)
+            } catch {
+                demoError = DemoSignIn.message(for: error)
+                if case .server(404)? = error as? ApiError { demo = false }
+            }
+            demoBusy = false
+        }
+    }
+
+    private func poll(_ server: String, _ done: @escaping (Credentials) -> Void) {
         task?.cancel()
         let api = Api(server: server)
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
@@ -45,12 +81,45 @@ final class SignInModel: ObservableObject {
     }
 }
 
+/// Общий аккаунт демо без телефона (`/api/auth/providers` → `demo: true`): тот же код телевизора, но
+/// подтверждает его сам телевизор (`/api/auth/demo/tv`), а ключ отдаёт обычный `/api/auth/tv/token`.
+enum DemoSignIn {
+    /// Ошибка запроса или прежний сервер без поля `demo` — демо нет, вход как обычно.
+    static func available(_ server: String) async -> Bool {
+        (try? await Api(server: server).providers().demo) == true
+    }
+
+    @MainActor
+    static func signIn(server: String) async throws -> Credentials {
+        let api = Api(server: server)
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let code = try await api.tvCode(deviceName: UIDevice.current.name)
+        try await api.approveDemo(code.deviceCode)
+        // Код уже подтверждён: ключ готов сразу, без опроса
+        guard let reply = try await api.tvToken(code.deviceCode, appVersion: version),
+              reply.status == "ready", let token = reply.token
+        else { throw ApiError.server(400) }
+        return Credentials(server: server, token: token, userName: reply.user?.name)
+    }
+
+    static func message(for error: Error) -> String {
+        switch error as? ApiError {
+        case .server(404)?: String(localized: "На этом сервере нет демо")
+        case .server(429)?: String(localized: "Слишком много входов в демо. Попробуйте через минуту")
+        case .server(403)?: String(localized: "Демо сейчас закрыто")
+        default: String(localized: "Не удалось войти в демо")
+        }
+    }
+}
+
 struct SignInView: View {
     @EnvironmentObject private var store: Store
     @StateObject private var model = SignInModel()
     /// Выбранный на экране подключения сервер
     let server: String
     var serverName: String?
+    /// Демо не открылось сразу с экрана подключения — показать почему
+    var demoError: String?
     /// «Другой сервер» — назад к выбору
     var back: () -> Void
 
@@ -85,13 +154,34 @@ struct SignInView: View {
                         .font(.system(size: 28))
                         .foregroundStyle(Theme.text3)
                 }
-                HStack(spacing: 24) {
-                    Text(serverName.map { "\($0) · \(ServerAddress.host(server))" } ?? ServerAddress.host(server))
-                        .font(.system(size: 26))
-                        .foregroundStyle(Theme.text3)
-                    Button("Другой сервер", action: back)
+                if let error = model.demoError {
+                    Text(error)
+                        .font(.system(size: 28))
+                        .foregroundStyle(Theme.accent)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.top, 8)
+                if model.demo {
+                    // Две кнопки и адрес в одну строку не помещаются: адрес — над кнопками
+                    VStack(alignment: .leading, spacing: 20) {
+                        serverLabel
+                        HStack(spacing: 24) {
+                            Button { model.signInDemo() } label: {
+                                HStack(spacing: 16) {
+                                    if model.demoBusy { ProgressView() }
+                                    Text("Войти в демо")
+                                }
+                            }
+                            Button("Другой сервер", action: back)
+                        }
+                    }
+                    .padding(.top, 8)
+                } else {
+                    HStack(spacing: 24) {
+                        serverLabel
+                        Button("Другой сервер", action: back)
+                    }
+                    .padding(.top, 8)
+                }
             }
             .frame(maxWidth: 900, alignment: .leading)
             Group {
@@ -104,8 +194,14 @@ struct SignInView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ink.ignoresSafeArea())
-        .onAppear { model.start(server: server) { store.signedIn($0) } }
+        .onAppear { model.start(server: server, demoError: demoError) { store.signedIn($0) } }
         .onDisappear { model.stop() }
+    }
+
+    private var serverLabel: some View {
+        Text(serverName.map { "\($0) · \(ServerAddress.host(server))" } ?? ServerAddress.host(server))
+            .font(.system(size: 26))
+            .foregroundStyle(Theme.text3)
     }
 
     private var shortURL: String {

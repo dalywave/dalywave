@@ -24,8 +24,13 @@ enum ServerAddress {
         return host + (url.port.map { ":\($0)" } ?? "")
     }
 
-    /// Демо-сервер с открытой музыкой
-    static let demo = "https://demo.wave.daly.rest"
+    /// Демо-сервер с открытой музыкой. Только отладочная сборка: свой демо на Mac — `DALYWAVE_DEMO_SERVER`.
+    static var demo: String {
+        #if DEBUG
+        if let dev = ProcessInfo.processInfo.environment["DALYWAVE_DEMO_SERVER"].flatMap(normalize) { return dev }
+        #endif
+        return "https://demo.wave.daly.rest"
+    }
 }
 
 /// Сервер-кандидат: из iCloud (выбран на iPhone), из локальной сети или введённый вручную.
@@ -82,7 +87,8 @@ final class ConnectModel: ObservableObject {
     private let listener = PairListener()
     private var kvsObserver: NSObjectProtocol?
 
-    func start(done: @escaping (Credentials) -> Void, chosen: @escaping (String, String?) -> Void) {
+    /// `chosen` — сервер для входа кодом: адрес, имя и почему не открылось демо (если пробовали).
+    func start(done: @escaping (Credentials) -> Void, chosen: @escaping (String, String?, String?) -> Void) {
         loadCloud()
         kvsObserver = NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
@@ -95,6 +101,7 @@ final class ConnectModel: ObservableObject {
         listener.onStatus = { [weak self] status in self?.pairing = status }
         listener.onSignedIn = { creds in done(creds) }
         listener.start()
+        self.done = done
         self.chosen = chosen
     }
 
@@ -106,10 +113,12 @@ final class ConnectModel: ObservableObject {
         kvsObserver = nil
     }
 
-    private var chosen: ((String, String?) -> Void)?
+    private var done: ((Credentials) -> Void)?
+    private var chosen: ((String, String?, String?) -> Void)?
 
-    /// Проверить и перейти ко входу на этом сервере.
-    func choose(_ raw: String, name: String? = nil) {
+    /// Проверить и перейти ко входу на этом сервере. `demo` — кнопка «Попробовать демо»: если сервер
+    /// говорит `demo: true`, сразу входим в общий аккаунт демо, без кода.
+    func choose(_ raw: String, name: String? = nil, demo: Bool = false) {
         guard let server = ServerAddress.normalize(raw) else {
             error = String(localized: "Это не похоже на адрес. Например: music.example.com")
             return
@@ -118,11 +127,26 @@ final class ConnectModel: ObservableObject {
         error = nil
         Task {
             let result = await probe(server)
-            checking = nil
             switch result {
             case let .success(reply):
-                chosen?(server, reply.name ?? name)
+                let name = reply.name ?? name
+                var demoError: String?
+                if demo, await DemoSignIn.available(server) {
+                    do {
+                        let creds = try await DemoSignIn.signIn(server: server)
+                        checking = nil
+                        Credentials.lastServer = server
+                        done?(creds)
+                        return
+                    } catch let failure {
+                        // Демо не открылось — обычный вход кодом и причина над ним
+                        demoError = DemoSignIn.message(for: failure)
+                    }
+                }
+                checking = nil
+                chosen?(server, name, demoError)
             case let .failure(e):
+                checking = nil
                 error = e.text
             }
         }
@@ -284,19 +308,21 @@ struct ConnectView: View {
     @StateObject private var model = ConnectModel()
     @State private var address = ""
     @State private var server: ServerChoice?
+    @State private var demoError: String?
 
     var body: some View {
         Group {
             if let server {
-                SignInView(server: server.url, serverName: server.name) { self.server = nil }
+                SignInView(server: server.url, serverName: server.name, demoError: demoError) { self.server = nil }
             } else {
                 picker
             }
         }
         .background(Theme.ink.ignoresSafeArea())
         .onAppear {
-            model.start(done: { store.signedIn($0) }, chosen: { url, name in
+            model.start(done: { store.signedIn($0) }, chosen: { url, name, demoError in
                 Credentials.lastServer = url
+                self.demoError = demoError
                 server = ServerChoice(url: url, name: name)
             })
         }
@@ -352,9 +378,9 @@ struct ConnectView: View {
                                 .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty || model.checking != nil)
                         }
                         Button {
-                            model.choose(ServerAddress.demo, name: "DalyWave Demo")
+                            model.choose(ServerAddress.demo, name: "DalyWave Demo", demo: true)
                         } label: {
-                            row(title: String(localized: "Попробовать демо"), subtitle: String(localized: "Открытая музыка, вход appreview"), busy: model.checking == ServerAddress.demo)
+                            row(title: String(localized: "Попробовать демо"), subtitle: String(localized: "Открытая музыка, без пароля"), busy: model.checking == ServerAddress.demo)
                         }
                         if let error = model.error {
                             Text(error).font(.system(size: 26)).foregroundStyle(Theme.accent)

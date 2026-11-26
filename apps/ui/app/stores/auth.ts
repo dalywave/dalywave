@@ -12,6 +12,7 @@ export const FALLBACK_PROVIDERS: AuthProviders = {
   password: true,
   local: false,
   setup: false,
+  demo: false,
 }
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'ready' | 'no-access' | 'offline'
@@ -26,6 +27,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = computed(() => me.value?.user ?? null)
   const roles = computed(() => me.value?.roles ?? [])
   const isAdmin = computed(() => me.value?.permissions.includes('admin') ?? false)
+  /** Общий аккаунт публичного демо: пароль, входы и удаление аккаунта закрыты */
+  const isDemo = computed(() => !!me.value?.demo)
 
   function can(p: Permission): boolean {
     return me.value?.permissions.includes(p) ?? false
@@ -111,9 +114,10 @@ export const useAuthStore = defineStore('auth', () => {
     return bridge.auth.loginUrl(next)
   }
 
-  /** Вход через daly.rest: сайт уходит на страницу провайдера, приложение открывает системный браузер */
-  async function login(next: string) {
-    const result = await bridge.auth.login(next)
+  /** Вход через daly.rest: сайт уходит на страницу провайдера, приложение открывает системный браузер.
+   *  `demo` — приложение входит в общий аккаунт демо */
+  async function login(next: string, opts?: { demo?: boolean }) {
+    const result = await bridge.auth.login(next, opts)
     if (result) apply(result)
     return result
   }
@@ -128,5 +132,5 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
-  return { me, status, providers, user, roles, isAdmin, can, load, loadProviders, passwordLogin, signedIn, login, logout, loginUrl }
+  return { me, status, providers, user, roles, isAdmin, isDemo, can, load, loadProviders, passwordLogin, signedIn, login, logout, loginUrl }
 })

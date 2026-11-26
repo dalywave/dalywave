@@ -121,6 +121,8 @@ async fn openapi_lists_every_endpoint(db: PgPool) {
         "/api/auth/app/pair",
         "/api/auth/app/start",
         "/api/auth/app/token",
+        "/api/auth/demo",
+        "/api/auth/demo/tv",
         "/api/auth/invites/{token}",
         "/api/auth/local/login",
         "/api/auth/logout",
