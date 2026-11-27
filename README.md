@@ -4,7 +4,7 @@
 </picture>
 
 <p align="center">
-  English · <a href="README.ru.md">Русский</a>
+  English · <a href="README.ru.md">Русский</a> · <a href="README.uk.md">Українська</a>
 </p>
 
 DalyWave is a music server you run yourself, in the spirit of Jellyfin or Plex, but made only for
@@ -105,7 +105,7 @@ DalyWave is young (version 0.1). Expect rough edges and changes between releases
 - The server announces itself on the local network (mDNS), so the apps can find it without typing an
   address. In Docker this needs host networking.
 - OpenAPI 3.1 description at `/api/openapi.json`.
-- Interface in English and Russian, dark and light themes.
+- Interface in English, Russian and Ukrainian, dark and light themes.
 
 ### Optional modules
 
@@ -155,7 +155,7 @@ More on configuration:
 - [Music folders and optional modules](docs/self-hosting/music.md)
 - [File storage](docs/self-hosting/storage.md): local folder or S3
 
-Some of these guides are only in Russian for now.
+Some of these guides are only in Russian and Ukrainian for now.
 
 ## Apps
 

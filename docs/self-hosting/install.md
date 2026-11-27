@@ -1,5 +1,7 @@
 # Install DalyWave on your server
 
+In Ukrainian: [install.uk.md](install.uk.md)
+
 DalyWave runs as a few containers from prebuilt images (linux/amd64 and linux/arm64):
 
 | Container | Image | What it does |
