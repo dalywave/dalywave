@@ -612,7 +612,11 @@
       "emergency": "emergency sign-in",
       "private": "Private session",
       "paused": "Paused",
-      "idle": "Nothing playing"
+      "idle": "Nothing playing",
+      "hours": {
+        "hm": "{h} h {m} min",
+        "m": "{m} min"
+      }
     }
   },
   "connect": {
@@ -684,7 +688,8 @@
     "minutes": "{n} min",
     "hour": "1 hour",
     "endOfTrack": "End of Track",
-    "mini": "Mini Player"
+    "mini": "Mini Player",
+    "khz": "{n}k"
   },
   "beat": {
     "label": "Feel the beat",
@@ -739,7 +744,8 @@
     "failed": "Something went wrong — try again",
     "hint": "Friends add tracks from their phones",
     "running": "On — no guests yet",
-    "withGuests": "On · guests: {n}"
+    "withGuests": "On · guests: {n}",
+    "guests": "{n} guest | {n} guests"
   },
   "party": {
     "title": "Party mode",
@@ -861,6 +867,73 @@
   },
   "focus": {
     "applied": "Wave set for Focus: “{name}”"
+  },
+  "format": {
+    "duration": {
+      "hours": "{h} h {m} min",
+      "minutes": "{m} min"
+    },
+    "noun": {
+      "track": "track | tracks",
+      "album": "album | albums",
+      "artist": "artist | artists",
+      "playlist": "playlist | playlists",
+      "listener": "listener | listeners",
+      "release": "release | releases",
+      "user": "user | users",
+      "session": "session | sessions",
+      "file": "file | files",
+      "image": "image | images",
+      "recording": "recording | recordings",
+      "play": "play | plays"
+    },
+    "date": {
+      "dayMonth": "{month} {d}",
+      "dayMonthYear": "{month} {d}, {y}"
+    },
+    "monthShort": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "monthLong": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "relative": {
+      "justNow": "just now",
+      "minutes": "{n} min ago",
+      "hours": "{n} h ago",
+      "yesterday": "yesterday"
+    },
+    "bytes": [
+      "B",
+      "KB",
+      "MB",
+      "GB",
+      "TB"
+    ]
   },
   "components": {
     "admin": {
@@ -1047,7 +1120,8 @@
         "pausedLabel": "paused",
         "paused": "“{title}” paused",
         "resumed": "“{title}” running again",
-        "failed": "Couldn't change the lane"
+        "failed": "Couldn't change the lane",
+        "workers": "{n} worker | {n} workers"
       },
       "LinkModal": {
         "copy": "Copy",
@@ -1179,7 +1253,8 @@
         "album": "album",
         "artist": "Artist",
         "follow": "follow",
-        "liked": "liked"
+        "liked": "liked",
+        "plays": "{n} play | {n} plays"
       },
       "Status": {
         "stepsLabel": "Transfer steps",
@@ -1228,7 +1303,17 @@
           "tracks": "tracks",
           "files": "files",
           "upgraded": "better than before"
-        }
+        },
+        "count": {
+          "files": "{n} file | {n} files",
+          "tracks": "{n} track | {n} tracks",
+          "likes": "{n} like | {n} likes",
+          "playlists": "{n} playlist | {n} playlists",
+          "albums": "{n} album | {n} albums",
+          "artists": "{n} follow | {n} follows",
+          "plays": "{n} play | {n} plays"
+        },
+        "and": "{a} and {b}"
       }
     },
     "music": {
@@ -1555,7 +1640,8 @@
         "ready": "Your {year} is ready",
         "watch": "Watch",
         "empty": "Quiet so far — your review builds as you listen",
-        "past": "Past years"
+        "past": "Past years",
+        "minutes": "{n} min"
       }
     },
     "search": {
@@ -3005,7 +3091,8 @@
               "queue": "queue",
               "remote": "remote"
             }
-          }
+          },
+          "plays": "{n} play | {n} plays"
         },
         "index": {
           "title": "Users",
@@ -3675,6 +3762,66 @@
         }
       }
     },
+    "privacy": {
+      "title": "Privacy",
+      "updated": "Updated November 13, 2026",
+      "lead": "DalyWave is a music service that a person or their administrator runs on their own server. The DalyWave apps for iPhone, iPad, Apple TV, Mac and Windows are clients of such a server: they show and play music from the server whose address you chose.",
+      "sections": [
+        {
+          "title": "Where data is stored",
+          "paragraphs": [
+            "Everything described below is stored only on the DalyWave server you connected to, by its owner. The app developer has no access to other people’s servers and receives no data from them.",
+            "If you use someone else’s server (for example, a friend’s), ask its owner how they store data and make backups."
+          ]
+        },
+        {
+          "title": "What the server stores",
+          "paragraphs": [
+            "Account: name, username, a password hash or a link to a sign-in service (OpenID Connect), and an email address if the sign-in service provided one; avatar.",
+            "Library and activity: likes, playlists, follows, listening history and wave reactions — recommendations are built from them.",
+            "Devices and sessions: device name, platform, app version, last activity time, IP address of the last sign-in; on iPhone and iPad, a push notification token if you allowed notifications.",
+            "The administrator action log and the server’s service logs."
+          ]
+        },
+        {
+          "title": "What the app does not do",
+          "paragraphs": [
+            "It does not collect analytics or advertising identifiers, does not track you across other apps and websites, and does not share data with third parties.",
+            "The microphone is used only by the “Recognize” screen while it is open: audio is not recorded or sent to the DalyWave server — the song is identified from an audio fingerprint by Apple’s Shazam service.",
+            "The local network is used only to find a DalyWave server and to connect an Apple TV from an iPhone. The app may keep the list of your servers (without passwords or keys) in iCloud so that an Apple TV signed in with the same Apple ID can offer to connect to them."
+          ]
+        },
+        {
+          "title": "Outside services",
+          "paragraphs": [
+            "The server may query open music catalogs (MusicBrainz, Wikidata, Wikipedia, LRCLIB) for artwork, artist information and lyrics — without any data about you. The server owner may enable other sources; that is their setting.",
+            "Signing in with an outside service (OpenID Connect) follows that service’s terms. Push notifications are delivered by Apple (APNs) or the browser. The “Listening to DalyWave” status in Discord on a computer appears only if you turned it on."
+          ]
+        },
+        {
+          "title": "How to delete data",
+          "paragraphs": [
+            "Listening history can be cleared in “History”.",
+            "The account is deleted in Settings → “Delete account”: the library, playlists, history, devices and sessions are removed from the server with it. The only administrator of a server cannot be deleted — appoint another one first.",
+            "Signing out or switching servers erases the sign-in key on this device. Deleting the app erases its data on the device."
+          ]
+        },
+        {
+          "title": "Children",
+          "paragraphs": [
+            "DalyWave is not intended for children under 13 and does not knowingly collect data about them."
+          ]
+        },
+        {
+          "title": "Contact",
+          "paragraphs": [
+            "Questions about data on a particular server go to its owner. Questions about the app go to the developer: Zakhar Stupak, github.com/Dalynkaa."
+          ]
+        }
+      ],
+      "back": "Back",
+      "languages": "Language"
+    },
     "reset": {
       "_token": {
         "title": "New password",
@@ -3873,7 +4020,8 @@
       "resetDesc": "Facets, mixes and “less like this” will be rebuilt from new listening. Your library and blocks stay",
       "resetBtn": "Reset",
       "resetDone": "Taste reset — the wave will get to know you again",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "facetsWord": "facet | facets"
     },
     "track": {
       "_id": {
@@ -4046,7 +4194,162 @@
         "summary": "Your {year}",
         "wave": "Wave",
         "more": "More"
+      },
+      "word": {
+        "minutesOfMusic": "minute of music | minutes of music",
+        "daysWithMusic": "day with music | days with music",
+        "inARow": "day in a row | days in a row",
+        "newArtists": "new artist | new artists",
+        "minutes": "minute | minutes",
+        "plays": "play | plays",
+        "times": "play | plays",
+        "days": "day | days",
+        "hours": "hour | hours"
+      },
+      "monthIn": {
+        "1": "in January",
+        "2": "in February",
+        "3": "in March",
+        "4": "in April",
+        "5": "in May",
+        "6": "in June",
+        "7": "in July",
+        "8": "in August",
+        "9": "in September",
+        "10": "in October",
+        "11": "in November",
+        "12": "in December"
+      },
+      "and": "{a} and {b}"
+    }
+  },
+  "utils": {
+    "notifications": {
+      "now": "now",
+      "minutes": "{n}m",
+      "hours": "{n}h",
+      "yesterday": "yesterday"
+    },
+    "waveOptions": {
+      "myWave": "My wave",
+      "familiarAndNew": "familiar and new",
+      "short": {
+        "activity": {
+          "wake": "Morning",
+          "road": "Road",
+          "work": "Work",
+          "sport": "Workout",
+          "rest": "Unwind",
+          "sleep": "Sleep",
+          "party": "Party"
+        },
+        "mood": {
+          "energetic": "Energetic",
+          "happy": "Happy",
+          "calm": "Calm",
+          "sad": "Sad"
+        },
+        "character": {
+          "fav": "favourites",
+          "new": "new",
+          "pop": "popular",
+          "rare": "rare"
+        },
+        "language": {
+          "ru": "Russian",
+          "foreign": "foreign",
+          "none": "instrumental"
+        }
+      },
+      "summary": {
+        "line": "{head} — {tail}",
+        "head": {
+          "any": "Wave for any mood",
+          "activity": "Wave {activity}",
+          "mood": "{mood} wave",
+          "moodActivity": "{mood} wave {activity}"
+        },
+        "mood": {
+          "energetic": "Energetic",
+          "happy": "Happy",
+          "calm": "Calm",
+          "sad": "Sad"
+        },
+        "activity": {
+          "wake": "to wake up",
+          "road": "for the road",
+          "work": "for work",
+          "sport": "for a workout",
+          "rest": "to unwind",
+          "sleep": "before sleep",
+          "party": "for a party"
+        },
+        "character": {
+          "fav": "favourites only",
+          "mix": "familiar and new",
+          "new": "new only",
+          "pop": "popular",
+          "rare": "rare finds"
+        },
+        "language": {
+          "ru": "in Russian",
+          "foreign": "in other languages",
+          "none": "instrumental"
+        }
+      }
+    },
+    "mixTitles": {
+      "dailyMix": "Daily Mix {n}",
+      "title": {
+        "discover_weekly": "Discover Weekly",
+        "on_repeat": "On Repeat",
+        "repeat_rewind": "Repeat Rewind"
+      },
+      "description": {
+        "on_repeat": "What you play most right now",
+        "repeat_rewind": "Once on heavy rotation"
+      },
+      "tail": {
+        "andMoreNew": "and more new to you",
+        "andMore": "and more"
+      },
+      "alone": {
+        "newToYou": "New to you",
+        "variousArtists": "Various artists"
+      },
+      "preset": {
+        "work": "Work",
+        "road": "Road",
+        "night": "Night"
       }
     }
+  },
+  "genres": {
+    "Pop": "Pop",
+    "Rap/Hip Hop": "Rap/Hip Hop",
+    "Rock": "Rock",
+    "Alternative": "Alternative",
+    "Indie Rock": "Indie Rock",
+    "Indie Pop": "Indie Pop",
+    "Dance": "Dance",
+    "Electro": "Electro",
+    "Techno/House": "Techno/House",
+    "R&B": "R&B",
+    "Soul & Funk": "Soul & Funk",
+    "Metal": "Metal",
+    "Jazz": "Jazz",
+    "Classical": "Classical",
+    "Films/Games": "Films/Games",
+    "Reggae": "Reggae",
+    "Reggaeton": "Reggaeton",
+    "Folk": "Folk",
+    "Blues": "Blues",
+    "Country": "Country",
+    "Latin Music": "Latin Music",
+    "Asian Music": "Asian Music",
+    "African Music": "African Music",
+    "Kids": "Kids",
+    "Chanson": "Chanson",
+    "Variété Internationale": "Variété Internationale"
   }
 }

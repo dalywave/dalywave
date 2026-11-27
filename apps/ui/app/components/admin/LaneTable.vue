@@ -10,9 +10,7 @@ const { t } = useScopedI18n('components.admin.LaneTable')
 
 /** «2 потока · пауза 2 с» — сколько задач полоса делает разом и сколько ждёт между ними */
 function laneMode(l: Lane) {
-  const workers = lang.value === 'en'
-    ? `${l.concurrency} ${l.concurrency === 1 ? 'worker' : 'workers'}`
-    : `${l.concurrency}\u00a0${plural(l.concurrency, lang.value === 'uk' ? ['потік', 'потоки', 'потоків'] : ['поток', 'потока', 'потоков'])}`
+  const workers = t('workers', l.concurrency)
   if (!l.minIntervalMs) return workers
   const sec = (l.minIntervalMs / 1000).toLocaleString(intlLocale(lang.value, 'en-US'), { maximumFractionDigits: 1 })
   return `${workers} · ${t('pause', { s: sec })}`

@@ -58,11 +58,7 @@ const meta = computed(() => {
   const x = r.value
   if (!x || x.plays === 0) return t('empty')
   const top = x.topArtists[0]?.artist.name
-  const minutes = lang.value === 'en'
-    ? `${formatNumber(x.minutes, 'en')} min`
-    : lang.value === 'uk'
-      ? `${formatNumber(x.minutes, 'uk')}${NBSP}${plural(x.minutes, ['хвилина', 'хвилини', 'хвилин'])}`
-      : `${formatNumber(x.minutes)}${NBSP}${plural(x.minutes, ['минута', 'минуты', 'минут'])}`
+  const minutes = t('minutes', { n: formatNumber(x.minutes, lang.value) }, x.minutes)
   return [minutes, top].filter(Boolean).join(' · ')
 })
 const past = computed(() => (years.value?.years ?? []).filter(y => y.year !== years.value?.current && y.minutes > 0))

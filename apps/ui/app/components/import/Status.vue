@@ -42,15 +42,14 @@ const isFiles = computed(() => props.summary?.kind === 'files')
 // Один плейлист по ссылке итожится как список: «В плейлист „…“ добавлено N треков»
 const isList = computed(() => !!props.summary && ['text', 'csv', 'm3u', 'youtube_playlist'].includes(props.summary.kind))
 
-/** Слово после числа в нужной форме: [одна, две, пять] — для русского и украинского, [one, many] — для английского */
-function count(v: number, ru: [string, string, string], uk: [string, string, string], en: [string, string]): string {
-  return lang.value === 'en' ? `${n(v)}\u00a0${v === 1 ? en[0] : en[1]}` : `${n(v)}\u00a0${plural(v, lang.value === 'uk' ? uk : ru)}`
-}
+type Counted = 'files' | 'tracks' | 'likes' | 'playlists' | 'albums' | 'artists' | 'plays'
+/** Число со словом в нужной форме: «1 240 лайков» (словарь, раздел count) */
+const count = (what: Counted, v: number) => t(`count.${what}`, { n: n(v) }, v)
 
-function joinRu(parts: string[]): string {
+/** «a, b и c» */
+function joinAnd(parts: string[]): string {
   if (parts.length <= 1) return parts.join('')
-  const and = lang.value === 'en' ? ' and ' : lang.value === 'uk' ? ' і ' : ' и '
-  return `${parts.slice(0, -1).join(', ')}${and}${parts.at(-1)}`
+  return t('and', { a: parts.slice(0, -1).join(', '), b: parts.at(-1)! })
 }
 
 /** «Добавлено 1 240 лайков, 38 плейлистов и 52 000 прослушиваний» */
@@ -60,7 +59,7 @@ const sentence = computed(() => {
   const st = s.stats
   if (isFiles.value) {
     if (!st.files) return t('result.noFiles')
-    const accepted = count(st.files, ['файл', 'файла', 'файлов'], ['файл', 'файли', 'файлів'], ['file', 'files'])
+    const accepted = count('files', st.files)
     return st.upgraded
       ? t('result.files', { files: accepted, upgraded: n(st.upgraded) })
       : t('result.filesOnly', { files: accepted })
@@ -68,18 +67,18 @@ const sentence = computed(() => {
   if (isList.value) {
     const tracks = st.playlistTracks || st.likes
     if (!tracks) return t('result.nothing')
-    const what = count(tracks, ['трек', 'трека', 'треков'], ['трек', 'треки', 'треків'], ['track', 'tracks'])
+    const what = count('tracks', tracks)
     return st.likes ? t('result.listLikes', { tracks: what }) : t('result.listPlaylist', { tracks: what, title: s.title })
   }
   const parts: string[] = []
-  if (st.likes) parts.push(count(st.likes, ['лайк', 'лайка', 'лайков'], ['вподобання', 'вподобання', 'вподобань'], ['like', 'likes']))
-  if (st.playlists) parts.push(count(st.playlists, ['плейлист', 'плейлиста', 'плейлистов'], ['плейлист', 'плейлисти', 'плейлистів'], ['playlist', 'playlists']))
+  if (st.likes) parts.push(count('likes', st.likes))
+  if (st.playlists) parts.push(count('playlists', st.playlists))
   // Плейлисты уже были с прошлого переноса — дополнились
-  else if (st.playlistTracks) parts.push(t('result.intoPlaylists', { tracks: count(st.playlistTracks, ['трек', 'трека', 'треков'], ['трек', 'треки', 'треків'], ['track', 'tracks']) }))
-  if (st.albums) parts.push(count(st.albums, ['альбом', 'альбома', 'альбомов'], ['альбом', 'альбоми', 'альбомів'], ['album', 'albums']))
-  if (st.artists) parts.push(count(st.artists, ['подписка', 'подписки', 'подписок'], ['підписка', 'підписки', 'підписок'], ['follow', 'follows']))
-  if (st.plays) parts.push(count(st.plays, ['прослушивание', 'прослушивания', 'прослушиваний'], ['прослуховування', 'прослуховування', 'прослуховувань'], ['play', 'plays']))
-  return parts.length ? t('result.added', { what: joinRu(parts) }) : t('result.nothingNew')
+  else if (st.playlistTracks) parts.push(t('result.intoPlaylists', { tracks: count('tracks', st.playlistTracks) }))
+  if (st.albums) parts.push(count('albums', st.albums))
+  if (st.artists) parts.push(count('artists', st.artists))
+  if (st.plays) parts.push(count('plays', st.plays))
+  return parts.length ? t('result.added', { what: joinAnd(parts) }) : t('result.nothingNew')
 })
 
 const title = computed(() => {

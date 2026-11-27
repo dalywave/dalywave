@@ -77,9 +77,7 @@ export function usePeopleLabels() {
       if (ms < 60_000) return '—'
       const m = Math.round(ms / 60_000)
       const h = Math.floor(m / 60)
-      if (lang.value === 'en') return h ? `${h} h ${m % 60} min` : `${m} min`
-      if (lang.value === 'uk') return h ? `${h}\u00A0год ${m % 60}\u00A0хв` : `${m}\u00A0хв`
-      return h ? `${h}\u00A0ч ${m % 60}\u00A0мин` : `${m}\u00A0мин`
+      return h ? t('admin.people.hours.hm', { h, m: m % 60 }) : t('admin.people.hours.m', { m })
     },
   }
 }

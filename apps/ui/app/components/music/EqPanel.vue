@@ -7,12 +7,13 @@ import { EQ_BANDS_HZ, EQ_MAX_DB, EQ_PRESETS, type EqPresetId } from '~/utils/eq'
 const props = withDefaults(defineProps<{ section?: 'presets' | 'bands' }>(), { section: 'presets' })
 const emit = defineEmits<{ picked: [id: EqPresetId] }>()
 const sound = useSoundStore()
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const lang = useLang()
 
 const PRESETS: EqPresetId[] = [...EQ_PRESETS.map(p => p.id), 'custom']
 const custom = computed(() => sound.eq.preset === 'custom')
-const label = (hz: number) => (hz >= 1000 ? `${hz / 1000}${locale.value === 'en' ? 'k' : 'к'}` : String(hz))
-const dbText = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString(locale.value === 'en' ? 'en' : locale.value === 'uk' ? 'uk' : 'ru')} ${t('sound.db')}`
+const label = (hz: number) => (hz >= 1000 ? t('sound.khz', { n: hz / 1000 }) : String(hz))
+const dbText = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString(intlLocale(lang.value))} ${t('sound.db')}`
 
 function bandModel(i: number) {
   return computed({

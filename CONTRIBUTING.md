@@ -96,9 +96,50 @@ screen goes through. In short:
   warnings.
 - No `unwrap`, `expect` or `panic!` in request handlers.
 - API types come from OpenAPI (`make api-types`); they are not duplicated by hand.
-- Interface strings go through i18n, in both `ru` and `en`.
+- Interface strings go through i18n: a new key goes into every dictionary in `apps/ui/i18n/locales/`
+  (`ru`, `uk`, `en`), and `bun run i18n-check` (from `apps/ui`) passes.
 - For interface changes, take screenshots with `bun tools/shot.mjs` at phone and desktop sizes and look
   at them before opening the pull request.
+
+## Adding a language
+
+### Interface (website, admin panel, app screens)
+
+Everything in `apps/ui` comes from one dictionary per language:
+
+1. Copy `apps/ui/i18n/locales/en.json` to `<code>.json` (for example `pl.json`) and translate the
+   values. Keep the keys, the `{placeholders}` and the non-breaking spaces (U+00A0) between a number
+   and its word. Plural forms are separated by ` | `: English has two (`track | tracks`).
+2. Add the language to `i18n.locales` in `apps/ui/nuxt.config.ts`:
+   `{ code: 'pl', language: 'pl-PL', name: 'Polski', file: 'pl.json' }`. `name` is how the language is
+   shown in Settings and on the privacy page.
+3. If the language has Slavic plural forms (one / few / many, like Russian and Ukrainian), add its
+   code to `SLAVIC` in `apps/ui/app/utils/plural-rules.ts` and give such keys three forms.
+
+Then run, from `apps/ui`, `bun run i18n-check` (same keys and placeholders as `ru.json`, same number of
+plural forms for Slavic languages), `bun test` and `bun run typecheck`. The app picks the language from
+the system automatically; a key without a translation falls back to English.
+
+### Native parts (optional)
+
+These have their own strings and currently know Russian, Ukrainian and English. The interface works in
+the new language without them; until they are translated, they fall back to English (the embedded
+player to Russian):
+
+- Apple targets (iPhone, iPad, Mac, Apple TV, Apple Watch, widgets): add
+  `apps/shell/gen/apple/<target>/<code>.lproj` next to `en.lproj` in each target that has one (the main
+  app is `Sources/dalywave-shell`), add the code to every `CFBundleLocalizations` list in
+  `apps/shell/gen/apple/project.yml`, then regenerate the project with `bash apps/shell/scripts/xcodegen.sh`.
+- Tray and menu bar menu (macOS, Windows): the `Locale` enum in `apps/shell/src/settings.rs` and the
+  text tables in `apps/shell/src/tray.rs`; then pass the code through in `SHELL_LOCALES`
+  (`apps/ui/app/bridge/tauri/index.ts`) and the `Locale` type of the shell contract
+  (`apps/shell/bridge/shell.ts`, copied as is to `apps/ui/app/bridge/tauri/shell.ts`).
+- Stream Deck plugin: `apps/streamdeck/src/i18n.ts`, the action names in
+  `apps/streamdeck/scripts/actions.ts` (plus the language list in `scripts/assets.ts`, which writes
+  `rest.daly.wave.sdPlugin/<code>.json` on `bun run build`) and the property inspector,
+  `apps/streamdeck/rest.daly.wave.sdPlugin/ui/pi.js`.
+- Embedded player (`/embed/{kind}/{id}`, rendered by the server): `crates/server/src/embed.rs`.
+- README: `README.<code>.md`, linked from the language line at the top of the other READMEs.
 
 ## Pull requests
 

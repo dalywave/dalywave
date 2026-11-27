@@ -9,7 +9,6 @@ const jam = useJamStore()
 const bridge = useBridge()
 const toast = useToast()
 const ui = useUiStore()
-const lang = useLang()
 const { t } = useScopedI18n('components.music.JamPanel')
 
 onMounted(() => {
@@ -47,11 +46,7 @@ async function share() {
   }
 }
 
-const guestsLabel = computed(() => {
-  const n = jam.guests.length
-  if (lang.value === 'en') return n === 1 ? '1 guest' : `${n} guests`
-  return `${n}${NBSP}${plural(n, lang.value === 'uk' ? ['гість', 'гості', 'гостей'] : ['гость', 'гостя', 'гостей'])}`
-})
+const guestsLabel = computed(() => t('jam.guests', jam.guests.length))
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 </script>

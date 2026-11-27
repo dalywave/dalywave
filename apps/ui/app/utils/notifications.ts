@@ -1,6 +1,7 @@
 // Уведомления: подписи времени в центре, значки видов, ключ VAPID для подписки браузера.
-// Без зависимостей от Nuxt — проверяется `bun test`
+// Без зависимостей от Nuxt — проверяется `bun test`; слова — utils.notifications в словарях
 import { intlLocale, type Locale } from './format'
+import { tr } from './i18n-runtime'
 
 export type Lang = Locale
 
@@ -17,11 +18,12 @@ export function notificationTime(iso: string, now: Date = new Date(), lang: Lang
   const at = new Date(iso)
   const diff = now.getTime() - at.getTime()
   if (Number.isNaN(diff)) return ''
-  if (diff < MIN) return lang === 'en' ? 'now' : lang === 'uk' ? 'зараз' : 'сейчас'
-  if (diff < HOUR) return lang === 'en' ? `${Math.floor(diff / MIN)}m` : `${Math.floor(diff / MIN)} ${lang === 'uk' ? 'хв' : 'мин'}`
+  const word = (key: string, n?: number) => tr(`utils.notifications.${key}`, { locale: lang, named: { n } })
+  if (diff < MIN) return word('now')
+  if (diff < HOUR) return word('minutes', Math.floor(diff / MIN))
   const days = Math.round((startOfDay(now) - startOfDay(at)) / DAY)
-  if (days <= 0) return lang === 'en' ? `${Math.floor(diff / HOUR)}h` : `${Math.floor(diff / HOUR)} ${lang === 'uk' ? 'год' : 'ч'}`
-  if (days === 1) return lang === 'en' ? 'yesterday' : lang === 'uk' ? 'вчора' : 'вчера'
+  if (days <= 0) return word('hours', Math.floor(diff / HOUR))
+  if (days === 1) return word('yesterday')
   if (days < 7) return new Intl.DateTimeFormat(intlLocale(lang, 'en-GB'), { weekday: 'short' }).format(at)
   const sameYear = at.getFullYear() === now.getFullYear()
   return new Intl.DateTimeFormat(intlLocale(lang, 'en-GB'), sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(at)

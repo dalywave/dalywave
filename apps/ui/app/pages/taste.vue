@@ -7,7 +7,7 @@ const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
 const ui = useUiStore()
-const { t } = useScopedI18n('pages.taste')
+const { t, te } = useScopedI18n('pages.taste')
 useHead({ title: () => t('title') })
 
 // Цвета долей — токены --chart-*: на светлой теме у них свои, плотнее
@@ -26,10 +26,7 @@ async function loadBlocked() {
 onMounted(loadBlocked)
 
 const facets = computed(() => data.value?.facets ?? [])
-const facetsWord = computed(() => {
-  const n = facets.value.length
-  return lang.value === 'en' ? (n === 1 ? 'facet' : 'facets') : plural(n, lang.value === 'uk' ? ['грань', 'грані', 'граней'] : ['грань', 'грани', 'граней'])
-})
+const facetsWord = computed(() => t('facetsWord', facets.value.length))
 const colorOf = (i: number) => COLORS[i % COLORS.length]!
 const stats = computed(() => data.value?.stats ?? null)
 const knows = computed(() => data.value?.knows ?? null)
@@ -92,36 +89,12 @@ const delta = computed(() => {
 const maxArtistMin = computed(() => Math.max(1, ...(stats.value?.topArtists.map(a => a.minutes) ?? [1])))
 const maxPart = computed(() => Math.max(0.01, ...(stats.value?.dayParts.map(p => p.share) ?? [0.01])))
 const PART_ICONS: Record<string, string> = { morning: 'ph:sun-horizon', day: 'ph:sun', evening: 'ph:moon-stars', night: 'ph:moon' }
-// Сервер отдаёт жанр Deezer (id) и его русское название (name); украинские — здесь, незнакомый остаётся как у Deezer
-const GENRE_UK: Record<string, string> = {
-  'Pop': 'Поп',
-  'Rap/Hip Hop': 'Реп і хіп-хоп',
-  'Rock': 'Рок',
-  'Alternative': 'Альтернатива',
-  'Indie Rock': 'Інді-рок',
-  'Indie Pop': 'Інді-поп',
-  'Dance': 'Танцювальна',
-  'Electro': 'Електроніка',
-  'Techno/House': 'Техно і хаус',
-  'R&B': 'R&B',
-  'Soul & Funk': 'Соул і фанк',
-  'Metal': 'Метал',
-  'Jazz': 'Джаз',
-  'Classical': 'Класика',
-  'Films/Games': 'Кіно та ігри',
-  'Reggae': 'Реґі',
-  'Reggaeton': 'Реґетон',
-  'Folk': 'Фолк',
-  'Blues': 'Блюз',
-  'Country': 'Кантрі',
-  'Latin Music': 'Латино',
-  'Asian Music': 'Азійська',
-  'African Music': 'Африканська',
-  'Kids': 'Дитяча',
-  'Chanson': 'Шансон',
-  'Variété Internationale': 'Естрада',
+// Сервер отдаёт жанр Deezer (id) и его русское название (name). Название на языке интерфейса — из словаря
+// (раздел genres, ключ — жанр Deezer); незнакомый жанр — как прислал сервер
+const genreName = (g: { id: string, name: string }) => {
+  const key = `genres["${g.id}"]`
+  return te(key) ? t(key) : g.name
 }
-const genreName = (g: { id: string, name: string }) => (lang.value === 'en' ? g.id : lang.value === 'uk' ? (GENRE_UK[g.id] ?? g.id) : g.name)
 
 // ---------- Не рекомендовать ----------
 

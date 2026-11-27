@@ -90,7 +90,7 @@ export function createHttp(opts: HttpOptions = {}) {
       return response
     },
   })
-  // Английский и украинский интерфейс: миксы сервера («Микс дня 1», «Открытия недели») — на языке интерфейса
+  // Интерфейс не на русском: миксы сервера («Микс дня 1», «Открытия недели») — на языке интерфейса
   api.use({
     async onResponse({ response }) {
       const to = contentTarget()

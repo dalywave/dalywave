@@ -119,7 +119,7 @@ const summary = (s: RecoOverview['sessions'][number]['settings']) => waveSummary
 
 const models = computed(() => data.value?.models ?? [])
 const training = computed(() => data.value?.training)
-const metric = (v: number | null | undefined) => (v == null ? '—' : v.toFixed(3).replace('.', lang.value === 'en' ? '.' : ','))
+const metric = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString(intlLocale(lang.value), { minimumFractionDigits: 3, maximumFractionDigits: 3, useGrouping: false }))
 const dataShare = computed(() => {
   const tr = training.value
   return tr && tr.minRows ? Math.min(1, tr.rows / tr.minRows) : 0

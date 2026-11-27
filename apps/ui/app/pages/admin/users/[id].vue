@@ -209,7 +209,7 @@ const days = computed(() => (d.value?.stats.days ?? []).map(x => ({
   values: { min: Math.round(x.listenedMs / 60_000) },
   title: `${formatShortDate(`${x.day}T12:00:00Z`, lang.value)}: ${P.hours(x.listenedMs)} · ${playsN(x.plays)}`,
 })))
-const playsN = (n: number) => (lang.value === 'en' ? `${n} ${n === 1 ? 'play' : 'plays'}` : `${n} ${plural(n, lang.value === 'uk' ? ['раз', 'рази', 'разів'] : ['раз', 'раза', 'раз'])}`)
+const playsN = (n: number) => t('plays', n)
 const genreMax = computed(() => Math.max(1, ...(d.value?.stats.genres ?? []).map(g => g.plays)))
 
 // ---------- История ----------

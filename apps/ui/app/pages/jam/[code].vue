@@ -10,7 +10,6 @@ definePageMeta({ layout: 'bare' })
 const route = useRoute()
 const bridge = useBridge()
 const toast = useToast()
-const lang = useLang()
 const { t } = useScopedI18n('pages.jam._code')
 
 const code = computed(() => String(route.params.code ?? ''))
@@ -205,12 +204,7 @@ function stateOf(id: string): 'queued' | 'pending' | null {
 }
 const canAdd = computed(() => !!view.value?.settings.guestsCanAdd)
 const guests = computed(() => view.value?.guests ?? [])
-const guestsLabel = computed(() => {
-  const n = guests.value.length
-  if (lang.value === 'en') return n === 1 ? '1 guest' : `${n} guests`
-  if (lang.value === 'uk') return `${n}${NBSP}${plural(n, ['гість', 'гості', 'гостей'])}`
-  return `${n}${NBSP}${plural(n, ['гость', 'гостя', 'гостей'])}`
-})
+const guestsLabel = computed(() => t('jam.guests', guests.value.length))
 
 // ---------- Поиск ----------
 

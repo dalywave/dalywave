@@ -3,8 +3,9 @@ import type { Locale } from '~/utils/format'
 import { setContentLocale } from '~/utils/mixTitles'
 
 // Язык интерфейса, выбранный в настройках, — до первой отрисовки. Не выбран — по языку системы:
-// украинский для украинского, русский для русского, белорусского и казахского, иначе английский
-// (ревьюер App Store, чужие серверы). На wave.daly.rest без выбора — русский
+// первый из языков системы, на который переведён интерфейс (i18n.locales в nuxt.config.ts);
+// для белорусского и казахского — русский, иначе английский (ревьюер App Store, чужие серверы).
+// На wave.daly.rest без выбора — русский
 function savedLocale(): string | null {
   try {
     return localStorage.getItem('dw.locale')
@@ -15,8 +16,8 @@ function savedLocale(): string | null {
 }
 
 const OWNER_HOST = 'wave.daly.rest'
-const UKRAINIAN = /^uk\b/i
-const RUSSIAN = /^(ru|be|kk)\b/i
+/** Языки системы, для которых интерфейс — русский */
+const AS_RUSSIAN = new Set(['be', 'kk'])
 
 function serverHost(): string {
   try {
@@ -32,24 +33,28 @@ function serverHost(): string {
   }
 }
 
-function systemLocale(): Locale {
+function systemLocale(available: readonly Locale[]): Locale {
   const langs = navigator.languages?.length ? navigator.languages : [navigator.language]
-  // Первый из знакомых языков по порядку предпочтений системы
+  const find = (code: string) => available.find(c => c.toLowerCase() === code)
+  // Первый из знакомых языков по порядку предпочтений системы: «pt-BR» — сначала целиком, потом «pt»
   for (const l of langs) {
-    if (UKRAINIAN.test(l)) return 'uk'
-    if (RUSSIAN.test(l)) return 'ru'
+    const tag = l.toLowerCase().replace('_', '-')
+    const primary = tag.split('-')[0] ?? ''
+    const code = find(tag) ?? find(primary) ?? (AS_RUSSIAN.has(primary) ? find('ru') : undefined)
+    if (code) return code
   }
-  return 'en'
+  return find('en') ?? available[0]!
 }
 
 export default defineNuxtPlugin(async (nuxtApp) => {
+  const i18n = nuxtApp.$i18n
+  const available = i18n.localeCodes.value
   const saved = savedLocale()
-  const locale = saved === 'en' || saved === 'ru' || saved === 'uk'
-    ? saved
-    : serverHost() === OWNER_HOST ? 'ru' : systemLocale()
-  if (locale !== nuxtApp.$i18n.locale.value) await nuxtApp.$i18n.setLocale(locale)
+  const chosen = available.find(c => c === saved)
+  const locale = chosen ?? (serverHost() === OWNER_HOST ? 'ru' : systemLocale(available))
+  if (locale !== i18n.locale.value) await i18n.setLocale(locale)
   document.documentElement.lang = locale
   setContentLocale(locale)
   // Меню в трее и строке меню — на том же языке
-  if (!saved) useBridge().setLocale(locale)
+  if (!chosen) useBridge().setLocale(locale)
 })

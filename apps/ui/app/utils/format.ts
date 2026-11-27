@@ -1,13 +1,17 @@
 // Форматирование для интерфейса: длительности табличными цифрами, числа с разделителем разрядов,
-// русские и украинские формы слов. Неразрывный пробел держит число рядом со словом.
+// формы слов для чисел. Слова — в словарях (раздел format в i18n/locales), сюда приходят через tr().
+// Неразрывный пробел держит число рядом со словом.
+import type { Locale as I18nLocale } from 'vue-i18n'
+import { tr } from './i18n-runtime'
 
 export const NBSP = ' '
 
-export type Locale = 'ru' | 'en' | 'uk'
+/** Код языка интерфейса: список — i18n.locales в nuxt.config.ts */
+export type Locale = I18nLocale
 
-/** Тег языка для Intl: английский — en-US или en-GB, как принято в месте вызова */
-export function intlLocale(locale: Locale, english: 'en-US' | 'en-GB' = 'en-US'): string {
-  return locale === 'en' ? english : locale === 'uk' ? 'uk-UA' : 'ru-RU'
+/** Тег языка для Intl — код как есть; английский — en-US или en-GB, как принято в месте вызова */
+export function intlLocale(locale: string, english: 'en-US' | 'en-GB' = 'en-US'): string {
+  return locale === 'en' ? english : locale
 }
 
 /** 2:49 или 1:02:03 */
@@ -25,9 +29,9 @@ export function formatLongDuration(ms: number, locale: Locale = 'ru'): string {
   const minutes = Math.max(1, Math.round(ms / 60000))
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  if (locale === 'en') return h ? `${h}${NBSP}h ${m}${NBSP}min` : `${m}${NBSP}min`
-  if (locale === 'uk') return h ? `${h}${NBSP}год ${m}${NBSP}хв` : `${m}${NBSP}хв`
-  return h ? `${h}${NBSP}ч ${m}${NBSP}мин` : `${m}${NBSP}мин`
+  return h
+    ? tr('format.duration.hours', { locale, named: { h, m } })
+    : tr('format.duration.minutes', { locale, named: { m } })
 }
 
 export function formatNumber(n: number, locale: Locale = 'ru'): string {
@@ -45,65 +49,47 @@ export function plural(n: number, forms: [string, string, string]): string {
   return forms[2]
 }
 
-const NOUNS = {
-  track: { ru: ['трек', 'трека', 'треков'], uk: ['трек', 'треки', 'треків'], en: ['track', 'tracks'] },
-  album: { ru: ['альбом', 'альбома', 'альбомов'], uk: ['альбом', 'альбоми', 'альбомів'], en: ['album', 'albums'] },
-  artist: { ru: ['артист', 'артиста', 'артистов'], uk: ['виконавець', 'виконавці', 'виконавців'], en: ['artist', 'artists'] },
-  playlist: { ru: ['плейлист', 'плейлиста', 'плейлистов'], uk: ['плейлист', 'плейлисти', 'плейлистів'], en: ['playlist', 'playlists'] },
-  listener: { ru: ['слушатель', 'слушателя', 'слушателей'], uk: ['слухач', 'слухачі', 'слухачів'], en: ['listener', 'listeners'] },
-  release: { ru: ['релиз', 'релиза', 'релизов'], uk: ['реліз', 'релізи', 'релізів'], en: ['release', 'releases'] },
-  user: { ru: ['пользователь', 'пользователя', 'пользователей'], uk: ['користувач', 'користувачі', 'користувачів'], en: ['user', 'users'] },
-  session: { ru: ['сессия', 'сессии', 'сессий'], uk: ['сесія', 'сесії', 'сесій'], en: ['session', 'sessions'] },
-  file: { ru: ['файл', 'файла', 'файлов'], uk: ['файл', 'файли', 'файлів'], en: ['file', 'files'] },
-  image: { ru: ['картинка', 'картинки', 'картинок'], uk: ['зображення', 'зображення', 'зображень'], en: ['image', 'images'] },
-  recording: { ru: ['запись', 'записи', 'записей'], uk: ['запис', 'записи', 'записів'], en: ['recording', 'recordings'] },
-  play: { ru: ['прослушивание', 'прослушивания', 'прослушиваний'], uk: ['прослуховування', 'прослуховування', 'прослуховувань'], en: ['play', 'plays'] },
-} as const
+// Формы слов — format.noun.<имя> в словаре: «трек | трека | треков», «track | tracks»
+export type Noun = 'track' | 'album' | 'artist' | 'playlist' | 'listener' | 'release' | 'user' | 'session' | 'file' | 'image' | 'recording' | 'play'
 
-export type Noun = keyof typeof NOUNS
+function nounFor(n: number, noun: Noun, locale: Locale): string {
+  return tr(`format.noun.${noun}`, { locale, n })
+}
+
+// После «тыс.» и «млн» — форма для «много»: «2 млн слушателей», «2.5M listeners»
+const MANY = 5
 
 /** «412 треков», «1 трек» */
 export function formatCount(n: number, noun: Noun, locale: Locale = 'ru'): string {
-  const forms = NOUNS[noun]
-  if (locale === 'en') return `${formatNumber(n, 'en')}${NBSP}${n === 1 ? forms.en[0] : forms.en[1]}`
-  return `${formatNumber(n, locale)}${NBSP}${plural(n, forms[locale] as unknown as [string, string, string])}`
+  return `${formatNumber(n, locale)}${NBSP}${nounFor(n, noun, locale)}`
 }
 
 /** Коротко для карточек: «2,5 млн слушателей», «18,2 тыс. слушателей», «2.5M listeners»; меньше 10 000 — целиком */
 export function formatCompactCount(n: number, noun: Noun, locale: Locale = 'ru'): string {
   // Перед словом — обычный пробел: в узкой карточке слово уходит на вторую строку, а число не разрывается
-  const forms = NOUNS[noun]
-  if (Math.abs(n) < 10_000) {
-    const word = locale === 'en' ? forms.en[n === 1 ? 0 : 1] : plural(n, forms[locale] as unknown as [string, string, string])
-    return `${formatNumber(n, locale)} ${word}`
-  }
+  if (Math.abs(n) < 10_000) return `${formatNumber(n, locale)} ${nounFor(n, noun, locale)}`
   const short = new Intl.NumberFormat(intlLocale(locale), { notation: 'compact', maximumFractionDigits: 1 })
     .format(n)
     .replace(/\s/g, NBSP)
-  // После «тыс.» и «млн» — всегда родительный множественного: «2 млн слушателей»
-  return `${short} ${locale === 'en' ? forms.en[1] : forms[locale][2]}`
+  return `${short} ${nounFor(MANY, noun, locale)}`
 }
-
-const MONTHS_RU = ['янв.', 'февр.', 'марта', 'апр.', 'мая', 'июня', 'июля', 'авг.', 'сент.', 'окт.', 'нояб.', 'дек.']
-const MONTHS_UK = ['січ.', 'лют.', 'бер.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'вер.', 'жовт.', 'лист.', 'груд.']
-const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function parseDay(iso: string): { y: number, m: number, d: number } {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
   return { y: y ?? 1970, m: m ?? 1, d: d ?? 1 }
 }
 
+/** День и месяц по шаблону словаря: «6 нояб.», «Nov 6»; в другом году — с годом */
+function dayMonth(d: number, month: string, y: number, sameYear: boolean, locale: Locale): string {
+  const named = { d: String(d), month, y: String(y) }
+  return tr(sameYear ? 'format.date.dayMonth' : 'format.date.dayMonthYear', { locale, named })
+}
+
 /** «6 нояб.», а для прошлых лет — «6 нояб. 2024» */
 export function formatShortDate(iso: string, locale: Locale = 'ru', now = new Date()): string {
   const { y, m, d } = parseDay(iso)
-  const sameYear = y === now.getFullYear()
-  if (locale === 'en') return `${MONTHS_EN[m - 1]} ${d}${sameYear ? '' : `, ${y}`}`
-  return `${d}${NBSP}${(locale === 'uk' ? MONTHS_UK : MONTHS_RU)[m - 1]}${sameYear ? '' : `${NBSP}${y}`}`
+  return dayMonth(d, tr(`format.monthShort.${m - 1}`, { locale }), y, y === now.getFullYear(), locale)
 }
-
-const MONTHS_RU_FULL = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
-const MONTHS_UK_FULL = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня']
-const MONTHS_EN_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 /** День выхода релиза: «12 декабря», в другом году — «15 января 2027»; «завтра», «сегодня» */
 export function formatReleaseDay(iso: string, locale: Locale = 'ru', now = new Date()): string {
@@ -111,11 +97,10 @@ export function formatReleaseDay(iso: string, locale: Locale = 'ru', now = new D
   const day = Date.UTC(y, m - 1, d)
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
   const diff = Math.round((day - today) / 86_400_000)
-  if (diff === 0) return locale === 'en' ? 'today' : locale === 'uk' ? 'сьогодні' : 'сегодня'
-  if (diff === 1) return locale === 'en' ? 'tomorrow' : 'завтра'
-  const sameYear = y === now.getFullYear()
-  if (locale === 'en') return `${MONTHS_EN_FULL[m - 1]} ${d}${sameYear ? '' : `, ${y}`}`
-  return `${d}${NBSP}${(locale === 'uk' ? MONTHS_UK_FULL : MONTHS_RU_FULL)[m - 1]}${sameYear ? '' : `${NBSP}${y}`}`
+  if (diff === 0) return tr('format.today', { locale })
+  if (diff === 1) return tr('format.tomorrow', { locale })
+  // Месяц в родительном падеже: «12 декабря»
+  return dayMonth(d, tr(`format.monthLong.${m - 1}`, { locale }), y, y === now.getFullYear(), locale)
 }
 
 export function formatYear(iso: string | null | undefined): string {
@@ -125,24 +110,11 @@ export function formatYear(iso: string | null | undefined): string {
 /** «2 ч назад», «вчера», «5 нояб.» */
 export function formatRelative(iso: string, locale: Locale = 'ru', now = new Date()): string {
   const diff = (now.getTime() - new Date(iso).getTime()) / 1000
-  if (locale === 'en') {
-    if (diff < 60) return 'just now'
-    if (diff < 3600) return `${Math.round(diff / 60)} min ago`
-    if (diff < 86400) return `${Math.round(diff / 3600)} h ago`
-    return formatShortDate(iso, 'en', now)
-  }
-  if (locale === 'uk') {
-    if (diff < 60) return 'щойно'
-    if (diff < 3600) return `${Math.round(diff / 60)}${NBSP}хв тому`
-    if (diff < 86400) return `${Math.round(diff / 3600)}${NBSP}год тому`
-    if (diff < 172800) return 'учора'
-    return formatShortDate(iso, 'uk', now)
-  }
-  if (diff < 60) return 'только что'
-  if (diff < 3600) return `${Math.round(diff / 60)}${NBSP}мин назад`
-  if (diff < 86400) return `${Math.round(diff / 3600)}${NBSP}ч назад`
-  if (diff < 172800) return 'вчера'
-  return formatShortDate(iso, 'ru', now)
+  if (diff < 60) return tr('format.relative.justNow', { locale })
+  if (diff < 3600) return tr('format.relative.minutes', { locale, named: { n: Math.round(diff / 60) } })
+  if (diff < 86400) return tr('format.relative.hours', { locale, named: { n: Math.round(diff / 3600) } })
+  if (diff < 172800) return tr('format.relative.yesterday', { locale })
+  return formatShortDate(iso, locale, now)
 }
 
 /** Короткий предлог не остаётся в конце строки: «Похоже на Lowborn» (и по-украински: «Схоже на») */
@@ -154,17 +126,19 @@ export function artistNames(artists: { name: string, role?: string }[]): string 
   return artists.filter(a => a.role !== 'featured').map(a => a.name).join(', ') || artists.map(a => a.name).join(', ')
 }
 
-/** «460 КБ», «1,2 ГБ» (по-украински единицы те же) */
+// Единицы — format.bytes в словаре: Б, КБ, МБ, ГБ, ТБ
+const BYTE_UNITS = 5
+
+/** «460 КБ», «1,2 ГБ» */
 export function formatBytes(bytes: number, locale: Locale = 'ru'): string {
-  const units = locale === 'en' ? ['B', 'KB', 'MB', 'GB', 'TB'] : ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ']
   let v = Math.max(0, bytes)
   let i = 0
-  while (v >= 1024 && i < units.length - 1) {
+  while (v >= 1024 && i < BYTE_UNITS - 1) {
     v /= 1024
     i++
   }
   const num = v.toLocaleString(intlLocale(locale), { maximumFractionDigits: v < 10 && i > 0 ? 1 : 0 })
-  return `${num}${NBSP}${units[i]}`
+  return `${num}${NBSP}${tr(`format.bytes.${i}`, { locale })}`
 }
 
 /** «5 нояб., 14:32» — для журналов */

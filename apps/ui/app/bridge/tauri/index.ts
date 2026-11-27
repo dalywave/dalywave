@@ -14,7 +14,7 @@ import { appPush, createOfflineBridge, haptic, systemNotify, withOffline } from 
 import { createTauriOutputs } from './outputs'
 import { createTauriRecognizer } from './recognize'
 import { createBeat, createScreensaver } from './extras'
-import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Shell, type UpdateState } from './shell'
+import { createShell, isShellError, shellInfo, trackSnapArea, type InvokeFn, type ListenFn, type Locale as ShellLocale, type Shell, type UpdateState } from './shell'
 
 // Адрес, выбранный в этом запуске: скрипт оболочки (`__DALYWAVE_SHELL__`) задан при создании окна и
 // после перезагрузки страницы отдаёт прежний адрес — новый ждёт здесь до следующего запуска
@@ -59,6 +59,8 @@ function detectPlatform(): Platform {
 }
 
 const DESKTOP: Platform[] = ['macos', 'windows', 'linux']
+/** Языки меню в трее и строке меню (договор оболочки, apps/shell/bridge/shell.ts) */
+const SHELL_LOCALES: readonly ShellLocale[] = ['ru', 'uk', 'en']
 
 // @tauri-apps/api подгружается только внутри приложения
 let shellJob: Promise<Shell> | null = null
@@ -320,7 +322,9 @@ export function createTauriBridge(): Bridge {
       install: async () => (await loadShell()).updates.install(),
     },
     setLocale(locale) {
-      void loadShell().then(shell => shell.setLocale(locale)).catch(() => {})
+      // Меню в трее переведено не на все языки интерфейса (apps/shell/src/settings.rs): остальные — английский
+      const shellLocale = SHELL_LOCALES.find(l => l === locale) ?? 'en'
+      void loadShell().then(shell => shell.setLocale(shellLocale)).catch(() => {})
     },
   }), offline)
   bridge.miniPlayer = miniPlayer

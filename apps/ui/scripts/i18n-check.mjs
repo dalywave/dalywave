@@ -3,10 +3,12 @@
 // Тексты живут только в словарях: блок <i18n> в компоненте — ошибка.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+// Славянские языки — тот же список, что у правила форм в приложении
+import { SLAVIC as SLAVIC_LOCALES } from '../app/utils/plural-rules.ts'
 
 const dir = new URL('../i18n/locales/', import.meta.url).pathname
 const app = new URL('../app/', import.meta.url).pathname
-const SLAVIC = new Set(['ru', 'uk'])
+const SLAVIC = new Set(SLAVIC_LOCALES)
 const PH = /\{[A-Za-z_][A-Za-z0-9_]*\}/g
 
 const load = f => JSON.parse(readFileSync(join(dir, f), 'utf8'))
@@ -26,8 +28,9 @@ function walk(a, b, path, lang) {
   const key = path.slice(0, -1)
   if (typeof b !== 'string') return errors.push(`${lang}: ${key} — не строка`)
   if (a.trim() && !b.trim()) errors.push(`${lang}: ${key} — пустая строка`)
-  const pa = (a.match(PH) ?? []).sort().join(' ')
-  const pb = (b.match(PH) ?? []).sort().join(' ')
+  // Набор плейсхолдеров, а не их число: в каждой форме «{n} трек | {n} трека» свой {n}
+  const pa = [...new Set(a.match(PH) ?? [])].sort().join(' ')
+  const pb = [...new Set(b.match(PH) ?? [])].sort().join(' ')
   if (pa !== pb) errors.push(`${lang}: ${key} — плейсхолдеры «${pa}» → «${pb}»`)
   if (SLAVIC.has(lang) && a.split(' | ').length !== b.split(' | ').length) errors.push(`${lang}: ${key} — другое число форм`)
 }

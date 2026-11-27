@@ -610,8 +610,8 @@ export interface Bridge {
     install(): Promise<void>
   }
 
-  /** Язык меню в трее и строке меню приложения */
-  setLocale(locale: 'ru' | 'en' | 'uk'): void
+  /** Язык меню в трее и строке меню приложения: код языка интерфейса; оболочка знает не все (см. bridge/tauri) */
+  setLocale(locale: string): void
 
   /** Установщики приложений для компьютера (меню аккаунта на сайте): последние версии по платформам */
   desktopApps(): Promise<AppDownloads>

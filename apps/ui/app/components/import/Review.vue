@@ -133,10 +133,7 @@ function meta(item: ImportItem): string {
   if (item.kind === 'album') parts.push(t('album'))
   if (item.kind === 'artist') parts.push(t('follow'))
   if (item.liked) parts.push(t('liked'))
-  if (item.plays) {
-    const n = formatNumber(item.plays, lang.value)
-    parts.push(lang.value === 'en' ? `${n} ${item.plays === 1 ? 'play' : 'plays'}` : `${n}\u00a0${plural(item.plays, lang.value === 'uk' ? ['прослуховування', 'прослуховування', 'прослуховувань'] : ['прослушивание', 'прослушивания', 'прослушиваний'])}`)
-  }
+  if (item.plays) parts.push(t('plays', { n: formatNumber(item.plays, lang.value) }, item.plays))
   if (item.kind === 'file' && item.file?.name) parts.push(item.file.name)
   return parts.join(' · ')
 }

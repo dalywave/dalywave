@@ -120,8 +120,10 @@ function resetWave() {
 
 // ---------- Внешний вид ----------
 
+// Языки — из i18n.locales в nuxt.config.ts, каждый под своим названием
+const languageOptions = computed(() => i18n.locales.value.map(l => ({ value: l.code, label: l.name ?? l.code })))
 const language = computed({
-  get: () => (i18n.locale.value === 'en' || i18n.locale.value === 'uk' ? i18n.locale.value : 'ru') as Locale,
+  get: () => i18n.locale.value,
   set: (v: Locale) => {
     void i18n.setLocale(v)
     // Миксы сервера («Микс дня») — на новом языке после перезагрузки данных
@@ -132,7 +134,7 @@ const language = computed({
       localStorage.setItem('dw.locale', v)
     }
     catch {
-      // Без хранилища язык вернётся к русскому при следующем запуске
+      // Без хранилища при следующем запуске язык снова выберется по системе
     }
   },
 })
@@ -255,7 +257,7 @@ const language = computed({
         />
       </SettingsRow>
       <SettingsRow :title="t('language')">
-        <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'uk', label: 'Українська' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
+        <UiSegmentedControl v-model="language" :options="languageOptions" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
       </SettingsRow>
       <!-- Живые обложки и видео «Открытий» — свои для устройства; «только по Wi-Fi» — где бывает сотовая -->
       <SettingsRow :title="t('motion')" :description="t('motionDesc')">

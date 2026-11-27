@@ -6,5 +6,5 @@ import type { Locale } from '~/utils/format'
  */
 export function useLang() {
   const i18n = useNuxtApp().$i18n
-  return computed<Locale>(() => (i18n.locale.value === 'en' || i18n.locale.value === 'uk' ? i18n.locale.value : 'ru'))
+  return computed<Locale>(() => i18n.locale.value)
 }

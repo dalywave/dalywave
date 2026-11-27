@@ -8,7 +8,8 @@ import type { AppDownload } from '~/api/types'
 const open = defineModel<boolean>('open', { default: false })
 const bridge = useBridge()
 const ui = useUiStore()
-const { t, locale } = useScopedI18n('components.shell.DesktopApps')
+const { t } = useScopedI18n('components.shell.DesktopApps')
+const lang = useLang()
 const { tg } = useGlobalT()
 
 const apps = ref<AppDownload[] | null>(null)
@@ -51,7 +52,7 @@ const deck = computed(() => apps.value?.find(a => a.platform === 'streamdeck') ?
 /** Плагин скачан: подсказать, что дальше */
 const deckTaken = ref(false)
 
-const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, locale.value === 'en' ? 'en' : locale.value === 'uk' ? 'uk' : 'ru')}`
+const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, lang.value)}`
 </script>
 
 <template>
