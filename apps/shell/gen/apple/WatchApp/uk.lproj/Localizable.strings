@@ -1,0 +1,38 @@
+/* DalyWave для Apple Watch: тексты по-украински. Ключи — английский текст (en.lproj). */
+
+"Try Again" = "Повторити";
+"Open DalyWave on your iPhone" = "Відкрийте DalyWave на iPhone";
+"Sign in to DalyWave on your iPhone" = "Увійдіть у DalyWave на iPhone";
+"No connection" = "Немає мережі";
+"No device" = "Немає пристрою";
+"Open DalyWave on your iPhone or computer" = "Відкрийте DalyWave на iPhone або комп’ютері";
+"Nothing playing" = "Нічого не грає";
+
+"Previous" = "Назад";
+"Next" = "Далі";
+"Pause" = "Пауза";
+"Play" = "Грати";
+"Like" = "Подобається";
+"Volume" = "Гучність";
+"Where to Play" = "Де грати";
+"Playing" = "Грає";
+"Online" = "У мережі";
+"Offline" = "Не в мережі";
+
+"My Wave" = "Моя хвиля";
+"Energetic" = "Бадьоре";
+"Happy" = "Веселе";
+"Calm" = "Спокійне";
+"Sad" = "Сумне";
+"Saved" = "Збережені";
+
+"Library" = "Медіатека";
+"Liked Songs" = "Вподобане";
+"Playlists" = "Плейлисти";
+"Recent" = "Нещодавнє";
+
+"No device to play on" = "Немає пристрою";
+"Device is offline" = "Пристрій не в мережі";
+"Device didn't respond" = "Пристрій не відповів";
+"Couldn't save" = "Не збереглося";
+"Couldn't load" = "Не завантажилося";

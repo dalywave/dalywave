@@ -4,7 +4,8 @@
 //! Страница собирается сервером целиком — без входа, без бандла интерфейса: обложка, название,
 //! исполнитель, кнопка отрывка и ссылка «Открыть в DalyWave»; у альбома, плейлиста и артиста — список
 //! первых треков. Высоту задаёт сайт (152 — карточка, 352 — со списком), ширина — любая. Тема —
-//! `theme=dark|light`. Плейлист открывается, только если владелец разрешил встраивание.
+//! `theme=dark|light`, язык — `lang=ru|en|uk` (по началу тега, иначе русский). Плейлист
+//! открывается, только если владелец разрешил встраивание.
 //!
 //! Без входа звучит только отрывок: 30 с с припева, нарезанные воркером из звука на сервере
 //! (`embed_clips`), а пока его нет — превью Deezer. Полный файл анонимно не отдаётся.
@@ -67,12 +68,14 @@ impl Theme {
 pub enum Lang {
     Ru,
     En,
+    Uk,
 }
 
 impl Lang {
     pub fn parse(s: Option<&str>) -> Self {
         match s {
             Some(l) if l.starts_with("en") => Lang::En,
+            Some(l) if l.starts_with("uk") => Lang::Uk,
             _ => Lang::Ru,
         }
     }
@@ -81,6 +84,7 @@ impl Lang {
         match self {
             Lang::Ru => "ru",
             Lang::En => "en",
+            Lang::Uk => "uk",
         }
     }
 
@@ -88,6 +92,7 @@ impl Lang {
         match self {
             Lang::Ru => "Открыть в DalyWave",
             Lang::En => "Open in DalyWave",
+            Lang::Uk => "Відкрити в DalyWave",
         }
     }
 
@@ -95,6 +100,7 @@ impl Lang {
         match self {
             Lang::Ru => "Отрывок",
             Lang::En => "Preview",
+            Lang::Uk => "Уривок",
         }
     }
 
@@ -102,6 +108,7 @@ impl Lang {
         match self {
             Lang::Ru => "Отрывок недоступен",
             Lang::En => "Preview unavailable",
+            Lang::Uk => "Уривок недоступний",
         }
     }
 
@@ -109,6 +116,7 @@ impl Lang {
         match self {
             Lang::Ru => "Отрывок скоро будет",
             Lang::En => "Preview is on its way",
+            Lang::Uk => "Уривок скоро буде",
         }
     }
 
@@ -116,6 +124,7 @@ impl Lang {
         match self {
             Lang::Ru => "Слушать отрывок",
             Lang::En => "Play preview",
+            Lang::Uk => "Слухати уривок",
         }
     }
 
@@ -123,6 +132,7 @@ impl Lang {
         match self {
             Lang::Ru => "Пауза",
             Lang::En => "Pause",
+            Lang::Uk => "Пауза",
         }
     }
 
@@ -130,6 +140,7 @@ impl Lang {
         match self {
             Lang::Ru => "Недоступно",
             Lang::En => "Unavailable",
+            Lang::Uk => "Недоступно",
         }
     }
 
@@ -141,6 +152,14 @@ impl Lang {
                     (1, m) if m != 11 => "трек",
                     (2..=4, m) if !(12..=14).contains(&m) => "трека",
                     _ => "треков",
+                };
+                format!("{n} {word}")
+            }
+            Lang::Uk => {
+                let word = match (n % 10, n % 100) {
+                    (1, m) if m != 11 => "трек",
+                    (2..=4, m) if !(12..=14).contains(&m) => "треки",
+                    _ => "треків",
                 };
                 format!("{n} {word}")
             }
@@ -157,6 +176,10 @@ impl Lang {
             (Lang::En, ShareKind::Album) => "Album",
             (Lang::En, ShareKind::Playlist) => "Playlist",
             (Lang::En, ShareKind::Artist) => "Artist",
+            (Lang::Uk, ShareKind::Track) => "Трек",
+            (Lang::Uk, ShareKind::Album) => "Альбом",
+            (Lang::Uk, ShareKind::Playlist) => "Плейлист",
+            (Lang::Uk, ShareKind::Artist) => "Виконавець",
         }
     }
 }
@@ -861,6 +884,26 @@ mod tests {
         assert_eq!(Lang::Ru.tracks(22), "22 трека");
         assert_eq!(Lang::Ru.tracks(25), "25 треков");
         assert_eq!(Lang::En.tracks(1), "1 track");
+        assert_eq!(Lang::Uk.tracks(1), "1 трек");
+        assert_eq!(Lang::Uk.tracks(3), "3 треки");
+        assert_eq!(Lang::Uk.tracks(11), "11 треків");
+        assert_eq!(Lang::Uk.tracks(21), "21 трек");
+        assert_eq!(Lang::Uk.tracks(22), "22 треки");
+        assert_eq!(Lang::Uk.tracks(25), "25 треків");
+    }
+
+    #[test]
+    fn language_from_query() {
+        assert_eq!(Lang::parse(None), Lang::Ru);
+        assert_eq!(Lang::parse(Some("ru")), Lang::Ru);
+        assert_eq!(Lang::parse(Some("en-GB")), Lang::En);
+        assert_eq!(Lang::parse(Some("uk")), Lang::Uk);
+        assert_eq!(Lang::parse(Some("uk-UA")), Lang::Uk);
+        assert_eq!(Lang::parse(Some("de")), Lang::Ru);
+        let html = render(&card(ShareKind::Album), Theme::Dark, Lang::Uk, "abc");
+        assert!(html.contains("<html lang=\"uk\">"));
+        assert!(html.contains("Відкрити в DalyWave"));
+        assert!(render_gone(Theme::Dark, Lang::Uk).contains("Недоступно"));
     }
 
     #[test]

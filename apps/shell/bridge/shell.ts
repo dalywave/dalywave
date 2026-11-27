@@ -42,7 +42,7 @@ export interface PlatformInfo {
   locale: Locale
 }
 
-export type Locale = 'ru' | 'en'
+export type Locale = 'ru' | 'en' | 'uk'
 export type Theme = 'dark' | 'light'
 
 export type ShellErrorCode =

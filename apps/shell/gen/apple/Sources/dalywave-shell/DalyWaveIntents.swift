@@ -1,8 +1,8 @@
 import AppIntents
 import Foundation
 
-// Siri и «Команды» (iOS 17+): фразы App Shortcuts на русском и английском (ru.lproj, en.lproj —
-// AppShortcuts.strings) и действия для приложения «Команды». Само действие делает Rust
+// Siri и «Команды» (iOS 17+): фразы App Shortcuts на русском, украинском и английском (ru.lproj,
+// uk.lproj, en.lproj — AppShortcuts.strings) и действия для приложения «Команды». Само действие делает Rust
 // (apps/shell/src/siri.rs, статическая библиотека libapp.a): сюда — только описание для системы.
 // Мост — C ABI, команда — JSON (тот же, что у расширения SiriKit и у события `siri:command`).
 

@@ -131,12 +131,16 @@ write('manifest.json', `${JSON.stringify(manifest, null, 2)}\n`)
 
 // ---------- переводы названий ----------
 
-for (const lang of ['ru', 'en'] as const) {
+const DESCRIPTION = {
+  ru: 'Пульт DalyWave: кнопки, крутилки и сенсорная полоса Stream Deck управляют музыкой там, где она играет.',
+  en: 'DalyWave remote: Stream Deck keys, dials and touch strip control your music wherever it plays.',
+  uk: 'Пульт DalyWave: кнопки, регулятори й сенсорна смуга Stream Deck керують музикою там, де вона грає.',
+}
+
+for (const lang of ['ru', 'en', 'uk'] as const) {
   const out: Record<string, unknown> = {
     Name: 'DalyWave',
-    Description: lang === 'ru'
-      ? 'Пульт DalyWave: кнопки, крутилки и сенсорная полоса Stream Deck управляют музыкой там, где она играет.'
-      : 'DalyWave remote: Stream Deck keys, dials and touch strip control your music wherever it plays.',
+    Description: DESCRIPTION[lang],
     Category: 'DalyWave',
     Localization: {},
   }

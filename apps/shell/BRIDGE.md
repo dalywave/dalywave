@@ -69,7 +69,7 @@ const shell = createShell({ invoke, listen })
 | `backdrop` | `mica` — под прозрачными местами интерфейса системный фон Windows 11; иначе `none` |
 | `dev` | приложение запущено через `cargo tauri dev` с dev-сервера интерфейса |
 | `serverUrl` | адрес сервера при запуске; дальше — `shell.server.get()` и событие `server:changed` |
-| `locale` | язык меню в трее (`ru` / `en`), меняется `shell.setLocale()` |
+| `locale` | язык меню в трее (`ru` / `uk` / `en`), меняется `shell.setLocale()` |
 
 ## Заголовок окна
 

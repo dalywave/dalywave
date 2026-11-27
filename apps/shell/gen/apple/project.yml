@@ -2,7 +2,7 @@
 #   - своя фаза «Build Rust Code» (scripts/build-ios.sh) — Run в Xcode работает без Tauri CLI;
 #   - фреймворки аудиодвижка и входа — статическая библиотека Rust не передаёт их линковщику;
 #   - фоновый звук, ссылки dalywave://, тема и строка состояния по выбору в интерфейсе, значок с темами;
-#   - Siri: App Intents (Swift в Sources, фразы — ru.lproj) и расширение SiriKit dalywave-siri;
+#   - Siri: App Intents (Swift в Sources, фразы — ru.lproj и uk.lproj) и расширение SiriKit dalywave-siri;
 #   - push (APNs): право aps-environment, делегат уведомлений Sources/…/PushLink.swift.
 # Пересобрать проект: `make ios` (или `xcodegen generate` здесь). `cargo tauri ios init` заново
 # не запускать: он перезапишет файл и вернёт штатную фазу, которой нужен запущенный CLI.
@@ -58,8 +58,8 @@ targets:
         CFBundleDisplayName: DalyWave
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        # Языки приложения: окна разрешений — Sources/…/en.lproj и ru.lproj/InfoPlist.strings
-        CFBundleLocalizations: [en, ru]
+        # Языки приложения: окна разрешений — Sources/…/en.lproj, ru.lproj и uk.lproj/InfoPlist.strings
+        CFBundleLocalizations: [en, ru, uk]
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64, metal]
@@ -417,10 +417,10 @@ targets:
       path: TVApp/Info.plist
       properties:
         CFBundleDisplayName: DalyWave
-        # Языки: английский (он же для прочих систем) и русский. Тексты — TVShared/*.lproj
+        # Языки: английский (он же для прочих систем), русский и украинский. Тексты — TVShared/*.lproj
         # (Localizable.strings, plural — .stringsdict), окно разрешения — TVApp/*.lproj/InfoPlist.strings
         CFBundleDevelopmentRegion: en
-        CFBundleLocalizations: [en, ru]
+        CFBundleLocalizations: [en, ru, uk]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen:
@@ -438,7 +438,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         # Экран подключения (TVApp/Sources/ConnectView.swift): серверы DalyWave в этой сети
         # (`_dalywave._tcp`) и «Подключить с iPhone» (`_dalywave-pair._tcp`).
-        # Перевод — TVApp/en.lproj и ru.lproj/InfoPlist.strings
+        # Перевод — TVApp/en.lproj, ru.lproj и uk.lproj/InfoPlist.strings
         NSLocalNetworkUsageDescription: Чтобы найти сервер DalyWave и iPhone в этой сети
         NSBonjourServices: [_dalywave._tcp, _dalywave-pair._tcp]
     entitlements:
@@ -484,7 +484,7 @@ targets:
         CFBundleDisplayName: DalyWave
         # Подписи полки — TVShared/*.lproj, как у приложения
         CFBundleDevelopmentRegion: en
-        CFBundleLocalizations: [en, ru]
+        CFBundleLocalizations: [en, ru, uk]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:

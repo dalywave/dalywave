@@ -1,0 +1,5 @@
+/* Системные окна разрешений и быстрое действие на значке (Info.plist, project.yml) — украинский */
+"NSMicrophoneUsageDescription" = "Щоб дізнатися, яка пісня грає поруч";
+"NSSiriUsageDescription" = "Щоб вмикати музику голосом — і на HomePod";
+"NSLocalNetworkUsageDescription" = "Щоб підключати Apple TV у цій мережі до DalyWave";
+"Распознать" = "Розпізнати";

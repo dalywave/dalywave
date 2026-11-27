@@ -8,7 +8,7 @@ import type { AddressInfo } from 'node:net'
 import { hostname } from 'node:os'
 import streamDeck from '@elgato/streamdeck'
 import { ApiError, DEFAULT_SERVER, api, normalizeServer } from './api'
-import { isRussian } from './i18n'
+import { type Lang, language } from './i18n'
 import { player } from './player'
 import type { AppToken } from './types'
 
@@ -40,14 +40,34 @@ function base64url(buf: Buffer): string {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+const PAGE: Record<Lang, { ok: string, okHint: string, fail: string, failHint: string }> = {
+  ru: {
+    ok: 'Stream Deck подключён',
+    okHint: 'Кнопки уже управляют музыкой. Вкладку можно закрыть.',
+    fail: 'Не получилось подключить',
+    failHint: 'Вернитесь в Stream Deck и нажмите «Подключить» ещё раз.',
+  },
+  en: {
+    ok: 'Stream Deck connected',
+    okHint: 'Your keys control the music now. You can close this tab.',
+    fail: 'Couldn’t connect',
+    failHint: 'Go back to Stream Deck and press Connect again.',
+  },
+  uk: {
+    ok: 'Stream Deck підключено',
+    okHint: 'Кнопки вже керують музикою. Вкладку можна закрити.',
+    fail: 'Не вдалося підключити',
+    failHint: 'Поверніться до Stream Deck і натисніть «Підключити» ще раз.',
+  },
+}
+
 /** Страница, которую браузер видит после входа: короткая, в цветах «Полночи» */
 function page(ok: boolean): string {
-  const ru = isRussian()
-  const title = ok ? (ru ? 'Stream Deck подключён' : 'Stream Deck connected') : (ru ? 'Не получилось подключить' : 'Couldn’t connect')
-  const hint = ok
-    ? (ru ? 'Кнопки уже управляют музыкой. Вкладку можно закрыть.' : 'Your keys control the music now. You can close this tab.')
-    : (ru ? 'Вернитесь в Stream Deck и нажмите «Подключить» ещё раз.' : 'Go back to Stream Deck and press Connect again.')
-  return `<!doctype html><html lang="${ru ? 'ru' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DalyWave</title>
+  const lang = language()
+  const s = PAGE[lang]
+  const title = ok ? s.ok : s.fail
+  const hint = ok ? s.okHint : s.failHint
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DalyWave</title>
 <style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#08090c;color:#f3f5f9;font:16px/1.5 -apple-system,'Segoe UI',system-ui,sans-serif}
 main{max-width:360px;padding:24px;text-align:center}svg{width:56px;height:56px}h1{margin:16px 0 6px;font-size:22px;font-weight:700;letter-spacing:-.01em}p{margin:0;color:rgba(232,236,244,.68)}</style></head>
 <body><main><svg viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8e6bff"/><stop offset=".45" stop-color="#d45bef"/><stop offset=".75" stop-color="#ff6f95"/><stop offset="1" stop-color="#ffa25c"/></linearGradient></defs><path d="M16 31C18.83 37.33 27.33 67.33 33 69C38.67 70.67 44.33 41 50 41C55.67 41 61.33 70.67 67 69C72.67 67.33 81.17 37.33 84 31" fill="none" stroke="url(#g)" stroke-width="11.5" stroke-linecap="round" stroke-linejoin="round"/></svg>

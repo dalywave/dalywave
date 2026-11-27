@@ -11,6 +11,7 @@
 		024C7DE6D5B18D66713E8BA8 /* TopShelfSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98BCA9E22B41CE0E444DCF1 /* TopShelfSnapshot.swift */; };
 		088C57F76473BB1FEBFB7418 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D439E9BF9652190398434011 /* CoreAudio.framework */; };
 		08AAED1C4479B7C254037591 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = E09330635EFCE09B3B387BA2 /* Models.swift */; };
+		08B151324C5B022A17C839EE /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 607921F342B0815190D84713 /* Localizable.strings */; };
 		0D7043CC236F437E07150F2E /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EE8D3754EB6635BC61E5266 /* AVKit.framework */; };
 		0DA3B907C5D14E219D93A6D5 /* Artwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5810D6E20945506470782203 /* Artwork.swift */; };
 		0DD9150F5AAEAC5ACFD76E6C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B072C937A128077FC78C55AE /* WidgetKit.framework */; };
@@ -66,6 +67,7 @@
 		6F41A88FFFF8C01323B3FF67 /* DalyWaveWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDAF17457D058E173A55F65C /* DalyWaveWidgets.swift */; };
 		70F6F09D1150B49EA7E8E5B3 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06F48107150D751B1FEB95D3 /* AudioToolbox.framework */; };
 		7627E31190D782C1E9B5D995 /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CE9544FBFC46CCB95BAEB85 /* Intents.framework */; };
+		770E51A900484C956C53F2D7 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F7C8E94A6F05A0E5C3DE2D4A /* Localizable.strings */; };
 		7905B613D62DAF6DA31A5D77 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA9586AE765B48537E1CACE /* WidgetIntents.swift */; };
 		7D019E868FC4DCC16DD17B98 /* PushLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */; };
 		801FFC16D4C3E13DA9F5938C /* DalyWaveWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B6E52155C4370AF324D1115 /* DalyWaveWidgets.swift */; };
@@ -86,6 +88,7 @@
 		A3136198FB9D58F917EDAD78 /* LoginSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D5F395E1360FF602CE276A /* LoginSheetTests.swift */; };
 		A626211671509DDBDB62667F /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81CD3367D00F1E9D5A2D28AB /* SystemConfiguration.framework */; };
 		A8555214625F12E71E94957E /* ShazamKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C8545FAE6945FC72A700A89 /* ShazamKit.framework */; };
+		AB9C0EAF320984B7B4910F75 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F7C8E94A6F05A0E5C3DE2D4A /* Localizable.strings */; };
 		AE31E7007E09BF952C7A0684 /* WidgetsHomeScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7CA547CF66672A2C67B62F /* WidgetsHomeScreenTests.swift */; };
 		B1819ACB2E8EFC9828A1A690 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA9586AE765B48537E1CACE /* WidgetIntents.swift */; };
 		B2256499133D0A5B8A158A31 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3C12E0D418269F691759B755 /* main.mm */; };
@@ -97,6 +100,7 @@
 		BD2E75AB59CDB8D319604E09 /* Localizable.stringsdict in Resources */ = {isa = PBXBuildFile; fileRef = FE828042A5DF7904BF4A6D24 /* Localizable.stringsdict */; };
 		BE6310FA185DEAF239FD69D3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9DD0496943717BF685CF20E /* Assets.xcassets */; };
 		BF6179592FFC55DF1AAF757A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D517CCC2BCF9B66A4AFCB7C8 /* SwiftUI.framework */; };
+		C0EB11D706272193DEAAC1A2 /* AppShortcuts.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3745870ABABD27F29BC9D2D4 /* AppShortcuts.strings */; };
 		C1C842BBA1EC3CF6199D9048 /* PhoneLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E17D140406AB97E6D0CE46D /* PhoneLink.swift */; };
 		C2800CEC082EC5AB9DFDE72E /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8680BC5BA77A8F5D01DAD70A /* UIKit.framework */; };
 		C29050D9764D0C48EF7F4956 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA4B34E99CF6A448EED0179 /* LibraryView.swift */; };
@@ -263,6 +267,7 @@
 		34187436670EFED00241A1C1 /* WaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveView.swift; sourceTree = "<group>"; };
 		36BAAFC41D38907CF573B818 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = en; path = en.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
 		3741B8EE0756D0F278CC21C7 /* snap.rs */ = {isa = PBXFileReference; path = snap.rs; sourceTree = "<group>"; };
+		3745870ABABD27F29BC9D2D4 /* AppShortcuts.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = AppShortcuts.strings; path = uk.lproj/AppShortcuts.strings; sourceTree = "<group>"; };
 		375402116E2037E9999A79FF /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		375C52D2788540345EF11B00 /* widgets.rs */ = {isa = PBXFileReference; path = widgets.rs; sourceTree = "<group>"; };
 		39054F1ED4CC707840016F7A /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
@@ -274,6 +279,7 @@
 		3F18935882415C3AB7A43757 /* WidgetColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetColor.swift; sourceTree = "<group>"; };
 		41A69F9BFD45F2682F2AB713 /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
 		457D1043EF249242790EE8C9 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		486BFD6114C042CB213EF86C /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		497BDAEAD0CAFB60ED861D68 /* DalyWaveFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DalyWaveFocus.swift; sourceTree = "<group>"; };
 		4D6DD6CBDAC52C876D770EBD /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		4DD55E8BAC864777E137F488 /* discord.rs */ = {isa = PBXFileReference; path = discord.rs; sourceTree = "<group>"; };
@@ -292,7 +298,9 @@
 		5D9A41810C91F9D868EDDF83 /* siri.rs */ = {isa = PBXFileReference; path = siri.rs; sourceTree = "<group>"; };
 		5EA4B34E99CF6A448EED0179 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		5EE8D3754EB6635BC61E5266 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		5EF8565BFA2E340A22427A97 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		60682E37B1D8A9DE89F6FB18 /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = System/Library/Frameworks/CoreHaptics.framework; sourceTree = SDKROOT; };
+		607921F342B0815190D84713 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		6107F62A7B3C96990854B4B9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		670CBC2ADAB6CE48A7904EEF /* mini.rs */ = {isa = PBXFileReference; path = mini.rs; sourceTree = "<group>"; };
 		68781904E0B82109FBBE62C0 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -320,12 +328,14 @@
 		8A151DCAB003AEFCE1F36018 /* DalyWaveWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DalyWaveWatchWidgets.entitlements; sourceTree = "<group>"; };
 		8B7048BB3224A3411FCFCCD4 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		8BE1CA940593FF793B4A70CB /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		8C039C90BB8EE1E3D7783068 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		8C3B438F7E947EA5654BACA1 /* WidgetStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetStyle.swift; sourceTree = "<group>"; };
 		8F2DA7FA3A01AC4E6A8C9B87 /* push.rs */ = {isa = PBXFileReference; path = push.rs; sourceTree = "<group>"; };
 		912A4D203E5A5DB0B2FF559B /* platform.rs */ = {isa = PBXFileReference; path = platform.rs; sourceTree = "<group>"; };
 		91F4510007265E1FCAE25C74 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		994AECBA29B15044C466628E /* focus.rs */ = {isa = PBXFileReference; path = focus.rs; sourceTree = "<group>"; };
 		9A20888E03A7E3C911E27612 /* dalywave-shell_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "dalywave-shell_iOS.entitlements"; sourceTree = "<group>"; };
+		9BDA73B08203D0935A94EEF5 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = uk; path = uk.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
 		9E26FC765B864620E88BDBF4 /* BackSwipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackSwipeTests.swift; sourceTree = "<group>"; };
 		9F6C18721B1459AAA3822C5D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A0241CB2EBE9E78ED8C36F31 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -341,6 +351,7 @@
 		A5DB1F76A956B88840826EE6 /* window.rs */ = {isa = PBXFileReference; path = window.rs; sourceTree = "<group>"; };
 		A6803B5439958761417885FA /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		A9DD0496943717BF685CF20E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA797CC05959137D7630D61E /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		AA7CA547CF66672A2C67B62F /* WidgetsHomeScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetsHomeScreenTests.swift; sourceTree = "<group>"; };
 		AB676CCF0A0B3DD6A6F2A9A2 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		AB8757432A62FA0CE791E7B5 /* DalyWaveBeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DalyWaveBeat.swift; sourceTree = "<group>"; };
@@ -349,6 +360,7 @@
 		B26F325A7592D1690C067E81 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B3568FC60D27F460104BD32F /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
 		B3EDB83FFDF7EE5AF85249AD /* DalyWaveTopShelf.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DalyWaveTopShelf.entitlements; sourceTree = "<group>"; };
+		B52630712E9F21B8423639F7 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		B614F846A144CB791D297423 /* dalywave-shell_UITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "dalywave-shell_UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8E57474B4D74E653C678BC0 /* WidgetActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetActions.swift; sourceTree = "<group>"; };
 		B98BCA9E22B41CE0E444DCF1 /* TopShelfSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopShelfSnapshot.swift; sourceTree = "<group>"; };
@@ -394,6 +406,7 @@
 		F22931C9FECB45445CA6BD05 /* dalywave-watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "dalywave-watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4774065B9405CD6790523C0 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = ru; path = ru.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
 		F51B3BE09351E2360BF640B4 /* Connect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connect.swift; sourceTree = "<group>"; };
+		F7C8E94A6F05A0E5C3DE2D4A /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FD29B50FF91E0BC0E0900202 /* pairing.rs */ = {isa = PBXFileReference; path = pairing.rs; sourceTree = "<group>"; };
 		FF709B75F14E3E87DA7D2A79 /* beat.rs */ = {isa = PBXFileReference; path = beat.rs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -662,6 +675,7 @@
 				A52089A17E2D1722CBE80A84 /* DalyWaveWidgets.swift */,
 				ADA380FCDDDFE5CB9990DCAD /* Info.plist */,
 				68781904E0B82109FBBE62C0 /* Localizable.strings */,
+				F7C8E94A6F05A0E5C3DE2D4A /* Localizable.strings */,
 				B8E57474B4D74E653C678BC0 /* WidgetActions.swift */,
 				8C3B438F7E947EA5654BACA1 /* WidgetStyle.swift */,
 				518756D0A7E6E6E1D95B9905 /* WidgetViews.swift */,
@@ -691,11 +705,13 @@
 			isa = PBXGroup;
 			children = (
 				7E940980C4193C05C04F336E /* AppShortcuts.strings */,
+				3745870ABABD27F29BC9D2D4 /* AppShortcuts.strings */,
 				AB8757432A62FA0CE791E7B5 /* DalyWaveBeat.swift */,
 				497BDAEAD0CAFB60ED861D68 /* DalyWaveFocus.swift */,
 				D2DFBAE387F99376B9271CFE /* DalyWaveIntents.swift */,
 				BDAF17457D058E173A55F65C /* DalyWaveWidgets.swift */,
 				7308B27218CBD8E0512FE115 /* Localizable.strings */,
+				607921F342B0815190D84713 /* Localizable.strings */,
 				3C12E0D418269F691759B755 /* main.mm */,
 				A03975E2DF2C010BE8CFB9C4 /* PushLink.swift */,
 				32F1930D0332E7BAC3B3532F /* TVPairing.swift */,
@@ -832,18 +848,18 @@
 			path = TVApp;
 			sourceTree = "<group>";
 		};
-		"TEMP_021A771A-8AD0-4578-A9A7-DAAE80E1979F" /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = arm64;
-			sourceTree = "<group>";
-		};
-		"TEMP_5D1E8763-B13C-4BC8-A983-5CFC946C9787" /* x86_64 */ = {
+		"TEMP_C718E5DC-0B5C-4C92-A952-BFB7ACE60903" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = x86_64;
+			sourceTree = "<group>";
+		};
+		"TEMP_CF8B9436-6BAF-4F57-B389-99223E781F61" /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = arm64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1103,6 +1119,7 @@
 				Base,
 				en,
 				ru,
+				uk,
 			);
 			mainGroup = F3DD767A9649E2491C831A50;
 			minimizedProjectReferenceProxies = 1;
@@ -1130,11 +1147,13 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0EB11D706272193DEAAC1A2 /* AppShortcuts.strings in Resources */,
 				903E17F5B3A348AAA776BFEB /* AppShortcuts.strings in Resources */,
 				BE6310FA185DEAF239FD69D3 /* Assets.xcassets in Resources */,
 				C9C09914F010D0BEAB60BF4C /* DalyWave.icon in Resources */,
 				6461BFCF6E29AB0C7DE39226 /* InfoPlist.strings in Resources */,
 				CAC466375E0855EE31F6724B /* LaunchScreen.storyboard in Resources */,
+				08B151324C5B022A17C839EE /* Localizable.strings in Resources */,
 				2236EA76AAA92DE8AC085660 /* Localizable.strings in Resources */,
 				F2CC07E3B94A9E34A407D43F /* assets in Resources */,
 			);
@@ -1144,6 +1163,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB9C0EAF320984B7B4910F75 /* Localizable.strings in Resources */,
 				9828E9C9DB3212A81E32DCBF /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1152,6 +1172,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				770E51A900484C956C53F2D7 /* Localizable.strings in Resources */,
 				A078C37E9365C63DBEC0F395 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1403,6 +1424,7 @@
 			children = (
 				59B973C64D2D461F65C07622 /* en */,
 				A4747FC41BBD93CA860EC42D /* ru */,
+				8C039C90BB8EE1E3D7783068 /* uk */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -1412,6 +1434,7 @@
 			children = (
 				017CFDC0D01692E70F47BE93 /* en */,
 				BADD4755CE00C9549DF3328F /* ru */,
+				B52630712E9F21B8423639F7 /* uk */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -1421,6 +1444,7 @@
 			children = (
 				526696B78A93B70FD28E067B /* en */,
 				39C7D8B543A2E30B31B33373 /* ru */,
+				486BFD6114C042CB213EF86C /* uk */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -1430,6 +1454,7 @@
 			children = (
 				A4A88AF3FDF9631A2B6C1DF1 /* en */,
 				8BE1CA940593FF793B4A70CB /* ru */,
+				5EF8565BFA2E340A22427A97 /* uk */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -1439,6 +1464,7 @@
 			children = (
 				1579346D893FB7D8F0AB07CE /* en */,
 				457D1043EF249242790EE8C9 /* ru */,
+				AA797CC05959137D7630D61E /* uk */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -1448,6 +1474,7 @@
 			children = (
 				36BAAFC41D38907CF573B818 /* en */,
 				F4774065B9405CD6790523C0 /* ru */,
+				9BDA73B08203D0935A94EEF5 /* uk */,
 			);
 			name = Localizable.stringsdict;
 			sourceTree = "<group>";

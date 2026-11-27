@@ -1,0 +1,24 @@
+/* Фразы Siri (App Shortcuts) по-украински: ключ — английская фраза из DalyWaveIntents.swift */
+
+"Play my wave in ${applicationName}" = "Увімкни мою хвилю в ${applicationName}";
+"Turn on my wave in ${applicationName}" = "Постав мою хвилю в ${applicationName}";
+"Start my wave in ${applicationName}" = "Запусти мою хвилю в ${applicationName}";
+"Play ${mood} wave in ${applicationName}" = "Увімкни ${mood} хвилю в ${applicationName}";
+"Play a wave for ${activity} in ${applicationName}" = "Увімкни хвилю для ${activity} в ${applicationName}";
+
+"Play ${item} in ${applicationName}" = "Увімкни ${item} в ${applicationName}";
+"Turn on ${item} in ${applicationName}" = "Постав ${item} в ${applicationName}";
+
+"Pause ${applicationName}" = "Пауза в ${applicationName}";
+"Pause the music in ${applicationName}" = "Постав на паузу ${applicationName}";
+
+"Resume ${applicationName}" = "Продовж ${applicationName}";
+"Continue the music in ${applicationName}" = "Продовж музику в ${applicationName}";
+
+"Next track in ${applicationName}" = "Далі в ${applicationName}";
+"Skip this song in ${applicationName}" = "Наступний трек у ${applicationName}";
+
+"Previous track in ${applicationName}" = "Попередній трек у ${applicationName}";
+
+"Like this song in ${applicationName}" = "Подобається в ${applicationName}";
+"I like this song in ${applicationName}" = "Мені подобається ця пісня в ${applicationName}";

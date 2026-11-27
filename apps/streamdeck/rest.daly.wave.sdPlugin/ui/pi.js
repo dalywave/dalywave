@@ -174,9 +174,100 @@
       helpMultimedia: 'Long-touch the strip to change mode. Rotate while pressed to seek.',
       helpVolume: 'DalyWave volume on the device that is playing.',
     },
+    uk: {
+      connectHint: 'Підключіть DalyWave — кнопки керуватимуть музикою там, де вона грає: на сайті, Mac, Windows або iPhone.',
+      connect: 'Підключити',
+      codeHint: 'Увійдіть у вікні браузера, що відкрилося, — після входу Stream Deck підключиться сам.',
+      openAgain: 'Відкрити знову',
+      cancel: 'Скасувати',
+      expired: 'Вхід не завершено — підключіть ще раз.',
+      error: 'Сервер не відповів. Перевірте мережу й спробуйте ще раз.',
+      connectedAs: 'Підключено',
+      online: 'на зв’язку',
+      offline: 'немає зв’язку із сервером',
+      connecting: 'підключаємося…',
+      disconnect: 'Відключити',
+      server: 'Сервер',
+      advanced: 'Додатково',
+      // Поля
+      mode: 'Дія',
+      toggle: 'Грати / пауза',
+      play: 'Грати',
+      pause: 'Пауза',
+      next: 'Наступний',
+      previous: 'Попередній',
+      shuffleToggle: 'Перемикати',
+      on: 'Увімкнути',
+      off: 'Вимкнути',
+      volumeUp: 'Гучніше',
+      volumeDown: 'Тихіше',
+      mute: 'Без звуку',
+      step: 'Крок, %',
+      dialStep: 'Крок регулятора, %',
+      target: 'Куди',
+      liked: 'Вподобане',
+      playlist: 'Плейлист',
+      source: 'Що грати',
+      history: 'Історія',
+      album: 'Альбом',
+      artist: 'Виконавець',
+      chart: 'Чарт',
+      playlists: 'Мої плейлисти',
+      mixes: 'Зібрано для вас',
+      albums: 'Збережені альбоми',
+      artists: 'Мої виконавці',
+      charts: 'Чарти',
+      find: 'Знайти',
+      findPlaceholder: 'Назва',
+      found: 'Знайдено',
+      shuffle: 'Перемішати',
+      query: 'Запит',
+      queryPlaceholder: 'Що знайти',
+      kind: 'Шукати',
+      tracks: 'Треки',
+      where: 'Де',
+      catalog: 'Усюди',
+      library: 'У медіатеці',
+      preset: 'Налаштування',
+      ownSettings: 'Власне',
+      mood: 'Настрій',
+      activity: 'Заняття',
+      character: 'Характер',
+      language: 'Мова',
+      any: 'Будь-яке',
+      device: 'Пристрій',
+      minutes: 'Хвилин',
+      sleepMode: 'Натискання',
+      sleepToggle: 'Запустити / зупинити',
+      sleepRestart: 'Перезапустити',
+      sleepExtend: 'Подовжити',
+      dialMode: 'Регулятор',
+      modeTracks: 'Треки',
+      modeSeek: 'Перемотка',
+      modeVolume: 'Гучність',
+      energetic: 'Бадьоре', happy: 'Веселе', calm: 'Спокійне', sad: 'Сумне',
+      wake: 'Прокидаюся', road: 'У дорозі', work: 'Працюю', sport: 'Тренуюся', rest: 'Відпочиваю', sleep: 'Засинаю', party: 'Вечірка',
+      fav: 'Улюблене', mix: 'Знайоме й нове', new: 'Незнайоме', pop: 'Популярне', rare: 'Рідкісне',
+      langRu: 'Російська', langForeign: 'Іноземна', langNone: 'Без слів',
+      helpQueue: 'Кнопка показує наступний трек і переходить до нього. Регулятор гортає чергу.',
+      helpDiscover: 'Вмикає хвилю лише з нового для вас. Регулятор гортає нові треки.',
+      helpNow: 'Натискання — грати або пауза, довге — «Подобається».',
+      helpTransition: 'Без пауз → Плавний → Розумний → Діджей. «Діджей» — там, де він є.',
+      helpLike: 'Додає поточний трек до «Вподобаного» або прибирає.',
+      helpDislike: 'Хвиля запам’ятає й перейде до наступного треку.',
+      helpNotNow: 'Пропустити трек, не позначаючи «Не подобається».',
+      helpRepeat: 'По колу: без повтору, усі, один трек.',
+      helpMultimedia: 'Довгий дотик до смуги змінює режим. Поворот із натисканням — перемотка.',
+      helpVolume: 'Гучність DalyWave на пристрої, де грає музика.',
+    },
   }
 
-  let lang = (navigator.language || 'en').toLowerCase().startsWith('ru') ? 'ru' : 'en'
+  /** Язык Stream Deck или браузера: `ru`, `uk`, остальные — английский */
+  const pick = (l) => {
+    const v = String(l).toLowerCase()
+    return v.startsWith('ru') ? 'ru' : v.startsWith('uk') ? 'uk' : 'en'
+  }
+  let lang = pick(navigator.language || 'en')
   const s = key => (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key
 
   function translate(root = document) {
@@ -275,7 +366,7 @@
     client.getConnectionInfo().then((info) => {
       const l = info && info.info && info.info.application && info.info.application.language
       if (l) {
-        lang = String(l).toLowerCase().startsWith('ru') ? 'ru' : 'en'
+        lang = pick(l)
         translate()
       }
       toPlugin({ event: 'account' })

@@ -54,6 +54,7 @@ pub const DEV_SERVER: &str = "http://localhost:3400";
 pub enum Locale {
     Ru,
     En,
+    Uk,
 }
 
 impl Locale {
@@ -61,6 +62,7 @@ impl Locale {
         match self {
             Self::Ru => "ru",
             Self::En => "en",
+            Self::Uk => "uk",
         }
     }
 }
@@ -406,6 +408,15 @@ mod tests {
         }
         assert_eq!(list.len(), RECENT_MAX);
         assert_eq!(list[0].url, "https://s19.example");
+    }
+
+    #[test]
+    fn locale_names_match_the_interface() {
+        for (locale, name) in [(Locale::Ru, "ru"), (Locale::En, "en"), (Locale::Uk, "uk")] {
+            assert_eq!(locale.as_str(), name);
+            assert_eq!(serde_json::to_string(&locale).unwrap(), format!("\"{name}\""));
+            assert_eq!(serde_json::from_str::<Locale>(&format!("\"{name}\"")).unwrap(), locale);
+        }
     }
 
     #[test]

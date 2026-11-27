@@ -71,10 +71,25 @@ const EN: Texts = Texts {
     update: "Update Ready — Restart",
 };
 
+const UK: Texts = Texts {
+    nothing: "Нічого не грає",
+    play: "Грати",
+    pause: "Пауза",
+    next: "Наступний трек",
+    previous: "Попередній трек",
+    show: "Показати DalyWave",
+    mini: "Мініплеєр",
+    recognize: "Розпізнати пісню",
+    mini_close: "Закрити мініплеєр",
+    quit: "Вийти з DalyWave",
+    update: "Оновлення готове — Перезапустити",
+};
+
 fn texts(locale: Locale) -> &'static Texts {
     match locale {
         Locale::Ru => &RU,
         Locale::En => &EN,
+        Locale::Uk => &UK,
     }
 }
 
@@ -154,10 +169,37 @@ const DL_EN: DlTexts = DlTexts {
     },
 };
 
+const DL_UK: DlTexts = DlTexts {
+    prefix: "Завантажувач: ",
+    working: "завантажує «{track}» — {artist}",
+    working_unknown: "завантажує трек",
+    finishing: "завершує «{track}», потім пауза",
+    idle: "чекає на завдання",
+    paused: "на паузі",
+    offline: "немає зв’язку із сервером",
+    starting: "запускається…",
+    resting: "відпочиває після перевірки YouTube",
+    stopping: "зупиняється…",
+    restarting: "перезапускається…",
+    token: "сервер не прийняв токен",
+    broken: "встановлення пошкоджено",
+    disabled: "вимкнено",
+    signed_out: "потрібен вхід",
+    forbidden: "доступний адміністратору",
+    pause: "Пауза",
+    resume: "Продовжити",
+    enabled: if cfg!(target_os = "macos") {
+        "Завантажувати на цьому Mac"
+    } else {
+        "Завантажувати на цьому ПК"
+    },
+};
+
 fn dl_texts(locale: Locale) -> &'static DlTexts {
     match locale {
         Locale::Ru => &DL_RU,
         Locale::En => &DL_EN,
+        Locale::Uk => &DL_UK,
     }
 }
 
@@ -521,6 +563,28 @@ mod tests {
             downloader_line(&DL_EN, &state(Summary::Offline)),
             "Downloader: can't reach the server"
         );
+        let short = state(Summary::Working {
+            track: Some("Another World".into()),
+            artist: Some("Lowborn".into()),
+            percent: 45,
+            finishing: false,
+        });
+        assert_eq!(
+            downloader_line(&DL_UK, &short),
+            "Завантажувач: завантажує «Another World» — Lowborn · 45\u{a0}%"
+        );
+        let no_artist = state(Summary::Working {
+            track: Some("Another World".into()),
+            artist: None,
+            percent: 3,
+            finishing: false,
+        });
+        assert_eq!(
+            downloader_line(&DL_UK, &no_artist),
+            "Завантажувач: завантажує «Another World» · 3\u{a0}%"
+        );
+        assert!(downloader_line(&DL_UK, &long).chars().count() <= DL_LINE_MAX);
+        assert_eq!(texts(Locale::Uk).quit, "Вийти з DalyWave");
         assert!(!state(Summary::Forbidden).can_pause());
         assert!(state(Summary::Paused).can_pause());
     }

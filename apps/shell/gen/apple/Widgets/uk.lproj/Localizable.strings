@@ -1,0 +1,23 @@
+/* Виджеты DalyWave (WidgetKit): названия и описания в галерее виджетов, подписи — по-украински */
+
+"Now Playing" = "Зараз грає";
+"What's playing, with pause and next." = "Що грає — з паузою й наступним треком.";
+"My Wave" = "Моя хвиля";
+"My Wave and your saved mixes in one tap." = "Хвиля та ваші поєднання — одним дотиком.";
+"Recent" = "Нещодавнє";
+"Albums and playlists you've been listening to." = "Альбоми й плейлисти, які ви слухали.";
+
+/* Сочетания волны, пока своих нет — как на главной */
+"Work" = "Робота";
+"Road" = "Дорога";
+"Night" = "Ніч";
+
+/* Кнопки (App Intents) */
+"Play or Pause" = "Грати або пауза";
+"Next Track" = "Наступний трек";
+"Play My Wave" = "Увімкнути «Мою хвилю»";
+"Playing" = "Грає";
+"Mood" = "Настрій";
+"Activity" = "Заняття";
+"Character" = "Характер";
+"Language" = "Мова";

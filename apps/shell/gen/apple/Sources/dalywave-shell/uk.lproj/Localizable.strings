@@ -1,0 +1,71 @@
+/* Siri и «Команды» (DalyWaveIntents.swift): названия действий, параметров и значений — по-украински */
+
+"Play My Wave" = "Увімкнути «Мою хвилю»";
+"Starts My Wave in DalyWave, with a mood or an activity if you like." = "Вмикає «Мою хвилю» в DalyWave — можна з настроєм або заняттям.";
+"Mood" = "Настрій";
+"Activity" = "Заняття";
+
+/* Настроение — в фразе «Увімкни ___ хвилю» */
+"energetic" = "бадьору";
+"upbeat" = "енергійну";
+"happy" = "веселу";
+"cheerful" = "радісну";
+"calm" = "спокійну";
+"chill" = "розслаблену";
+"sad" = "сумну";
+"melancholic" = "журливу";
+
+/* Занятие — в фразе «Увімкни хвилю для ___» */
+"waking up" = "пробудження";
+"the road" = "дороги";
+"work" = "роботи";
+"a workout" = "тренування";
+"rest" = "відпочинку";
+"sleep" = "сну";
+"a party" = "вечірки";
+
+"Music" = "Музика";
+"Play in DalyWave" = "Увімкнути в DalyWave";
+"Plays a playlist, an album or an artist from DalyWave." = "Вмикає плейлист, альбом або виконавця з DalyWave.";
+"Shuffle" = "Уперемішку";
+"Find and Play in DalyWave" = "Знайти й увімкнути в DalyWave";
+"Finds a playlist, an artist, an album or a song in DalyWave and plays it." = "Знаходить у DalyWave плейлист, виконавця, альбом або пісню та вмикає.";
+"Search" = "Що знайти";
+"Pause DalyWave" = "Пауза в DalyWave";
+"Resume DalyWave" = "Продовжити в DalyWave";
+"Next Track" = "Наступний трек";
+"Previous Track" = "Попередній трек";
+"Like This Song" = "Подобається";
+"Adds the song that is playing in DalyWave to your likes." = "Додає те, що грає в DalyWave, до «Вподобаного».";
+"Added to your likes" = "Додано до «Вподобаного»";
+"DalyWave is still starting. Try again in a moment." = "DalyWave ще запускається — повторіть за секунду.";
+"DalyWave couldn't do that." = "DalyWave не зміг це зробити.";
+
+/* Короткие названия в «Командах» и Spotlight */
+"My Wave" = "Моя хвиля";
+"Play" = "Увімкнути";
+"Pause" = "Пауза";
+"Resume" = "Продовжити";
+"Next" = "Далі";
+"Previous" = "Назад";
+"Like" = "Подобається";
+
+/* Кнопки виджетов (WidgetsShared/WidgetIntents.swift) */
+"Play or Pause" = "Грати або пауза";
+"Playing" = "Грає";
+"Character" = "Характер";
+"Language" = "Мова";
+
+/* Фокусирование (DalyWaveFocus.swift): фильтр «Моей волны» */
+"Set My Wave" = "Хвиля у фокусі";
+"My Wave plays the chosen mix while this Focus is on." = "Поки ввімкнено цей фокус, «Моя хвиля» грає вибране поєднання.";
+"Wave" = "Хвиля";
+"Work" = "Робота";
+"Road" = "Дорога";
+"Night" = "Ніч";
+
+/* Apple TV рядом (TVPairing.swift) */
+"%@ wants to connect" = "%@ хоче підключитися";
+"The Apple TV will sign in to DalyWave with your account on this server." = "Apple TV увійде в DalyWave з вашим обліковим записом на цьому сервері.";
+"Not now" = "Не зараз";
+"Allow" = "Дозволити";
