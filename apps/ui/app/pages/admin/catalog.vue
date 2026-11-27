@@ -107,7 +107,7 @@ function formatSub(r: AdminRecording) {
   return [rate, khz].filter(Boolean).join(' · ') + (r.files > 1 ? ` · ${t('files', { n: r.files })}` : '')
 }
 // Настоящий минус, а не дефис: «−5,8 LUFS»
-const num = (v: number, digits = 1) => v.toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: digits, minimumFractionDigits: digits }).replace('-', '−')
+const num = (v: number, digits = 1) => v.toLocaleString(intlLocale(lang.value, 'en-US'), { maximumFractionDigits: digits, minimumFractionDigits: digits }).replace('-', '−')
 function sourceLink(r: AdminRecording) {
   const ref = r.file?.sourceRef
   if (!ref) return null
@@ -281,6 +281,42 @@ function menu(r: AdminRecording): MenuEntry[] {
     "reacquireQueued": "«{title}» поищется заново; файл заменится, если найдётся лучше",
     "col": { "track": "Запись", "status": "Состояние", "format": "Формат", "loudness": "Громкость", "source": "Источник", "match": "Совпадение", "size": "Размер" },
     "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Загружен", "local": "Своя папка", "other": "Другое" }
+  },
+  "uk": {
+    "view": { "ready": "Готові", "unverified": "Не перевірені", "failed": "З помилкою", "disputed": "Спірні", "all": "Усі записи" },
+    "title": "Каталог",
+    "search": "Назва або виконавець",
+    "status": "Стан",
+    "anyStatus": "З файлом або в роботі",
+    "sourceLabel": "Джерело",
+    "anySource": "Будь-яке джерело",
+    "verifiedLabel": "Перевірка",
+    "verifiedAll": "Усі",
+    "verifiedYes": "Перевірені",
+    "verifiedNo": "Без перевірки",
+    "empty": "Таких записів немає",
+    "failed": "Не вдалося — спробуйте ще раз",
+    "more": "Показати ще",
+    "noTrack": "Трек видалено з каталогу",
+    "sharedBy": "треків: {n}",
+    "files": "файлів: {n}",
+    "kbps": "кбіт/с",
+    "khz": "кГц",
+    "peak": "пік {v} дБ",
+    "verified": "звірено",
+    "unverified": "без перевірки",
+    "actions": "Дії",
+    "replace": "Замінити за посиланням",
+    "replacePlaceholder": "Посилання: YouTube, SoundCloud, Bandcamp…",
+    "replaceGo": "Замінити",
+    "cancel": "Скасувати",
+    "reacquire": "Завантажити наново",
+    "openSource": "Відкрити джерело",
+    "openAlbum": "Відкрити альбом",
+    "replaceQueued": "«{title}» завантажиться за посиланням і замінить файл",
+    "reacquireQueued": "«{title}» шукатиметься наново; файл заміниться, якщо знайдеться кращий",
+    "col": { "track": "Запис", "status": "Стан", "format": "Формат", "loudness": "Гучність", "source": "Джерело", "match": "Збіг", "size": "Розмір" },
+    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Завантажено", "local": "Власна тека", "other": "Інше" }
   },
   "en": {
     "view": { "ready": "Ready", "unverified": "Not verified", "failed": "Failed", "disputed": "Disputed", "all": "All recordings" },

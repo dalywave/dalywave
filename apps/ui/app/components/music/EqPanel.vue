@@ -12,7 +12,7 @@ const { t, locale } = useI18n()
 const PRESETS: EqPresetId[] = [...EQ_PRESETS.map(p => p.id), 'custom']
 const custom = computed(() => sound.eq.preset === 'custom')
 const label = (hz: number) => (hz >= 1000 ? `${hz / 1000}${locale.value === 'en' ? 'k' : 'к'}` : String(hz))
-const dbText = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString(locale.value === 'en' ? 'en' : 'ru')} ${t('sound.db')}`
+const dbText = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString(locale.value === 'en' ? 'en' : locale.value === 'uk' ? 'uk' : 'ru')} ${t('sound.db')}`
 
 function bandModel(i: number) {
   return computed({

@@ -89,6 +89,12 @@ function open(item: RecentItem) {
     "remove": "Убрать",
     "kind": { "query": "Запрос", "artist": "Артист", "album": "Альбом", "track": "Трек", "playlist": "Плейлист" }
   },
+  "uk": {
+    "title": "Нещодавні",
+    "clear": "Очистити",
+    "remove": "Прибрати",
+    "kind": { "query": "Запит", "artist": "Виконавець", "album": "Альбом", "track": "Трек", "playlist": "Плейлист" }
+  },
   "en": {
     "title": "Recent",
     "clear": "Clear",

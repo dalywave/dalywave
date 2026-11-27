@@ -138,6 +138,26 @@ const fresh = computed(() => (latest.value ? Date.now() - new Date(latest.value.
     },
     "files": { "title": "Копии", "hint": "Копия базы каждый день, хранятся 14 дней", "empty": "Копий пока нет", "name": "Файл", "size": "Размер", "when": "Создана" }
   },
+  "uk": {
+    "title": "Резервні копії",
+    "off": { "title": "Теку з копіями не під’єднано", "text": "Укажіть на сервері DALYWAVE_BACKUP_DIR — теку, куди контейнер backup кладе щоденні дампи бази" },
+    "stats": { "last": "остання копія", "count": "копій зберігається", "size": "займають", "checkOk": "Читається", "checkBad": "Пошкоджена", "checked": "перевірка {when}", "never": "ще не перевірялася" },
+    "stale": "Свіжої копії немає вже понад півтори доби — перевірте контейнер backup на сервері",
+    "check": {
+      "action": "Перевірити свіжу",
+      "one": "Перевірити {name}",
+      "title": "Остання перевірка",
+      "file": "Копія",
+      "result": "Підсумок",
+      "readable": "Читається повністю, дамп завершено",
+      "tables": "Таблиць",
+      "objects": "Об’єктів у схемі",
+      "ok": "Копія {name} в порядку",
+      "bad": "Копія {name} пошкоджена",
+      "failed": "Не вдалося перевірити копію"
+    },
+    "files": { "title": "Копії", "hint": "Копія бази щодня, зберігаються 14 днів", "empty": "Копій поки немає", "name": "Файл", "size": "Розмір", "when": "Створено" }
+  },
   "en": {
     "title": "Backups",
     "off": { "title": "Backup folder is not connected", "text": "Set DALYWAVE_BACKUP_DIR on the server — the folder where the backup container puts daily database dumps" },

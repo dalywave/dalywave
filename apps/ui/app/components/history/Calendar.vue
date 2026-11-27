@@ -32,11 +32,12 @@ function shift(by: number) {
   month.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
 }
 
-const locale = computed(() => (lang.value === 'en' ? 'en-GB' : 'ru-RU'))
+const locale = computed(() => intlLocale(lang.value, 'en-GB'))
 const title = computed(() => {
   const [y, m] = month.value.split('-').map(Number) as [number, number]
   const s = new Intl.DateTimeFormat(locale.value, { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1))
-  return s.charAt(0).toUpperCase() + s.slice(1).replace(/\s*г\.$/, '')
+  // «ноябрь 2026 г.» / «листопад 2026 р.» — без «г.» и «р.»
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/\s*[гр]\.$/, '')
 })
 const weekdays = computed(() => {
   const f = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
@@ -134,6 +135,7 @@ const fullDate = (key: string) => {
 <i18n lang="json">
 {
   "ru": { "prev": "Предыдущий месяц", "next": "Следующий месяц" },
+  "uk": { "prev": "Попередній місяць", "next": "Наступний місяць" },
   "en": { "prev": "Previous month", "next": "Next month" }
 }
 </i18n>

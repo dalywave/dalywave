@@ -101,6 +101,7 @@ const rows = computed(() => hits.value.map(h => ({ hit: h, parts: parts(h.line, 
 <i18n lang="json">
 {
   "ru": { "title": "По словам песни" },
+  "uk": { "title": "За словами пісні" },
   "en": { "title": "From the lyrics" }
 }
 </i18n>

@@ -30,7 +30,7 @@ const discs = computed(() => {
 const releaseDate = computed(() => {
   const d = album.value?.releaseDate
   if (!d) return null
-  const date = new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d))
+  const date = new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d))
   return t(new Date(d) > new Date() ? 'upcoming' : 'released', { date })
 })
 
@@ -133,6 +133,18 @@ const moreItems = computed<MenuEntry[]>(() => {
     "noTracks": "Треков пока нет",
     "released": "Вышел {date}",
     "upcoming": "Выйдет {date}"
+  },
+  "uk": {
+    "title": "Альбом",
+    "resume": "Продовжити",
+    "shuffle": "Перемішати",
+    "save": "Додати до медіатеки",
+    "unsave": "Прибрати з медіатеки",
+    "toArtist": "Перейти до виконавця",
+    "disc": "Диск {n}",
+    "noTracks": "Треків поки немає",
+    "released": "Вийшов {date}",
+    "upcoming": "Вийде {date}"
   },
   "en": {
     "title": "Album",

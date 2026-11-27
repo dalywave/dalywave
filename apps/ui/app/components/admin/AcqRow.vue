@@ -138,6 +138,14 @@ async function cancel() {
     "cancelled": "«{title}» больше не качается",
     "failed": "Не получилось — скачивание уже изменилось"
   },
+  "uk": {
+    "noTrack": "Трек видалено з каталогу",
+    "col": { "track": "Запис", "state": "Стан", "why": "Навіщо · хто", "updated": "Оновлено" },
+    "position": "{n}-й",
+    "cancel": "Скасувати завантаження",
+    "cancelled": "«{title}» більше не завантажується",
+    "failed": "Не вдалося — завантаження вже змінилося"
+  },
   "en": {
     "noTrack": "Track removed from the catalog",
     "col": { "track": "Recording", "state": "State", "why": "Why · who", "updated": "Updated" },

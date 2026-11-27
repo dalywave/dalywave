@@ -69,6 +69,13 @@ a.pr__who:hover .pr__name { text-decoration: underline; text-underline-offset: 3
     "sent": "Запрос отправлен",
     "cancel": "Отменить запрос"
   },
+  "uk": {
+    "add": "Додати",
+    "accept": "Прийняти",
+    "decline": "Відхилити",
+    "sent": "Запит надіслано",
+    "cancel": "Скасувати запит"
+  },
   "en": {
     "add": "Add",
     "accept": "Accept",

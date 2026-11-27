@@ -91,6 +91,29 @@ const line = computed(() => {
       "forbidden": "Доступен администратору"
     }
   },
+  "uk": {
+    "titleMac": "Завантажувач на цьому Mac",
+    "titlePc": "Завантажувач на цьому ПК",
+    "line": "Завантажувач: {state}",
+    "meta": {
+      "working": "Завантажує «{track}»",
+      "workingFull": "Завантажує «{track}» — {artist}",
+      "workingUnknown": "Завантажує трек",
+      "finishing": "Доробляє «{track}», потім пауза",
+      "idle": "Чекає завдань",
+      "paused": "На паузі",
+      "offline": "Немає зв’язку із сервером",
+      "resting": "Відпочиває після перевірки YouTube",
+      "starting": "Запускається…",
+      "stopping": "Зупиняється…",
+      "restarting": "Перезапускається…",
+      "token": "Сервер не прийняв токен",
+      "broken": "Встановлення пошкоджено",
+      "disabled": "Вимкнений",
+      "signed-out": "Потрібен вхід",
+      "forbidden": "Доступний адміністраторові"
+    }
+  },
   "en": {
     "titleMac": "Downloader on this Mac",
     "titlePc": "Downloader on this PC",

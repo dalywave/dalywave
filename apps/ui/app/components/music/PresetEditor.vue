@@ -129,6 +129,7 @@ function submit() {
 <i18n lang="json">
 {
   "ru": { "name": "Название", "icon": "Иконка" },
+  "uk": { "name": "Назва", "icon": "Іконка" },
   "en": { "name": "Name", "icon": "Icon" }
 }
 </i18n>

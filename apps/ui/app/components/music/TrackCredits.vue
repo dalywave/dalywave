@@ -123,6 +123,23 @@ const empty = computed(() => !loading.value && !rows.value.length && !data.value
       "mastering": "Мастеринг"
     }
   },
+  "uk": {
+    "title": "Хто створив трек",
+    "label": "Лейбл",
+    "year": "Рік",
+    "role": {
+      "writer": "Музика і слова",
+      "composer": "Музика",
+      "lyricist": "Слова",
+      "producer": "Продюсер | Продюсери",
+      "arranger": "Аранжування",
+      "programming": "Програмування",
+      "recording": "Запис",
+      "engineer": "Звукорежисер | Звукорежисери",
+      "mix": "Зведення",
+      "mastering": "Мастеринг"
+    }
+  },
   "en": {
     "title": "Credits",
     "label": "Label",

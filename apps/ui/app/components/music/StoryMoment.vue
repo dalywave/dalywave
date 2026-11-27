@@ -227,6 +227,15 @@ function jump(ms: number) {
     "start": "Начало",
     "chorus": "Припев"
   },
+  "uk": {
+    "length": "Тривалість історії",
+    "sec": "{n} с",
+    "moment": "Момент для історії",
+    "play": "Послухати вибране",
+    "stop": "Зупинити",
+    "start": "Початок",
+    "chorus": "Приспів"
+  },
   "en": {
     "length": "Story length",
     "sec": "{n} s",

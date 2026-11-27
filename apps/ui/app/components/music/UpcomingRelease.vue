@@ -107,6 +107,13 @@ async function toggle() {
     "savedNow": "«{title}» — в медиатеке",
     "failed": "Не получилось — попробуйте ещё раз"
   },
+  "uk": {
+    "save": "Зберегти заздалегідь",
+    "saved": "Збережено",
+    "presaved": "Збережемо в медіатеку {day}",
+    "savedNow": "«{title}» — у медіатеці",
+    "failed": "Не вдалося — спробуйте ще раз"
+  },
   "en": {
     "save": "Pre-save",
     "saved": "Pre-saved",

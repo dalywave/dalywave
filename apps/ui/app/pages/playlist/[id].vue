@@ -302,6 +302,23 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
     "weeklyOn": "Каждую неделю прослушанное сменится новым",
     "weeklyOff": "Плейлист больше не обновляется сам"
   },
+  "uk": {
+    "title": "Плейлист",
+    "kind": { "user": "Плейлист", "smart": "Розумна добірка", "mix": "Мікс" },
+    "resume": "Продовжити",
+    "shuffle": "Перемішати",
+    "addTracks": "Додати треки",
+    "empty": "У плейлисті поки порожньо",
+    "emptyMine": "Знайдіть треки або виберіть із запропонованих",
+    "you": "ви",
+    "andMore": "{names} і ще {n}",
+    "moreLikeThis": "Ще в тому ж дусі",
+    "moreAdded": "Додано: {n}",
+    "noMore": "Більше відповідного поки немає",
+    "weekly": "Оновлювати щотижня",
+    "weeklyOn": "Щотижня прослухане зміниться новим",
+    "weeklyOff": "Плейлист більше не оновлюється сам"
+  },
   "en": {
     "title": "Playlist",
     "kind": { "user": "Playlist", "smart": "Smart playlist", "mix": "Mix" },

@@ -611,7 +611,7 @@ export interface Bridge {
   }
 
   /** Язык меню в трее и строке меню приложения */
-  setLocale(locale: 'ru' | 'en'): void
+  setLocale(locale: 'ru' | 'en' | 'uk'): void
 
   /** Установщики приложений для компьютера (меню аккаунта на сайте): последние версии по платформам */
   desktopApps(): Promise<AppDownloads>

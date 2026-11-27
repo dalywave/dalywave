@@ -41,6 +41,12 @@ const model = computed<PlayerView>({
     "map": "Как подобран",
     "showCover": "Показать обложку"
   },
+  "uk": {
+    "label": "Що показувати",
+    "cover": "Обкладинка",
+    "map": "Як підібрано",
+    "showCover": "Показати обкладинку"
+  },
   "en": {
     "label": "What to show",
     "cover": "Cover",

@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
 }>(), { height: 120 })
 const lang = useLang()
 const max = computed(() => Math.max(1, ...props.days.map(d => props.series.reduce((s, x) => s + (d.values[x.key] ?? 0), 0))))
-const dayLabel = (iso: string) => new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`))
+const dayLabel = (iso: string) => new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`))
 const marks = computed(() => new Set([0, Math.floor((props.days.length - 1) / 2), props.days.length - 1]))
 </script>
 

@@ -36,6 +36,11 @@ const progress = computed(() => {
     "of": "{ready} из {need}",
     "cancel": "Отменить"
   },
+  "uk": {
+    "preparing": "Готуємо «{name}»…",
+    "of": "{ready} з {need}",
+    "cancel": "Скасувати"
+  },
   "en": {
     "preparing": "Preparing “{name}”…",
     "of": "{ready} of {need}",

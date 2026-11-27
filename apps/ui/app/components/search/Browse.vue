@@ -196,6 +196,19 @@ onMounted(() => void loadArt())
       "rock": "Рок"
     }
   },
+  "uk": {
+    "title": "Настрої та жанри",
+    "genre": {
+      "ruRap": "Російський реп",
+      "hyperpop": "Гіперпоп",
+      "phonk": "Фонк",
+      "alt": "Альтернатива",
+      "popPunk": "Поп-панк",
+      "electronic": "Електроніка",
+      "indie": "Інді",
+      "rock": "Рок"
+    }
+  },
   "en": {
     "title": "Moods and genres",
     "genre": {

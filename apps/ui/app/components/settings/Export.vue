@@ -89,6 +89,19 @@ const formats: ListFormat[] = ['csv', 'm3u8', 'json']
     "likedNote": "CSV подходит для TuneMyMusic и Soundiiz, M3U8 — для плееров",
     "download": "Скачать"
   },
+  "uk": {
+    "row": "Експорт",
+    "rowDesc": "Медіатека у файл: CSV, M3U8, JSON",
+    "title": "Експорт медіатеки",
+    "whole": "Уся медіатека",
+    "zip": "Архів ZIP",
+    "zipDesc": "Кожен плейлист у CSV і M3U8, усе — в JSON",
+    "json": "Один файл JSON",
+    "jsonDesc": "Вподобання, плейлисти з папками, підписки",
+    "history": "Історія прослуховувань",
+    "likedNote": "CSV підходить для TuneMyMusic і Soundiiz, M3U8 — для плеєрів",
+    "download": "Завантажити"
+  },
   "en": {
     "row": "Export",
     "rowDesc": "Your library as a file: CSV, M3U8, JSON",

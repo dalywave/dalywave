@@ -116,6 +116,13 @@ function onSubmit() {
     "newPassword": "Пароль",
     "hint": "Не короче 10 символов"
   },
+  "uk": {
+    "name": "Ім’я",
+    "username": "Логін",
+    "password": "Пароль",
+    "newPassword": "Пароль",
+    "hint": "Щонайменше 10 символів"
+  },
   "en": {
     "name": "Name",
     "username": "Username",

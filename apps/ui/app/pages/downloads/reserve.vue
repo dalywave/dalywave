@@ -138,6 +138,14 @@ onBeforeUnmount(() => io?.disconnect())
     "empty": "Пока пусто",
     "emptyText": "Треки появятся, когда будет сеть"
   },
+  "uk": {
+    "title": "Запас для хвилі",
+    "sub": "Оновлюється сам, поки є мережа",
+    "off": "Запас вимкнено",
+    "offText": "Вподобане впереміш із новим — щоб хвиля грала й без мережі",
+    "empty": "Поки порожньо",
+    "emptyText": "Треки з’являться, коли буде мережа"
+  },
   "en": {
     "title": "Wave reserve",
     "sub": "Refreshes itself while you're online",

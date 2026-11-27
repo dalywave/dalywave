@@ -76,6 +76,14 @@ async function accept() {
     "expired": "Ссылка больше не работает",
     "expiredText": "Попросите у друга новую"
   },
+  "uk": {
+    "invites": "Кличе вас у друзі: буде видно, що слухає кожен, і можна слухати разом",
+    "already": "Ви вже друзі",
+    "open": "Відкрити сторінку",
+    "mine": "Це ваше посилання — надішліть його друзям",
+    "expired": "Посилання більше не працює",
+    "expiredText": "Попросіть у друга нове"
+  },
   "en": {
     "invites": "Invites you to be friends: you’ll see what each other plays and can listen together",
     "already": "You’re already friends",

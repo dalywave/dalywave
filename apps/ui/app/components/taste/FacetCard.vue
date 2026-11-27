@@ -127,6 +127,18 @@ function listen() {
       "night": "чаще ночью"
     }
   },
+  "uk": {
+    "listen": "Слухати",
+    "lessBtn": "Менше такого",
+    "undo": "Повернути",
+    "also": "ще {names}",
+    "peak": {
+      "morning": "частіше вранці",
+      "day": "частіше вдень",
+      "evening": "частіше ввечері",
+      "night": "частіше вночі"
+    }
+  },
   "en": {
     "listen": "Play",
     "lessBtn": "Less like this",

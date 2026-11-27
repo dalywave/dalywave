@@ -656,6 +656,18 @@ defineExpose({ synced })
     "shareLine": "Поделиться строкой",
     "copyLine": "Скопировать строку"
   },
+  "uk": {
+    "region": "Текст пісні",
+    "loading": "Завантажуємо текст",
+    "failed": "Текст не завантажився",
+    "none": "Тексту немає",
+    "instrumental": "Без слів",
+    "break": "Програш",
+    "back": "До поточного рядка",
+    "chorus": "Приспів",
+    "shareLine": "Поділитися рядком",
+    "copyLine": "Скопіювати рядок"
+  },
   "en": {
     "region": "Lyrics",
     "loading": "Loading lyrics",

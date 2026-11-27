@@ -109,6 +109,23 @@ async function copy(text: string) {
     "on": "включён",
     "off": "выключен"
   },
+  "uk": {
+    "admins": "адміни: {claim} = {values}",
+    "noAdmins": "адмінів не видає",
+    "open": "нові чекають на роль",
+    "inviteOnly": "лише за запрошенням",
+    "trustEmail": "пов’язує за поштою",
+    "users": "входять: {n}",
+    "copyCallback": "Скопіювати адресу повернення",
+    "copied": "Адресу скопійовано",
+    "copyFailed": "Не вдалося скопіювати",
+    "local": "Власні облікові записи",
+    "localOn": "Логін і пароль, запрошення, майстер першого запуску",
+    "localOff": "Вимкнено: DALYWAVE_LOCAL_AUTH=false",
+    "emergency": "Аварійний пароль",
+    "on": "увімкнено",
+    "off": "вимкнено"
+  },
   "en": {
     "admins": "admins: {claim} = {values}",
     "noAdmins": "grants no admins",

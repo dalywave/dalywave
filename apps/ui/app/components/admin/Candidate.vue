@@ -89,7 +89,7 @@ const open = ref(false)
         </div>
         <div v-if="factor != null && factor < 1">
           <dt>{{ t('penalty') }}<small v-if="penalties.length"> · {{ penalties.join(', ') }}</small></dt>
-          <dd><b class="tnum">×{{ factor.toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU') }}</b></dd>
+          <dd><b class="tnum">×{{ factor.toLocaleString(intlLocale(lang, 'en-US')) }}</b></dd>
         </div>
       </dl>
       <p v-if="titleInfo?.got && titleInfo.got !== titleInfo.expected" class="cd__why">{{ t('titleGot', { got: titleInfo.got, expected: titleInfo.expected }) }}</p>
@@ -164,6 +164,24 @@ const open = ref(false)
     "titleGot": "В источнике «{got}», ждали «{expected}»",
     "versionGot": "Версия: в источнике {got}, ждали {expected}",
     "missing": "Нет артистов: {names}"
+  },
+  "uk": {
+    "sec": "с",
+    "kind": { "atv": "офіційне аудіо", "omv": "кліп", "ugc": "завантаження слухача", "other": "інше" },
+    "rejected": "Відкинуто: {why}",
+    "notDownloaded": "Не завантажився",
+    "verified": "Завантажено, відбиток збігся на {p}%",
+    "notVerified": "Завантажено, відбиток збігся лише на {p}%",
+    "noPreview": "Завантажено, звірити не було з чим",
+    "breakdown": "Розбір оцінки",
+    "play": "Послухати",
+    "stop": "Зупинити",
+    "choose": "Вибрати",
+    "part": { "duration": "Тривалість", "title": "Назва", "artist": "Виконавці", "album": "Альбом", "source": "Джерело" },
+    "penalty": "Штраф",
+    "titleGot": "У джерелі «{got}», очікували «{expected}»",
+    "versionGot": "Версія: у джерелі {got}, очікували {expected}",
+    "missing": "Немає виконавців: {names}"
   },
   "en": {
     "sec": "s",

@@ -48,9 +48,9 @@ async function toggle(v: boolean) {
 function when(ms: number) {
   const d = new Date(ms)
   const today = new Date()
-  const time = d.toLocaleTimeString(lang.value === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const time = d.toLocaleTimeString(intlLocale(lang.value, 'en-US'), { hour: '2-digit', minute: '2-digit' })
   if (d.toDateString() === today.toDateString()) return t('today', { time })
-  const date = d.toLocaleDateString(lang.value === 'en' ? 'en-US' : 'ru-RU', { day: 'numeric', month: 'long' })
+  const date = d.toLocaleDateString(intlLocale(lang.value, 'en-US'), { day: 'numeric', month: 'long' })
   return t('onDate', { date, time })
 }
 
@@ -117,6 +117,27 @@ const status = computed(() => {
     "today": "Сегодня в {time}",
     "onDate": "{date} в {time}",
     "failed": "Не получилось — попробуйте ещё раз"
+  },
+  "uk": {
+    "titleMac": "Рекомендації на цьому Mac",
+    "titlePc": "Рекомендації на цьому ПК",
+    "switch": "Допомагати навчати рекомендації",
+    "switchDesc": "Тільки з живленням від мережі, коли комп’ютер не зайнятий",
+    "state": {
+      "training": "Навчається — це займе кілька хвилин",
+      "battery": "Чекає живлення від мережі",
+      "busy": "Чекає, поки комп’ютер звільниться",
+      "signedOut": "Потрібен вхід",
+      "waiting": "Чекає своєї черги"
+    },
+    "last": {
+      "active": "{when}: рекомендації стали точнішими",
+      "kept": "{when}: попередні рекомендації виявилися точнішими",
+      "failed": "{when}: не вдалося, спробує пізніше"
+    },
+    "today": "Сьогодні о {time}",
+    "onDate": "{date} о {time}",
+    "failed": "Не вдалося — спробуйте ще раз"
   },
   "en": {
     "titleMac": "Recommendations on this Mac",

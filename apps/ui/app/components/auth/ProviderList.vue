@@ -49,6 +49,7 @@ function href(p: OidcProvider) {
 <i18n lang="json">
 {
   "ru": { "with": "Войти через {title}" },
+  "uk": { "with": "Увійти через {title}" },
   "en": { "with": "Sign in with {title}" }
 }
 </i18n>

@@ -75,6 +75,16 @@ async function logout() {
     "logout": "Выйти",
     "as": "Вы вошли как {account}"
   },
+  "uk": {
+    "title": "Чекаємо на доступ",
+    "heading": "{name}, майже готово",
+    "headingAnon": "Майже готово",
+    "text": "Залишилося дочекатися, поки адміністратор відкриє доступ. Екран оновиться сам",
+    "check": "Перевірити зараз",
+    "still": "Доступу поки немає",
+    "logout": "Вийти",
+    "as": "Ви увійшли як {account}"
+  },
   "en": {
     "title": "Waiting for access",
     "heading": "{name}, almost there",

@@ -131,6 +131,25 @@ const codecName = (c: string) => qualityLabel({ codec: c }) ?? c
     "artistsHint": "Все файлы записей артиста, включая вытесненные",
     "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Загружено", "other": "Другое" }
   },
+  "uk": {
+    "title": "Сховище",
+    "stats": {
+      "total": "зайнято загалом",
+      "growth": "додалося за 30 днів",
+      "cost": "на місяць у R2",
+      "price": "$0,015 за ГБ понад 10 ГБ",
+      "replaced": "витіснені копії"
+    },
+    "kinds": "За видами",
+    "kind": { "audio": "Звук", "covers": "Обкладинки", "photos": "Фото виконавців" },
+    "growth": { "title": "Приріст звуку", "audio": "Звук за день" },
+    "codecs": "Звук за форматами",
+    "sources": "Звук за джерелами",
+    "noAudio": "Звуку на сервері поки немає",
+    "artists": "Найбільш «важкі» виконавці",
+    "artistsHint": "Усі файли записів виконавця, включно з витісненими",
+    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Завантажено", "other": "Інше" }
+  },
   "en": {
     "title": "Storage",
     "stats": {

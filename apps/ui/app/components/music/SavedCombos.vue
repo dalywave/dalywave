@@ -212,6 +212,20 @@ const swatch = (set: WaveSettings) => {
     "savedToast": "«{name}» сохранено",
     "failed": "Не получилось — попробуйте ещё раз"
   },
+  "uk": {
+    "label": "Збережені поєднання",
+    "now": "зараз",
+    "save": "Зберегти",
+    "saveMeta": "поточні налаштування",
+    "saveTitle": "Зберегти поєднання",
+    "editTitle": "Поєднання",
+    "done": "Готово",
+    "rename": "Перейменувати",
+    "remove": "Видалити",
+    "removed": "«{name}» видалено",
+    "savedToast": "«{name}» збережено",
+    "failed": "Не вдалося — спробуйте ще раз"
+  },
   "en": {
     "label": "Saved mixes",
     "now": "now",

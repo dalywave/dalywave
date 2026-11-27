@@ -95,7 +95,7 @@ const BACKGROUND_LANES = ['library', 'discography', 'discovery', 'analysis', 'sc
 const downloadLanes = computed(() => lanes.value?.filter(l => DOWNLOAD_LANES.includes(l.lane)) ?? [])
 const scheduleLanes = computed(() => lanes.value?.filter(l => BACKGROUND_LANES.includes(l.lane)) ?? [])
 const PAUSES = [0, 1000, 2000, 5000, 8000, 15000, 30000, 60000]
-const pauseLabel = (ms: number) => (ms ? t('pauseS', { s: (ms / 1000).toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU') }) : t('noPause'))
+const pauseLabel = (ms: number) => (ms ? t('pauseS', { s: (ms / 1000).toLocaleString(intlLocale(lang.value, 'en-US')) }) : t('noPause'))
 const HOURS = Array.from({ length: 24 }, (_, h) => h * 60)
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 
@@ -307,6 +307,56 @@ function setBound(l: Lane, which: 'from' | 'until', v: number) {
       "title": "Время",
       "label": "Часовой пояс",
       "hint": "Для расписания и времени суток во вкусе"
+    }
+  },
+  "uk": {
+    "title": "Налаштування",
+    "tabs": "Розділи налаштувань",
+    "tab": { "general": "Загальне", "signin": "Вхід", "music": "Музика", "storage": "Сховище", "clips": "Кліпи", "reco": "Рекомендації", "notifications": "Сповіщення", "integrations": "Інтеграції" },
+    "signin": { "title": "Вхід", "access": "Запрошення і способи входу", "accessHint": "Провайдери, запрошення, сесії", "users": "Користувачі та ролі", "usersHint": "Власні облікові записи, ролі, блокування" },
+    "storage": { "title": "Сховище", "open": "Місце і файли", "hint": "Аудіо, обкладинки, стиснені копії та їхня ціна", "backups": "Резервні копії бази", "backupsHint": "Щоденні дампи й пробна перевірка" },
+    "reco": { "title": "Рекомендації", "open": "Розвідник і модель смаку", "hint": "Скільки нового на день, розмір індексу, сміливість розвідки" },
+    "notifications": { "hint": "Сповіщення на телефон і в браузер налаштовуються ключами на сервері. Що отримувати — кожен вибирає у своїх налаштуваннях" },
+    "integrations": { "hint": "Тексти пісень, перенесення з інших сервісів, живі обкладинки й випуски застосунків — зовнішні сервіси з адресами й ключами на сервері" },
+    "saved": "Збережено",
+    "failed": "Не вдалося зберегти — спробуйте ще раз",
+    "laneSaved": "«{title}»: збережено",
+    "follow": {
+      "title": "Підписка на виконавця",
+      "note": "Що довантажувати за новою підпискою, якщо людина не вибрала сама",
+      "albums": "Альбоми",
+      "eps": "Мініальбоми",
+      "singles": "Сингли",
+      "compilations": "Збірки",
+      "live": "Концертні записи",
+      "appearsOn": "Участь у чужих релізах"
+    },
+    "speed": {
+      "title": "Швидкість завантажень",
+      "note": "Пауза між завантаженнями захищає від перевірок YouTube на бота",
+      "pause": "Пауза в «{title}»",
+      "parallel": "Одночасно в «{title}»",
+      "workers": "{n} одночасно"
+    },
+    "noPause": "Без паузи",
+    "pauseS": "Пауза {s} с",
+    "schedule": {
+      "title": "Розклад",
+      "note": "Увімкніть, щоб смуга працювала лише у своє вікно. «Зараз» і «Хвиля» працюють завжди",
+      "always": "Цілодобово",
+      "windowOpen": "З {from} до {until}, зараз працює",
+      "windowClosed": "З {from} до {until}, зараз чекає",
+      "toggle": "«{title}» лише за розкладом",
+      "from": "з",
+      "until": "до",
+      "fromLabel": "Початок вікна «{title}»",
+      "untilLabel": "Кінець вікна «{title}»"
+    },
+    "sameBounds": "Початок і кінець вікна мають відрізнятися",
+    "tz": {
+      "title": "Час",
+      "label": "Часовий пояс",
+      "hint": "Для розкладу й часу доби в смаку"
     }
   },
   "en": {

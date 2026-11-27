@@ -135,7 +135,7 @@ function meta(item: ImportItem): string {
   if (item.liked) parts.push(t('liked'))
   if (item.plays) {
     const n = formatNumber(item.plays, lang.value)
-    parts.push(lang.value === 'en' ? `${n} ${item.plays === 1 ? 'play' : 'plays'}` : `${n}\u00a0${plural(item.plays, ['прослушивание', 'прослушивания', 'прослушиваний'])}`)
+    parts.push(lang.value === 'en' ? `${n} ${item.plays === 1 ? 'play' : 'plays'}` : `${n}\u00a0${plural(item.plays, lang.value === 'uk' ? ['прослуховування', 'прослуховування', 'прослуховувань'] : ['прослушивание', 'прослушивания', 'прослушиваний'])}`)
   }
   if (item.kind === 'file' && item.file?.name) parts.push(item.file.name)
   return parts.join(' · ')
@@ -257,6 +257,30 @@ function heading(item: ImportItem): string {
     "artist": "Артист",
     "follow": "подписка",
     "liked": "в лайках"
+  },
+  "uk": {
+    "title": "Не знайшлося",
+    "find": "Знайти",
+    "close": "Закрити",
+    "skip": "Пропустити",
+    "skipped": "Пропущено",
+    "guess": "Схоже на",
+    "yes": "Так, це він",
+    "added": "Готово — додано до медіатеки",
+    "fileQueued": "Файл додаємо до вибраного трека",
+    "fixFailed": "Не вдалося — спробуйте ще раз",
+    "loadFailed": "Не вдалося завантажити список",
+    "retry": "Повторити",
+    "allDone": "Усе розібрано",
+    "allDoneText": "Незнайденого більше немає",
+    "searchPlaceholder": "Виконавець і назва",
+    "searching": "Шукаємо…",
+    "nothing": "Нічого не знайшлося — спробуйте написати інакше",
+    "more": "Показати ще",
+    "album": "альбом",
+    "artist": "Виконавець",
+    "follow": "підписка",
+    "liked": "у вподобаних"
   },
   "en": {
     "title": "Not found",

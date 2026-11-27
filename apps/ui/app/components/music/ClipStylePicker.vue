@@ -143,6 +143,7 @@ function update(v: unknown) {
 <i18n lang="json">
 {
   "ru": { "square": "Квадрат", "wide": "Широкий", "backdrop": "Фон", "cinema": "Кино", "off": "Выключено" },
+  "uk": { "square": "Квадрат", "wide": "Широкий", "backdrop": "Тло", "cinema": "Кіно", "off": "Вимкнено" },
   "en": { "square": "Square", "wide": "Wide", "backdrop": "Backdrop", "cinema": "Cinema", "off": "Off" }
 }
 </i18n>

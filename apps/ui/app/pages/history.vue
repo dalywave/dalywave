@@ -95,7 +95,7 @@ watch(field, (v) => {
 
 // ---------- Дни ----------
 
-const locale = computed(() => (lang.value === 'en' ? 'en-GB' : 'ru-RU'))
+const locale = computed(() => intlLocale(lang.value, 'en-GB'))
 function dayLabel(key: string) {
   const now = new Date()
   if (key === keyOf(now)) return t('today')
@@ -104,7 +104,7 @@ function dayLabel(key: string) {
   if (key === keyOf(y)) return t('yesterday')
   const d = dateOf(key)
   return new Intl.DateTimeFormat(locale.value, d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' })
-    .format(d).replace(/\s*г\.$/, '')
+    .format(d).replace(/\s*[гр]\.$/, '')
 }
 const groups = computed(() => {
   const out: { key: string, label: string, items: HistoryItem[] }[] = []
@@ -379,6 +379,29 @@ const empty = computed(() => state.value === 'ready' && !items.value.length)
     "emptyText": "Включите волну или любимый альбом",
     "nothing": "Ничего не нашлось",
     "nothingFor": "По запросу «{q}»"
+  },
+  "uk": {
+    "title": "Нещодавно прослухане",
+    "search": "Пошук в історії",
+    "jump": "Перейти до дати",
+    "until": "До {day}",
+    "resetDay": "Показати з початку",
+    "today": "Сьогодні",
+    "yesterday": "Вчора",
+    "ctx": { "from": "з «{title}»", "radio": "Радіо", "search": "з пошуку" },
+    "openSource": "Перейти до джерела",
+    "hide": "Прибрати з історії",
+    "hidden": "Прибрано з історії",
+    "hideFailed": "Не вдалося прибрати",
+    "clear": "Очистити історію",
+    "clearTitle": "Очистити історію?",
+    "clearText": "Рекомендацій і міксів це не змінить",
+    "cleared": "Історію очищено",
+    "clearFailed": "Не вдалося очистити історію",
+    "empty": "Тут з’явиться те, що ви слухаєте",
+    "emptyText": "Увімкніть хвилю або улюблений альбом",
+    "nothing": "Нічого не знайдено",
+    "nothingFor": "За запитом «{q}»"
   },
   "en": {
     "title": "Recently played",

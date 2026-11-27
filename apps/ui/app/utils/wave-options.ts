@@ -1,6 +1,7 @@
 // Настройки волны: варианты групп, сохранённые сочетания и человеческое описание
 import type { WavePreset } from '~/api/types'
 import type { WaveActivity, WaveCharacter, WaveLanguage, WaveMood, WaveSettings } from '~/bridge/types'
+import type { Locale } from '~/utils/format'
 
 export interface WaveOption<T extends string> {
   value: T
@@ -77,33 +78,40 @@ const ACTIVITY_NOUN_EN: Record<WaveActivity, string> = { any: '', wake: 'Morning
 const MOOD_EN_SHORT: Record<WaveMood, string> = { any: '', energetic: 'Energetic', happy: 'Happy', calm: 'Calm', sad: 'Sad' }
 const CHARACTER_SHORT_EN: Record<WaveCharacter, string> = { fav: 'favourites', mix: '', new: 'new', pop: 'popular', rare: 'rare' }
 const LANGUAGE_SHORT_EN: Record<WaveLanguage, string> = { any: '', ru: 'Russian', foreign: 'foreign', none: 'instrumental' }
+const ACTIVITY_NOUN_UK: Record<WaveActivity, string> = { any: '', wake: 'Ранок', road: 'Дорога', work: 'Робота', sport: 'Тренування', rest: 'Відпочинок', sleep: 'Сон', party: 'Вечірка' }
+const MOOD_NEUT_UK: Record<WaveMood, string> = { any: '', energetic: 'Бадьоре', happy: 'Веселе', calm: 'Спокійне', sad: 'Сумне' }
+const CHARACTER_SHORT_UK: Record<WaveCharacter, string> = { fav: 'улюблене', mix: '', new: 'нове', pop: 'популярне', rare: 'рідкісне' }
+const LANGUAGE_SHORT_UK: Record<WaveLanguage, string> = { any: '', ru: 'російською', foreign: 'іноземне', none: 'без слів' }
 
-function shortParts(s: WaveSettings, locale: 'ru' | 'en'): string[] {
-  const ru = locale === 'ru'
+/** Значение для языка интерфейса: русское, украинское или английское */
+function byLocale<T>(locale: Locale, ru: T, uk: T, en: T): T {
+  return locale === 'ru' ? ru : locale === 'uk' ? uk : en
+}
+
+function shortParts(s: WaveSettings, locale: Locale): string[] {
   const parts = [
-    (ru ? ACTIVITY_NOUN_RU : ACTIVITY_NOUN_EN)[s.activity],
-    (ru ? MOOD_NEUT_RU : MOOD_EN_SHORT)[s.mood],
-    (ru ? LANGUAGE_SHORT_RU : LANGUAGE_SHORT_EN)[s.language],
-    (ru ? CHARACTER_SHORT_RU : CHARACTER_SHORT_EN)[s.character],
+    byLocale(locale, ACTIVITY_NOUN_RU, ACTIVITY_NOUN_UK, ACTIVITY_NOUN_EN)[s.activity],
+    byLocale(locale, MOOD_NEUT_RU, MOOD_NEUT_UK, MOOD_EN_SHORT)[s.mood],
+    byLocale(locale, LANGUAGE_SHORT_RU, LANGUAGE_SHORT_UK, LANGUAGE_SHORT_EN)[s.language],
+    byLocale(locale, CHARACTER_SHORT_RU, CHARACTER_SHORT_UK, CHARACTER_SHORT_EN)[s.character],
   ].filter(Boolean)
   return parts.map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p.toLowerCase()))
 }
 
 /** Название для нового сочетания: «Спокойное · без слов», «Работа · спокойное» */
-export function suggestPresetName(s: WaveSettings, locale: 'ru' | 'en' = 'ru'): string {
+export function suggestPresetName(s: WaveSettings, locale: Locale = 'ru'): string {
   const parts = shortParts(s, locale).slice(0, 2)
-  return parts.length ? parts.join(' · ') : (locale === 'ru' ? 'Моя волна' : 'My wave')
+  return parts.length ? parts.join(' · ') : byLocale(locale, 'Моя волна', 'Моя хвиля', 'My wave')
 }
 
 /** Подпись под названием сочетания: настроение, язык, характер — «спокойное, без слов» */
-export function presetMeta(s: WaveSettings, locale: 'ru' | 'en' = 'ru'): string {
-  const ru = locale === 'ru'
+export function presetMeta(s: WaveSettings, locale: Locale = 'ru'): string {
   const parts = [
-    (ru ? MOOD_NEUT_RU : MOOD_EN_SHORT)[s.mood],
-    (ru ? LANGUAGE_SHORT_RU : LANGUAGE_SHORT_EN)[s.language],
-    (ru ? CHARACTER_SHORT_RU : CHARACTER_SHORT_EN)[s.character],
+    byLocale(locale, MOOD_NEUT_RU, MOOD_NEUT_UK, MOOD_EN_SHORT)[s.mood],
+    byLocale(locale, LANGUAGE_SHORT_RU, LANGUAGE_SHORT_UK, LANGUAGE_SHORT_EN)[s.language],
+    byLocale(locale, CHARACTER_SHORT_RU, CHARACTER_SHORT_UK, CHARACTER_SHORT_EN)[s.character],
   ].filter(Boolean).map(p => p.toLowerCase())
-  if (!parts.length) return ru ? 'знакомое и новое' : 'familiar and new'
+  if (!parts.length) return byLocale(locale, 'знакомое и новое', 'знайоме й нове', 'familiar and new')
   return parts.join(', ')
 }
 
@@ -121,22 +129,34 @@ const ACTIVITY_RU: Record<WaveActivity, string> = { any: '', wake: 'для пр�
 const CHARACTER_RU: Record<WaveCharacter, string> = { fav: 'только любимое', mix: 'знакомое и новое', new: 'только новое', pop: 'популярное', rare: 'редкое' }
 const LANGUAGE_RU: Record<WaveLanguage, string> = { any: '', ru: 'на русском', foreign: 'на иностранных языках', none: 'без слов' }
 
+const MOOD_FEM_UK: Record<WaveMood, string> = { any: '', energetic: 'Бадьора', happy: 'Весела', calm: 'Спокійна', sad: 'Сумна' }
+const ACTIVITY_UK: Record<WaveActivity, string> = { any: '', wake: 'для пробудження', road: 'в дорогу', work: 'для роботи', sport: 'для тренування', rest: 'для відпочинку', sleep: 'перед сном', party: 'для вечірки' }
+const CHARACTER_UK: Record<WaveCharacter, string> = { fav: 'тільки улюблене', mix: 'знайоме й нове', new: 'тільки нове', pop: 'популярне', rare: 'рідкісне' }
+const LANGUAGE_UK: Record<WaveLanguage, string> = { any: '', ru: 'російською', foreign: 'іноземними мовами', none: 'без слів' }
+
+/** Слова описания волны: «Спокойная волна для работы» / «Спокійна хвиля для роботи» */
+const SUMMARY_WORDS = {
+  ru: { Wave: 'Волна', wave: 'волна', anyMood: 'под любое настроение', mood: MOOD_FEM_RU, activity: ACTIVITY_RU, character: CHARACTER_RU, language: LANGUAGE_RU },
+  uk: { Wave: 'Хвиля', wave: 'хвиля', anyMood: 'під будь-який настрій', mood: MOOD_FEM_UK, activity: ACTIVITY_UK, character: CHARACTER_UK, language: LANGUAGE_UK },
+}
+
 const MOOD_EN: Record<WaveMood, string> = { any: '', energetic: 'Energetic', happy: 'Happy', calm: 'Calm', sad: 'Sad' }
 const ACTIVITY_EN: Record<WaveActivity, string> = { any: '', wake: 'to wake up', road: 'for the road', work: 'for work', sport: 'for a workout', rest: 'to unwind', sleep: 'before sleep', party: 'for a party' }
 const CHARACTER_EN: Record<WaveCharacter, string> = { fav: 'favourites only', mix: 'familiar and new', new: 'new only', pop: 'popular', rare: 'rare finds' }
 const LANGUAGE_EN: Record<WaveLanguage, string> = { any: '', ru: 'in Russian', foreign: 'in other languages', none: 'instrumental' }
 
 /** «Спокойная волна для работы — знакомое и новое, без слов» */
-export function waveSummary(s: WaveSettings, locale: 'ru' | 'en' = 'ru'): string {
+export function waveSummary(s: WaveSettings, locale: Locale = 'ru'): string {
   const NB = ' '
   if (locale === 'en') {
     const head = [MOOD_EN[s.mood], s.mood === 'any' ? 'Wave' : 'wave', ACTIVITY_EN[s.activity] || (s.mood === 'any' ? 'for any mood' : '')].filter(Boolean).join(' ')
     return `${head} — ${[CHARACTER_EN[s.character], LANGUAGE_EN[s.language]].filter(Boolean).join(', ')}`
   }
+  const w = SUMMARY_WORDS[locale]
   const head = s.mood === 'any'
-    ? ['Волна', ACTIVITY_RU[s.activity] || 'под любое настроение']
-    : [MOOD_FEM_RU[s.mood], 'волна', ACTIVITY_RU[s.activity]]
-  const tail = [CHARACTER_RU[s.character], LANGUAGE_RU[s.language]].filter(Boolean).join(', ')
+    ? [w.Wave, w.activity[s.activity] || w.anyMood]
+    : [w.mood[s.mood], w.wave, w.activity[s.activity]]
+  const tail = [w.character[s.character], w.language[s.language]].filter(Boolean).join(', ')
   return `${head.filter(Boolean).join(' ')}${NB}— ${tail}`
 }
 

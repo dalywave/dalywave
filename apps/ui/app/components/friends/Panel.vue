@@ -69,6 +69,13 @@ const quiet = computed(() => friends.friends.filter(f => !f.activity))
     "failed": "Не загрузилось",
     "retry": "Повторить"
   },
+  "uk": {
+    "requests": "Запити на дружбу: {n}",
+    "emptyText": "Додайте друзів — тут буде видно, що вони слухають",
+    "find": "Знайти друзів",
+    "failed": "Не завантажилося",
+    "retry": "Повторити"
+  },
   "en": {
     "requests": "Friend requests: {n}",
     "emptyText": "Add friends to see what they’re playing",

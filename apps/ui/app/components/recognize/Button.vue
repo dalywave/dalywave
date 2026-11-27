@@ -16,6 +16,7 @@ const { t } = useI18n({ useScope: 'local' })
 <i18n lang="json">
 {
   "ru": { "label": "Распознать песню" },
+  "uk": { "label": "Розпізнати пісню" },
   "en": { "label": "Recognize a song" }
 }
 </i18n>

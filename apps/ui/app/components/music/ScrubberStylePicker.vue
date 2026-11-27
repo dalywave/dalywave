@@ -72,6 +72,7 @@ function update(v: unknown) {
 <i18n lang="json">
 {
   "ru": { "wave": "Волна", "line": "Линия" },
+  "uk": { "wave": "Хвиля", "line": "Лінія" },
   "en": { "wave": "Wave", "line": "Line" }
 }
 </i18n>

@@ -61,6 +61,7 @@ const server = useServerStore()
 <i18n lang="json">
 {
   "ru": { "title": "Открытия", "sub": "Новое для вас — клипами, листайте" },
+  "uk": { "title": "Відкриття", "sub": "Нове для вас — кліпами, гортайте" },
   "en": { "title": "Discover", "sub": "New music for you, as clips — swipe through" }
 }
 </i18n>

@@ -12,6 +12,7 @@ const { t } = useI18n({ useScope: 'local' })
 <i18n lang="json">
 {
   "ru": { "title": "Подключить телефон" },
+  "uk": { "title": "Під’єднати телефон" },
   "en": { "title": "Connect a phone" }
 }
 </i18n>

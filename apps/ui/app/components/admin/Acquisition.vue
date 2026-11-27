@@ -61,7 +61,7 @@ defineExpose({ play: (videoId: string | null) => (playing.value = videoId) })
             <small v-if="a.error" :title="a.error">{{ a.error }}</small>
             <small v-else-if="a.ytDlpVersion">yt-dlp {{ a.ytDlpVersion }}</small>
           </span>
-          <span class="ap-num ap-muted">{{ a.totalMs != null ? `${(a.totalMs / 1000).toLocaleString(lang === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: 1 })} ${t('sec')}` : '' }}</span>
+          <span class="ap-num ap-muted">{{ a.totalMs != null ? `${(a.totalMs / 1000).toLocaleString(intlLocale(lang, 'en-US'), { maximumFractionDigits: 1 })} ${t('sec')}` : '' }}</span>
         </div>
       </div>
     </section>
@@ -89,6 +89,14 @@ defineExpose({ play: (videoId: string | null) => (playing.value = videoId) })
     "sec": "с",
     "all": "Все {n}",
     "less": "Свернуть"
+  },
+  "uk": {
+    "candidates": "Кандидати",
+    "noCandidates": "Пошук нічого не знайшов",
+    "attempts": "Спроби",
+    "sec": "с",
+    "all": "Усі {n}",
+    "less": "Згорнути"
   },
   "en": {
     "candidates": "Candidates",

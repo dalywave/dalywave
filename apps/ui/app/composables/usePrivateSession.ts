@@ -16,7 +16,7 @@ export function usePrivateSession() {
     if (!on.value || !at) return ''
     const d = new Date(at)
     const sameDay = d.toDateString() === new Date().toDateString()
-    const time = new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', sameDay
+    const time = new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), sameDay
       ? { hour: '2-digit', minute: '2-digit' }
       : { weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(d)
     return t('friends.privateUntil', { time })

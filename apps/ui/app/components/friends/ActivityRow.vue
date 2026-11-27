@@ -91,6 +91,7 @@ const jamTo = computed(() => (a.value?.jamCode ? `/jam/${a.value.jamCode}` : nul
 <i18n lang="json">
 {
   "ru": { "nothing": "Пока тихо" },
+  "uk": { "nothing": "Поки тихо" },
   "en": { "nothing": "Nothing yet" }
 }
 </i18n>

@@ -200,6 +200,15 @@ const moreItems = computed<MenuEntry[]>(() => [
     "taste": "Мой вкус",
     "resetSettings": "Сбросить настройки волны"
   },
+  "uk": {
+    "preparing": "Готуємо хвилю…",
+    "hint": "Підбираємо музику під ці налаштування",
+    "progress": "Готово {ready} з {need}",
+    "cancel": "Скасувати",
+    "more": "Ще",
+    "taste": "Мій смак",
+    "resetSettings": "Скинути налаштування хвилі"
+  },
   "en": {
     "preparing": "Preparing your wave…",
     "hint": "Picking music for these settings",

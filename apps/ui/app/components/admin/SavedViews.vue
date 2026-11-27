@@ -90,6 +90,7 @@ function remove(v: Saved) {
 <i18n lang="json">
 {
   "ru": { "views": "Виды", "save": "Сохранить вид", "saveTitle": "Сохранить вид", "name": "Название", "remove": "Убрать вид «{name}»" },
+  "uk": { "views": "Подання", "save": "Зберегти подання", "saveTitle": "Зберегти подання", "name": "Назва", "remove": "Прибрати подання «{name}»" },
   "en": { "views": "Views", "save": "Save view", "saveTitle": "Save view", "name": "Name", "remove": "Remove view “{name}”" }
 }
 </i18n>

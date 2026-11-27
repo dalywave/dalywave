@@ -23,7 +23,7 @@ const list = computed(() => {
   }).slice(0, props.limit)
 })
 
-const day = (iso: string) => new Date(iso).toLocaleDateString(lang.value === 'en' ? 'en-US' : 'ru-RU', { day: 'numeric', month: 'long' })
+const day = (iso: string) => new Date(iso).toLocaleDateString(intlLocale(lang.value, 'en-US'), { day: 'numeric', month: 'long' })
 function sub(r: Recognition) {
   const artist = r.track ? r.track.artists.map(a => a.name).join(', ') : r.artist
   return `${artist} · ${day(r.recognizedAt)}`
@@ -78,6 +78,7 @@ async function remove(r: Recognition) {
 <i18n lang="json">
 {
   "ru": { "title": "Распознанное", "remove": "Убрать", "removeFailed": "Не получилось убрать" },
+  "uk": { "title": "Розпізнане", "remove": "Прибрати", "removeFailed": "Не вдалося прибрати" },
   "en": { "title": "Recognized", "remove": "Remove", "removeFailed": "Couldn't remove" }
 }
 </i18n>

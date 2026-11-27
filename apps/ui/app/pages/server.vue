@@ -232,6 +232,30 @@ const text = computed(() => {
       "unknown": "Что-то пошло не так. Попробуйте ещё раз"
     }
   },
+  "uk": {
+    "title": "Адреса сервера",
+    "lead": "DalyWave грає музику з вашого сервера. Введіть його адресу — або зазирніть у демо з відкритою музикою",
+    "change": "Інший сервер",
+    "changeText": "На поточному сервері ви вийдете з облікового запису",
+    "address": "Адреса сервера",
+    "placeholder": "music.example.com",
+    "continue": "Продовжити",
+    "connect": "Підключитися",
+    "other": "Інша адреса",
+    "foundVersion": "{host} · версія {version}",
+    "recent": "Нещодавні сервери",
+    "forget": "Прибрати «{name}» з нещодавніх",
+    "demo": "Спробувати демо",
+    "cancel": "Скасувати",
+    "privacy": "Конфіденційність",
+    "errors": {
+      "invalid": "Це не схоже на адресу. Наприклад: music.example.com",
+      "unreachable": "Сервер не відповідає. Перевірте адресу та інтернет",
+      "not_dalywave": "За цією адресою не DalyWave",
+      "down": "Сервер на місці, але зараз не готовий. Спробуйте за кілька хвилин",
+      "unknown": "Щось пішло не так. Спробуйте ще раз"
+    }
+  },
   "en": {
     "title": "Server address",
     "lead": "DalyWave plays music from your own server. Enter its address — or look around the demo with open music",

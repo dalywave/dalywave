@@ -28,7 +28,7 @@ onMounted(loadBlocked)
 const facets = computed(() => data.value?.facets ?? [])
 const facetsWord = computed(() => {
   const n = facets.value.length
-  return lang.value === 'en' ? (n === 1 ? 'facet' : 'facets') : plural(n, ['грань', 'грани', 'граней'])
+  return lang.value === 'en' ? (n === 1 ? 'facet' : 'facets') : plural(n, lang.value === 'uk' ? ['грань', 'грані', 'граней'] : ['грань', 'грани', 'граней'])
 })
 const colorOf = (i: number) => COLORS[i % COLORS.length]!
 const stats = computed(() => data.value?.stats ?? null)
@@ -75,7 +75,7 @@ const orphanDampers = computed(() => {
 
 const monthName = computed(() => {
   if (!stats.value) return ''
-  const m = new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { month: 'long' }).format(new Date(new Date(stats.value.since).getTime() + 2 * 86_400_000))
+  const m = new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { month: 'long' }).format(new Date(new Date(stats.value.since).getTime() + 2 * 86_400_000))
   return m.charAt(0).toUpperCase() + m.slice(1)
 })
 const hours = computed(() => {
@@ -92,7 +92,36 @@ const delta = computed(() => {
 const maxArtistMin = computed(() => Math.max(1, ...(stats.value?.topArtists.map(a => a.minutes) ?? [1])))
 const maxPart = computed(() => Math.max(0.01, ...(stats.value?.dayParts.map(p => p.share) ?? [0.01])))
 const PART_ICONS: Record<string, string> = { morning: 'ph:sun-horizon', day: 'ph:sun', evening: 'ph:moon-stars', night: 'ph:moon' }
-const genreName = (g: { id: string, name: string }) => (lang.value === 'en' ? g.id : g.name)
+// Сервер отдаёт жанр Deezer (id) и его русское название (name); украинские — здесь, незнакомый остаётся как у Deezer
+const GENRE_UK: Record<string, string> = {
+  'Pop': 'Поп',
+  'Rap/Hip Hop': 'Реп і хіп-хоп',
+  'Rock': 'Рок',
+  'Alternative': 'Альтернатива',
+  'Indie Rock': 'Інді-рок',
+  'Indie Pop': 'Інді-поп',
+  'Dance': 'Танцювальна',
+  'Electro': 'Електроніка',
+  'Techno/House': 'Техно і хаус',
+  'R&B': 'R&B',
+  'Soul & Funk': 'Соул і фанк',
+  'Metal': 'Метал',
+  'Jazz': 'Джаз',
+  'Classical': 'Класика',
+  'Films/Games': 'Кіно та ігри',
+  'Reggae': 'Реґі',
+  'Reggaeton': 'Реґетон',
+  'Folk': 'Фолк',
+  'Blues': 'Блюз',
+  'Country': 'Кантрі',
+  'Latin Music': 'Латино',
+  'Asian Music': 'Азійська',
+  'African Music': 'Африканська',
+  'Kids': 'Дитяча',
+  'Chanson': 'Шансон',
+  'Variété Internationale': 'Естрада',
+}
+const genreName = (g: { id: string, name: string }) => (lang.value === 'en' ? g.id : lang.value === 'uk' ? (GENRE_UK[g.id] ?? g.id) : g.name)
 
 // ---------- Не рекомендовать ----------
 
@@ -462,6 +491,47 @@ const analyzedShare = computed(() => {
     "resetBtn": "Сбросить",
     "resetDone": "Вкус сброшен — волна начнёт узнавать вас заново",
     "cancel": "Отмена"
+  },
+  "uk": {
+    "title": "Мій смак",
+    "kicker": "Що знає хвиля",
+    "sub": "Ваш смак — це {n} {word}. Підлаштуйте їх, якщо хвиля промахується",
+    "subEmpty": "Слухайте й ставте лайки — хвиля збере ваш смак",
+    "facets": "Грані смаку",
+    "emptyTitle": "Смак ще збирається",
+    "emptyText": "Потрібно хоча б кілька вподобаних або дослуханих треків. Грані з’являться самі",
+    "lessDone": "Менше такого: «{label}»",
+    "undoDone": "Повернули як було",
+    "lessList": "Менше такого:",
+    "undo": "Повернути",
+    "failed": "Не вдалося — сервер не відповів",
+    "h": "год",
+    "min": "хв",
+    "part": { "morning": "Ранок", "day": "День", "evening": "Вечір", "night": "Ніч" },
+    "topArtists": "Найчастіше",
+    "topGenres": "Жанри",
+    "noPlays": "Цього місяця ви ще нічого не слухали",
+    "blocked": "Не рекомендувати",
+    "blockedEmpty": "Порожньо. Додавайте треки й виконавців з меню «⋯»",
+    "artist": "Виконавець",
+    "track": "Трек",
+    "unblock": "Знову рекомендувати",
+    "unblocked": "«{name}» знову може потрапити у хвилю",
+    "knows": "Із чого хвиля знає смак",
+    "kLikes": "лайків",
+    "kListened": "дослухано",
+    "kAnalyzed": "розібрано за звучанням",
+    "kReactions": "реакцій у хвилі за місяць",
+    "kNo": "«не подобається» і заборон",
+    "updated": "Грані оновлено {when}",
+    "notYet": "Грані ще не зібрано",
+    "wasReset": "смак скинуто {when}",
+    "reset": "Скинути смак",
+    "resetSure": "Точно скинути?",
+    "resetDesc": "Грані, мікси й «менше такого» зберуться заново за новими прослуховуваннями. Медіатека і заборони залишаться",
+    "resetBtn": "Скинути",
+    "resetDone": "Смак скинуто — хвиля почне впізнавати вас заново",
+    "cancel": "Скасувати"
   },
   "en": {
     "title": "My taste",

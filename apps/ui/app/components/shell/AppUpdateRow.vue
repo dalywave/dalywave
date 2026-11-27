@@ -108,6 +108,18 @@ async function restart() {
     "restart": "Перезапустить",
     "check": "Проверить"
   },
+  "uk": {
+    "version": "Версія застосунку",
+    "upToDate": "Встановлено останню версію",
+    "checking": "Перевіряємо оновлення…",
+    "downloading": "Завантажуємо оновлення {version}",
+    "ready": "Оновлення готове — {version}",
+    "installing": "Встановлюємо…",
+    "failed": "Не вдалося перевірити оновлення",
+    "onQuit": "Або встановиться саме під час виходу з DalyWave",
+    "restart": "Перезапустити",
+    "check": "Перевірити"
+  },
   "en": {
     "version": "App version",
     "upToDate": "You're on the latest version",

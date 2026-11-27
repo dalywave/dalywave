@@ -54,6 +54,11 @@ const enabled = computed({
     "title": "Статус в Discord",
     "failed": "Не получилось переключить"
   },
+  "uk": {
+    "group": "Інтеграції",
+    "title": "Статус у Discord",
+    "failed": "Не вдалося перемкнути"
+  },
   "en": {
     "group": "Integrations",
     "title": "Discord status",

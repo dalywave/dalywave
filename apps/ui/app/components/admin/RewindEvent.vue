@@ -36,7 +36,7 @@ const styleOptions = computed(() => [...STYLES, 'random' as const].map(v => ({ v
 const modeOptions = computed(() => (['auto', 'open', 'closed'] as RewindMode[]).map(v => ({ value: v, label: t(`mode.${v}`) })))
 const yearOptions = computed(() => (ev.value?.years ?? []).map(y => ({ value: y, label: String(y) })))
 
-const date = (iso: string) => new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'long' }).format(new Date(iso))
+const date = (iso: string) => new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { day: 'numeric', month: 'long' }).format(new Date(iso))
 const status = computed(() => {
   const e = ev.value
   if (!e) return ''
@@ -92,6 +92,23 @@ const previewYear = computed(() => ev.value?.openYear ?? ev.value?.year ?? ev.va
     },
     "saved": "Сохранено",
     "failed": "Не получилось сохранить"
+  },
+  "uk": {
+    "title": "Підсумки року",
+    "when": "Коли відкриті",
+    "year": "За який рік",
+    "styleLabel": "Стиль історій",
+    "preview": "Попередній перегляд",
+    "style": { "wave": "Хвиля року", "spread": "Розворот", "record": "Платівка", "random": "Випадковий для кожного слухача" },
+    "mode": { "auto": "Автоматично", "open": "Відкрито зараз", "closed": "Закрито" },
+    "status": {
+      "openUntil": "Відкрито підсумки {year} · закриються {date}",
+      "open": "Відкрито підсумки {year}",
+      "closedUntil": "Закрито · відкриються {date}",
+      "closed": "Закрито — слухачі їх не бачать"
+    },
+    "saved": "Збережено",
+    "failed": "Не вдалося зберегти"
   },
   "en": {
     "title": "Year in review",

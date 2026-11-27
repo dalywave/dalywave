@@ -115,7 +115,7 @@ function details(e: AuditEvent) {
 }
 
 // Строки по дням; подряд идущие одинаковые события (десяток входов паролем) — одной строкой «×N»
-const locale = computed(() => (lang.value === 'en' ? 'en-GB' : 'ru-RU'))
+const locale = computed(() => intlLocale(lang.value, 'en-GB'))
 const dayKey = (iso: string) => new Date(iso).toLocaleDateString('sv-SE')
 function dayLabel(key: string) {
   const today = dayKey(new Date().toISOString())
@@ -252,6 +252,59 @@ const days = computed(() => {
       "interval": "пауза {s} с",
       "queued": "задач: {n}",
       "action": { "choose": "выбрано видео", "url": "по ссылке", "unavailable": "нет в источниках", "retry": "искать заново" }
+    }
+  },
+  "uk": {
+    "view": { "all": "Усі події", "auth": "Входи", "user": "Люди й ролі", "settings": "Налаштування" },
+    "title": "Журнал",
+    "filterKind": "Вид подій",
+    "filterActor": "Хто",
+    "allKinds": "Усі події",
+    "anyone": "Усі люди",
+    "empty": "Таких подій немає",
+    "failed": "Не вдалося завантажити журнал",
+    "more": "Показати ще",
+    "system": "система",
+    "today": "Сьогодні",
+    "yesterday": "Учора",
+    "group": { "auth": "Входи й виходи", "user": "Люди й ролі", "session": "Сесії", "lane": "Смуги черги", "job": "Завдання", "downloader": "Завантажувачі", "acquisition": "Спірні", "recording": "Каталог", "source": "Перевірки завантаження", "reco": "Рекомендації", "settings": "Налаштування" },
+    "kind": {
+      "auth_sign_in": "Вхід",
+      "auth_sign_in_failed": "Невдалий вхід",
+      "auth_sign_in_denied": "Вхід відхилено",
+      "auth_logout": "Вихід",
+      "auth_app_code_reused": "Повтор коду застосунку",
+      "user_created": "Новий користувач",
+      "user_roles_changed": "Ролі змінено",
+      "user_disabled": "Користувача вимкнено",
+      "user_enabled": "Користувача ввімкнено",
+      "session_revoked": "Сесію завершено",
+      "job_retried": "Завдання повторено",
+      "job_cancelled": "Завдання скасовано",
+      "lane_changed": "Смугу змінено",
+      "downloader_created": "Завантажувач додано",
+      "downloader_revoked": "Завантажувач відкликано",
+      "acquisition_resolved": "Рішення щодо спірного",
+      "reco_settings_changed": "Налаштування розвідки",
+      "reco_run": "Запуск поза розкладом",
+      "settings_changed": "Налаштування сервера",
+      "recording_reacquire": "Запис завантажується наново",
+      "recording_reported": "Скарга «Неправильний запис»",
+      "clip_chosen": "Кліп вибрано вручну",
+      "source_check": "Перевірка завантаження",
+      "device_created": "Новий пристрій"
+    },
+    "d": {
+      "password": "паролем",
+      "noRoles": "без ролей",
+      "byProvider": "через daly.rest",
+      "paused": "пауза",
+      "resumed": "запуск",
+      "always": "цілодобово",
+      "concurrency": "одночасно {n}",
+      "interval": "пауза {s} с",
+      "queued": "завдань: {n}",
+      "action": { "choose": "вибрано відео", "url": "за посиланням", "unavailable": "немає в джерелах", "retry": "шукати наново" }
     }
   },
   "en": {

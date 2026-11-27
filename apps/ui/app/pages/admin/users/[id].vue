@@ -209,7 +209,7 @@ const days = computed(() => (d.value?.stats.days ?? []).map(x => ({
   values: { min: Math.round(x.listenedMs / 60_000) },
   title: `${formatShortDate(`${x.day}T12:00:00Z`, lang.value)}: ${P.hours(x.listenedMs)} · ${playsN(x.plays)}`,
 })))
-const playsN = (n: number) => (lang.value === 'en' ? `${n} ${n === 1 ? 'play' : 'plays'}` : `${n} ${plural(n, ['раз', 'раза', 'раз'])}`)
+const playsN = (n: number) => (lang.value === 'en' ? `${n} ${n === 1 ? 'play' : 'plays'}` : `${n} ${plural(n, lang.value === 'uk' ? ['раз', 'рази', 'разів'] : ['раз', 'раза', 'раз'])}`)
 const genreMax = computed(() => Math.max(1, ...(d.value?.stats.genres ?? []).map(g => g.plays)))
 
 // ---------- История ----------
@@ -236,7 +236,7 @@ async function moreHistory() {
     historyMore.value = false
   }
 }
-const time = (iso: string) => new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+const time = (iso: string) => new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 const historyGroups = computed(() => {
   const out: { day: string, items: UserHistoryItem[] }[] = []
   for (const h of history.value ?? []) {
@@ -658,6 +658,126 @@ const L = useAdminLabels()
       "more": "Показать ещё",
       "empty": "Ещё ничего не слушал",
       "ctx": { "album": "альбом", "playlist": "плейлист", "artist": "артист", "wave": "волна", "radio": "радио", "mix": "микс", "search": "поиск", "library": "медиатека", "queue": "очередь", "remote": "пульт" }
+    }
+  },
+  "uk": {
+    "title": "Користувач",
+    "back": "Користувачі",
+    "missing": "Такого користувача немає",
+    "missingText": "Можливо, обліковий запис видалили",
+    "you": "це ви",
+    "more": "Ще",
+    "give": "Надати доступ",
+    "live": "Зараз слухає",
+    "roles": {
+      "title": "Ролі",
+      "idp": "видана провайдером входу",
+      "given": { "admin": "{name} тепер адміністратор", "listener": "{name} отримав доступ до музики" },
+      "removed": { "admin": "{name} більше не адміністратор", "listener": "{name} більше не слухач" }
+    },
+    "block": {
+      "action": "Заблокувати",
+      "undo": "Розблокувати",
+      "done": "{name} заблоковано: вхід закрито, сесії завершено",
+      "undone": "{name} знову може входити",
+      "since": "Заблоковано {when}: увійти не може",
+      "now": "Заблоковано: увійти не може"
+    },
+    "rename": {
+      "action": "Змінити ім’я",
+      "title": "Ім’я",
+      "note": "Провайдер входу більше не змінюватиме це ім’я",
+      "submit": "Зберегти",
+      "done": "Ім’я змінено"
+    },
+    "reset": {
+      "action": "Посилання для нового пароля",
+      "actionNew": "Посилання, щоб задати пароль",
+      "title": "Посилання для нового пароля",
+      "text": "Передайте його: {name} задасть новий пароль, попередні сесії закриються. Посилання одноразове, діє 48 годин"
+    },
+    "delete": {
+      "action": "Видалити обліковий запис",
+      "title": "Видалити обліковий запис",
+      "text": "Обліковий запис «{name}» зникне разом з усіма даними: медіатекою, плейлистами, історією, пристроями й сесіями. Повернути не вийде.",
+      "type": "Щоб підтвердити, введіть ім’я: {name}",
+      "submit": "Видалити назавжди",
+      "done": "Обліковий запис «{name}» видалено"
+    },
+    "err": {
+      "failed": "Не вдалося — спробуйте ще раз",
+      "self": "Із собою так не можна",
+      "lastAdmin": "Це єдиний адміністратор: спершу надайте роль комусь іще",
+      "lastAdminShort": "єдиний адміністратор"
+    },
+    "stats": {
+      "title": "Статистика",
+      "h7": "слухав за 7 днів",
+      "h30": "слухав за 30 днів",
+      "p30": "прослуховувань за 30 днів",
+      "total": "прослуховувань загалом",
+      "minutes": "Хвилини на день",
+      "chart": "Скільки слухав по днях за 30 днів"
+    },
+    "top": {
+      "artists": "Улюблені виконавці",
+      "tracks": "Улюблені треки",
+      "genres": "Жанри",
+      "empty": "За 30 днів поки нічого"
+    },
+    "profile": {
+      "title": "Профіль і вхід",
+      "created": "Зареєстрований",
+      "lastLogin": "Останній вхід",
+      "username": "Логін",
+      "noPassword": "пароль не задано",
+      "method": "Вхід",
+      "name": "Ім’я",
+      "nameLocked": "задано вручну"
+    },
+    "library": {
+      "title": "Медіатека",
+      "playlists": "Плейлисти",
+      "liked": "Вподобані треки",
+      "albums": "Збережені альбоми",
+      "followed": "Підписки на виконавців",
+      "friends": "Друзі",
+      "imports": "Імпорти"
+    },
+    "sessions": {
+      "title": "Пристрої та сесії",
+      "hint": "Вкладки сайту й застосунку, де виконано вхід",
+      "all": "Вийти всюди",
+      "allDone": "Сесії завершено: {n}",
+      "done": "Сесію завершено",
+      "revoke": "Завершити сесію",
+      "browser": "Браузер",
+      "empty": "Відкритих сесій немає"
+    },
+    "invite": {
+      "title": "Запрошення",
+      "came": "Прийшов за запрошенням",
+      "none": "без запрошення",
+      "unknown": "від видаленого облікового запису",
+      "sent": "Запрошення",
+      "status": { "active": "чекає", "used": "прийнято", "expired": "прострочено", "revoked": "відкликано" }
+    },
+    "acq": {
+      "title": "Завантаження",
+      "hint": "Записи, які сервер завантажив через цю людину: лайк, плейлист, відтворення",
+      "total": "Усього",
+      "ready": "Готово",
+      "active": "У роботі",
+      "failed": "Не вийшло"
+    },
+    "history": {
+      "title": "Історія прослуховувань",
+      "hint": "У приватному сеансі видно лише час",
+      "private": "Приватний сеанс",
+      "skipped": "пропущено",
+      "more": "Показати ще",
+      "empty": "Ще нічого не слухав",
+      "ctx": { "album": "альбом", "playlist": "плейлист", "artist": "виконавець", "wave": "хвиля", "radio": "радіо", "mix": "мікс", "search": "пошук", "library": "медіатека", "queue": "черга", "remote": "пульт" }
     }
   },
   "en": {

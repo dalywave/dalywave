@@ -41,6 +41,10 @@ const privateDesc = computed(() => (priv.on.value ? [tg('friends.privateHint'), 
     "shareOff": "Друзья видят только ваше имя",
     "start": "Включить"
   },
+  "uk": {
+    "shareOff": "Друзі бачать тільки ваше ім’я",
+    "start": "Увімкнути"
+  },
   "en": {
     "shareOff": "Friends only see your name",
     "start": "Turn on"

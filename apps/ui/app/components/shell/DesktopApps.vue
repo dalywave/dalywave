@@ -51,7 +51,7 @@ const deck = computed(() => apps.value?.find(a => a.platform === 'streamdeck') ?
 /** Плагин скачан: подсказать, что дальше */
 const deckTaken = ref(false)
 
-const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, locale.value === 'en' ? 'en' : 'ru')}`
+const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, locale.value === 'en' ? 'en' : locale.value === 'uk' ? 'uk' : 'ru')}`
 </script>
 
 <template>
@@ -157,6 +157,17 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
     "deckWhat": "Плагин для Stream Deck и Stream Deck +",
     "deckReq": "Для Mac и Windows, Stream Deck {v} и новее",
     "deckNext": "Откройте файл — Stream Deck установит плагин и профиль «DalyWave». Нажмите любую кнопку DalyWave и войдите в открывшемся окне"
+  },
+  "uk": {
+    "macReq": "Apple silicon, macOS {v} і новіші",
+    "winReq": "Windows {v} і новіші, 64 біт",
+    "download": "Завантажити",
+    "intel": "Для Mac з Intel",
+    "soon": "Незабаром",
+    "failed": "Не вдалося завантажити",
+    "deckWhat": "Плагін для Stream Deck і Stream Deck +",
+    "deckReq": "Для Mac і Windows, Stream Deck {v} і новіші",
+    "deckNext": "Відкрийте файл — Stream Deck встановить плагін і профіль «DalyWave». Натисніть будь-яку кнопку DalyWave й увійдіть у вікні, що відкриється"
   },
   "en": {
     "macReq": "Apple silicon, macOS {v} or later",

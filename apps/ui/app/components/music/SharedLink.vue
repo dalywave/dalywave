@@ -196,6 +196,26 @@ onBeforeUnmount(() => {
       "network": "Попробуйте ещё раз чуть позже"
     }
   },
+  "uk": {
+    "title": "Посилання",
+    "from": "З {source}",
+    "looking": "Шукаємо в каталозі…",
+    "play": "Слухати",
+    "like": "До вподобаного",
+    "liked": "У вподобаному",
+    "toPlaylist": "До плейлиста",
+    "openAlbum": "Відкрити альбом",
+    "error": {
+      "unsupported_link": "Це посилання не відкрити",
+      "not_found": "Не знайшли в каталозі",
+      "network": "Сервер не відповів"
+    },
+    "errorText": {
+      "unsupported_link": "Підходять посилання з Deezer, Spotify, Apple Music, YouTube, SoundCloud і Bandcamp",
+      "not_found": "Спробуйте знайти пісню пошуком",
+      "network": "Спробуйте ще раз трохи згодом"
+    }
+  },
   "en": {
     "title": "Link",
     "from": "From {source}",

@@ -159,6 +159,14 @@ function move(d: number) {
     "group": { "sections": "Разделы", "settings": "Настройки", "people": "Люди", "tracks": "Записи", "jobs": "Упавшие задачи" },
     "settings": { "general": "Общее, часовой пояс", "signin": "Вход", "music": "Музыка: подписки, скорость, расписание", "storage": "Хранилище", "clips": "Клипы: качество, место", "reco": "Рекомендации", "notifications": "Уведомления", "integrations": "Интеграции" }
   },
+  "uk": {
+    "title": "Пошук в адмінці",
+    "placeholder": "Розділ, людина, трек, завдання або налаштування",
+    "empty": "Нічого не знайшлося",
+    "settingsWord": "Налаштування",
+    "group": { "sections": "Розділи", "settings": "Налаштування", "people": "Люди", "tracks": "Записи", "jobs": "Невдалі завдання" },
+    "settings": { "general": "Загальне, часовий пояс", "signin": "Вхід", "music": "Музика: підписки, швидкість, розклад", "storage": "Сховище", "clips": "Кліпи: якість, місце", "reco": "Рекомендації", "notifications": "Сповіщення", "integrations": "Інтеграції" }
+  },
   "en": {
     "title": "Search the admin",
     "placeholder": "Section, person, track, job or setting",

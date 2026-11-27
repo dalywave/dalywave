@@ -111,6 +111,10 @@ function radio() {
     "title": "Трек",
     "radio": "Радио"
   },
+  "uk": {
+    "title": "Трек",
+    "radio": "Радіо"
+  },
   "en": {
     "title": "Track",
     "radio": "Radio"

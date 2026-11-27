@@ -66,6 +66,15 @@ const showUnset = ref(false)
     "hideUnset": "Скрыть незаданные",
     "failed": "Не получилось узнать настройки сервера"
   },
+  "uk": {
+    "title": "Задано на сервері",
+    "note": "Ці налаштування задаються змінними середовища й змінюються лише на сервері",
+    "hidden": "задано",
+    "unset": "не задано",
+    "showUnset": "Інші змінні розділу: {n}",
+    "hideUnset": "Сховати незадані",
+    "failed": "Не вдалося отримати налаштування сервера"
+  },
   "en": {
     "title": "Set on the server",
     "note": "These come from environment variables and change only on the server",

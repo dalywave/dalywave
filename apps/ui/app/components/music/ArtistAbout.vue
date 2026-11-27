@@ -79,6 +79,14 @@ const facts = computed(() => {
     "from": "Откуда",
     "genres": "Жанры"
   },
+  "uk": {
+    "title": "Про виконавця",
+    "more": "Читати далі",
+    "active": "На сцені",
+    "since": "з {year}",
+    "from": "Звідки",
+    "genres": "Жанри"
+  },
   "en": {
     "title": "About",
     "more": "Read more",

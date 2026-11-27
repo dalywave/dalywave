@@ -103,6 +103,11 @@ watch(type, () => void nextTick(() => reveal()))
     "library": "В медиатеке",
     "type": { "all": "Всё", "tracks": "Треки", "artists": "Артисты", "albums": "Альбомы", "playlists": "Плейлисты", "sound": "По звучанию" }
   },
+  "uk": {
+    "label": "Фільтри",
+    "library": "У медіатеці",
+    "type": { "all": "Усе", "tracks": "Треки", "artists": "Виконавці", "albums": "Альбоми", "playlists": "Плейлисти", "sound": "За звучанням" }
+  },
   "en": {
     "label": "Filters",
     "library": "In library",

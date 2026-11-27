@@ -159,6 +159,24 @@ const moreItems = computed<MenuEntry[]>(() => {
       "compilationsTitle": "Сборники"
     }
   },
+  "uk": {
+    "title": "Виконавець",
+    "resume": "Продовжити",
+    "shuffle": "Перемішати",
+    "follow": "Підписатися",
+    "following": "Ви підписані",
+    "popular": "Популярні треки",
+    "more": "Показати 10",
+    "less": "Згорнути",
+    "related": "Схожі виконавці",
+    "soon": "Незабаром",
+    "empty": "Релізів поки немає",
+    "kinds": {
+      "albumsTitle": "Альбоми",
+      "epsTitle": "EP і сингли",
+      "compilationsTitle": "Збірки"
+    }
+  },
   "en": {
     "title": "Artist",
     "resume": "Resume",

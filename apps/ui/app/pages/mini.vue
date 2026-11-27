@@ -182,6 +182,15 @@ html[data-mini] .ambient { display: none; }
     "seek": "Позиция в треке",
     "back": "Открыть DalyWave"
   },
+  "uk": {
+    "nothing": "Нічого не грає",
+    "prev": "Попередній",
+    "next": "Наступний",
+    "play": "Слухати",
+    "pause": "Пауза",
+    "seek": "Позиція в треку",
+    "back": "Відкрити DalyWave"
+  },
   "en": {
     "nothing": "Nothing playing",
     "prev": "Previous",

@@ -50,7 +50,7 @@ async function share() {
 const guestsLabel = computed(() => {
   const n = jam.guests.length
   if (lang.value === 'en') return n === 1 ? '1 guest' : `${n} guests`
-  return `${n}${NBSP}${plural(n, ['гость', 'гостя', 'гостей'])}`
+  return `${n}${NBSP}${plural(n, lang.value === 'uk' ? ['гість', 'гості', 'гостей'] : ['гость', 'гостя', 'гостей'])}`
 })
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
@@ -194,6 +194,31 @@ const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
     "approval": "Одобрять треки гостей",
     "canListen": "Гости слушают у себя",
     "end": "Закончить"
+  },
+  "uk": {
+    "title": "Слухати разом",
+    "intro": "Друзі відкриють посилання на телефоні й додадуть свої треки в чергу — без облікового запису",
+    "start": "Почати",
+    "qr": "QR-код посилання для гостей",
+    "scan": "Наведіть камеру телефона або надішліть посилання",
+    "copy": "Скопіювати",
+    "copied": "Посилання скопійовано",
+    "copyFailed": "Не вдалося скопіювати посилання",
+    "share": "Надіслати",
+    "shareTitle": "Слухаємо разом у DalyWave",
+    "pending": "Чекають схвалення",
+    "approve": "Додати в чергу",
+    "decline": "Відхилити",
+    "listening": "Слухають",
+    "online": "на зв’язку {n}",
+    "noGuests": "Поки нікого",
+    "here": "на зв’язку",
+    "away": "не на зв’язку",
+    "remove": "Прибрати {name}",
+    "canAdd": "Гості додають треки",
+    "approval": "Схвалювати треки гостей",
+    "canListen": "Гості слухають у себе",
+    "end": "Завершити"
   },
   "en": {
     "title": "Listen together",

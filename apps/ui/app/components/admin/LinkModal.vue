@@ -53,6 +53,7 @@ async function copy(url: string) {
 <i18n lang="json">
 {
   "ru": { "copy": "Скопировать", "copied": "Ссылка скопирована", "copyFailed": "Не получилось скопировать — выделите ссылку вручную" },
+  "uk": { "copy": "Скопіювати", "copied": "Посилання скопійовано", "copyFailed": "Не вдалося скопіювати — виділіть посилання вручну" },
   "en": { "copy": "Copy", "copied": "Link copied", "copyFailed": "Couldn't copy — select the link manually" }
 }
 </i18n>

@@ -66,6 +66,7 @@ const onMenu = () => (menu.value = pla.menuFor(props.playlist))
 <i18n lang="json">
 {
   "ru": { "kicker": "Микс дня", "kind": { "on_repeat": "На повторе", "repeat_rewind": "Старые хиты" } },
+  "uk": { "kicker": "Мікс дня", "kind": { "on_repeat": "На повторі", "repeat_rewind": "Старі хіти" } },
   "en": { "kicker": "Daily mix", "kind": { "on_repeat": "On repeat", "repeat_rewind": "Repeat rewind" } }
 }
 </i18n>

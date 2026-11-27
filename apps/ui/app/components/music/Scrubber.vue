@@ -272,6 +272,11 @@ function onKey(e: KeyboardEvent) {
     "transitionAt": "Переход в {time}",
     "valueText": "{pos} из {dur}"
   },
+  "uk": {
+    "seek": "Позиція в треку",
+    "transitionAt": "Перехід на {time}",
+    "valueText": "{pos} з {dur}"
+  },
   "en": {
     "seek": "Track position",
     "transitionAt": "Transition at {time}",

@@ -58,7 +58,12 @@ const meta = computed(() => {
   const x = r.value
   if (!x || x.plays === 0) return t('empty')
   const top = x.topArtists[0]?.artist.name
-  return [lang.value === 'en' ? `${formatNumber(x.minutes, 'en')} min` : `${formatNumber(x.minutes)}${NBSP}${plural(x.minutes, ['минута', 'минуты', 'минут'])}`, top].filter(Boolean).join(' · ')
+  const minutes = lang.value === 'en'
+    ? `${formatNumber(x.minutes, 'en')} min`
+    : lang.value === 'uk'
+      ? `${formatNumber(x.minutes, 'uk')}${NBSP}${plural(x.minutes, ['хвилина', 'хвилини', 'хвилин'])}`
+      : `${formatNumber(x.minutes)}${NBSP}${plural(x.minutes, ['минута', 'минуты', 'минут'])}`
+  return [minutes, top].filter(Boolean).join(' · ')
 })
 const past = computed(() => (years.value?.years ?? []).filter(y => y.year !== years.value?.current && y.minutes > 0))
 const href = computed(() => `/rewind?year=${r.value?.year ?? ''}`)
@@ -263,6 +268,15 @@ const yearHalves = computed(() => [String(r.value?.year ?? '').slice(0, 2), Stri
     "watch": "Смотреть",
     "empty": "Пока тихо — итоги соберутся из прослушиваний",
     "past": "Прошлые годы"
+  },
+  "uk": {
+    "kicker": "Підсумки року",
+    "soFar": "Підсумки на сьогодні",
+    "sideA": "Сторона А",
+    "ready": "Твої підсумки {year} готові",
+    "watch": "Дивитися",
+    "empty": "Поки тихо — підсумки зберуться з прослуховувань",
+    "past": "Минулі роки"
   },
   "en": {
     "kicker": "Year in review",

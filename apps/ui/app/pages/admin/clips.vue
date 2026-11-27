@@ -56,6 +56,10 @@ onMounted(() => {
     "title": "Клипы",
     "reports": { "title": "Жалобы на клипы", "hint": "Слушатели скрыли эти клипы у себя — выберите другой или оставьте без клипа", "n": "скрыли: {n}" }
   },
+  "uk": {
+    "title": "Кліпи",
+    "reports": { "title": "Скарги на кліпи", "hint": "Слухачі приховали ці кліпи в себе — виберіть інший або залиште без кліпу", "n": "приховали: {n}" }
+  },
   "en": {
     "title": "Clips",
     "reports": { "title": "Clip reports", "hint": "Listeners hid these clips — pick another one or leave the track without a clip", "n": "hidden: {n}" }

@@ -34,6 +34,7 @@ const to = computed(() => ({ path: '/describe', query: { text: props.text } }))
 <i18n lang="json">
 {
   "ru": { "build": "Собрать плейлист по описанию" },
+  "uk": { "build": "Зібрати плейлист за описом" },
   "en": { "build": "Build a playlist from this description" }
 }
 </i18n>

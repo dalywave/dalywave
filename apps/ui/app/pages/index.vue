@@ -34,7 +34,7 @@ const greeting = computed(() => {
   const key = h < 5 ? 'night' : h < 12 ? 'morning' : h < 17 ? 'day' : h < 23 ? 'evening' : 'night'
   return firstName.value ? t(`greet.${key}`, { name: firstName.value }) : t(`greetShort.${key}`)
 })
-const today = computed(() => new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()))
+const today = computed(() => new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()))
 
 const isNew = (a: AlbumSummary) => !!a.releaseDate && Date.now() - new Date(a.releaseDate).getTime() < 14 * 86_400_000
 const albums = (s: Shelf) => s.items.filter((i): i is ShelfItem & { type: 'album' } => i.type === 'album') as AlbumSummary[]
@@ -324,6 +324,38 @@ function playLiked(list: Track[], i: number) {
     "find": "Найти музыку",
     "import": "Перенести медиатеку",
     "retry": "Повторить"
+  },
+  "uk": {
+    "title": "Головна",
+    "greet": {
+      "morning": "Доброго ранку, {name}",
+      "day": "Добрий день, {name}",
+      "evening": "Добрий вечір, {name}",
+      "night": "Доброї ночі, {name}"
+    },
+    "greetShort": {
+      "morning": "Доброго ранку",
+      "day": "Добрий день",
+      "evening": "Добрий вечір",
+      "night": "Доброї ночі"
+    },
+    "recent": "Нещодавно вподобане",
+    "playAll": "Слухати",
+    "hint": {
+      "discover_weekly": "Нове поруч із вашим смаком",
+      "release_radar": "Свіжі релізи ваших виконавців",
+      "forgotten_favorites": "Улюблене, яке давно не грало"
+    },
+    "allLiked": "Усе вподобане",
+    "settings": "Налаштування",
+    "quick": "Швидкий доступ",
+    "failed": "Головна не завантажилася",
+    "failedText": "Перевірте з’єднання і спробуйте ще раз",
+    "emptyTitle": "Тут з’являться ваші добірки",
+    "emptyText": "Слухайте хвилю та позначайте улюблене — мікси й новинки зберуться самі",
+    "find": "Знайти музику",
+    "import": "Перенести медіатеку",
+    "retry": "Повторити"
   },
   "en": {
     "title": "Home",

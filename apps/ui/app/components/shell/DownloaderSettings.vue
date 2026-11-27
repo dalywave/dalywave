@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatNumber } from '~/utils/format'
+import { formatNumber, intlLocale } from '~/utils/format'
 
 // Раздел настроек «Загрузчик на этом Mac» (Windows — «на этом ПК»): переключатель, что делает
 // сейчас, счётчик за сегодня, журнал. На сайте и телефонах — одна строка: загрузчик живёт в
@@ -26,7 +26,7 @@ const job = computed(() => (view.value.kind === 'working' ? view.value.job : nul
 const percent = computed(() => Math.floor((job.value?.progress ?? 0) * 100))
 
 function time(ms: number) {
-  return new Date(ms).toLocaleTimeString(lang.value === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return new Date(ms).toLocaleTimeString(intlLocale(lang.value, 'en-US'), { hour: '2-digit', minute: '2-digit' })
 }
 
 /** Что загрузчик делает прямо сейчас — одной строкой */
@@ -167,6 +167,42 @@ onMounted(() => {
     "counters": "скачано {done} · не удалось {failed}",
     "log": "Журнал",
     "failed": "Не получилось — попробуйте ещё раз"
+  },
+  "uk": {
+    "titleMac": "Завантажувач на цьому Mac",
+    "titlePc": "Завантажувач на цьому ПК",
+    "titleWeb": "Завантажувач",
+    "web": "Працює в застосунку для Mac і ПК",
+    "switchMac": "Завантажувати на цьому Mac",
+    "switchPc": "Завантажувати на цьому ПК",
+    "forbidden": "Доступний адміністраторові",
+    "state": {
+      "working": "Завантажує: {track} — {artist}",
+      "workingTrack": "Завантажує: {track}",
+      "workingUnknown": "Завантажує",
+      "finishing": "Доробляє трек, потім пауза",
+      "idle": "Чекає завдань",
+      "paused": "На паузі",
+      "offline": "Немає зв’язку із сервером",
+      "resting": "Відпочиває",
+      "restingUntil": "Відпочиває до {time}",
+      "starting": "Запускається…",
+      "stopping": "Зупиняється…",
+      "restarting": "Перезапускається…",
+      "token": "Сервер не прийняв токен",
+      "broken": "Встановлення пошкоджено",
+      "disabled": "Вимкнений",
+      "signed-out": "Потрібен вхід",
+      "forbidden": "Доступний адміністраторові"
+    },
+    "progress": "Перебіг завдання",
+    "pause": "Пауза",
+    "resume": "Продовжити",
+    "recreate": "Перестворити токен",
+    "today": "Сьогодні",
+    "counters": "завантажено {done} · не вдалося {failed}",
+    "log": "Журнал",
+    "failed": "Не вдалося — спробуйте ще раз"
   },
   "en": {
     "titleMac": "Downloader on this Mac",

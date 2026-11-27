@@ -12,9 +12,9 @@ const { t } = useI18n({ useScope: 'local' })
 function laneMode(l: Lane) {
   const workers = lang.value === 'en'
     ? `${l.concurrency} ${l.concurrency === 1 ? 'worker' : 'workers'}`
-    : `${l.concurrency}\u00a0${plural(l.concurrency, ['поток', 'потока', 'потоков'])}`
+    : `${l.concurrency}\u00a0${plural(l.concurrency, lang.value === 'uk' ? ['потік', 'потоки', 'потоків'] : ['поток', 'потока', 'потоков'])}`
   if (!l.minIntervalMs) return workers
-  const sec = (l.minIntervalMs / 1000).toLocaleString(lang.value === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: 1 })
+  const sec = (l.minIntervalMs / 1000).toLocaleString(intlLocale(lang.value, 'en-US'), { maximumFractionDigits: 1 })
   return `${workers} · ${t('pause', { s: sec })}`
 }
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -96,6 +96,25 @@ async function toggle(l: Lane, paused: boolean) {
     "paused": "«{title}» на паузе",
     "resumed": "«{title}» снова работает",
     "failed": "Не получилось изменить полосу"
+  },
+  "uk": {
+    "title": "Смуги черги",
+    "lane": "Смуга",
+    "queued": "Чекають",
+    "running": "Ідуть",
+    "failed24": "Помилки",
+    "done": "За добу",
+    "mode": "Як працює",
+    "state": "Увімкнено",
+    "pause": "пауза {s} с",
+    "window": "лише {w}",
+    "closed": "поза розкладом",
+    "switchRunning": "«{title}» працює",
+    "switchPaused": "«{title}» на паузі",
+    "pausedLabel": "на паузі",
+    "paused": "«{title}» на паузі",
+    "resumed": "«{title}» знову працює",
+    "failed": "Не вдалося змінити смугу"
   },
   "en": {
     "title": "Queue lanes",

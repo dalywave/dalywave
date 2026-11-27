@@ -602,6 +602,29 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
       "playlists": "Плейлистов с таким названием нет"
     }
   },
+  "uk": {
+    "title": "Пошук",
+    "cancel": "Скасувати",
+    "resultsFor": "Результати: «{q}»",
+    "yourArtists": "Ваші виконавці",
+    "nothing": "Нічого не знайдено",
+    "nothingMine": "У медіатеці такого немає",
+    "nothingFor": "За запитом «{q}»",
+    "searchEverywhere": "Шукати всюди",
+    "top": "Найкращий збіг",
+    "didYouMean": "Можливо, ви шукали",
+    "track": "Трек",
+    "tracks": "Треки",
+    "artists": "Виконавці",
+    "albums": "Альбоми й сингли",
+    "playlists": "Плейлисти",
+    "noneOf": {
+      "tracks": "Треків не знайдено",
+      "artists": "Виконавців не знайдено",
+      "albums": "Альбомів не знайдено",
+      "playlists": "Плейлистів із такою назвою немає"
+    }
+  },
   "en": {
     "title": "Search",
     "cancel": "Cancel",

@@ -625,6 +625,13 @@ const settled = computed(() => now.value >= T)
     "options": "варианты волны",
     "replay": "Показать ещё раз"
   },
+  "uk": {
+    "aria": "Як підібрано трек: мапа смаку",
+    "done": "дослухано",
+    "skipped": "пропущено",
+    "options": "варіанти хвилі",
+    "replay": "Показати ще раз"
+  },
   "en": {
     "aria": "How this track was picked: taste map",
     "done": "played through",

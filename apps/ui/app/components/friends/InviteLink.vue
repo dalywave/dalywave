@@ -73,6 +73,12 @@ async function share() {
     "share": "Отправить",
     "reset": "Новая ссылка"
   },
+  "uk": {
+    "qr": "QR-код посилання",
+    "copy": "Скопіювати",
+    "share": "Надіслати",
+    "reset": "Нове посилання"
+  },
   "en": {
     "qr": "QR code with the link",
     "copy": "Copy",

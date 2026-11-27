@@ -208,6 +208,7 @@ const guests = computed(() => view.value?.guests ?? [])
 const guestsLabel = computed(() => {
   const n = guests.value.length
   if (lang.value === 'en') return n === 1 ? '1 guest' : `${n} guests`
+  if (lang.value === 'uk') return `${n}${NBSP}${plural(n, ['гість', 'гості', 'гостей'])}`
   return `${n}${NBSP}${plural(n, ['гость', 'гостя', 'гостей'])}`
 })
 
@@ -663,6 +664,59 @@ async function syncAudio(force = false) {
     "waitingHost": "Хозяин скоро посмотрит",
     "next": "Далее",
     "queueEmpty": "Очередь пуста — добавьте первый трек"
+  },
+  "uk": {
+    "title": "Слухати разом",
+    "titleHost": "{name} — слухати разом",
+    "invite": "{name} кличе слухати разом",
+    "inviteText": "Додавайте свої треки до спільної черги — музика грає в господаря",
+    "nameLabel": "Ваше ім’я",
+    "namePlaceholder": "Як вас звати?",
+    "join": "Приєднатися",
+    "noAccount": "Обліковий запис не потрібен",
+    "joinFailed": "Не вдалося увійти — спробуйте ще раз",
+    "slowDown": "Занадто часто — зачекайте хвилину",
+    "endedTitle": "Сеанс завершився",
+    "endedText": "Попросіть у господаря нове посилання",
+    "removedTitle": "Вас прибрали із сеансу",
+    "removedText": "Господар закрив вам доступ до цього сеансу",
+    "leave": "Вийти",
+    "nowPlaying": "Зараз грає",
+    "addedBy": "додав {name}",
+    "position": "Позиція в треку",
+    "hostAway": "господар не на зв’язку",
+    "paused": "пауза",
+    "silence": "Поки тиша",
+    "silenceText": "Музика почнеться, коли {name} її ввімкне",
+    "like": "Подобається",
+    "skip": "Пропустити",
+    "skipVotes": "{n} з {of}",
+    "listenHere": "Слухати в себе",
+    "listeningHere": "Грає у вас",
+    "connecting": "Підключаємо…",
+    "notReady": "Трек не готовий",
+    "addTitle": "Додати до черги",
+    "searchPlaceholder": "Трек або виконавець",
+    "searching": "Шукаємо…",
+    "nothingFound": "Нічого не знайшли",
+    "searchFailed": "Пошук не відповів — спробуйте ще раз",
+    "explicit": "Ненормативна лексика",
+    "inQueue": "У черзі",
+    "waiting": "Чекає",
+    "add": "Додати до черги",
+    "added": "«{title}» — у черзі",
+    "sentForApproval": "Надіслали господареві на схвалення",
+    "alreadyQueued": "Цей трек уже в черзі",
+    "nothingPlaying": "У господаря зараз нічого не грає",
+    "tooManyPending": "Зачекайте, поки господар перегляне попередні треки",
+    "addingOff": "Господар вимкнув додавання треків",
+    "explicitOff": "Господар слухає без нецензурних треків",
+    "addFailed": "Не вдалося додати — спробуйте ще раз",
+    "skipFailed": "Не вдалося проголосувати",
+    "yourWaiting": "Чекають на схвалення",
+    "waitingHost": "Господар скоро перегляне",
+    "next": "Далі",
+    "queueEmpty": "Черга порожня — додайте перший трек"
   },
   "en": {
     "title": "Listen together",

@@ -2,6 +2,7 @@
 import type { Health } from '~/api/types'
 import { ApiError } from '~/api/types'
 import type { TransitionMode } from '~/stores/player'
+import type { Locale } from '~/utils/format'
 
 // Настройки: аккаунт, воспроизведение, волна, внешний вид, о приложении.
 // Колонка по центру; каждая группа — <SettingsGroup> из строк <SettingsRow> (см. components/settings).
@@ -120,8 +121,8 @@ function resetWave() {
 // ---------- Внешний вид ----------
 
 const language = computed({
-  get: () => (i18n.locale.value === 'en' ? 'en' : 'ru') as 'ru' | 'en',
-  set: (v: 'ru' | 'en') => {
+  get: () => (i18n.locale.value === 'en' || i18n.locale.value === 'uk' ? i18n.locale.value : 'ru') as Locale,
+  set: (v: Locale) => {
     void i18n.setLocale(v)
     // Миксы сервера («Микс дня») — на новом языке после перезагрузки данных
     setContentLocale(v)
@@ -254,7 +255,7 @@ const language = computed({
         />
       </SettingsRow>
       <SettingsRow :title="t('language')">
-        <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
+        <UiSegmentedControl v-model="language" :options="[{ value: 'ru', label: 'Русский' }, { value: 'uk', label: 'Українська' }, { value: 'en', label: 'English' }]" :label="t('language')" :size="ui.isPhone ? 'sm' : 'md'" />
       </SettingsRow>
       <!-- Живые обложки и видео «Открытий» — свои для устройства; «только по Wi-Fi» — где бывает сотовая -->
       <SettingsRow :title="t('motion')" :description="t('motionDesc')">
@@ -433,6 +434,66 @@ const language = computed({
     "deleteFailed": "Не получилось удалить аккаунт — попробуйте ещё раз",
     "serverDown": "Не отвечает",
     "version": "Версия"
+  },
+  "uk": {
+    "title": "Налаштування",
+    "account": "Обліковий запис",
+    "roleAdmin": "Адміністратор",
+    "demo": "Демо",
+    "demoNote": "Спільний обліковий запис для демо: пароль і способи входу не змінюються, видалити його не можна. Уночі все повернеться як було",
+    "logout": "Вийти",
+    "logoutFailed": "Не вдалося вийти — спробуйте ще раз",
+    "library": "Медіатека",
+    "import": "Перенести музику",
+    "importDesc": "Зі Spotify, списком або своїми файлами",
+    "playback": "Відтворення",
+    "normalize": "Вирівнювати гучність",
+    "spatial": "Просторове аудіо",
+    "spatialDesc": "З AirPods: утримуйте гучність у Пункті керування",
+    "spatialOnDesc": "{name}: режим — у Пункті керування, утримуючи гучність",
+    "spatialOn": "Увімкнено",
+    "scrubber": "Смуга перемотування",
+    "explicit": "Без нецензурного",
+    "explicitDesc": "Треки з позначкою «E» не грають",
+    "quality": "Якість",
+    "qualityWifi": "Через Wi-Fi",
+    "qualityCellular": "Через стільникову",
+    "qualityDownload": "Завантаження",
+    "q": { "high": "Висока", "normal": "Звичайна", "saver": "Економія" },
+    "transitions": "Переходи між треками",
+    "wave": "Моя хвиля",
+    "taste": "Мій смак",
+    "tasteDesc": "Що хвиля знає про вас і як це виправити",
+    "waveRow": "Налаштування хвилі",
+    "focus": "Зосередження",
+    "focusDesc": "Хвиля під увімкнений режим зосередження",
+    "waveResetBtn": "Скинути",
+    "waveReset": "Налаштування хвилі скинуто",
+    "appearance": "Інтерфейс",
+    "theme": "Тема",
+    "themeDark": "Темна",
+    "themeLight": "Світла",
+    "themeSystem": "Як у системі",
+    "language": "Мова",
+    "sidePlayer": "Плеєр збоку",
+    "sidePlayerDesc": "Горизонтально «Зараз грає» — колонкою праворуч",
+    "motion": "Відео замість обкладинки",
+    "motionDesc": "Фрагмент кліпу без звуку в плеєрі та у «Відкриттях»",
+    "motionWifi": "Лише через Wi-Fi",
+    "clipStyle": "Кліпи в плеєрі",
+    "about": "Про застосунок",
+    "desktopAppsDesc": "Mac, Windows і Stream Deck",
+    "server": "Сервер",
+    "serverChange": "Змінити",
+    "privacy": "Конфіденційність",
+    "deleteAccount": "Видалити обліковий запис",
+    "deleteTitle": "Видалити обліковий запис?",
+    "deleteText": "Із сервера зникнуть медіатека, плейлисти, історія та всі пристрої. Повернути їх не вийде",
+    "deleteConfirm": "Видалити",
+    "deleteLastAdmin": "Ви єдиний адміністратор. Спершу призначте іншого",
+    "deleteFailed": "Не вдалося видалити обліковий запис — спробуйте ще раз",
+    "serverDown": "Не відповідає",
+    "version": "Версія"
   },
   "en": {
     "title": "Settings",

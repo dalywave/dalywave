@@ -541,6 +541,26 @@ const STORIES = {
     "soundOff": "Выключить звук",
     "progress": "Слайд {n} из {of}"
   },
+  "uk": {
+    "title": "Підсумки {year}",
+    "titleShort": "Підсумки року",
+    "saved": "Зображення збережено",
+    "shareFailed": "Не вдалося зібрати зображення",
+    "playlistSaved": "«Твої найкращі треки {year}» — у медіатеці",
+    "playlistFailed": "Не вдалося зберегти плейлист",
+    "moreSaved": "«Ще послухати {year}» — у\u00a0медіатеці",
+    "moreTitle": "Ще послухати {year}",
+    "waveTitle": "Хвиля {year}",
+    "open": "Відкрити",
+    "failed": "Підсумки не завантажилися",
+    "retry": "Ще раз",
+    "prev": "Назад",
+    "next": "Далі",
+    "close": "Закрити",
+    "soundOn": "Увімкнути звук",
+    "soundOff": "Вимкнути звук",
+    "progress": "Слайд {n} з {of}"
+  },
   "en": {
     "title": "Your {year}",
     "titleShort": "Year in review",

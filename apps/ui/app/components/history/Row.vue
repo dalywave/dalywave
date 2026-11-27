@@ -21,7 +21,7 @@ const { t } = useI18n()
 const track = computed(() => props.item.track)
 const isCurrent = computed(() => player.current?.track.id === track.value.id)
 const artists = computed(() => track.value.artists.map(a => a.name).join(', '))
-const time = computed(() => new Intl.DateTimeFormat(lang.value === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(props.item.startedAt)))
+const time = computed(() => new Intl.DateTimeFormat(intlLocale(lang.value, 'en-GB'), { hour: '2-digit', minute: '2-digit' }).format(new Date(props.item.startedAt)))
 const menuOpen = ref(false)
 const items = computed(() => (menuOpen.value ? menuFor(track.value, { extra: props.extra() }) : []))
 

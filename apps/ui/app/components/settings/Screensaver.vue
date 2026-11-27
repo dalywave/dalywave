@@ -61,6 +61,16 @@ async function install() {
     "done": "Выберите DalyWave в настройках заставки",
     "failed": "Не получилось установить заставку"
   },
+  "uk": {
+    "group": "Заставка",
+    "title": "Заставка DalyWave",
+    "hint": "Хвиля на екрані, поки Mac відпочиває",
+    "installed": "Встановлена",
+    "install": "Встановити",
+    "open": "Налаштувати",
+    "done": "Виберіть DalyWave у налаштуваннях заставки",
+    "failed": "Не вдалося встановити заставку"
+  },
   "en": {
     "group": "Screen saver",
     "title": "DalyWave screen saver",

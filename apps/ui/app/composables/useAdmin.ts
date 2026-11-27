@@ -1,5 +1,6 @@
 import type { AcquireReason, AcquisitionStatus, AttemptOutcome, AudioStatus, JobStatus, ServerEventType } from '~/api/types'
 import type { ServerEventOf } from '~/bridge/types'
+import type { Locale } from '~/utils/format'
 
 // Общее для страниц админки: подписи статусов и видов задач, счётчики в навигации, живые события
 
@@ -98,6 +99,6 @@ export function r2MonthlyUsd(bytes: number): number {
   const gb = bytes / 1024 ** 3
   return Math.max(0, gb - R2_FREE_GB) * R2_PRICE_GB_MONTH
 }
-export function formatUsd(v: number, locale: 'ru' | 'en'): string {
-  return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'ru-RU', { style: 'currency', currency: 'USD', maximumFractionDigits: v < 1 ? 2 : 0 }).format(v)
+export function formatUsd(v: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale(locale, 'en-US'), { style: 'currency', currency: 'USD', maximumFractionDigits: v < 1 ? 2 : 0 }).format(v)
 }

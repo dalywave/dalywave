@@ -1,7 +1,8 @@
 // Уведомления: подписи времени в центре, значки видов, ключ VAPID для подписки браузера.
 // Без зависимостей от Nuxt — проверяется `bun test`
+import { intlLocale, type Locale } from './format'
 
-export type Lang = 'ru' | 'en'
+export type Lang = Locale
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -16,14 +17,14 @@ export function notificationTime(iso: string, now: Date = new Date(), lang: Lang
   const at = new Date(iso)
   const diff = now.getTime() - at.getTime()
   if (Number.isNaN(diff)) return ''
-  if (diff < MIN) return lang === 'en' ? 'now' : 'сейчас'
-  if (diff < HOUR) return lang === 'en' ? `${Math.floor(diff / MIN)}m` : `${Math.floor(diff / MIN)} мин`
+  if (diff < MIN) return lang === 'en' ? 'now' : lang === 'uk' ? 'зараз' : 'сейчас'
+  if (diff < HOUR) return lang === 'en' ? `${Math.floor(diff / MIN)}m` : `${Math.floor(diff / MIN)} ${lang === 'uk' ? 'хв' : 'мин'}`
   const days = Math.round((startOfDay(now) - startOfDay(at)) / DAY)
-  if (days <= 0) return lang === 'en' ? `${Math.floor(diff / HOUR)}h` : `${Math.floor(diff / HOUR)} ч`
-  if (days === 1) return lang === 'en' ? 'yesterday' : 'вчера'
-  if (days < 7) return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'ru-RU', { weekday: 'short' }).format(at)
+  if (days <= 0) return lang === 'en' ? `${Math.floor(diff / HOUR)}h` : `${Math.floor(diff / HOUR)} ${lang === 'uk' ? 'год' : 'ч'}`
+  if (days === 1) return lang === 'en' ? 'yesterday' : lang === 'uk' ? 'вчора' : 'вчера'
+  if (days < 7) return new Intl.DateTimeFormat(intlLocale(lang, 'en-GB'), { weekday: 'short' }).format(at)
   const sameYear = at.getFullYear() === now.getFullYear()
-  return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'ru-RU', sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(at)
+  return new Intl.DateTimeFormat(intlLocale(lang, 'en-GB'), sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(at)
 }
 
 /** Значок вида уведомления, когда картинки нет */

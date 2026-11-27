@@ -17,6 +17,7 @@ const { t } = useI18n({ useScope: 'local' })
 <i18n lang="json">
 {
   "ru": { "or": "или" },
+  "uk": { "or": "або" },
   "en": { "or": "or" }
 }
 </i18n>

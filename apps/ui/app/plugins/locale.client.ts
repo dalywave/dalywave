@@ -1,9 +1,10 @@
 import { shellInfo } from '~/bridge/tauri/shell'
+import type { Locale } from '~/utils/format'
 import { setContentLocale } from '~/utils/mixTitles'
 
 // Язык интерфейса, выбранный в настройках, — до первой отрисовки. Не выбран — по языку системы:
-// русский для русского, украинского, белорусского и казахского, иначе английский (ревьюер App Store,
-// чужие серверы). На wave.daly.rest без выбора — русский
+// украинский для украинского, русский для русского, белорусского и казахского, иначе английский
+// (ревьюер App Store, чужие серверы). На wave.daly.rest без выбора — русский
 function savedLocale(): string | null {
   try {
     return localStorage.getItem('dw.locale')
@@ -14,7 +15,8 @@ function savedLocale(): string | null {
 }
 
 const OWNER_HOST = 'wave.daly.rest'
-const RUSSIAN = /^(ru|uk|be|kk)\b/i
+const UKRAINIAN = /^uk\b/i
+const RUSSIAN = /^(ru|be|kk)\b/i
 
 function serverHost(): string {
   try {
@@ -30,14 +32,19 @@ function serverHost(): string {
   }
 }
 
-function systemLocale(): 'ru' | 'en' {
+function systemLocale(): Locale {
   const langs = navigator.languages?.length ? navigator.languages : [navigator.language]
-  return langs.some(l => RUSSIAN.test(l)) ? 'ru' : 'en'
+  // Первый из знакомых языков по порядку предпочтений системы
+  for (const l of langs) {
+    if (UKRAINIAN.test(l)) return 'uk'
+    if (RUSSIAN.test(l)) return 'ru'
+  }
+  return 'en'
 }
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   const saved = savedLocale()
-  const locale = saved === 'en' || saved === 'ru'
+  const locale = saved === 'en' || saved === 'ru' || saved === 'uk'
     ? saved
     : serverHost() === OWNER_HOST ? 'ru' : systemLocale()
   if (locale !== nuxtApp.$i18n.locale.value) await nuxtApp.$i18n.setLocale(locale)
