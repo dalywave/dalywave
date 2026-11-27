@@ -25,7 +25,7 @@ const emit = defineEmits<{ toggle: [], moved: [] }>()
 const start = defineModel<number>('start', { required: true })
 const length = defineModel<StoryLength>('length', { required: true })
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.StoryMoment')
 const bridge = useBridge()
 
 const lengthOptions = computed<SegmentOption<string>[]>(() =>
@@ -215,35 +215,3 @@ function jump(ms: number) {
 .moment__jumps { display: flex; gap: 6px; margin-left: auto; }
 .moment__lyric { margin: -4px 0 0; overflow: hidden; font-size: var(--fs-small); color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "length": "Длина истории",
-    "sec": "{n} с",
-    "moment": "Момент для истории",
-    "play": "Послушать выбранное",
-    "stop": "Остановить",
-    "start": "Начало",
-    "chorus": "Припев"
-  },
-  "uk": {
-    "length": "Тривалість історії",
-    "sec": "{n} с",
-    "moment": "Момент для історії",
-    "play": "Послухати вибране",
-    "stop": "Зупинити",
-    "start": "Початок",
-    "chorus": "Приспів"
-  },
-  "en": {
-    "length": "Story length",
-    "sec": "{n} s",
-    "moment": "Moment for the story",
-    "play": "Play the selection",
-    "stop": "Stop",
-    "start": "Start",
-    "chorus": "Chorus"
-  }
-}
-</i18n>

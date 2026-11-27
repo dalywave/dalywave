@@ -28,7 +28,7 @@ const bridge = useBridge()
 const player = usePlayerStore()
 const ui = useUiStore()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.StoryShare')
 
 const phase = ref<Phase>('pick')
 const progress = ref(0)
@@ -400,53 +400,3 @@ function save() {
 .story__bar { position: relative; width: 120px; height: 3px; overflow: hidden; border-radius: 2px; background: rgba(255, 255, 255, 0.22); }
 .story__bar > span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: #fff; transition: width var(--dur-2) linear; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "История",
-    "make": "Собрать видео",
-    "repick": "Другой момент",
-    "listenFailed": "Не получилось включить отрывок",
-    "prepare": "Готовим звук",
-    "render": "Собираем видео · {n} %",
-    "upload": "Добавляем звук",
-    "share": "Поделиться",
-    "save": "Сохранить видео",
-    "saved": "Видео сохранено",
-    "retry": "Попробовать ещё раз",
-    "noAudio": "У этого трека пока нет звука для истории",
-    "failed": "Не получилось собрать видео"
-  },
-  "uk": {
-    "title": "Історія",
-    "make": "Зібрати відео",
-    "repick": "Інший момент",
-    "listenFailed": "Не вдалося ввімкнути уривок",
-    "prepare": "Готуємо звук",
-    "render": "Збираємо відео · {n} %",
-    "upload": "Додаємо звук",
-    "share": "Поділитися",
-    "save": "Зберегти відео",
-    "saved": "Відео збережено",
-    "retry": "Спробувати ще раз",
-    "noAudio": "У цього трека поки немає звуку для історії",
-    "failed": "Не вдалося зібрати відео"
-  },
-  "en": {
-    "title": "Story",
-    "make": "Make the video",
-    "repick": "Another moment",
-    "listenFailed": "Couldn't play the clip",
-    "prepare": "Preparing audio",
-    "render": "Making the video · {n}%",
-    "upload": "Adding audio",
-    "share": "Share",
-    "save": "Save video",
-    "saved": "Video saved",
-    "retry": "Try again",
-    "noAudio": "This track has no audio for a story yet",
-    "failed": "Couldn't make the video"
-  }
-}
-</i18n>

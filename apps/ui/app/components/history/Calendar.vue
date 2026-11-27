@@ -10,7 +10,7 @@ const props = defineProps<{
 const emit = defineEmits<{ pick: [day: string] }>()
 
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.history.Calendar')
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -131,11 +131,3 @@ const fullDate = (key: string) => {
   .cal__day { aspect-ratio: auto; height: 48px; min-height: 44px; font-size: var(--fs-body); }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "prev": "Предыдущий месяц", "next": "Следующий месяц" },
-  "uk": { "prev": "Попередній місяць", "next": "Наступний місяць" },
-  "en": { "prev": "Previous month", "next": "Next month" }
-}
-</i18n>

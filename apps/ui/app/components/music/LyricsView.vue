@@ -29,7 +29,7 @@ const emit = defineEmits<{
 const player = usePlayerStore()
 const ui = useUiStore()
 const { share } = useShare()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.LyricsView')
 const { tg } = useGlobalT()
 
 const track = computed(() => player.current?.track ?? null)
@@ -641,44 +641,3 @@ defineExpose({ synced })
 .ly.is-reduced .ly__main .w, .ly.is-reduced .ly__back .w { transition: none; transform: none !important; }
 .ly.is-reduced .ly__brk.is-active .ly__dots { animation: none; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "region": "Текст песни",
-    "loading": "Загружаем текст",
-    "failed": "Текст не загрузился",
-    "none": "Текста нет",
-    "instrumental": "Без слов",
-    "break": "Проигрыш",
-    "back": "К текущей строке",
-    "chorus": "Припев",
-    "shareLine": "Поделиться строкой",
-    "copyLine": "Скопировать строку"
-  },
-  "uk": {
-    "region": "Текст пісні",
-    "loading": "Завантажуємо текст",
-    "failed": "Текст не завантажився",
-    "none": "Тексту немає",
-    "instrumental": "Без слів",
-    "break": "Програш",
-    "back": "До поточного рядка",
-    "chorus": "Приспів",
-    "shareLine": "Поділитися рядком",
-    "copyLine": "Скопіювати рядок"
-  },
-  "en": {
-    "region": "Lyrics",
-    "loading": "Loading lyrics",
-    "failed": "Couldn’t load lyrics",
-    "none": "No lyrics",
-    "instrumental": "Instrumental",
-    "break": "Instrumental break",
-    "back": "Back to current line",
-    "chorus": "Chorus",
-    "shareLine": "Share line",
-    "copyLine": "Copy line"
-  }
-}
-</i18n>

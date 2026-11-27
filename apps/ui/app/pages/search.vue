@@ -11,7 +11,7 @@ const ui = useUiStore()
 const library = useLibraryStore()
 const player = usePlayerStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.search')
 const { tg } = useGlobalT()
 // Чарты, жанры и отрывки — из каталога Deezer: без него не показываются
 const server = useServerStore()
@@ -576,77 +576,3 @@ const albumMeta = (a: AlbumSummary) => [tg(`record.${a.recordType}`), a.artist.n
   .hint__link { display: inline-flex; align-items: center; min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Поиск",
-    "cancel": "Отменить",
-    "resultsFor": "Результаты: «{q}»",
-    "yourArtists": "Ваши артисты",
-    "nothing": "Ничего не нашлось",
-    "nothingMine": "В медиатеке такого нет",
-    "nothingFor": "По запросу «{q}»",
-    "searchEverywhere": "Искать везде",
-    "top": "Лучшее совпадение",
-    "didYouMean": "Возможно, вы искали",
-    "track": "Трек",
-    "tracks": "Треки",
-    "artists": "Артисты",
-    "albums": "Альбомы и синглы",
-    "playlists": "Плейлисты",
-    "noneOf": {
-      "tracks": "Треков не нашлось",
-      "artists": "Артистов не нашлось",
-      "albums": "Альбомов не нашлось",
-      "playlists": "Плейлистов с таким названием нет"
-    }
-  },
-  "uk": {
-    "title": "Пошук",
-    "cancel": "Скасувати",
-    "resultsFor": "Результати: «{q}»",
-    "yourArtists": "Ваші виконавці",
-    "nothing": "Нічого не знайдено",
-    "nothingMine": "У медіатеці такого немає",
-    "nothingFor": "За запитом «{q}»",
-    "searchEverywhere": "Шукати всюди",
-    "top": "Найкращий збіг",
-    "didYouMean": "Можливо, ви шукали",
-    "track": "Трек",
-    "tracks": "Треки",
-    "artists": "Виконавці",
-    "albums": "Альбоми й сингли",
-    "playlists": "Плейлисти",
-    "noneOf": {
-      "tracks": "Треків не знайдено",
-      "artists": "Виконавців не знайдено",
-      "albums": "Альбомів не знайдено",
-      "playlists": "Плейлистів із такою назвою немає"
-    }
-  },
-  "en": {
-    "title": "Search",
-    "cancel": "Cancel",
-    "resultsFor": "Results for “{q}”",
-    "yourArtists": "Your artists",
-    "nothing": "Nothing found",
-    "nothingMine": "Not in your library",
-    "nothingFor": "For “{q}”",
-    "searchEverywhere": "Search everywhere",
-    "top": "Top result",
-    "didYouMean": "Did you mean",
-    "track": "Song",
-    "tracks": "Songs",
-    "artists": "Artists",
-    "albums": "Albums and singles",
-    "playlists": "Playlists",
-    "noneOf": {
-      "tracks": "No songs found",
-      "artists": "No artists found",
-      "albums": "No albums found",
-      "playlists": "No playlists with that name"
-    }
-  }
-}
-</i18n>

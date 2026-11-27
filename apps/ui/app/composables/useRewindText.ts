@@ -1,15 +1,12 @@
 import type { ImageSet, Rewind, Track } from '~/api/types'
-import { REWIND_FORMS, REWIND_MESSAGES, type RewindForm } from '~/lib/rewind/messages'
+import { REWIND_FORMS, type RewindForm } from '~/lib/rewind/messages'
 
 const MONTH_IN = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре']
 const MONTH_IN_UK = ['січні', 'лютому', 'березні', 'квітні', 'травні', 'червні', 'липні', 'серпні', 'вересні', 'жовтні', 'листопаді', 'грудні']
 
-/**
- * Тексты, числа и картинки историй «Итогов года» — общие для трёх стилей. Это единственный
- * вызов useI18n в компоненте стиля: второй локальный словарь vue-i18n в компоненте не поддерживает
- */
+/** Тексты, числа и картинки историй «Итогов года» — общие для трёх стилей (словарь lib.rewind) */
 export function useRewindText() {
-  const { t } = useI18n({ useScope: 'local', messages: REWIND_MESSAGES })
+  const { t } = useScopedI18n('lib.rewind')
   const bridge = useBridge()
   const lang = useLang()
   const en = computed(() => lang.value === 'en')

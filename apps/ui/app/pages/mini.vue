@@ -6,7 +6,7 @@ import { createShell, type InvokeFn, type ListenFn, type PlayerNow, type Shell }
 // `player:*`, и кнопки-пульт. Окно тянется за любое пустое место
 definePageMeta({ layout: false })
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.mini')
 useHead({ title: 'DalyWave', htmlAttrs: { 'data-mini': '' } })
 
 const now = ref<PlayerNow | null>(null)
@@ -170,35 +170,3 @@ function onKey(e: KeyboardEvent) {
 html[data-mini], html[data-mini] body { background: var(--ink-2); overflow: hidden; }
 html[data-mini] .ambient { display: none; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "nothing": "Ничего не играет",
-    "prev": "Предыдущий",
-    "next": "Следующий",
-    "play": "Слушать",
-    "pause": "Пауза",
-    "seek": "Позиция в треке",
-    "back": "Открыть DalyWave"
-  },
-  "uk": {
-    "nothing": "Нічого не грає",
-    "prev": "Попередній",
-    "next": "Наступний",
-    "play": "Слухати",
-    "pause": "Пауза",
-    "seek": "Позиція в треку",
-    "back": "Відкрити DalyWave"
-  },
-  "en": {
-    "nothing": "Nothing playing",
-    "prev": "Previous",
-    "next": "Next",
-    "play": "Play",
-    "pause": "Pause",
-    "seek": "Playback position",
-    "back": "Open DalyWave"
-  }
-}
-</i18n>

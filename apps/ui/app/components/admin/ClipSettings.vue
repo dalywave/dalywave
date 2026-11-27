@@ -9,7 +9,7 @@ const emit = defineEmits<{ saved: [ClipSettings] }>()
 const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.ClipSettings')
 
 const HEIGHTS = [360, 480, 720, 1080]
 const DEFAULTS = { height: 480, whole: false, sync: true, lengthS: 12, keepDays: 7, keepLikedDays: 60, maxGb: 3, autoSearch: true }
@@ -95,110 +95,3 @@ const def = (v: string) => t('default', { v })
 .cs__meter-text { font-size: var(--fs-small); color: var(--text-2); }
 .cs__env { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-small); color: var(--text-2); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "saved": "Сохранено",
-    "failed": "Не получилось сохранить — попробуйте ещё раз",
-    "default": "По умолчанию — {v}",
-    "seconds": "{n} с",
-    "days": "{n} дн.",
-    "gb": "ГБ",
-    "quality": {
-      "title": "Показ",
-      "note": "Один клип при этих настройках — около {size}: под потолок поместится примерно {n}",
-      "height": "Качество"
-    },
-    "what": {
-      "title": "Что показывать",
-      "piece": "Кусок с припевом",
-      "whole": "Клип целиком",
-      "length": "Длина куска",
-      "lengthFallback": "Если клип не совпал со звуком трека — кусок с припевом по кругу",
-      "sync": "В такт с треком",
-      "syncHint": "Сервер сверяет звук клипа с треком: перемотка и пауза ведут и видео"
-    },
-    "auto": {
-      "title": "Искать клипы сами",
-      "hint": "Выключено — только клипы, выбранные администратором"
-    },
-    "space": {
-      "title": "Место",
-      "used": "Занято {used} из {max} · клипов: {n}",
-      "max": "Потолок места",
-      "env": "Задано на сервере (DALYWAVE_CLIPS_MAX_GB)",
-      "keep": "Хранить после показа",
-      "keepLiked": "Хранить для любимых треков"
-    }
-  },
-  "uk": {
-    "saved": "Збережено",
-    "failed": "Не вдалося зберегти — спробуйте ще раз",
-    "default": "За замовчуванням — {v}",
-    "seconds": "{n} с",
-    "days": "{n} дн.",
-    "gb": "ГБ",
-    "quality": {
-      "title": "Показ",
-      "note": "Один кліп із цими налаштуваннями — близько {size}: під ліміт вміститься приблизно {n}",
-      "height": "Якість"
-    },
-    "what": {
-      "title": "Що показувати",
-      "piece": "Фрагмент із приспівом",
-      "whole": "Кліп повністю",
-      "length": "Довжина фрагмента",
-      "lengthFallback": "Якщо кліп не збігся зі звуком трека — фрагмент із приспівом по колу",
-      "sync": "У такт із треком",
-      "syncHint": "Сервер звіряє звук кліпу з треком: перемотування і пауза керують і відео"
-    },
-    "auto": {
-      "title": "Шукати кліпи самостійно",
-      "hint": "Вимкнено — лише кліпи, вибрані адміністратором"
-    },
-    "space": {
-      "title": "Місце",
-      "used": "Зайнято {used} з {max} · кліпів: {n}",
-      "max": "Ліміт місця",
-      "env": "Задано на сервері (DALYWAVE_CLIPS_MAX_GB)",
-      "keep": "Зберігати після показу",
-      "keepLiked": "Зберігати для вподобаних треків"
-    }
-  },
-  "en": {
-    "saved": "Saved",
-    "failed": "Couldn't save — try again",
-    "default": "Default — {v}",
-    "seconds": "{n} s",
-    "days": "{n} d",
-    "gb": "GB",
-    "quality": {
-      "title": "Display",
-      "note": "One clip with these settings is about {size}: roughly {n} fit under the limit",
-      "height": "Quality"
-    },
-    "what": {
-      "title": "What to show",
-      "piece": "Chorus piece",
-      "whole": "Whole clip",
-      "length": "Piece length",
-      "lengthFallback": "If the clip doesn't match the track audio — the chorus piece on a loop",
-      "sync": "In sync with the track",
-      "syncHint": "The server matches the clip audio to the track: seeking and pausing move the video too"
-    },
-    "auto": {
-      "title": "Find clips automatically",
-      "hint": "Off — only clips picked by an admin"
-    },
-    "space": {
-      "title": "Space",
-      "used": "{used} of {max} used · clips: {n}",
-      "max": "Space limit",
-      "env": "Set on the server (DALYWAVE_CLIPS_MAX_GB)",
-      "keep": "Keep after showing",
-      "keepLiked": "Keep for liked tracks"
-    }
-  }
-}
-</i18n>

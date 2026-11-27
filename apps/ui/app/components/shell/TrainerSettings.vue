@@ -8,7 +8,7 @@ const bridge = useBridge()
 const auth = useAuthStore()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.shell.TrainerSettings')
 
 const trainer = bridge.trainer
 const pc = bridge.platform === 'windows'
@@ -94,71 +94,3 @@ const status = computed(() => {
 .tr__state--accent { color: var(--accent); }
 .tr__state--warn { color: var(--warning); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "titleMac": "Рекомендации на этом Mac",
-    "titlePc": "Рекомендации на этом ПК",
-    "switch": "Помогать учить рекомендации",
-    "switchDesc": "Только на питании от сети, когда компьютер не занят",
-    "state": {
-      "training": "Учится — это займёт пару минут",
-      "battery": "Ждёт питания от сети",
-      "busy": "Ждёт, пока компьютер освободится",
-      "signedOut": "Нужен вход",
-      "waiting": "Ждёт своей очереди"
-    },
-    "last": {
-      "active": "{when}: рекомендации стали точнее",
-      "kept": "{when}: прежние рекомендации оказались точнее",
-      "failed": "{when}: не получилось, попробует позже"
-    },
-    "today": "Сегодня в {time}",
-    "onDate": "{date} в {time}",
-    "failed": "Не получилось — попробуйте ещё раз"
-  },
-  "uk": {
-    "titleMac": "Рекомендації на цьому Mac",
-    "titlePc": "Рекомендації на цьому ПК",
-    "switch": "Допомагати навчати рекомендації",
-    "switchDesc": "Тільки з живленням від мережі, коли комп’ютер не зайнятий",
-    "state": {
-      "training": "Навчається — це займе кілька хвилин",
-      "battery": "Чекає живлення від мережі",
-      "busy": "Чекає, поки комп’ютер звільниться",
-      "signedOut": "Потрібен вхід",
-      "waiting": "Чекає своєї черги"
-    },
-    "last": {
-      "active": "{when}: рекомендації стали точнішими",
-      "kept": "{when}: попередні рекомендації виявилися точнішими",
-      "failed": "{when}: не вдалося, спробує пізніше"
-    },
-    "today": "Сьогодні о {time}",
-    "onDate": "{date} о {time}",
-    "failed": "Не вдалося — спробуйте ще раз"
-  },
-  "en": {
-    "titleMac": "Recommendations on this Mac",
-    "titlePc": "Recommendations on this PC",
-    "switch": "Help train recommendations",
-    "switchDesc": "Only on mains power, when the computer isn't busy",
-    "state": {
-      "training": "Training — takes a couple of minutes",
-      "battery": "Waiting for mains power",
-      "busy": "Waiting until the computer is free",
-      "signedOut": "Sign-in required",
-      "waiting": "Waiting for its turn"
-    },
-    "last": {
-      "active": "{when}: recommendations got more accurate",
-      "kept": "{when}: the previous recommendations were more accurate",
-      "failed": "{when}: didn't work, will try later"
-    },
-    "today": "Today at {time}",
-    "onDate": "{date} at {time}",
-    "failed": "That didn't work — try again"
-  }
-}
-</i18n>

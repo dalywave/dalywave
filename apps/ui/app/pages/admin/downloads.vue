@@ -11,7 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const lang = useLang()
 const L = useAdminLabels()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.downloads')
 useHead({ title: () => t('title') })
 const { failed, attempt } = useAttempts()
 
@@ -226,68 +226,3 @@ const laneOptions = computed(() => [{ value: '', label: t('jobs.anyLane') }, ...
 .dl__link { color: var(--text-1); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .dl__live { font-size: var(--fs-caption); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Загрузки",
-    "liveOn": "Обновляется вживую",
-    "liveOff": "Без живых обновлений",
-    "all": "Все",
-    "more": "Показать ещё",
-    "now": {
-      "title": "Сейчас",
-      "summary": "Качается {running} · ждут {queued}",
-      "waiting": "Качать некому: загрузчик не на связи.",
-      "sources": "Источники",
-      "all": "Показать все {n}",
-      "less": "Свернуть",
-      "empty": "Сейчас ничего не качается",
-      "count": "Качается: {n}"
-    },
-    "lanes": { "title": "Полосы", "hint": "Полосы работают независимо: пауза одной не задерживает остальные" },
-    "jobs": { "title": "Задачи", "filter": "Какие задачи", "lane": "Полоса", "anyLane": "Все полосы", "empty": "Таких задач нет", "search": "Вид задачи или ошибка" },
-    "history": { "title": "История скачиваний", "hint": "Чем закончились: кандидаты, оценки, проверка отпечатком", "filter": "Чем закончилось", "empty": "Пока ничего не скачивалось", "search": "Название, артист или ошибка" }
-  },
-  "uk": {
-    "title": "Завантаження",
-    "liveOn": "Оновлюється наживо",
-    "liveOff": "Без живих оновлень",
-    "all": "Усі",
-    "more": "Показати ще",
-    "now": {
-      "title": "Зараз",
-      "summary": "Завантажується {running} · чекають {queued}",
-      "waiting": "Нікому завантажувати: завантажувач не на зв’язку.",
-      "sources": "Джерела",
-      "all": "Показати всі {n}",
-      "less": "Згорнути",
-      "empty": "Зараз нічого не завантажується",
-      "count": "Завантажується: {n}"
-    },
-    "lanes": { "title": "Смуги", "hint": "Смуги працюють незалежно: пауза однієї не затримує інші" },
-    "jobs": { "title": "Завдання", "filter": "Які завдання", "lane": "Смуга", "anyLane": "Усі смуги", "empty": "Таких завдань немає", "search": "Вид завдання або помилка" },
-    "history": { "title": "Історія завантажень", "hint": "Чим завершилися: кандидати, оцінки, перевірка відбитком", "filter": "Чим завершилося", "empty": "Поки нічого не завантажувалося", "search": "Назва, виконавець або помилка" }
-  },
-  "en": {
-    "title": "Downloads",
-    "liveOn": "Updating live",
-    "liveOff": "No live updates",
-    "all": "All",
-    "more": "Show more",
-    "now": {
-      "title": "Now",
-      "summary": "{running} downloading · {queued} waiting",
-      "waiting": "No one to download: the downloader is offline.",
-      "sources": "Sources",
-      "all": "Show all {n}",
-      "less": "Collapse",
-      "empty": "Nothing is downloading right now",
-      "count": "Downloading: {n}"
-    },
-    "lanes": { "title": "Lanes", "hint": "Lanes run independently: pausing one doesn't hold up the others" },
-    "jobs": { "title": "Jobs", "filter": "Which jobs", "lane": "Lane", "anyLane": "All lanes", "empty": "No such jobs", "search": "Job kind or error" },
-    "history": { "title": "Download history", "hint": "How downloads ended: candidates, scores, fingerprint check", "filter": "Outcome", "empty": "Nothing has been downloaded yet", "search": "Title, artist or error" }
-  }
-}
-</i18n>

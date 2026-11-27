@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ seek: [ms: number] }>()
 
 const prefs = usePrefsStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.Scrubber')
 const kind = computed<ScrubberStyle>(() => props.variant ?? prefs.scrubber)
 
 const root = ref<HTMLElement | null>(null)
@@ -264,23 +264,3 @@ function onKey(e: KeyboardEvent) {
   .scrub--line.scrub--lg .scrub__bar::before { inset: -12px 0; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "seek": "Позиция в треке",
-    "transitionAt": "Переход в {time}",
-    "valueText": "{pos} из {dur}"
-  },
-  "uk": {
-    "seek": "Позиція в треку",
-    "transitionAt": "Перехід на {time}",
-    "valueText": "{pos} з {dur}"
-  },
-  "en": {
-    "seek": "Track position",
-    "transitionAt": "Transition at {time}",
-    "valueText": "{pos} of {dur}"
-  }
-}
-</i18n>

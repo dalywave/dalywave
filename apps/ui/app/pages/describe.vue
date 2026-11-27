@@ -14,7 +14,7 @@ const library = useLibraryStore()
 const toast = useToast()
 const ui = useUiStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.describe')
 const { tg } = useGlobalT()
 useHead({ title: () => t('title') })
 
@@ -368,92 +368,3 @@ function reset() {
   .wait__text { align-items: center; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Плейлист по описанию",
-    "placeholder": "Опишите, что хочется послушать",
-    "build": "Собрать",
-    "clear": "Очистить",
-    "try": "Например:",
-    "example1": "40 минут фонка для зала, без медляков",
-    "example2": "спокойный инди под дождь, только русское",
-    "example3": "как Скриптонит, но менее известное",
-    "building": "Собираем плейлист…",
-    "failed": "Не получилось собрать — попробуйте ещё раз",
-    "tooOften": "Слишком часто — попробуйте через пару минут",
-    "empty": "Под такое описание ничего не нашлось",
-    "emptyText": "Попробуйте сказать иначе или шире",
-    "name": "Название",
-    "rename": "Изменить название",
-    "listen": "Слушать",
-    "save": "Сохранить",
-    "rebuild": "Пересобрать",
-    "weekly": "Обновлять каждую неделю",
-    "weeklyHint": "Прослушанное сменится новым в том же духе",
-    "more": "Ещё 10 в том же духе",
-    "noMore": "Больше подходящего пока нет",
-    "remove": "Убрать",
-    "removed": "«{title}» убран",
-    "saved": "Плейлист «{title}» сохранён",
-    "saveFailed": "Не получилось сохранить — попробуйте ещё раз"
-  },
-  "uk": {
-    "title": "Плейлист за описом",
-    "placeholder": "Опишіть, що хочеться послухати",
-    "build": "Зібрати",
-    "clear": "Очистити",
-    "try": "Наприклад:",
-    "example1": "40 хвилин фонку для залу, без повільняків",
-    "example2": "спокійне інді під дощ",
-    "example3": "як Скриптоніт, але менш відоме",
-    "building": "Збираємо плейлист…",
-    "failed": "Не вдалося зібрати — спробуйте ще раз",
-    "tooOften": "Занадто часто — спробуйте за кілька хвилин",
-    "empty": "Під такий опис нічого не знайшлося",
-    "emptyText": "Спробуйте сказати інакше або ширше",
-    "name": "Назва",
-    "rename": "Змінити назву",
-    "listen": "Слухати",
-    "save": "Зберегти",
-    "rebuild": "Перезібрати",
-    "weekly": "Оновлювати щотижня",
-    "weeklyHint": "Прослухане зміниться новим у тому ж дусі",
-    "more": "Ще 10 у тому ж дусі",
-    "noMore": "Більше відповідного поки немає",
-    "remove": "Прибрати",
-    "removed": "«{title}» прибрано",
-    "saved": "Плейлист «{title}» збережено",
-    "saveFailed": "Не вдалося зберегти — спробуйте ще раз"
-  },
-  "en": {
-    "title": "Playlist from a description",
-    "placeholder": "Describe what you want to hear",
-    "build": "Build",
-    "clear": "Clear",
-    "try": "Try:",
-    "example1": "40 minutes of phonk for the gym, no slow songs",
-    "example2": "calm indie for a rainy day",
-    "example3": "like Skryptonite, but less known",
-    "building": "Building your playlist…",
-    "failed": "Couldn't build it — try again",
-    "tooOften": "Too many tries — wait a couple of minutes",
-    "empty": "Nothing fits this description",
-    "emptyText": "Try saying it differently or more broadly",
-    "name": "Title",
-    "rename": "Rename",
-    "listen": "Listen",
-    "save": "Save",
-    "rebuild": "Rebuild",
-    "weekly": "Refresh every week",
-    "weeklyHint": "What you've played gets swapped for something new in the same vein",
-    "more": "10 more like this",
-    "noMore": "Nothing more fits yet",
-    "remove": "Remove",
-    "removed": "“{title}” removed",
-    "saved": "Playlist “{title}” saved",
-    "saveFailed": "Couldn't save — try again"
-  }
-}
-</i18n>

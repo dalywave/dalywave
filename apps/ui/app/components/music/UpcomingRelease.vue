@@ -12,7 +12,7 @@ const props = defineProps<{
 const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.UpcomingRelease')
 const { tg } = useGlobalT()
 
 const presaved = ref(props.release.presaved)
@@ -97,29 +97,3 @@ async function toggle() {
   .up :deep(.btn) { min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "save": "Сохранить заранее",
-    "saved": "Сохранено",
-    "presaved": "Сохраним в медиатеку {day}",
-    "savedNow": "«{title}» — в медиатеке",
-    "failed": "Не получилось — попробуйте ещё раз"
-  },
-  "uk": {
-    "save": "Зберегти заздалегідь",
-    "saved": "Збережено",
-    "presaved": "Збережемо в медіатеку {day}",
-    "savedNow": "«{title}» — у медіатеці",
-    "failed": "Не вдалося — спробуйте ще раз"
-  },
-  "en": {
-    "save": "Pre-save",
-    "saved": "Pre-saved",
-    "presaved": "Will be added to your library on {day}",
-    "savedNow": "“{title}” is in your library",
-    "failed": "Something went wrong — try again"
-  }
-}
-</i18n>

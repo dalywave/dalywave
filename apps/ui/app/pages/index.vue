@@ -10,7 +10,7 @@ const auth = useAuthStore()
 const ui = useUiStore()
 const player = usePlayerStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.index')
 const { tg, te } = useGlobalT()
 useHead({ title: () => t('title') })
 
@@ -290,104 +290,3 @@ function playLiked(list: Track[], i: number) {
   .home__skel-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Главная",
-    "greet": {
-      "morning": "Доброе утро, {name}",
-      "day": "Добрый день, {name}",
-      "evening": "Добрый вечер, {name}",
-      "night": "Доброй ночи, {name}"
-    },
-    "greetShort": {
-      "morning": "Доброе утро",
-      "day": "Добрый день",
-      "evening": "Добрый вечер",
-      "night": "Доброй ночи"
-    },
-    "recent": "Недавно понравилось",
-    "playAll": "Слушать",
-    "hint": {
-      "discover_weekly": "Новое рядом с вашим вкусом",
-      "release_radar": "Свежие релизы ваших артистов",
-      "forgotten_favorites": "Любимое, которое давно не играло"
-    },
-    "allLiked": "Все любимые",
-    "settings": "Настройки",
-    "quick": "Быстрый доступ",
-    "failed": "Главная не загрузилась",
-    "failedText": "Проверьте соединение и попробуйте ещё раз",
-    "emptyTitle": "Здесь появятся ваши подборки",
-    "emptyText": "Слушайте волну и отмечайте любимое — миксы и новинки соберутся сами",
-    "find": "Найти музыку",
-    "import": "Перенести медиатеку",
-    "retry": "Повторить"
-  },
-  "uk": {
-    "title": "Головна",
-    "greet": {
-      "morning": "Доброго ранку, {name}",
-      "day": "Добрий день, {name}",
-      "evening": "Добрий вечір, {name}",
-      "night": "Доброї ночі, {name}"
-    },
-    "greetShort": {
-      "morning": "Доброго ранку",
-      "day": "Добрий день",
-      "evening": "Добрий вечір",
-      "night": "Доброї ночі"
-    },
-    "recent": "Нещодавно вподобане",
-    "playAll": "Слухати",
-    "hint": {
-      "discover_weekly": "Нове поруч із вашим смаком",
-      "release_radar": "Свіжі релізи ваших виконавців",
-      "forgotten_favorites": "Улюблене, яке давно не грало"
-    },
-    "allLiked": "Усе вподобане",
-    "settings": "Налаштування",
-    "quick": "Швидкий доступ",
-    "failed": "Головна не завантажилася",
-    "failedText": "Перевірте з’єднання і спробуйте ще раз",
-    "emptyTitle": "Тут з’являться ваші добірки",
-    "emptyText": "Слухайте хвилю та позначайте улюблене — мікси й новинки зберуться самі",
-    "find": "Знайти музику",
-    "import": "Перенести медіатеку",
-    "retry": "Повторити"
-  },
-  "en": {
-    "title": "Home",
-    "greet": {
-      "morning": "Good morning, {name}",
-      "day": "Good afternoon, {name}",
-      "evening": "Good evening, {name}",
-      "night": "Good night, {name}"
-    },
-    "greetShort": {
-      "morning": "Good morning",
-      "day": "Good afternoon",
-      "evening": "Good evening",
-      "night": "Good night"
-    },
-    "recent": "Recently liked",
-    "playAll": "Play",
-    "hint": {
-      "discover_weekly": "New music close to your taste",
-      "release_radar": "Fresh releases from your artists",
-      "forgotten_favorites": "Favorites you haven't played in a while"
-    },
-    "allLiked": "All liked",
-    "settings": "Settings",
-    "quick": "Quick access",
-    "failed": "Home didn't load",
-    "failedText": "Check your connection and try again",
-    "emptyTitle": "Your picks will show up here",
-    "emptyText": "Play the wave and like what you love — mixes and new releases will follow",
-    "find": "Find music",
-    "import": "Bring your library",
-    "retry": "Retry"
-  }
-}
-</i18n>

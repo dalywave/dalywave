@@ -2,7 +2,7 @@
 // QR-код «Подключить телефон»: ссылка `dalywave://server?url=<этот сервер>`. Камера iPhone узнаёт её и
 // открывает DalyWave с экраном «Адрес сервера», где адрес уже подставлен. Экран входа сайта и админка
 const props = defineProps<{ compact?: boolean }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.auth.AppQr')
 
 const origin = typeof location !== 'undefined' ? location.origin : ''
 const link = computed(() => `dalywave://server?url=${encodeURIComponent(origin)}`)
@@ -31,23 +31,3 @@ const host = computed(() => origin.replace(/^https?:\/\//, ''))
 .aq--compact .aq__text { align-items: center; }
 .aq--compact .aq__code { width: 180px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "DalyWave на телефоне",
-    "lead": "Наведите камеру iPhone — приложение откроется с адресом этого сервера",
-    "label": "QR-код: подключить приложение к {host}"
-  },
-  "uk": {
-    "title": "DalyWave на телефоні",
-    "lead": "Наведіть камеру iPhone — застосунок відкриється з адресою цього сервера",
-    "label": "QR-код: під’єднати застосунок до {host}"
-  },
-  "en": {
-    "title": "DalyWave on your phone",
-    "lead": "Point the iPhone camera here — the app opens with this server's address",
-    "label": "QR code: connect the app to {host}"
-  }
-}
-</i18n>

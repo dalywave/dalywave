@@ -9,7 +9,7 @@ defineProps<{
 }>()
 const open = defineModel<boolean>('open', { default: false })
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.LinkModal')
 
 async function copy(url: string) {
   try {
@@ -49,11 +49,3 @@ async function copy(url: string) {
 }
 .lm__url:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--focus); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "copy": "Скопировать", "copied": "Ссылка скопирована", "copyFailed": "Не получилось скопировать — выделите ссылку вручную" },
-  "uk": { "copy": "Скопіювати", "copied": "Посилання скопійовано", "copyFailed": "Не вдалося скопіювати — виділіть посилання вручну" },
-  "en": { "copy": "Copy", "copied": "Link copied", "copyFailed": "Couldn't copy — select the link manually" }
-}
-</i18n>

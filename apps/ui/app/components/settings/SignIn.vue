@@ -9,7 +9,7 @@ const bridge = useBridge()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.SignIn')
 
 const account = ref<Account | null>(null)
 async function load() {
@@ -182,83 +182,3 @@ async function save() {
   .si__input { height: 44px; font-size: 15px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Вход",
-    "username": "Логин",
-    "password": "Пароль",
-    "change": "Сменить",
-    "set": "Задать",
-    "changeTitle": "Новый пароль",
-    "setTitle": "Логин и пароль",
-    "current": "Нынешний пароль",
-    "new": "Новый пароль",
-    "save": "Сохранить",
-    "saved": "Пароль сохранён",
-    "wrong": "Нынешний пароль не подошёл",
-    "weak": "Не короче 10 символов",
-    "badUsername": "Логин — 3–32 символа: буквы, цифры, точка, _ и -",
-    "taken": "Такой логин уже есть",
-    "rateLimited": "Слишком много попыток. Подождите минуту",
-    "link": "Привязать",
-    "unlink": "Отвязать",
-    "linked": "Вход привязан",
-    "linkedElsewhere": "Этот вход уже у другого аккаунта",
-    "linkFailed": "Не получилось привязать вход",
-    "lastMethod": "Это единственный способ войти. Сначала задайте пароль или привяжите другой вход",
-    "failed": "Не получилось. Проверьте связь с сервером"
-  },
-  "uk": {
-    "title": "Вхід",
-    "username": "Логін",
-    "password": "Пароль",
-    "change": "Змінити",
-    "set": "Задати",
-    "changeTitle": "Новий пароль",
-    "setTitle": "Логін і пароль",
-    "current": "Поточний пароль",
-    "new": "Новий пароль",
-    "save": "Зберегти",
-    "saved": "Пароль збережено",
-    "wrong": "Поточний пароль не підійшов",
-    "weak": "Щонайменше 10 символів",
-    "badUsername": "Логін — 3–32 символи: літери, цифри, крапка, _ і -",
-    "taken": "Такий логін уже є",
-    "rateLimited": "Забагато спроб. Зачекайте хвилину",
-    "link": "Прив’язати",
-    "unlink": "Відв’язати",
-    "linked": "Вхід прив’язано",
-    "linkedElsewhere": "Цей вхід уже належить іншому обліковому запису",
-    "linkFailed": "Не вдалося прив’язати вхід",
-    "lastMethod": "Це єдиний спосіб увійти. Спершу задайте пароль або прив’яжіть інший вхід",
-    "failed": "Не вдалося. Перевірте зв’язок із сервером"
-  },
-  "en": {
-    "title": "Sign-in",
-    "username": "Username",
-    "password": "Password",
-    "change": "Change",
-    "set": "Set",
-    "changeTitle": "New password",
-    "setTitle": "Username and password",
-    "current": "Current password",
-    "new": "New password",
-    "save": "Save",
-    "saved": "Password saved",
-    "wrong": "The current password is wrong",
-    "weak": "At least 10 characters",
-    "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
-    "taken": "This username is taken",
-    "rateLimited": "Too many attempts. Wait a minute",
-    "link": "Link",
-    "unlink": "Unlink",
-    "linked": "Sign-in linked",
-    "linkedElsewhere": "This sign-in belongs to another account",
-    "linkFailed": "Couldn't link the sign-in",
-    "lastMethod": "This is your only way to sign in. Set a password or link another sign-in first",
-    "failed": "Something went wrong. Check the connection to the server"
-  }
-}
-</i18n>

@@ -9,7 +9,7 @@ definePageMeta({ layout: 'bare' })
 const route = useRoute()
 const auth = useAuthStore()
 const bridge = useBridge()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.reset._token')
 useHead({ title: () => t('title') })
 
 const token = computed(() => String(route.params.token ?? ''))
@@ -73,71 +73,3 @@ const text = computed(() => {
     <UiButton v-else-if="state === 'invalid'" variant="secondary" size="lg" block to="/login">{{ t('toLogin') }}</UiButton>
   </AuthStage>
 </template>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Новый пароль",
-    "heading": "Новый пароль",
-    "lead": "{name}, придумайте пароль — старый больше не подойдёт",
-    "leadNew": "{name}, придумайте логин и пароль для входа",
-    "submit": "Сохранить и войти",
-    "taken": "Такой логин уже есть",
-    "weak": "Пароль — не короче 10 символов",
-    "badUsername": "Логин — 3–32 символа: буквы, цифры, точка, _ и -",
-    "disabled": "Аккаунт отключён. Напишите администратору",
-    "failed": "Не получилось. Проверьте связь с сервером",
-    "toLogin": "К входу",
-    "invalid": {
-      "title": "Ссылка не действует",
-      "text": "Её уже использовали или срок вышел. Попросите новую у администратора"
-    },
-    "down": {
-      "title": "Сервер не отвечает",
-      "text": "Скорее всего, это ненадолго. Попробуйте через минуту"
-    }
-  },
-  "uk": {
-    "title": "Новий пароль",
-    "heading": "Новий пароль",
-    "lead": "{name}, придумайте пароль — старий більше не підійде",
-    "leadNew": "{name}, придумайте логін і пароль для входу",
-    "submit": "Зберегти й увійти",
-    "taken": "Такий логін уже є",
-    "weak": "Пароль — не коротший за 10 символів",
-    "badUsername": "Логін — 3–32 символи: літери, цифри, крапка, _ і -",
-    "disabled": "Обліковий запис вимкнено. Напишіть адміністраторові",
-    "failed": "Не вдалося. Перевірте зв’язок із сервером",
-    "toLogin": "До входу",
-    "invalid": {
-      "title": "Посилання не діє",
-      "text": "Його вже використали або термін минув. Попросіть нове в адміністратора"
-    },
-    "down": {
-      "title": "Сервер не відповідає",
-      "text": "Найімовірніше, це ненадовго. Спробуйте за хвилину"
-    }
-  },
-  "en": {
-    "title": "New password",
-    "heading": "New password",
-    "lead": "{name}, pick a new password — the old one stops working",
-    "leadNew": "{name}, pick a username and password to sign in",
-    "submit": "Save and sign in",
-    "taken": "This username is taken",
-    "weak": "The password must be at least 10 characters",
-    "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
-    "disabled": "This account is disabled. Contact the administrator",
-    "failed": "Something went wrong. Check the connection to the server",
-    "toLogin": "To sign-in",
-    "invalid": {
-      "title": "This link doesn't work",
-      "text": "It was used or has expired. Ask the administrator for a new one"
-    },
-    "down": {
-      "title": "The server isn't responding",
-      "text": "It's probably brief. Try again in a minute"
-    }
-  }
-}
-</i18n>

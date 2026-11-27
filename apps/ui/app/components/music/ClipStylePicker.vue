@@ -9,7 +9,7 @@ import type { ClipStyle } from '~/stores/prefs'
 defineProps<{ label: string }>()
 
 const model = defineModel<ClipStyle>({ required: true })
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.ClipStylePicker')
 
 function update(v: unknown) {
   // Повторное нажатие на выбранный вариант не снимает выбор
@@ -139,11 +139,3 @@ function update(v: unknown) {
   .csp__item[data-state='on'] .csp__radio { box-shadow: inset 0 0 0 6px var(--accent); }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "square": "Квадрат", "wide": "Широкий", "backdrop": "Фон", "cinema": "Кино", "off": "Выключено" },
-  "uk": { "square": "Квадрат", "wide": "Широкий", "backdrop": "Тло", "cinema": "Кіно", "off": "Вимкнено" },
-  "en": { "square": "Square", "wide": "Wide", "backdrop": "Backdrop", "cinema": "Cinema", "off": "Off" }
-}
-</i18n>

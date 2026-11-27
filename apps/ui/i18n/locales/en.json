@@ -861,5 +861,3192 @@
   },
   "focus": {
     "applied": "Wave set for Focus: “{name}”"
+  },
+  "components": {
+    "admin": {
+      "AcqRow": {
+        "noTrack": "Track removed from the catalog",
+        "col": {
+          "track": "Recording",
+          "state": "State",
+          "why": "Why · who",
+          "updated": "Updated"
+        },
+        "position": "#{n}",
+        "cancel": "Cancel download",
+        "cancelled": "“{title}” is no longer downloading",
+        "failed": "Didn't work — the download already changed"
+      },
+      "Acquisition": {
+        "candidates": "Candidates",
+        "noCandidates": "The search found nothing",
+        "attempts": "Attempts",
+        "sec": "s",
+        "all": "All {n}",
+        "less": "Collapse"
+      },
+      "Candidate": {
+        "sec": "s",
+        "kind": {
+          "atv": "official audio",
+          "omv": "music video",
+          "ugc": "user upload",
+          "other": "other"
+        },
+        "rejected": "Rejected: {why}",
+        "notDownloaded": "Didn't download",
+        "verified": "Downloaded, fingerprint matched {p}%",
+        "notVerified": "Downloaded, fingerprint matched only {p}%",
+        "noPreview": "Downloaded, nothing to compare with",
+        "breakdown": "Score breakdown",
+        "play": "Listen",
+        "stop": "Stop",
+        "choose": "Choose",
+        "part": {
+          "duration": "Duration",
+          "title": "Title",
+          "artist": "Artists",
+          "album": "Album",
+          "source": "Source"
+        },
+        "penalty": "Penalty",
+        "titleGot": "Source says “{got}”, expected “{expected}”",
+        "versionGot": "Version: source {got}, expected {expected}",
+        "missing": "Missing artists: {names}"
+      },
+      "ClipSettings": {
+        "saved": "Saved",
+        "failed": "Couldn't save — try again",
+        "default": "Default — {v}",
+        "seconds": "{n} s",
+        "days": "{n} d",
+        "gb": "GB",
+        "quality": {
+          "title": "Display",
+          "note": "One clip with these settings is about {size}: roughly {n} fit under the limit",
+          "height": "Quality"
+        },
+        "what": {
+          "title": "What to show",
+          "piece": "Chorus piece",
+          "whole": "Whole clip",
+          "length": "Piece length",
+          "lengthFallback": "If the clip doesn't match the track audio — the chorus piece on a loop",
+          "sync": "In sync with the track",
+          "syncHint": "The server matches the clip audio to the track: seeking and pausing move the video too"
+        },
+        "auto": {
+          "title": "Find clips automatically",
+          "hint": "Off — only clips picked by an admin"
+        },
+        "space": {
+          "title": "Space",
+          "used": "{used} of {max} used · clips: {n}",
+          "max": "Space limit",
+          "env": "Set on the server (DALYWAVE_CLIPS_MAX_GB)",
+          "keep": "Keep after showing",
+          "keepLiked": "Keep for liked tracks"
+        }
+      },
+      "Command": {
+        "title": "Search the admin",
+        "placeholder": "Section, person, track, job or setting",
+        "empty": "Nothing found",
+        "settingsWord": "Settings",
+        "group": {
+          "sections": "Sections",
+          "settings": "Settings",
+          "people": "People",
+          "tracks": "Recordings",
+          "jobs": "Failed jobs"
+        },
+        "settings": {
+          "general": "General, time zone",
+          "signin": "Sign-in",
+          "music": "Music: follows, speed, schedule",
+          "storage": "Storage",
+          "clips": "Clips: quality, space",
+          "reco": "Recommendations",
+          "notifications": "Notifications",
+          "integrations": "Integrations"
+        }
+      },
+      "ConnectApp": {
+        "title": "Connect a phone"
+      },
+      "EnvList": {
+        "title": "Set on the server",
+        "note": "These come from environment variables and change only on the server",
+        "hidden": "set",
+        "unset": "not set",
+        "showUnset": "Other variables of this section: {n}",
+        "hideUnset": "Hide unset",
+        "failed": "Couldn't load server settings"
+      },
+      "Invites": {
+        "title": "Invites",
+        "hint": "One-time link: the person signs in and gets the role right away",
+        "create": "Invite",
+        "createTitle": "Invite",
+        "createSubmit": "Create link",
+        "roleLabel": "Role",
+        "daysLabel": "Valid for",
+        "days": "{n} d",
+        "note": "Who it's for (only you see this)",
+        "role": {
+          "listener": "Listener",
+          "admin": "Admin",
+          "none": "No role"
+        },
+        "status": {
+          "active": "active",
+          "used": "accepted",
+          "expired": "expired",
+          "revoked": "revoked"
+        },
+        "usedBy": "accepted by {name}",
+        "until": "until {when}",
+        "revoke": "Revoke",
+        "empty": "No invites yet",
+        "linkTitle": "Invite link",
+        "linkText": "Send it to the person. The link is shown once and works for one account only",
+        "failed": "Something went wrong — try again"
+      },
+      "JobRow": {
+        "album": "album",
+        "artist": "artist",
+        "retry": "Retry",
+        "cancel": "Cancel",
+        "cancelJob": "Cancel job",
+        "col": {
+          "state": "State",
+          "job": "Job",
+          "lane": "Lane",
+          "attempts": "Attempts",
+          "updated": "Updated"
+        },
+        "retried": "Job queued again",
+        "cancelled": "Job cancelled",
+        "actionFailed": "Didn't work — the job already changed, refresh the list",
+        "noHistory": "No download history"
+      },
+      "LaneTable": {
+        "title": "Queue lanes",
+        "lane": "Lane",
+        "queued": "Queued",
+        "running": "Running",
+        "failed24": "Failed",
+        "done": "24 h",
+        "mode": "How it runs",
+        "state": "Enabled",
+        "pause": "{s} s pause",
+        "window": "only {w}",
+        "closed": "off schedule",
+        "switchRunning": "“{title}” is running",
+        "switchPaused": "“{title}” is paused",
+        "pausedLabel": "paused",
+        "paused": "“{title}” paused",
+        "resumed": "“{title}” running again",
+        "failed": "Couldn't change the lane"
+      },
+      "LinkModal": {
+        "copy": "Copy",
+        "copied": "Link copied",
+        "copyFailed": "Couldn't copy — select the link manually"
+      },
+      "RewindEvent": {
+        "title": "Year in review",
+        "when": "When it’s open",
+        "year": "Year",
+        "styleLabel": "Story style",
+        "preview": "Preview",
+        "style": {
+          "wave": "Wave of the year",
+          "spread": "Spread",
+          "record": "Record",
+          "random": "Random for each listener"
+        },
+        "mode": {
+          "auto": "Automatically",
+          "open": "Open now",
+          "closed": "Closed"
+        },
+        "status": {
+          "openUntil": "Your {year} is open · closes {date}",
+          "open": "Your {year} is open",
+          "closedUntil": "Closed · opens {date}",
+          "closed": "Closed — listeners don’t see it"
+        },
+        "saved": "Saved",
+        "failed": "Couldn’t save"
+      },
+      "SavedViews": {
+        "views": "Views",
+        "save": "Save view",
+        "saveTitle": "Save view",
+        "name": "Name",
+        "remove": "Remove view “{name}”"
+      },
+      "SignInMethods": {
+        "admins": "admins: {claim} = {values}",
+        "noAdmins": "grants no admins",
+        "open": "new people wait for a role",
+        "inviteOnly": "invite only",
+        "trustEmail": "links by email",
+        "users": "users: {n}",
+        "copyCallback": "Copy the callback URL",
+        "copied": "URL copied",
+        "copyFailed": "Couldn't copy",
+        "local": "Local accounts",
+        "localOn": "Username and password, invites, first-run setup",
+        "localOff": "Off: DALYWAVE_LOCAL_AUTH=false",
+        "emergency": "Emergency password",
+        "on": "on",
+        "off": "off"
+      }
+    },
+    "auth": {
+      "AppQr": {
+        "title": "DalyWave on your phone",
+        "lead": "Point the iPhone camera here — the app opens with this server's address",
+        "label": "QR code: connect the app to {host}"
+      },
+      "Credentials": {
+        "name": "Name",
+        "username": "Username",
+        "password": "Password",
+        "newPassword": "Password",
+        "hint": "At least 10 characters"
+      },
+      "Or": {
+        "or": "or"
+      },
+      "ProviderList": {
+        "with": "Sign in with {title}"
+      }
+    },
+    "friends": {
+      "ActivityRow": {
+        "nothing": "Nothing yet"
+      },
+      "InviteLink": {
+        "qr": "QR code with the link",
+        "copy": "Copy",
+        "share": "Send",
+        "reset": "New link"
+      },
+      "Panel": {
+        "requests": "Friend requests: {n}",
+        "emptyText": "Add friends to see what they’re playing",
+        "find": "Find friends",
+        "failed": "Didn’t load",
+        "retry": "Retry"
+      },
+      "PersonRow": {
+        "add": "Add",
+        "accept": "Accept",
+        "decline": "Decline",
+        "sent": "Request sent",
+        "cancel": "Cancel request"
+      }
+    },
+    "history": {
+      "Calendar": {
+        "prev": "Previous month",
+        "next": "Next month"
+      }
+    },
+    "import": {
+      "Review": {
+        "title": "Not found",
+        "find": "Find",
+        "close": "Close",
+        "skip": "Skip",
+        "skipped": "Skipped",
+        "guess": "Looks like",
+        "yes": "Yes, that's it",
+        "added": "Done — added to your library",
+        "fileQueued": "Attaching the file to the chosen track",
+        "fixFailed": "That didn't work — try again",
+        "loadFailed": "Couldn't load the list",
+        "retry": "Retry",
+        "allDone": "All sorted",
+        "allDoneText": "Nothing left unmatched",
+        "searchPlaceholder": "Artist and title",
+        "searching": "Searching…",
+        "nothing": "Nothing found — try different words",
+        "more": "Show more",
+        "album": "album",
+        "artist": "Artist",
+        "follow": "follow",
+        "liked": "liked"
+      },
+      "Status": {
+        "stepsLabel": "Transfer steps",
+        "step": {
+          "upload": "Upload",
+          "match": "Catalog search",
+          "apply": "Library"
+        },
+        "title": {
+          "upload": "Uploading",
+          "match": "Searching the catalog",
+          "apply": "Filling your library",
+          "done": "Done",
+          "failed": "Something went wrong",
+          "cancelled": "Transfer stopped"
+        },
+        "detail": {
+          "upload": "{pct}% sent",
+          "reading": "Reading the archive…",
+          "files": "Files: {n}",
+          "matchStart": "Starting…",
+          "match": "{done} of {total}",
+          "apply": "Likes, playlists and history are falling into place",
+          "failed": "Try again a bit later",
+          "cancelled": "Whatever was found before stopping stays in your library"
+        },
+        "calm": "You can close this page — the transfer keeps going",
+        "calmUpload": "Keep this page open while the file uploads",
+        "result": {
+          "added": "Added {what}",
+          "nothingNew": "All of it was already in your library",
+          "nothing": "No tracks were found — check the list below",
+          "listPlaylist": "Added {tracks} to “{title}”",
+          "listLikes": "Added {tracks} to Liked",
+          "intoPlaylists": "{tracks} to playlists",
+          "files": "Accepted {files}, {upgraded} replaced lower-quality copies",
+          "filesOnly": "Accepted {files}",
+          "noFiles": "No files matched — check the list below"
+        },
+        "tile": {
+          "likes": "likes",
+          "playlists": "playlists",
+          "albums": "albums",
+          "artists": "follows",
+          "plays": "plays",
+          "tracks": "tracks",
+          "files": "files",
+          "upgraded": "better than before"
+        }
+      }
+    },
+    "music": {
+      "ArtistAbout": {
+        "title": "About",
+        "more": "Read more",
+        "active": "Active",
+        "since": "since {year}",
+        "from": "From",
+        "genres": "Genres"
+      },
+      "ClipSheet": {
+        "title": "Video",
+        "loadFailed": "Couldn’t load — close and open again",
+        "preparing": "Video is being prepared",
+        "none": "No video — the cover is shown",
+        "off": "No video",
+        "pinned": "chosen by hand",
+        "reports": "Hidden by listeners: {n}",
+        "keep": "Keep",
+        "kept": "Video kept",
+        "others": "Other options",
+        "refresh": "Refresh",
+        "searching": "Looking for options…",
+        "noCandidates": "No options yet",
+        "source": {
+          "artist": "artist channel",
+          "official": "official"
+        },
+        "reason": {
+          "fan": "fan-made",
+          "version": "not a video",
+          "not_official": "not official",
+          "duration": "different length",
+          "title": "different song",
+          "artist": "different artist",
+          "topic_channel": "audio only",
+          "other": "doesn’t fit"
+        },
+        "linkLabel": "YouTube link",
+        "linkPlaceholder": "Paste a YouTube link",
+        "use": "Use",
+        "chosen": "Video chosen — preparing",
+        "autoLabel": "Pick again",
+        "auto": "The video will be picked again",
+        "offLabel": "No video",
+        "offDone": "Video removed — the cover will show",
+        "failed": "Didn’t work — try again"
+      },
+      "ClipStylePicker": {
+        "square": "Square",
+        "wide": "Wide",
+        "backdrop": "Backdrop",
+        "cinema": "Cinema",
+        "off": "Off"
+      },
+      "DailyMixCard": {
+        "kicker": "Daily mix",
+        "kind": {
+          "on_repeat": "On repeat",
+          "repeat_rewind": "Repeat rewind"
+        }
+      },
+      "DiscoverTile": {
+        "title": "Discover",
+        "sub": "New music for you, as clips — swipe through"
+      },
+      "JamPanel": {
+        "title": "Listen together",
+        "intro": "Friends open the link on their phones and add tracks to the queue — no account needed",
+        "start": "Start",
+        "qr": "QR code with the guest link",
+        "scan": "Point a phone camera here or send the link",
+        "copy": "Copy",
+        "copied": "Link copied",
+        "copyFailed": "Couldn’t copy the link",
+        "share": "Send",
+        "shareTitle": "Listening together on DalyWave",
+        "pending": "Waiting for approval",
+        "approve": "Add to queue",
+        "decline": "Decline",
+        "listening": "Listening",
+        "online": "{n} online",
+        "noGuests": "Nobody yet",
+        "here": "online",
+        "away": "away",
+        "remove": "Remove {name}",
+        "canAdd": "Guests add tracks",
+        "approval": "Approve guest tracks",
+        "canListen": "Guests listen on their devices",
+        "end": "End session"
+      },
+      "LyricsView": {
+        "region": "Lyrics",
+        "loading": "Loading lyrics",
+        "failed": "Couldn’t load lyrics",
+        "none": "No lyrics",
+        "instrumental": "Instrumental",
+        "break": "Instrumental break",
+        "back": "Back to current line",
+        "chorus": "Chorus",
+        "shareLine": "Share line",
+        "copyLine": "Copy line"
+      },
+      "PlayerViewSwitch": {
+        "label": "What to show",
+        "cover": "Cover",
+        "map": "How it was picked",
+        "showCover": "Show cover"
+      },
+      "PlaylistPeople": {
+        "title": "Shared playlist",
+        "collab": "Shared",
+        "collabDesc": "Friends add, remove and reorder tracks",
+        "visible": "Visible to friends",
+        "visibleDesc": "On your page for friends",
+        "people": "People",
+        "you": "You",
+        "owner": "owner",
+        "remove": "Remove {name}",
+        "invite": "Invite friends",
+        "add": "Invite",
+        "invited": "{name} is in the playlist now",
+        "allIn": "All your friends are already here",
+        "noFriends": "To invite people, add friends first:",
+        "byLink": "With a link",
+        "linkHint": "Anyone who opens the link can add tracks",
+        "leave": "Leave playlist",
+        "left": "You left “{title}”"
+      },
+      "PresetEditor": {
+        "name": "Name",
+        "icon": "Icon"
+      },
+      "ReportRecording": {
+        "title": "Wrong recording",
+        "reason": {
+          "wrong_song": "Different song",
+          "wrong_version": "Different version or live",
+          "bad_quality": "Poor quality",
+          "cut": "Cut off"
+        },
+        "comment": "Comment — optional",
+        "send": "Send",
+        "thanks": "Thanks, we'll find another one",
+        "notReady": "This track isn't downloaded yet",
+        "failed": "Couldn't send"
+      },
+      "SavedCombos": {
+        "label": "Saved mixes",
+        "now": "now",
+        "save": "Save",
+        "saveMeta": "current settings",
+        "saveTitle": "Save this mix",
+        "editTitle": "Mix",
+        "done": "Done",
+        "rename": "Rename",
+        "remove": "Delete",
+        "removed": "“{name}” deleted",
+        "savedToast": "“{name}” saved",
+        "failed": "Something went wrong — try again"
+      },
+      "Scrubber": {
+        "seek": "Track position",
+        "transitionAt": "Transition at {time}",
+        "valueText": "{pos} of {dur}"
+      },
+      "ScrubberStylePicker": {
+        "wave": "Wave",
+        "line": "Line"
+      },
+      "SharedLink": {
+        "title": "Link",
+        "from": "From {source}",
+        "looking": "Looking it up…",
+        "play": "Play",
+        "like": "Like",
+        "liked": "Liked",
+        "toPlaylist": "Add to playlist",
+        "openAlbum": "Open album",
+        "error": {
+          "unsupported_link": "Can’t open this link",
+          "not_found": "Not in the catalog",
+          "network": "The server didn’t respond"
+        },
+        "errorText": {
+          "unsupported_link": "Links from Deezer, Spotify, Apple Music, YouTube, SoundCloud and Bandcamp work",
+          "not_found": "Try finding the song with search",
+          "network": "Try again a little later"
+        }
+      },
+      "StoryMoment": {
+        "length": "Story length",
+        "sec": "{n} s",
+        "moment": "Moment for the story",
+        "play": "Play the selection",
+        "stop": "Stop",
+        "start": "Start",
+        "chorus": "Chorus"
+      },
+      "StoryShare": {
+        "title": "Story",
+        "make": "Make the video",
+        "repick": "Another moment",
+        "listenFailed": "Couldn't play the clip",
+        "prepare": "Preparing audio",
+        "render": "Making the video · {n}%",
+        "upload": "Adding audio",
+        "share": "Share",
+        "save": "Save video",
+        "saved": "Video saved",
+        "retry": "Try again",
+        "noAudio": "This track has no audio for a story yet",
+        "failed": "Couldn't make the video"
+      },
+      "TasteMap": {
+        "aria": "How this track was picked: taste map",
+        "done": "played through",
+        "skipped": "skipped",
+        "options": "wave options",
+        "replay": "Show again"
+      },
+      "TrackCredits": {
+        "title": "Credits",
+        "label": "Label",
+        "year": "Year",
+        "role": {
+          "writer": "Songwriting",
+          "composer": "Music",
+          "lyricist": "Lyrics",
+          "producer": "Producer | Producers",
+          "arranger": "Arrangement",
+          "programming": "Programming",
+          "recording": "Recording",
+          "engineer": "Engineer | Engineers",
+          "mix": "Mixing",
+          "mastering": "Mastering"
+        }
+      },
+      "UpcomingRelease": {
+        "save": "Pre-save",
+        "saved": "Pre-saved",
+        "presaved": "Will be added to your library on {day}",
+        "savedNow": "“{title}” is in your library",
+        "failed": "Something went wrong — try again"
+      },
+      "WaveHero": {
+        "preparing": "Preparing your wave…",
+        "hint": "Picking music for these settings",
+        "progress": "{ready} of {need} ready",
+        "cancel": "Cancel",
+        "more": "More",
+        "taste": "My taste",
+        "resetSettings": "Reset wave settings"
+      },
+      "WavePrepNote": {
+        "preparing": "Preparing “{name}”…",
+        "of": "{ready} of {need}",
+        "cancel": "Cancel"
+      },
+      "WhyTrack": {
+        "title": "Why this track",
+        "failed": "Couldn't find out — try again later",
+        "details": "Details"
+      }
+    },
+    "recognize": {
+      "Button": {
+        "label": "Recognize a song"
+      },
+      "History": {
+        "title": "Recognized",
+        "remove": "Remove",
+        "removeFailed": "Couldn't remove"
+      },
+      "Layer": {
+        "aria": "Recognize a song",
+        "listening": "Listening…",
+        "found": "Found it",
+        "noMatch": "No match",
+        "closer": "Try getting closer to the sound",
+        "again": "Try again",
+        "cancel": "Cancel",
+        "close": "Close",
+        "fail": {
+          "permission": {
+            "title": "No microphone access",
+            "text": "Allow it in system settings"
+          },
+          "no_microphone": {
+            "title": "No microphone",
+            "text": "Connect a microphone and try again"
+          },
+          "shazam": {
+            "title": "Shazam didn't respond",
+            "text": "Check your connection and try again"
+          },
+          "network": {
+            "title": "Couldn't find the song",
+            "text": "Check your connection and try again"
+          },
+          "unsupported": {
+            "title": "Not available here",
+            "text": "Use the iPhone or Mac app"
+          }
+        },
+        "sheetTitle": "Recognized song",
+        "recognized": "Recognized",
+        "play": "Play",
+        "pause": "Pause",
+        "like": "Like",
+        "liked": "Liked",
+        "playlist": "Add to playlist",
+        "wave": "Song radio",
+        "missing": "This song isn't in the catalog",
+        "search": "Search"
+      }
+    },
+    "rewind": {
+      "Card": {
+        "kicker": "Year in review",
+        "soFar": "Your year so far",
+        "sideA": "Side A",
+        "ready": "Your {year} is ready",
+        "watch": "Watch",
+        "empty": "Quiet so far — your review builds as you listen",
+        "past": "Past years"
+      }
+    },
+    "search": {
+      "Browse": {
+        "title": "Moods and genres",
+        "genre": {
+          "ruRap": "Russian rap",
+          "hyperpop": "Hyperpop",
+          "phonk": "Phonk",
+          "alt": "Alternative",
+          "popPunk": "Pop punk",
+          "electronic": "Electronic",
+          "indie": "Indie",
+          "rock": "Rock"
+        }
+      },
+      "DescribeRow": {
+        "build": "Build a playlist from this description"
+      },
+      "Filters": {
+        "label": "Filters",
+        "library": "In library",
+        "type": {
+          "all": "All",
+          "tracks": "Songs",
+          "artists": "Artists",
+          "albums": "Albums",
+          "playlists": "Playlists",
+          "sound": "By sound"
+        }
+      },
+      "LyricsResults": {
+        "title": "From the lyrics"
+      },
+      "Recent": {
+        "title": "Recent",
+        "clear": "Clear",
+        "remove": "Remove",
+        "kind": {
+          "query": "Search",
+          "artist": "Artist",
+          "album": "Album",
+          "track": "Song",
+          "playlist": "Playlist"
+        }
+      },
+      "SoundResults": {
+        "title": "Sounds like this",
+        "kicker": "By sound",
+        "wave": "Start a wave from this",
+        "waveShort": "Wave",
+        "ctx": "From “{q}”",
+        "catalog": "New for you",
+        "library": "From your library",
+        "unknown": "Didn't understand: {words}",
+        "down": "Sound search is unavailable",
+        "downText": "Try again a bit later — regular search works",
+        "none": "Nothing similar",
+        "noneText": "Try describing the mood, instruments or tempo"
+      }
+    },
+    "settings": {
+      "Discord": {
+        "group": "Integrations",
+        "title": "Discord status",
+        "failed": "Couldn’t switch it"
+      },
+      "Downloads": {
+        "title": "Downloads",
+        "used": "{used} of {limit} used",
+        "part": {
+          "pinned": "Pinned",
+          "reserve": "Smart reserve",
+          "cache": "Cache"
+        },
+        "state": {
+          "forced": "Offline mode: only downloads play",
+          "offline": "No network — downloads resume when it's back",
+          "wifi": "Waiting for Wi-Fi",
+          "downloading": "Downloading {n}",
+          "overLimit": "{n} don't fit — raise the limit",
+          "failed": "{n} didn't download — we'll retry later",
+          "done": "Everything is downloaded"
+        },
+        "limit": "Storage to use",
+        "wifi": "Wi-Fi only",
+        "wifiDesc": "No music downloads over cellular",
+        "reserve": "Smart reserve",
+        "reserveDesc": "Favourites mixed with new music — the wave plays offline",
+        "reserveCount": "Offline wave: {ready} of {total} on this device",
+        "reserveList": "Wave reserve",
+        "forceOffline": "Offline mode",
+        "forceOfflineDesc": "Downloads only: the app stays off the server",
+        "remove": "Remove all downloads",
+        "removeConfirm": "Sure? Tap again"
+      },
+      "Export": {
+        "row": "Export",
+        "rowDesc": "Your library as a file: CSV, M3U8, JSON",
+        "title": "Export library",
+        "whole": "Whole library",
+        "zip": "ZIP archive",
+        "zipDesc": "Every playlist as CSV and M3U8, everything as JSON",
+        "json": "Single JSON file",
+        "jsonDesc": "Likes, playlists with folders, follows",
+        "history": "Listening history",
+        "likedNote": "CSV works with TuneMyMusic and Soundiiz, M3U8 with media players",
+        "download": "Download"
+      },
+      "Friends": {
+        "shareOff": "Friends only see your name",
+        "start": "Turn on"
+      },
+      "Handoff": {
+        "group": "Across devices",
+        "autoHint": "Plays where you are",
+        "hereHint": "The other device pauses",
+        "thereHint": "This device is a remote",
+        "title": "Continue on another device",
+        "desc": "Music follows your headphones",
+        "ask": "Ask first",
+        "askOn": "“Continue here?” before moving",
+        "askOff": "Music moves on its own"
+      },
+      "Overlay": {
+        "group": "Stream overlay",
+        "title": "Now Playing card",
+        "desc": "For OBS: a transparent page with what’s playing",
+        "create": "Get link",
+        "preview": "How the card looks on stream",
+        "look": "Style",
+        "line": "Line",
+        "card": "Card",
+        "side": "Side",
+        "left": "Left",
+        "right": "Right",
+        "size": "Size",
+        "private": "Hide in a private session",
+        "link": "Link",
+        "linkDesc": "OBS → Source → Browser",
+        "copy": "Copy link",
+        "copied": "Link copied",
+        "rotate": "New link",
+        "rotateTitle": "Make a new link?",
+        "rotateText": "The old link will stop working — paste the new one into OBS.",
+        "off": "Turn off overlay",
+        "offTitle": "Turn off the overlay?",
+        "offText": "The link will stop working. You can get a new one any time.",
+        "failed": "Didn’t work — try again"
+      },
+      "Screensaver": {
+        "group": "Screen saver",
+        "title": "DalyWave screen saver",
+        "hint": "The wave on screen while your Mac rests",
+        "installed": "Installed",
+        "install": "Install",
+        "open": "Set up",
+        "done": "Choose DalyWave in Screen Saver settings",
+        "failed": "Couldn’t install the screen saver"
+      },
+      "SignIn": {
+        "title": "Sign-in",
+        "username": "Username",
+        "password": "Password",
+        "change": "Change",
+        "set": "Set",
+        "changeTitle": "New password",
+        "setTitle": "Username and password",
+        "current": "Current password",
+        "new": "New password",
+        "save": "Save",
+        "saved": "Password saved",
+        "wrong": "The current password is wrong",
+        "weak": "At least 10 characters",
+        "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+        "taken": "This username is taken",
+        "rateLimited": "Too many attempts. Wait a minute",
+        "link": "Link",
+        "unlink": "Unlink",
+        "linked": "Sign-in linked",
+        "linkedElsewhere": "This sign-in belongs to another account",
+        "linkFailed": "Couldn't link the sign-in",
+        "lastMethod": "This is your only way to sign in. Set a password or link another sign-in first",
+        "failed": "Something went wrong. Check the connection to the server"
+      }
+    },
+    "shell": {
+      "AppUpdateRow": {
+        "version": "App version",
+        "upToDate": "You're on the latest version",
+        "checking": "Checking for updates…",
+        "downloading": "Downloading update {version}",
+        "ready": "Update ready — {version}",
+        "installing": "Installing…",
+        "failed": "Couldn't check for updates",
+        "onQuit": "Or it installs when you quit DalyWave",
+        "restart": "Restart",
+        "check": "Check"
+      },
+      "DesktopApps": {
+        "macReq": "Apple silicon, macOS {v} or later",
+        "winReq": "Windows {v} or later, 64-bit",
+        "download": "Download",
+        "intel": "For Intel-based Macs",
+        "soon": "Coming soon",
+        "failed": "Couldn't load",
+        "deckWhat": "Plugin for Stream Deck and Stream Deck +",
+        "deckReq": "For Mac and Windows, Stream Deck {v} or later",
+        "deckNext": "Open the file and Stream Deck will install the plugin and the DalyWave profile. Press any DalyWave key and sign in in the window that opens"
+      },
+      "DownloaderIndicator": {
+        "titleMac": "Downloader on this Mac",
+        "titlePc": "Downloader on this PC",
+        "line": "Downloader: {state}",
+        "meta": {
+          "working": "Downloading “{track}”",
+          "workingFull": "Downloading “{track}” — {artist}",
+          "workingUnknown": "Downloading a track",
+          "finishing": "Finishing “{track}”, then pausing",
+          "idle": "Waiting for jobs",
+          "paused": "Paused",
+          "offline": "Can't reach the server",
+          "resting": "Resting after a YouTube check",
+          "starting": "Starting…",
+          "stopping": "Stopping…",
+          "restarting": "Restarting…",
+          "token": "Token rejected by the server",
+          "broken": "Installation is damaged",
+          "disabled": "Off",
+          "signed-out": "Sign-in required",
+          "forbidden": "Available to admins"
+        }
+      },
+      "DownloaderSettings": {
+        "titleMac": "Downloader on this Mac",
+        "titlePc": "Downloader on this PC",
+        "titleWeb": "Downloader",
+        "web": "Works in the app for Mac and PC",
+        "switchMac": "Download on this Mac",
+        "switchPc": "Download on this PC",
+        "forbidden": "Available to admins",
+        "state": {
+          "working": "Downloading: {track} — {artist}",
+          "workingTrack": "Downloading: {track}",
+          "workingUnknown": "Downloading",
+          "finishing": "Finishing the track, then pausing",
+          "idle": "Waiting for jobs",
+          "paused": "Paused",
+          "offline": "Can't reach the server",
+          "resting": "Resting",
+          "restingUntil": "Resting until {time}",
+          "starting": "Starting…",
+          "stopping": "Stopping…",
+          "restarting": "Restarting…",
+          "token": "Token rejected by the server",
+          "broken": "Installation is damaged",
+          "disabled": "Off",
+          "signed-out": "Sign-in required",
+          "forbidden": "Available to admins"
+        },
+        "progress": "Job progress",
+        "pause": "Pause",
+        "resume": "Resume",
+        "recreate": "Recreate token",
+        "today": "Today",
+        "counters": "{done} downloaded · {failed} failed",
+        "log": "Log",
+        "failed": "That didn't work — try again"
+      },
+      "TrainerSettings": {
+        "titleMac": "Recommendations on this Mac",
+        "titlePc": "Recommendations on this PC",
+        "switch": "Help train recommendations",
+        "switchDesc": "Only on mains power, when the computer isn't busy",
+        "state": {
+          "training": "Training — takes a couple of minutes",
+          "battery": "Waiting for mains power",
+          "busy": "Waiting until the computer is free",
+          "signedOut": "Sign-in required",
+          "waiting": "Waiting for its turn"
+        },
+        "last": {
+          "active": "{when}: recommendations got more accurate",
+          "kept": "{when}: the previous recommendations were more accurate",
+          "failed": "{when}: didn't work, will try later"
+        },
+        "today": "Today at {time}",
+        "onDate": "{date} at {time}",
+        "failed": "That didn't work — try again"
+      }
+    },
+    "taste": {
+      "FacetCard": {
+        "listen": "Play",
+        "lessBtn": "Less like this",
+        "undo": "Restore",
+        "also": "also {names}",
+        "peak": {
+          "morning": "mostly mornings",
+          "day": "mostly afternoons",
+          "evening": "mostly evenings",
+          "night": "mostly at night"
+        }
+      }
+    }
+  },
+  "pages": {
+    "admin": {
+      "access": {
+        "title": "Invites & sign-in",
+        "people": "People",
+        "hint": "New people wait for a role until you give one. Sign-in provider admins are admins here too",
+        "waiting": "waiting: {n}",
+        "you": "you",
+        "local": "emergency sign-in",
+        "login": "username {name}",
+        "noRole": "No role",
+        "newUser": {
+          "action": "New account",
+          "title": "New account",
+          "name": "Name",
+          "username": "Username",
+          "role": "Role",
+          "note": "The person sets the password themselves — with the link you pass on",
+          "submit": "Create",
+          "taken": "This username is taken",
+          "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+          "linkTitle": "Sign-in link",
+          "linkText": "Pass it on: {name} sets a password and signs in. One-time link, valid for 48 hours"
+        },
+        "reset": {
+          "action": "New password link",
+          "actionNew": "Link to set a password",
+          "title": "New password link",
+          "text": "Pass it on: {name} sets a new password, old sessions end. One-time link, valid for 48 hours"
+        },
+        "methods": {
+          "title": "Sign-in methods",
+          "hint": "Configured with the server's environment variables"
+        },
+        "lastLogin": "signed in {when}",
+        "disabled": "Disabled",
+        "give": "Give access",
+        "actions": "Actions",
+        "role": {
+          "admin": "Admin",
+          "listener": "Listener"
+        },
+        "makeAdmin": "Make admin",
+        "removeAdmin": "Remove admin role",
+        "idpAdmin": "granted by the sign-in provider",
+        "self": "that's you",
+        "makeListener": "Give listener role",
+        "removeListener": "Remove listener role",
+        "disable": "Disable",
+        "enable": "Enable",
+        "adminGiven": "{name} is now an admin",
+        "adminRemoved": "{name} is no longer an admin",
+        "listenerGiven": "{name} can now listen",
+        "listenerRemoved": "{name} is no longer a listener",
+        "disabledDone": "{name} disabled: all sessions closed",
+        "enabledDone": "{name} can sign in again",
+        "restored": "Roles restored",
+        "failed": "Couldn't change access — try again",
+        "sessions": {
+          "title": "Sessions and devices",
+          "hint": "Website tabs and apps that are signed in",
+          "who": "Who",
+          "where": "Where",
+          "how": "Sign-in",
+          "active": "Active",
+          "current": "this session",
+          "browser": "Browser",
+          "via": {
+            "oidc": "provider",
+            "password": "emergency",
+            "device": "app",
+            "local": "username"
+          },
+          "revoke": "End session",
+          "all": "Show all {n}",
+          "less": "Collapse",
+          "revoked": "Session of {name} ended",
+          "failed": "Couldn't end the session",
+          "empty": "No open sessions"
+        }
+      },
+      "backups": {
+        "title": "Backups",
+        "off": {
+          "title": "Backup folder is not connected",
+          "text": "Set DALYWAVE_BACKUP_DIR on the server — the folder where the backup container puts daily database dumps"
+        },
+        "stats": {
+          "last": "latest backup",
+          "count": "backups kept",
+          "size": "take up",
+          "checkOk": "Readable",
+          "checkBad": "Damaged",
+          "checked": "checked {when}",
+          "never": "not checked yet"
+        },
+        "stale": "No fresh backup for over a day and a half — check the backup container on the server",
+        "check": {
+          "action": "Check the latest",
+          "one": "Check {name}",
+          "title": "Last check",
+          "file": "Backup",
+          "result": "Result",
+          "readable": "Fully readable, dump is complete",
+          "tables": "Tables",
+          "objects": "Schema objects",
+          "ok": "Backup {name} is fine",
+          "bad": "Backup {name} is damaged",
+          "failed": "Couldn't check the backup"
+        },
+        "files": {
+          "title": "Backups",
+          "hint": "One database backup a day, kept for 14 days",
+          "empty": "No backups yet",
+          "name": "File",
+          "size": "Size",
+          "when": "Created"
+        }
+      },
+      "catalog": {
+        "view": {
+          "ready": "Ready",
+          "unverified": "Not verified",
+          "failed": "Failed",
+          "disputed": "Disputed",
+          "all": "All recordings"
+        },
+        "title": "Catalog",
+        "search": "Title or artist",
+        "status": "State",
+        "anyStatus": "With a file or in progress",
+        "sourceLabel": "Source",
+        "anySource": "Any source",
+        "verifiedLabel": "Verification",
+        "verifiedAll": "All",
+        "verifiedYes": "Verified",
+        "verifiedNo": "Unverified",
+        "empty": "No such recordings",
+        "failed": "Didn't work — try again",
+        "more": "Show more",
+        "noTrack": "Track removed from the catalog",
+        "sharedBy": "tracks: {n}",
+        "files": "files: {n}",
+        "kbps": "kbps",
+        "khz": "kHz",
+        "peak": "peak {v} dB",
+        "verified": "verified",
+        "unverified": "unverified",
+        "actions": "Actions",
+        "replace": "Replace from a link",
+        "replacePlaceholder": "Link: YouTube, SoundCloud, Bandcamp…",
+        "replaceGo": "Replace",
+        "cancel": "Cancel",
+        "reacquire": "Download again",
+        "openSource": "Open the source",
+        "openAlbum": "Open the album",
+        "replaceQueued": "“{title}” will download from the link and replace the file",
+        "reacquireQueued": "“{title}” will be searched again; the file is replaced if a better one turns up",
+        "col": {
+          "track": "Recording",
+          "status": "State",
+          "format": "Format",
+          "loudness": "Loudness",
+          "source": "Source",
+          "match": "Match",
+          "size": "Size"
+        },
+        "source": {
+          "youtube_music": "YouTube Music",
+          "youtube": "YouTube",
+          "soundcloud": "SoundCloud",
+          "bandcamp": "Bandcamp",
+          "upload": "Uploaded",
+          "local": "Music folder",
+          "other": "Other"
+        }
+      },
+      "clips": {
+        "title": "Clips",
+        "reports": {
+          "title": "Clip reports",
+          "hint": "Listeners hid these clips — pick another one or leave the track without a clip",
+          "n": "hidden: {n}"
+        }
+      },
+      "disputed": {
+        "view": {
+          "all": "All",
+          "sure": "Almost sure",
+          "doubt": "Doubtful",
+          "empty": "No candidates",
+          "newest": "Recent"
+        },
+        "sort": {
+          "label": "Order",
+          "scoreDesc": "Sure first",
+          "scoreAsc": "Doubtful first",
+          "newest": "Recent first",
+          "oldest": "Oldest first"
+        },
+        "search": "Title, artist or ISRC",
+        "shown": "{n} of {total}",
+        "nothing": "No recordings in this view",
+        "title": "Disputed",
+        "clips": "Videos listeners hid",
+        "clipReports": "How many listeners hid the video",
+        "queue": "Disputed recordings",
+        "empty": "No disputed recordings",
+        "emptyText": "Downloads that didn't match the Deezer preview land here",
+        "noTrack": "Track removed from the catalog",
+        "bestScore": "Best candidate score",
+        "more": "Showing the first 100",
+        "prev": "Previous",
+        "next": "Next",
+        "of": "{i} of {n}",
+        "expected": "Expected track",
+        "album": "Album",
+        "duration": "Duration",
+        "tried": "Last attempt",
+        "playPreview": "Play the Deezer preview",
+        "stopPreview": "Stop the preview",
+        "noPreview": "This track has no Deezer preview",
+        "previewFailed": "The preview didn't load",
+        "linkLabel": "Link to the recording",
+        "linkPlaceholder": "Link: YouTube, SoundCloud, Bandcamp…",
+        "download": "Download",
+        "searchAgain": "Search again",
+        "none": "Not in sources",
+        "chosen": "“{title}” will download from the chosen video",
+        "linked": "“{title}” will download from the link",
+        "markedUnavailable": "“{title}” marked as not in sources",
+        "retried": "“{title}” will be searched again",
+        "failed": "Didn't work — try again",
+        "keys": {
+          "move": "recording",
+          "choose": "choose",
+          "preview": "preview",
+          "link": "link",
+          "none": "not in sources"
+        }
+      },
+      "downloads": {
+        "title": "Downloads",
+        "liveOn": "Updating live",
+        "liveOff": "No live updates",
+        "all": "All",
+        "more": "Show more",
+        "now": {
+          "title": "Now",
+          "summary": "{running} downloading · {queued} waiting",
+          "waiting": "No one to download: the downloader is offline.",
+          "sources": "Sources",
+          "all": "Show all {n}",
+          "less": "Collapse",
+          "empty": "Nothing is downloading right now",
+          "count": "Downloading: {n}"
+        },
+        "lanes": {
+          "title": "Lanes",
+          "hint": "Lanes run independently: pausing one doesn't hold up the others"
+        },
+        "jobs": {
+          "title": "Jobs",
+          "filter": "Which jobs",
+          "lane": "Lane",
+          "anyLane": "All lanes",
+          "empty": "No such jobs",
+          "search": "Job kind or error"
+        },
+        "history": {
+          "title": "Download history",
+          "hint": "How downloads ended: candidates, scores, fingerprint check",
+          "filter": "Outcome",
+          "empty": "Nothing has been downloaded yet",
+          "search": "Title, artist or error"
+        }
+      },
+      "health": {
+        "title": "Health",
+        "allGood": "Everything works",
+        "problems": "Need attention: {n}",
+        "checks": "Server parts",
+        "open": "Open",
+        "ok": "works",
+        "off": "not enabled on this server",
+        "down": "not responding",
+        "latency": "answered in {ms} ms",
+        "detail": {
+          "worker": "last job — {when}",
+          "backups": "last backup — {when}",
+          "noBackups": "no backups yet"
+        },
+        "uptime": {
+          "min": "{n} min",
+          "h": "{n} h",
+          "d": "{n} d"
+        },
+        "stats": {
+          "version": "version · up {uptime}",
+          "db": "database",
+          "connections": "connections now",
+          "queue": "queued · {n} running",
+          "failed": "jobs failed in 24 h"
+        },
+        "state": {
+          "ok": "OK",
+          "warn": "Attention",
+          "down": "Down",
+          "off": "Off"
+        },
+        "part": {
+          "database": "Database",
+          "storage": "File storage",
+          "realtime": "Live events",
+          "worker": "Job queue",
+          "ml": "Audio analysis",
+          "fetcher": "Server downloader",
+          "backups": "Backups"
+        },
+        "about": {
+          "database": "Postgres",
+          "storage": "audio, covers, clips",
+          "realtime": "updates on screens",
+          "worker": "downloads, covers, analysis",
+          "ml": "recommendations and wave",
+          "fetcher": "downloading on the server",
+          "backups": "daily database dump"
+        },
+        "failures": {
+          "title": "Failed in 24 hours",
+          "hint": "Latest jobs with an error",
+          "none": "No job failed",
+          "all": "All failed"
+        }
+      },
+      "import": {
+        "title": "Import",
+        "history": "History",
+        "empty": "No imports yet",
+        "emptyText": "Transfers of the Spotify archive, lists and your own files will show up here — with progress and items that weren't found",
+        "col": {
+          "what": "What",
+          "state": "State",
+          "matched": "Found",
+          "unmatched": "Unmatched",
+          "when": "When"
+        },
+        "kind": {
+          "text": "Text list",
+          "csv": "CSV table",
+          "m3u": "M3U playlist",
+          "files": "Files",
+          "spotify_archive": "Spotify archive",
+          "yandex": "Yandex Music",
+          "youtube_playlist": "YouTube Music playlist",
+          "youtube_takeout": "YouTube Music archive"
+        },
+        "status": {
+          "running": "Running",
+          "done": "Done",
+          "failed": "Failed",
+          "cancelled": "Stopped"
+        },
+        "phase": {
+          "uploading": "Uploading files",
+          "matching": "Catalog search",
+          "applying": "Applying",
+          "done": "Done"
+        },
+        "stat": {
+          "likes": "like | likes",
+          "playlists": "playlist | playlists",
+          "albums": "album | albums",
+          "artists": "follow | follows",
+          "plays": "play | plays",
+          "files": "file | files",
+          "upgraded": "upgraded | upgraded"
+        }
+      },
+      "index": {
+        "title": "Overview",
+        "now": {
+          "title": "Now",
+          "summary": "online {online}, listening {listening}",
+          "all": "All",
+          "empty": "Nobody is here right now"
+        },
+        "health": {
+          "ok": "Server running · {version} · {uptime}",
+          "down": "Server not responding"
+        },
+        "uptime": {
+          "min": "{n} min",
+          "h": "{n} h",
+          "d": "{n} d"
+        },
+        "live": {
+          "on": "Live events",
+          "off": "No live events"
+        },
+        "problem": {
+          "title": "Needs attention",
+          "none": "All good",
+          "disputed": "Disputed recordings: {n} — pick what to download",
+          "waiting": "Waiting for access: {n}",
+          "nobody": "No one to download: downloader offline, {n} queued",
+          "fetcher": "Server downloader not responding",
+          "jobs": "Failed jobs: {n}",
+          "paused": "“{title}” paused, {n} waiting",
+          "ml": "Audio analysis service not responding",
+          "review": "Review",
+          "open": "Open",
+          "sources": "Sources",
+          "resume": "Resume",
+          "resumed": "“{title}” running again",
+          "failed": "Didn't work — try again"
+        },
+        "stats": {
+          "title": "Last 24 hours",
+          "plays": "plays",
+          "likes": "likes",
+          "newTracks": "new tracks",
+          "acquired": "downloaded",
+          "acquireFailed": "failed downloads",
+          "jobs": "jobs done",
+          "jobsFailed": "{n} failed"
+        },
+        "rec": {
+          "title": "Recordings by state"
+        },
+        "storage": {
+          "title": "Storage",
+          "audio": "Audio",
+          "images": "Covers and photos",
+          "cost": "R2 cost per month"
+        },
+        "lib": {
+          "title": "Catalog and library",
+          "tracks": "Tracks",
+          "albums": "Albums",
+          "artists": "Artists",
+          "liked": "Likes",
+          "followed": "Follows",
+          "playlists": "Playlists"
+        },
+        "sys": {
+          "title": "Sources and recommendations",
+          "downloaders": "Downloaders",
+          "online": "online: {n}",
+          "offline": "none online",
+          "server": "Server downloader",
+          "works": "working",
+          "down": "not responding",
+          "queue": "Jobs queued",
+          "analysed": "Downloads analysed",
+          "index": "Catalog index",
+          "ml": "Audio analysis",
+          "model": "Model version"
+        }
+      },
+      "library": {
+        "title": "Library",
+        "rescan": "Rescan",
+        "queued": "Rescanning the folders",
+        "failed": "Could not start the scan",
+        "none": {
+          "title": "No music folders yet",
+          "text": "Set the music folders in the server settings (DALYWAVE_MUSIC_DIRS) and restart it"
+        },
+        "stats": {
+          "tracks": "tracks from folders",
+          "analyzing": "awaiting loudness and analysis",
+          "transcoded": "played via a copy",
+          "unreadable": "could not be read"
+        },
+        "scan": {
+          "title": "Scanning",
+          "running": "Running",
+          "done": "Done",
+          "failed": "Interrupted",
+          "never": "The folders have not been scanned yet",
+          "progress": "{done} of {total} files processed"
+        },
+        "kind": {
+          "full": "all folders",
+          "changes": "changes"
+        },
+        "sum": {
+          "added": "+{n} new",
+          "updated": "{n} changed",
+          "moved": "{n} moved",
+          "removed": "{n} removed",
+          "failed": "{n} unreadable",
+          "nothing": "Nothing changed"
+        },
+        "dirs": {
+          "title": "Folders",
+          "hint": "The server only reads them: files are never copied or changed",
+          "ok": "Readable, changes are picked up automatically",
+          "missing": "Folder is unavailable — its files stay in the library until it is back"
+        },
+        "problems": {
+          "title": "Not in the library",
+          "hint": "A fixed file is picked up on the next scan",
+          "none": "Every file was read",
+          "root": "In the folder root"
+        },
+        "problem": {
+          "error": "The file could not be read",
+          "unsupported": "Unsupported format",
+          "errorShort": "Read error",
+          "unsupportedShort": "Unsupported"
+        }
+      },
+      "live": {
+        "title": "Now",
+        "live": "Updating live",
+        "offline": "Offline — will update when connected",
+        "people": "Online",
+        "empty": "Nobody is here right now",
+        "emptyText": "When someone opens the site or the app, they will appear here",
+        "stats": {
+          "online": "online",
+          "listening": "listening now",
+          "plays": "plays in 24 hours",
+          "newUsers": "new this week"
+        }
+      },
+      "log": {
+        "view": {
+          "all": "All events",
+          "auth": "Sign-ins",
+          "user": "People and roles",
+          "settings": "Settings"
+        },
+        "title": "Log",
+        "filterKind": "Event kind",
+        "filterActor": "Who",
+        "allKinds": "All events",
+        "anyone": "Everyone",
+        "empty": "No such events",
+        "failed": "Couldn't load the log",
+        "more": "Show more",
+        "system": "system",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "group": {
+          "auth": "Sign-ins and sign-outs",
+          "user": "People and roles",
+          "session": "Sessions",
+          "lane": "Queue lanes",
+          "job": "Jobs",
+          "downloader": "Downloaders",
+          "acquisition": "Disputed",
+          "recording": "Catalog",
+          "source": "Download tests",
+          "reco": "Recommendations",
+          "settings": "Settings"
+        },
+        "kind": {
+          "auth_sign_in": "Sign-in",
+          "auth_sign_in_failed": "Failed sign-in",
+          "auth_sign_in_denied": "Sign-in denied",
+          "auth_logout": "Sign-out",
+          "auth_app_code_reused": "App code reused",
+          "user_created": "New user",
+          "user_roles_changed": "Roles changed",
+          "user_disabled": "User disabled",
+          "user_enabled": "User enabled",
+          "session_revoked": "Session ended",
+          "job_retried": "Job retried",
+          "job_cancelled": "Job cancelled",
+          "lane_changed": "Lane changed",
+          "downloader_created": "Downloader added",
+          "downloader_revoked": "Downloader revoked",
+          "acquisition_resolved": "Disputed resolved",
+          "reco_settings_changed": "Scouting settings",
+          "reco_run": "Run out of schedule",
+          "settings_changed": "Server settings",
+          "recording_reacquire": "Recording re-downloading",
+          "recording_reported": "Wrong recording reported",
+          "clip_chosen": "Video chosen by hand",
+          "source_check": "Download test",
+          "device_created": "New device"
+        },
+        "d": {
+          "password": "password",
+          "noRoles": "no roles",
+          "byProvider": "via daly.rest",
+          "paused": "paused",
+          "resumed": "resumed",
+          "always": "around the clock",
+          "concurrency": "{n} at once",
+          "interval": "{s} s pause",
+          "queued": "jobs: {n}",
+          "action": {
+            "choose": "video chosen",
+            "url": "from a link",
+            "unavailable": "not in sources",
+            "retry": "search again"
+          }
+        }
+      },
+      "reco": {
+        "title": "Recommendations",
+        "who": "Listener",
+        "whoHint": "likes: {l} · plays: {p}",
+        "me": "{name} (you)",
+        "failed": "Didn't work — try again",
+        "user": {
+          "eyebrow": "Listener's taste",
+          "hint": "Facets, impressions, sessions, pools and mixes of this listener only"
+        },
+        "ustats": {
+          "likes": "likes",
+          "plays": "plays",
+          "facets": "taste facets",
+          "pools": "pool tracks on the server"
+        },
+        "shared": {
+          "eyebrow": "Shared by everyone",
+          "title": "Shared catalog index",
+          "hint": "What is analysed by sound and what the scout is looking for — one index for all listeners"
+        },
+        "stats": {
+          "index": "in the catalog index",
+          "of": "of {n}",
+          "analysed": "of downloads analysed",
+          "files": "files: {n}",
+          "day": "analysed in 24 h",
+          "failed": "{n} failed",
+          "queue": "waiting for analysis",
+          "artists": "artists around your taste",
+          "seeds": "favourites: {n}"
+        },
+        "settings": {
+          "title": "Scouting",
+          "hint": "Applies from the next scout pass",
+          "perDay": "Tracks to analyse per day",
+          "maxIndex": "Index limit",
+          "hops": "Scouting boldness",
+          "hopsHint": "Steps through similar artists",
+          "decay": "Share of new",
+          "careful": "Careful",
+          "balanced": "Balanced",
+          "bold": "Bold",
+          "saved": "Settings saved"
+        },
+        "index": {
+          "title": "Scout finds",
+          "source": "From",
+          "found": "Found",
+          "analyzed": "Analysed",
+          "pending": "Waiting",
+          "kind": {
+            "top": "Artists' top tracks",
+            "release": "Fresh releases",
+            "radio": "Artist radio",
+            "chart": "Charts",
+            "editorial": "Editorial picks"
+          }
+        },
+        "run": {
+          "scout": "Scout now",
+          "analysis": "Analyse downloads",
+          "taste": "Rebuild taste",
+          "model": "Train",
+          "queued": "Jobs queued: {n}",
+          "nothing": "Everything is already queued"
+        },
+        "facets": {
+          "title": "Taste facets",
+          "hint": "From likes and full listens; rebuilt at night",
+          "empty": "No facets yet: more likes and plays needed"
+        },
+        "shown": {
+          "title": "Recent impressions",
+          "hint": "What the wave suggested, why, and how it ended",
+          "empty": "Nothing shown yet"
+        },
+        "sessions": {
+          "title": "Wave sessions",
+          "hint": "Last ten: how much was served and how it went",
+          "empty": "The wave hasn't been started yet",
+          "outcomes": "likes: {l} · finished: {c} · skips: {s}"
+        },
+        "pools": {
+          "title": "Wave pools",
+          "hint": "For frequent settings: ready on the server out of picked",
+          "empty": "No pools yet — rebuilt hourly",
+          "ready": "{r} of {n} ready"
+        },
+        "mixes": {
+          "title": "Mixes",
+          "hint": "Built when taste is rebuilt",
+          "empty": "No mixes yet",
+          "kind": {
+            "daily_mix": "Daily mix",
+            "discover_weekly": "Discover weekly"
+          }
+        },
+        "surface": {
+          "wave": "wave",
+          "radio": "radio",
+          "similar": "similar",
+          "mix": "mix",
+          "discovery": "discovery",
+          "autoplay": "autoplay"
+        },
+        "outcome": {
+          "like": "Like",
+          "dislike": "Dislike",
+          "skip": "Skip",
+          "not_now": "Not now",
+          "more_like_this": "More like this",
+          "completed": "Finished"
+        },
+        "nn": {
+          "title": "Taste network",
+          "hint": "Trains nightly on the server and on computers with the app; switches itself on only when it beats the rules and the current version on held-out data",
+          "data": "Data",
+          "of": "{n} of {m} plays",
+          "enough": "{n} plays",
+          "never": "Not trained yet",
+          "training": "Training…",
+          "version": "Version",
+          "auc": "AUC",
+          "logloss": "Logloss",
+          "vs": "rules {v}",
+          "vsCurrent": "previous {v}",
+          "session": "In session",
+          "confidence": "confidence {p} %",
+          "server": "Server",
+          "device": "Computer",
+          "global": "shared",
+          "personal": "own: {name}",
+          "rows": "{n} rows",
+          "devices": "Training on computers",
+          "devicesHint": "Computers with the app train the network on their own hardware; the server checks what they send on its own held-out data",
+          "task": {
+            "leased": "Training",
+            "done": "Checked",
+            "failed": "Failed",
+            "expired": "Timed out"
+          },
+          "rules": "Rules: until the network is better",
+          "outcome": {
+            "trained": "Trained",
+            "too_little_data": "Too little data",
+            "failed": "Failed",
+            "none": "—"
+          },
+          "state": {
+            "title": "State",
+            "active": "Active",
+            "replaced": "Replaced",
+            "worse": "Not enabled",
+            "notBetter": "Not better than previous",
+            "rulesOff": "Off"
+          }
+        },
+        "ml": {
+          "title": "Audio analysis service",
+          "state": "State",
+          "works": "working",
+          "down": "not responding",
+          "error": "Error",
+          "models": "Models",
+          "loaded": "loaded",
+          "notLoaded": "not loaded",
+          "version": "Version",
+          "address": "Address"
+        }
+      },
+      "releases": {
+        "title": "Releases",
+        "server": "server and website",
+        "outdated": "devices on old versions",
+        "devices": "{n} dev.",
+        "people": "{n} ppl",
+        "unknown": "Unknown version",
+        "old": "Outdated",
+        "target": {
+          "darwin": "Mac",
+          "windows": "Windows",
+          "linux": "Linux",
+          "streamdeck": "Stream Deck"
+        },
+        "platform": {
+          "macos": "Mac",
+          "windows": "Windows",
+          "linux": "Linux",
+          "ios": "iPhone",
+          "ipados": "iPad",
+          "watchos": "Watch",
+          "tvos": "Apple TV",
+          "streamdeck": "Stream Deck",
+          "android": "Android",
+          "web": "Website"
+        },
+        "installs": {
+          "title": "Who is on which version",
+          "hint": "Apps seen in the last 60 days",
+          "empty": "No apps in use yet"
+        },
+        "history": {
+          "title": "Release history",
+          "empty": "No releases yet",
+          "emptyText": "They are published by the release pipeline with DALYWAVE_RELEASE_TOKEN",
+          "version": "Version",
+          "target": "For",
+          "size": "Size",
+          "when": "Released",
+          "installer": "Installer on the website"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "tabs": "Settings sections",
+        "tab": {
+          "general": "General",
+          "signin": "Sign-in",
+          "music": "Music",
+          "storage": "Storage",
+          "clips": "Clips",
+          "reco": "Recommendations",
+          "notifications": "Notifications",
+          "integrations": "Integrations"
+        },
+        "signin": {
+          "title": "Sign-in",
+          "access": "Invites and sign-in methods",
+          "accessHint": "Providers, invites, sessions",
+          "users": "Users and roles",
+          "usersHint": "Own accounts, roles, blocking"
+        },
+        "storage": {
+          "title": "Storage",
+          "open": "Space and files",
+          "hint": "Audio, covers, compressed copies and their cost",
+          "backups": "Database backups",
+          "backupsHint": "Daily dumps and a trial check"
+        },
+        "reco": {
+          "title": "Recommendations",
+          "open": "Scout and taste model",
+          "hint": "New tracks per day, index size, how bold the scout is"
+        },
+        "notifications": {
+          "hint": "Phone and browser notifications are set up with keys on the server. What to receive — everyone picks in their own settings"
+        },
+        "integrations": {
+          "hint": "Lyrics, imports from other services, animated covers and app releases — external services with addresses and keys on the server"
+        },
+        "saved": "Saved",
+        "failed": "Couldn't save — try again",
+        "laneSaved": "“{title}”: saved",
+        "follow": {
+          "title": "Following an artist",
+          "note": "What to download for a new follow unless the person chose themselves",
+          "albums": "Albums",
+          "eps": "EPs",
+          "singles": "Singles",
+          "compilations": "Compilations",
+          "live": "Live recordings",
+          "appearsOn": "Appearances on others' releases"
+        },
+        "speed": {
+          "title": "Download speed",
+          "note": "A pause between downloads keeps YouTube's bot checks away",
+          "pause": "Pause in “{title}”",
+          "parallel": "At once in “{title}”",
+          "workers": "{n} at once"
+        },
+        "noPause": "No pause",
+        "pauseS": "{s} s pause",
+        "schedule": {
+          "title": "Schedule",
+          "note": "Turn on to run a lane only in its window. “Now” and “Wave” always run",
+          "always": "Around the clock",
+          "windowOpen": "From {from} to {until}, running now",
+          "windowClosed": "From {from} to {until}, waiting now",
+          "toggle": "“{title}” on schedule only",
+          "from": "from",
+          "until": "until",
+          "fromLabel": "Window start for “{title}”",
+          "untilLabel": "Window end for “{title}”"
+        },
+        "sameBounds": "The window start and end must differ",
+        "tz": {
+          "title": "Time",
+          "label": "Time zone",
+          "hint": "For the schedule and time of day in taste"
+        }
+      },
+      "sources": {
+        "view": {
+          "active": "Active",
+          "online": "Online",
+          "failing": "With errors",
+          "revoked": "Revoked",
+          "all": "All"
+        },
+        "title": "Sources",
+        "failed": "Didn't work — try again",
+        "check": {
+          "button": "Test a download",
+          "title": "Test",
+          "hint": "A track downloads out of turn — you see how the sources work",
+          "started": "Testing with “{title}”"
+        },
+        "dl": {
+          "title": "Downloaders",
+          "hint": "They download audio from your computer: YouTube won't give it to the server",
+          "name": "Downloader",
+          "state": "Connection",
+          "versions": "Versions",
+          "running": "Running",
+          "ok": "Done",
+          "failed": "Errors",
+          "online": "online",
+          "seen": "seen {when}",
+          "never": "never connected",
+          "revokedAt": "revoked {when}",
+          "search": "Name, machine or version",
+          "nothing": "No downloaders in this view",
+          "noMachine": "unknown machine",
+          "pot": "PO tokens",
+          "cookies": "cookies",
+          "actions": "Actions",
+          "revoke": "Revoke token",
+          "revoked": "The “{name}” token no longer works",
+          "none": "No downloaders yet",
+          "noneHint": "Add the first one: a name, then a token for make downloader",
+          "newLabel": "New downloader name",
+          "newPlaceholder": "For example, “Zakhar's Mac”",
+          "add": "Add",
+          "tokenHint": "The token is shown once: give it to the downloader (make downloader TOKEN=…)",
+          "copy": "Copy",
+          "copied": "Token copied",
+          "hideToken": "Hide token",
+          "revokedList": "Revoked · {n}"
+        },
+        "days": {
+          "title": "By day",
+          "rate": "{p}% successful in 14 days",
+          "ok": "Downloaded",
+          "disputed": "Disputed",
+          "unavailable": "Not found",
+          "failed": "Errors"
+        },
+        "server": {
+          "title": "Server downloader",
+          "state": "State",
+          "off": "off",
+          "offHint": "Home downloaders do all the work",
+          "works": "working",
+          "down": "not responding",
+          "error": "Error",
+          "pot": "PO token service",
+          "cookies": "Cookies",
+          "noCookies": "none",
+          "yes": "present",
+          "until": "until {when}",
+          "running": "Downloading now",
+          "ok": "Downloaded in 24 h",
+          "failed": "Errors in 24 h"
+        }
+      },
+      "storage": {
+        "title": "Storage",
+        "stats": {
+          "total": "used in total",
+          "growth": "added in 30 days",
+          "cost": "per month in R2",
+          "price": "$0.015 per GB above 10 GB",
+          "replaced": "replaced copies"
+        },
+        "kinds": "By kind",
+        "kind": {
+          "audio": "Audio",
+          "covers": "Covers",
+          "photos": "Artist photos"
+        },
+        "growth": {
+          "title": "Audio growth",
+          "audio": "Audio per day"
+        },
+        "codecs": "Audio by format",
+        "sources": "Audio by source",
+        "noAudio": "No audio on the server yet",
+        "artists": "Heaviest artists",
+        "artistsHint": "All files of the artist's recordings, replaced ones included",
+        "source": {
+          "youtube_music": "YouTube Music",
+          "youtube": "YouTube",
+          "soundcloud": "SoundCloud",
+          "bandcamp": "Bandcamp",
+          "upload": "Uploaded",
+          "other": "Other"
+        }
+      },
+      "users": {
+        "_id": {
+          "title": "User",
+          "back": "Users",
+          "missing": "No such user",
+          "missingText": "The account may have been deleted",
+          "you": "you",
+          "more": "More",
+          "give": "Give access",
+          "live": "Listening now",
+          "roles": {
+            "title": "Roles",
+            "idp": "granted by the sign-in provider",
+            "given": {
+              "admin": "{name} is now an admin",
+              "listener": "{name} can now listen"
+            },
+            "removed": {
+              "admin": "{name} is no longer an admin",
+              "listener": "{name} is no longer a listener"
+            }
+          },
+          "block": {
+            "action": "Block",
+            "undo": "Unblock",
+            "done": "{name} blocked: sign-in closed, sessions ended",
+            "undone": "{name} can sign in again",
+            "since": "Blocked {when}: can't sign in",
+            "now": "Blocked: can't sign in"
+          },
+          "rename": {
+            "action": "Change name",
+            "title": "Name",
+            "note": "The sign-in provider won't change this name anymore",
+            "submit": "Save",
+            "done": "Name changed"
+          },
+          "reset": {
+            "action": "New password link",
+            "actionNew": "Link to set a password",
+            "title": "New password link",
+            "text": "Pass it on: {name} sets a new password, old sessions end. One-time link, valid for 48 hours"
+          },
+          "delete": {
+            "action": "Delete account",
+            "title": "Delete account",
+            "text": "The account of {name} will disappear with all its data: library, playlists, history, devices and sessions. This can't be undone.",
+            "type": "To confirm, type the name: {name}",
+            "submit": "Delete forever",
+            "done": "Account of {name} deleted"
+          },
+          "err": {
+            "failed": "That didn't work — try again",
+            "self": "You can't do that to yourself",
+            "lastAdmin": "This is the only admin: give the role to someone else first",
+            "lastAdminShort": "the only admin"
+          },
+          "stats": {
+            "title": "Statistics",
+            "h7": "listened in 7 days",
+            "h30": "listened in 30 days",
+            "p30": "plays in 30 days",
+            "total": "plays in total",
+            "minutes": "Minutes a day",
+            "chart": "Listening per day, last 30 days"
+          },
+          "top": {
+            "artists": "Top artists",
+            "tracks": "Top tracks",
+            "genres": "Genres",
+            "empty": "Nothing in the last 30 days"
+          },
+          "profile": {
+            "title": "Profile and sign-in",
+            "created": "Joined",
+            "lastLogin": "Last sign-in",
+            "username": "Username",
+            "noPassword": "no password yet",
+            "method": "Sign-in",
+            "name": "Name",
+            "nameLocked": "set manually"
+          },
+          "library": {
+            "title": "Library",
+            "playlists": "Playlists",
+            "liked": "Liked tracks",
+            "albums": "Saved albums",
+            "followed": "Followed artists",
+            "friends": "Friends",
+            "imports": "Imports"
+          },
+          "sessions": {
+            "title": "Devices and sessions",
+            "hint": "Website tabs and apps that are signed in",
+            "all": "Sign out everywhere",
+            "allDone": "Sessions ended: {n}",
+            "done": "Session ended",
+            "revoke": "End session",
+            "browser": "Browser",
+            "empty": "No open sessions"
+          },
+          "invite": {
+            "title": "Invites",
+            "came": "Came with an invite",
+            "none": "no invite",
+            "unknown": "from a deleted account",
+            "sent": "Invite",
+            "status": {
+              "active": "waiting",
+              "used": "accepted",
+              "expired": "expired",
+              "revoked": "revoked"
+            }
+          },
+          "acq": {
+            "title": "Downloads",
+            "hint": "Recordings the server downloaded because of this person: a like, a playlist, a play",
+            "total": "Total",
+            "ready": "Ready",
+            "active": "In progress",
+            "failed": "Failed"
+          },
+          "history": {
+            "title": "Listening history",
+            "hint": "Only the time is visible in a private session",
+            "private": "Private session",
+            "skipped": "skipped",
+            "more": "Show more",
+            "empty": "Hasn't listened to anything yet",
+            "ctx": {
+              "album": "album",
+              "playlist": "playlist",
+              "artist": "artist",
+              "wave": "wave",
+              "radio": "radio",
+              "mix": "mix",
+              "search": "search",
+              "library": "library",
+              "queue": "queue",
+              "remote": "remote"
+            }
+          }
+        },
+        "index": {
+          "title": "Users",
+          "invites": "Invites",
+          "views": "Views",
+          "view": {
+            "all": "All",
+            "online": "Online",
+            "waiting": "Waiting",
+            "admins": "Admins",
+            "disabled": "Blocked"
+          },
+          "search": "Name, email or username",
+          "role": "Role",
+          "anyRole": "Any role",
+          "noRole": "No role",
+          "method": "Sign-in method",
+          "anyMethod": "Any sign-in",
+          "localMethod": "Username and password",
+          "sortLabel": "Order",
+          "sort": {
+            "activity": "By activity",
+            "name": "By name",
+            "hours": "By hours",
+            "created": "By sign-up"
+          },
+          "col": {
+            "name": "Person",
+            "roles": "Roles",
+            "method": "Sign-in",
+            "status": "Status",
+            "hours": "Hours, 30 days",
+            "created": "Joined"
+          },
+          "you": "you",
+          "give": "Give access",
+          "given": "{name} can now listen",
+          "failed": "That didn't work — try again",
+          "empty": "Nobody found",
+          "pick": "Select {name}",
+          "pickAll": "Select all",
+          "bulk": {
+            "title": "Actions with selected",
+            "picked": "Selected: {n}",
+            "listener": "Give access",
+            "admin": "Make admins",
+            "disable": "Block",
+            "enable": "Unblock",
+            "clear": "Clear selection",
+            "done": "Done: {n}",
+            "partial": "Done: {ok}, failed: {refused} — you and the last admin can't be changed"
+          },
+          "newUser": {
+            "action": "New account",
+            "title": "New account",
+            "name": "Name",
+            "username": "Username",
+            "note": "The person sets the password themselves — with the link you pass on",
+            "submit": "Create",
+            "taken": "This username is taken",
+            "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+            "linkTitle": "Sign-in link",
+            "linkText": "Pass it on: {name} sets a password and signs in. One-time link, valid for 48 hours"
+          }
+        }
+      }
+    },
+    "album": {
+      "_id": {
+        "title": "Album",
+        "resume": "Resume",
+        "shuffle": "Shuffle",
+        "save": "Add to library",
+        "unsave": "Remove from library",
+        "toArtist": "Go to artist",
+        "disc": "Disc {n}",
+        "noTracks": "No tracks yet",
+        "released": "Released {date}",
+        "upcoming": "Out {date}"
+      }
+    },
+    "artist": {
+      "_id": {
+        "title": "Artist",
+        "resume": "Resume",
+        "shuffle": "Shuffle",
+        "follow": "Follow",
+        "following": "Following",
+        "popular": "Popular tracks",
+        "more": "Show 10",
+        "less": "Show less",
+        "related": "Similar artists",
+        "soon": "Coming soon",
+        "empty": "No releases yet",
+        "kinds": {
+          "albumsTitle": "Albums",
+          "epsTitle": "EPs and singles",
+          "compilationsTitle": "Compilations"
+        }
+      }
+    },
+    "describe": {
+      "title": "Playlist from a description",
+      "placeholder": "Describe what you want to hear",
+      "build": "Build",
+      "clear": "Clear",
+      "try": "Try:",
+      "example1": "40 minutes of phonk for the gym, no slow songs",
+      "example2": "calm indie for a rainy day",
+      "example3": "like Skryptonite, but less known",
+      "building": "Building your playlist…",
+      "failed": "Couldn't build it — try again",
+      "tooOften": "Too many tries — wait a couple of minutes",
+      "empty": "Nothing fits this description",
+      "emptyText": "Try saying it differently or more broadly",
+      "name": "Title",
+      "rename": "Rename",
+      "listen": "Listen",
+      "save": "Save",
+      "rebuild": "Rebuild",
+      "weekly": "Refresh every week",
+      "weeklyHint": "What you've played gets swapped for something new in the same vein",
+      "more": "10 more like this",
+      "noMore": "Nothing more fits yet",
+      "remove": "Remove",
+      "removed": "“{title}” removed",
+      "saved": "Playlist “{title}” saved",
+      "saveFailed": "Couldn't save — try again"
+    },
+    "discover": {
+      "title": "Discover",
+      "close": "Close",
+      "like": "Like",
+      "unlike": "Unlike",
+      "likeFailed": "Couldn't update your likes",
+      "add": "Add to playlist",
+      "listen": "Play full track",
+      "nav": "Browse",
+      "prev": "Previous",
+      "next": "Next",
+      "empty": "Nothing to show yet",
+      "emptyText": "Listen a little and new music will show up here",
+      "failed": "Couldn't load",
+      "failedText": "Check your connection and try again",
+      "retry": "Retry"
+    },
+    "downloads": {
+      "reserve": {
+        "title": "Wave reserve",
+        "sub": "Refreshes itself while you're online",
+        "off": "Reserve is off",
+        "offText": "Favourites mixed with new music — so the wave plays offline",
+        "empty": "Nothing here yet",
+        "emptyText": "Tracks will appear once you're online"
+      }
+    },
+    "friends": {
+      "_id": {
+        "person": "Profile",
+        "friend": "Friend",
+        "since": "Friends since {date}",
+        "nowPlaying": "Playing now",
+        "lastPlayed": "Last played · {when}",
+        "match": "Taste match",
+        "matchUnknown": "Not enough listening yet to compare",
+        "byArtists": "shared artists {n}%",
+        "bySound": "sound {n}%",
+        "common": "Artists you both like",
+        "top": "Top this month",
+        "playlists": "Playlists",
+        "quietTitle": "Nothing yet",
+        "quietText": "What your friend plays will show up here",
+        "closedTitle": "Only friends can see this",
+        "closedText": "Become friends to see what they play and their playlists",
+        "accept": "Accept",
+        "decline": "Decline",
+        "sent": "Request sent",
+        "remove": "Remove friend",
+        "removeTitle": "Remove {name} from friends?",
+        "removeText": "You’ll both stop seeing what the other plays"
+      },
+      "add": {
+        "_code": {
+          "invites": "Invites you to be friends: you’ll see what each other plays and can listen together",
+          "already": "You’re already friends",
+          "open": "Open page",
+          "mine": "This is your link — send it to friends",
+          "expired": "This link no longer works",
+          "expiredText": "Ask your friend for a new one"
+        }
+      },
+      "index": {
+        "invite": "Invite with a link",
+        "privacy": "What friends see",
+        "inviteHint": "Whoever opens this link becomes your friend right away",
+        "shareTitle": "Add me as a friend on DalyWave",
+        "search": "Search by name",
+        "noOne": "No one found",
+        "incoming": "Friend requests",
+        "wants": "Friend request",
+        "listeningNow": "Listening now: {n}",
+        "people": "People on DalyWave",
+        "outgoing": "Sent requests",
+        "emptyText": "Find people by name or send them a link to see what they’re playing",
+        "open": "Friend’s page",
+        "remove": "Remove friend",
+        "removeTitle": "Remove {name} from friends?",
+        "removeText": "You’ll both stop seeing what the other plays"
+      }
+    },
+    "history": {
+      "title": "Recently played",
+      "search": "Search history",
+      "jump": "Go to date",
+      "until": "Up to {day}",
+      "resetDay": "Show from the start",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ctx": {
+        "from": "from “{title}”",
+        "radio": "Radio",
+        "search": "from search"
+      },
+      "openSource": "Go to source",
+      "hide": "Remove from history",
+      "hidden": "Removed from history",
+      "hideFailed": "Couldn't remove",
+      "clear": "Clear history",
+      "clearTitle": "Clear history?",
+      "clearText": "Recommendations and mixes won't change",
+      "cleared": "History cleared",
+      "clearFailed": "Couldn't clear history",
+      "empty": "What you play will show up here",
+      "emptyText": "Start the wave or a favourite album",
+      "nothing": "Nothing found",
+      "nothingFor": "For “{q}”"
+    },
+    "import": {
+      "title": "Bring your music",
+      "how": "Where from",
+      "mode": {
+        "spotify": "Spotify",
+        "yandex": "Yandex Music",
+        "youtube": "YouTube Music",
+        "list": "List",
+        "files": "Files"
+      },
+      "go": "Bring over",
+      "or": "or",
+      "yandex": {
+        "label": "Yandex Music playlist link",
+        "placeholder": "Playlist link",
+        "all": "Bring everything: likes and playlists",
+        "step1": "Sign in to Yandex",
+        "open": "Open",
+        "step2": "Copy the address of the page Yandex returns you to and paste it here",
+        "keyLabel": "Address after sign-in",
+        "keyPlaceholder": "Address after sign-in",
+        "keyNote": "Without a link, your Liked tracks and all your playlists come over. Sign-in is used once — we don't keep it.",
+        "needLogin": "Yandex only shares music after you sign in — two steps below",
+        "badKey": "Sign-in didn't work — sign in again and copy the whole address",
+        "badLink": "That's not a Yandex Music playlist link",
+        "notFound": "The playlist didn't open — it's hidden or deleted",
+        "region": "Yandex isn't sharing music right now — try later"
+      },
+      "youtube": {
+        "label": "YouTube Music playlist link",
+        "placeholder": "Playlist link",
+        "badLink": "Use a playlist link — it has “list=” in it",
+        "notFound": "The playlist didn't open — it's private or deleted",
+        "drop": "Drop your Google Takeout archive here",
+        "dropPhone": "Google Takeout archive",
+        "dropHint": "Likes, library and all playlists",
+        "pick": "Choose archive",
+        "where": "Get it at takeout.google.com: keep only “YouTube and YouTube Music”, and in its data — playlists and music library. It arrives by email.",
+        "wrongFile": "Use the ZIP archive from Google Takeout",
+        "tooBig": "The archive is over 500 MB — keep only playlists and the music library in Takeout"
+      },
+      "spotify": {
+        "drop": "Drop my_spotify_data.zip here",
+        "dropPhone": "my_spotify_data.zip archive",
+        "dropHint": "The extended history archive works too",
+        "pick": "Choose archive",
+        "where": "Get it in Spotify: Account → Privacy → “Download your data”. It arrives by email within a few days.",
+        "wrongFile": "Use the my_spotify_data.zip archive from Spotify's email",
+        "tooBig": "The archive is over 500 MB — Spotify never sends that much. Check the file"
+      },
+      "list": {
+        "label": "Track list",
+        "placeholder": "One track per line, for example:\nLowborn — Devil\nMzlff — Город\n\nOr an artist, title table — or paste an M3U",
+        "formats": "“Artist — Track”, CSV or M3U",
+        "lines": "Lines: {n}",
+        "file": "From file",
+        "where": "Add to",
+        "toPlaylist": "New playlist",
+        "toLikes": "Liked",
+        "titleLabel": "Playlist name",
+        "titlePlaceholder": "Playlist name",
+        "go": "Find tracks",
+        "tooBig": "The file is over 4 MB — split it into parts"
+      },
+      "files": {
+        "drop": "Drop audio files here",
+        "dropPhone": "Audio files",
+        "dropHint": "FLAC, ALAC, MP3, Opus, WAV and AIFF",
+        "pick": "Choose files",
+        "more": "Add more files",
+        "list": "Files",
+        "waiting": "Queued",
+        "uploading": "Uploading · {pct}%",
+        "processing": "Recognising…",
+        "unmatched": "Not recognised — pick the track below",
+        "skipped": "Skipped",
+        "upgraded": "replaced a worse copy",
+        "kept": "already had one as good",
+        "skippedSome": "Skipped files of the wrong format: {n}"
+      },
+      "review": {
+        "title": "Not found: {n}",
+        "sub": "Pick it yourself or skip — whatever you choose goes straight into place",
+        "subRunning": "Still searching — you can start sorting now"
+      },
+      "history": {
+        "title": "Earlier transfers",
+        "running": "running",
+        "failed": "failed",
+        "cancelled": "stopped",
+        "found": "{found} found",
+        "live": "Running",
+        "check": "Check {n}"
+      },
+      "again": "Bring more",
+      "stop": "Stop",
+      "stopped": "Transfer stopped",
+      "cancelUpload": "Cancel",
+      "forget": "Remove from history",
+      "forgotten": "Removed from history — your library is unchanged",
+      "openPlaylist": "Open playlist",
+      "openLibrary": "Open library",
+      "uploadFailed": "Upload failed — try again"
+    },
+    "index": {
+      "title": "Home",
+      "greet": {
+        "morning": "Good morning, {name}",
+        "day": "Good afternoon, {name}",
+        "evening": "Good evening, {name}",
+        "night": "Good night, {name}"
+      },
+      "greetShort": {
+        "morning": "Good morning",
+        "day": "Good afternoon",
+        "evening": "Good evening",
+        "night": "Good night"
+      },
+      "recent": "Recently liked",
+      "playAll": "Play",
+      "hint": {
+        "discover_weekly": "New music close to your taste",
+        "release_radar": "Fresh releases from your artists",
+        "forgotten_favorites": "Favorites you haven't played in a while"
+      },
+      "allLiked": "All liked",
+      "settings": "Settings",
+      "quick": "Quick access",
+      "failed": "Home didn't load",
+      "failedText": "Check your connection and try again",
+      "emptyTitle": "Your picks will show up here",
+      "emptyText": "Play the wave and like what you love — mixes and new releases will follow",
+      "find": "Find music",
+      "import": "Bring your library",
+      "retry": "Retry"
+    },
+    "invite": {
+      "_token": {
+        "title": "Invite",
+        "heading": "You're invited",
+        "lead": "Pick a username and password — and the music is yours",
+        "leadProviders": "Sign in — your account appears right away",
+        "submit": "Create account",
+        "taken": "This username is taken",
+        "weak": "The password must be at least 10 characters",
+        "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+        "failed": "Something went wrong. Check the connection to the server",
+        "toLogin": "To sign-in",
+        "invalid": {
+          "title": "This invite doesn't work",
+          "text": "It was used or has expired. Ask for a new link"
+        },
+        "down": {
+          "title": "The server isn't responding",
+          "text": "It's probably brief. Try again in a minute"
+        }
+      }
+    },
+    "jam": {
+      "_code": {
+        "title": "Listen together",
+        "titleHost": "{name} — listen together",
+        "invite": "{name} invites you to listen together",
+        "inviteText": "Add your tracks to the shared queue — the music plays at the host’s",
+        "nameLabel": "Your name",
+        "namePlaceholder": "What’s your name?",
+        "join": "Join",
+        "noAccount": "No account needed",
+        "joinFailed": "Couldn’t join — try again",
+        "slowDown": "Too fast — wait a minute",
+        "endedTitle": "This session has ended",
+        "endedText": "Ask the host for a new link",
+        "removedTitle": "You were removed",
+        "removedText": "The host closed this session for you",
+        "leave": "Leave",
+        "nowPlaying": "Now playing",
+        "addedBy": "added by {name}",
+        "position": "Track position",
+        "hostAway": "host is offline",
+        "paused": "paused",
+        "silence": "Nothing playing yet",
+        "silenceText": "Music starts when {name} presses play",
+        "like": "Like",
+        "skip": "Skip",
+        "skipVotes": "{n} of {of}",
+        "listenHere": "Listen here",
+        "listeningHere": "Playing here",
+        "connecting": "Connecting…",
+        "notReady": "Not ready",
+        "addTitle": "Add to queue",
+        "searchPlaceholder": "Track or artist",
+        "searching": "Searching…",
+        "nothingFound": "Nothing found",
+        "searchFailed": "Search didn’t respond — try again",
+        "explicit": "Explicit",
+        "inQueue": "Queued",
+        "waiting": "Pending",
+        "add": "Add to queue",
+        "added": "“{title}” is queued",
+        "sentForApproval": "Sent to the host for approval",
+        "alreadyQueued": "This track is already queued",
+        "nothingPlaying": "Nothing is playing at the host’s",
+        "tooManyPending": "Wait until the host reviews your tracks",
+        "addingOff": "The host turned off adding tracks",
+        "explicitOff": "The host is listening without explicit tracks",
+        "addFailed": "Couldn’t add — try again",
+        "skipFailed": "Couldn’t vote",
+        "yourWaiting": "Waiting for approval",
+        "waitingHost": "The host will look soon",
+        "next": "Up next",
+        "queueEmpty": "The queue is empty — add the first track"
+      }
+    },
+    "library": {
+      "title": "Library",
+      "all": "All",
+      "filters": "Show",
+      "showAll": "Show all",
+      "filter": {
+        "playlists": "Playlists",
+        "albums": "Albums",
+        "artists": "Artists",
+        "downloaded": "Downloaded",
+        "recent": "Recently added"
+      },
+      "kind": {
+        "playlist": "Playlist",
+        "mix": "Mix",
+        "smart": "Smart playlist"
+      },
+      "wave": "My Wave",
+      "waveListen": "Listen",
+      "wavePlaying": "Playing",
+      "recent": "Recently added",
+      "soon": "Coming soon",
+      "soonAll": "All",
+      "soonLess": "Show less",
+      "sortBy": "Sort by",
+      "sort": {
+        "added": "Newest first",
+        "title": "Title"
+      },
+      "back": "Library",
+      "asList": "List view",
+      "asGrid": "Grid view",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "removeAlbum": "Remove from library",
+      "unfollow": "Unfollow",
+      "newPlaylist": "New playlist",
+      "byDescription": "Playlist from a description",
+      "newPlaceholder": "Title",
+      "create": "Create",
+      "created": "Playlist “{title}” created",
+      "createFailed": "Couldn't create the playlist — try again",
+      "find": "Find music",
+      "deviceSize": "On this device: {size}",
+      "downloadSettings": "Downloads",
+      "reserve": "Wave reserve · {n}",
+      "tracks": "Tracks",
+      "empty": {
+        "playlists": "Make your first playlist",
+        "playlistsText": "Everything you love, in one place",
+        "albums": "Your albums will live here",
+        "albumsText": "Save the albums you keep coming back to",
+        "artists": "Your artists will live here",
+        "artistsText": "Follow them — new releases show up on their own",
+        "downloaded": "Nothing downloaded yet",
+        "downloadedText": "Music saved to this device will be here",
+        "folderText": "Add playlists with “Move to folder” in their menu"
+      }
+    },
+    "liked": {
+      "title": "Liked songs",
+      "kicker": "Library",
+      "shuffle": "Shuffle",
+      "filter": "Search liked songs",
+      "nothing": "Nothing found",
+      "nothingText": "No “{q}” among liked songs. Try the whole catalog",
+      "empty": "Songs you like will show up here",
+      "emptyText": "Tap the heart — in the player or in lists"
+    },
+    "login": {
+      "title": "Sign in",
+      "lead": "Your music — and a wave that knows what you like",
+      "appLead": "Sign in to continue in the app",
+      "oidc": "Sign in with {title}",
+      "signIn": "Sign in",
+      "retry": "Try again",
+      "password": "Sign in with password",
+      "changeServer": "{host} · change server",
+      "phone": "App on your phone",
+      "openApp": "Open in the app",
+      "privacy": "Privacy",
+      "failed": "Couldn't sign in",
+      "cancelled": {
+        "title": "Sign-in cancelled"
+      },
+      "disabled": {
+        "title": "Access closed"
+      },
+      "notRegistered": {
+        "title": "Invite needed"
+      },
+      "setup": {
+        "title": "Welcome",
+        "text": "Create the administrator account. Invite everyone else later",
+        "submit": "Create and sign in"
+      },
+      "handoff": {
+        "title": "Back to the app",
+        "text": "You can close this tab"
+      },
+      "down": {
+        "title": "The server isn't responding",
+        "text": "It's probably brief. Try again in a minute",
+        "reload": "Reload"
+      },
+      "errors": {
+        "cancelled": "No problem — you can try again",
+        "expired": "The sign-in link expired. Start over",
+        "state": "Sign-in started in another tab or browser. Start over here",
+        "disabled": "This account is disabled. Contact the administrator",
+        "not_registered": "This server is invite-only. Ask the administrator for a link",
+        "provider": "The sign-in service isn't responding. Try again in a minute",
+        "timeout": "Sign-in wasn't finished within 10 minutes. Start over",
+        "invalid_request": "The server rejected the sign-in. Start over",
+        "invalid_grant": "The sign-in code was used or expired. Start over",
+        "forbidden": "The server didn't allow this app to sign in. Contact the administrator",
+        "too_many_requests": "Too many attempts. Wait a minute",
+        "network": "No connection to the server. Check the internet and try again",
+        "server": "The server responded unexpectedly. Try a bit later",
+        "keychain": "The keychain didn't save the sign-in. Check the app's access to it",
+        "demo_unavailable": "The demo isn't available on this server right now",
+        "unknown": "Something went wrong. Try again"
+      },
+      "app": {
+        "wait": "Finish signing in to {title} in the window that opened",
+        "waitAny": "Finish signing in in the window that opened",
+        "cancel": "Cancel"
+      },
+      "form": {
+        "submit": "Sign in",
+        "wrong": "Wrong username or password",
+        "weak": "The password must be at least 10 characters",
+        "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+        "appExpired": "Sign-in expired. Start it again in the app",
+        "disabled": "This account is disabled. Contact the administrator",
+        "rateLimited": "Too many attempts. Wait a minute",
+        "failed": "Couldn't sign in. Check the connection to the server"
+      },
+      "emergency": {
+        "link": "Emergency sign-in",
+        "title": "Sign in with password",
+        "placeholder": "Owner password",
+        "wrong": "Wrong password"
+      },
+      "demo": {
+        "button": "Try the demo",
+        "note": "No password. Everything resets every night",
+        "or": "or with your account",
+        "unavailable": "The demo isn't available right now. Try again later"
+      }
+    },
+    "mini": {
+      "nothing": "Nothing playing",
+      "prev": "Previous",
+      "next": "Next",
+      "play": "Play",
+      "pause": "Pause",
+      "seek": "Playback position",
+      "back": "Open DalyWave"
+    },
+    "party": {
+      "title": "Party",
+      "pairTitle": "Connect your TV",
+      "pairQr": "Sign-in code for your phone",
+      "pairScan": "Point your phone camera at the code",
+      "pairOr": "or open {url} and enter",
+      "pairOffline": "Can’t reach the server. Retrying…",
+      "addedBy": "Added by {name}",
+      "next": "Up next",
+      "guests": "Guests",
+      "addTrack": "Add a track",
+      "silenceTitle": "Silence",
+      "silenceHint": "Start music on your phone or computer",
+      "back": "Back",
+      "playHere": "Play here",
+      "settings": "Party settings",
+      "full": "Full screen",
+      "exitFull": "Exit full screen",
+      "energetic": "Energetic only",
+      "noRepeat": "No repeated artists",
+      "dj": "DJ transitions",
+      "finish": "End the party"
+    },
+    "playlist": {
+      "_id": {
+        "title": "Playlist",
+        "kind": {
+          "user": "Playlist",
+          "smart": "Smart playlist",
+          "mix": "Mix"
+        },
+        "resume": "Resume",
+        "shuffle": "Shuffle",
+        "addTracks": "Add tracks",
+        "empty": "This playlist is empty",
+        "emptyMine": "Search for tracks or pick from suggestions",
+        "you": "you",
+        "andMore": "{names} and {n} more",
+        "moreLikeThis": "More like this",
+        "moreAdded": "Added: {n}",
+        "noMore": "Nothing more fits yet",
+        "weekly": "Refresh every week",
+        "weeklyOn": "What you've played will be swapped weekly",
+        "weeklyOff": "This playlist no longer refreshes"
+      },
+      "join": {
+        "_code": {
+          "title": "Shared playlist",
+          "from": "Shared playlist · {name}",
+          "members": "{n} people",
+          "text": "Add your own tracks — the playlist will show up in your library",
+          "join": "Join",
+          "joined": "“{title}” is in your library",
+          "open": "Open playlist",
+          "expired": "This link no longer works",
+          "expiredText": "Ask the playlist owner for a new one"
+        }
+      }
+    },
+    "reset": {
+      "_token": {
+        "title": "New password",
+        "heading": "New password",
+        "lead": "{name}, pick a new password — the old one stops working",
+        "leadNew": "{name}, pick a username and password to sign in",
+        "submit": "Save and sign in",
+        "taken": "This username is taken",
+        "weak": "The password must be at least 10 characters",
+        "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
+        "disabled": "This account is disabled. Contact the administrator",
+        "failed": "Something went wrong. Check the connection to the server",
+        "toLogin": "To sign-in",
+        "invalid": {
+          "title": "This link doesn't work",
+          "text": "It was used or has expired. Ask the administrator for a new one"
+        },
+        "down": {
+          "title": "The server isn't responding",
+          "text": "It's probably brief. Try again in a minute"
+        }
+      }
+    },
+    "rewind": {
+      "title": "Your {year}",
+      "titleShort": "Year in review",
+      "saved": "Image saved",
+      "shareFailed": "Couldn’t make the image",
+      "playlistSaved": "“Your top tracks {year}” is in your library",
+      "playlistFailed": "Couldn’t save the playlist",
+      "moreSaved": "“More to hear {year}” is in your library",
+      "moreTitle": "More to hear {year}",
+      "waveTitle": "Your {year} wave",
+      "open": "Open",
+      "failed": "Couldn’t load your review",
+      "retry": "Try again",
+      "prev": "Back",
+      "next": "Next",
+      "close": "Close",
+      "soundOn": "Sound on",
+      "soundOff": "Sound off",
+      "progress": "Slide {n} of {of}"
+    },
+    "search": {
+      "title": "Search",
+      "cancel": "Cancel",
+      "resultsFor": "Results for “{q}”",
+      "yourArtists": "Your artists",
+      "nothing": "Nothing found",
+      "nothingMine": "Not in your library",
+      "nothingFor": "For “{q}”",
+      "searchEverywhere": "Search everywhere",
+      "top": "Top result",
+      "didYouMean": "Did you mean",
+      "track": "Song",
+      "tracks": "Songs",
+      "artists": "Artists",
+      "albums": "Albums and singles",
+      "playlists": "Playlists",
+      "noneOf": {
+        "tracks": "No songs found",
+        "artists": "No artists found",
+        "albums": "No albums found",
+        "playlists": "No playlists with that name"
+      }
+    },
+    "server": {
+      "title": "Server address",
+      "lead": "DalyWave plays music from your own server. Enter its address — or look around the demo with open music",
+      "change": "Another server",
+      "changeText": "You'll be signed out of the current server",
+      "address": "Server address",
+      "placeholder": "music.example.com",
+      "continue": "Continue",
+      "connect": "Connect",
+      "other": "Another address",
+      "foundVersion": "{host} · version {version}",
+      "recent": "Recent servers",
+      "forget": "Remove “{name}” from recent",
+      "demo": "Try the demo",
+      "cancel": "Cancel",
+      "privacy": "Privacy",
+      "errors": {
+        "invalid": "That doesn't look like an address. For example: music.example.com",
+        "unreachable": "The server isn't responding. Check the address and the internet",
+        "not_dalywave": "There's no DalyWave at this address",
+        "down": "The server is there but not ready. Try again in a couple of minutes",
+        "unknown": "Something went wrong. Try again"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "account": "Account",
+      "roleAdmin": "Admin",
+      "demo": "Demo",
+      "demoNote": "Shared demo account: its password and sign-in methods stay as they are, and it can't be deleted. Everything resets every night",
+      "logout": "Sign out",
+      "logoutFailed": "Couldn't sign out — try again",
+      "library": "Library",
+      "import": "Bring your music",
+      "importDesc": "From Spotify, a list or your own files",
+      "playback": "Playback",
+      "normalize": "Normalize volume",
+      "spatial": "Spatial Audio",
+      "spatialDesc": "With AirPods: touch and hold volume in Control Center",
+      "spatialOnDesc": "{name}: pick the mode in Control Center by holding volume",
+      "spatialOn": "On",
+      "scrubber": "Progress bar",
+      "explicit": "No explicit content",
+      "explicitDesc": "Tracks marked “E” won't play",
+      "quality": "Audio quality",
+      "qualityWifi": "On Wi-Fi",
+      "qualityCellular": "On cellular",
+      "qualityDownload": "Downloads",
+      "q": {
+        "high": "High",
+        "normal": "Normal",
+        "saver": "Data saver"
+      },
+      "transitions": "Transitions",
+      "wave": "My Wave",
+      "taste": "My taste",
+      "tasteDesc": "What the wave knows about you and how to tune it",
+      "waveRow": "Wave settings",
+      "focus": "Focus",
+      "focusDesc": "The wave follows the Focus you turn on",
+      "waveResetBtn": "Reset",
+      "waveReset": "Wave settings reset",
+      "appearance": "Interface",
+      "theme": "Theme",
+      "themeDark": "Dark",
+      "themeLight": "Light",
+      "themeSystem": "System",
+      "language": "Language",
+      "sidePlayer": "Side player",
+      "sidePlayerDesc": "In landscape, Now Playing stays on the right",
+      "motion": "Video instead of artwork",
+      "motionDesc": "A silent loop from the music video in the player and in Discover",
+      "motionWifi": "Wi-Fi only",
+      "clipStyle": "Music videos in the player",
+      "about": "About",
+      "desktopAppsDesc": "Mac, Windows and Stream Deck",
+      "server": "Server",
+      "serverChange": "Change",
+      "privacy": "Privacy",
+      "deleteAccount": "Delete account",
+      "deleteTitle": "Delete your account?",
+      "deleteText": "Your library, playlists, history and all devices will be removed from the server. This can't be undone",
+      "deleteConfirm": "Delete",
+      "deleteLastAdmin": "You're the only administrator. Appoint another one first",
+      "deleteFailed": "Couldn't delete the account — try again",
+      "serverDown": "Not responding",
+      "version": "Version"
+    },
+    "taste": {
+      "title": "My taste",
+      "kicker": "What the wave knows",
+      "sub": "Your taste has {n} {word}. Tune them if the wave misses",
+      "subEmpty": "Listen and like tracks — the wave will learn your taste",
+      "facets": "Taste facets",
+      "emptyTitle": "Still learning your taste",
+      "emptyText": "It needs a few liked or fully played tracks. Facets will appear on their own",
+      "lessDone": "Less like this: “{label}”",
+      "undoDone": "Restored",
+      "lessList": "Less like this:",
+      "undo": "Restore",
+      "failed": "That didn't work — the server didn't respond",
+      "h": "h",
+      "min": "min",
+      "part": {
+        "morning": "Morning",
+        "day": "Day",
+        "evening": "Evening",
+        "night": "Night"
+      },
+      "topArtists": "Most played",
+      "topGenres": "Genres",
+      "noPlays": "Nothing played this month yet",
+      "blocked": "Don't recommend",
+      "blockedEmpty": "Empty. Add tracks and artists from the “⋯” menu",
+      "artist": "Artist",
+      "track": "Track",
+      "unblock": "Recommend again",
+      "unblocked": "“{name}” can show up in the wave again",
+      "knows": "What the wave learns from",
+      "kLikes": "likes",
+      "kListened": "played through",
+      "kAnalyzed": "analyzed by sound",
+      "kReactions": "wave reactions this month",
+      "kNo": "dislikes and blocks",
+      "updated": "Facets updated {when}",
+      "notYet": "Facets not built yet",
+      "wasReset": "taste reset {when}",
+      "reset": "Reset taste",
+      "resetSure": "Reset for sure?",
+      "resetDesc": "Facets, mixes and “less like this” will be rebuilt from new listening. Your library and blocks stay",
+      "resetBtn": "Reset",
+      "resetDone": "Taste reset — the wave will get to know you again",
+      "cancel": "Cancel"
+    },
+    "track": {
+      "_id": {
+        "title": "Track",
+        "radio": "Radio"
+      }
+    },
+    "tv": {
+      "title": "Connect a TV",
+      "hint": "Enter the code shown on your TV",
+      "code": "Code from the screen",
+      "next": "Continue",
+      "short": "The code has 8 characters",
+      "unknown": "That code didn’t work — check it on the TV",
+      "confirmTitle": "Sign in on “{name}”?",
+      "confirmHint": "Make sure the code matches the one on the screen",
+      "approve": "Sign in",
+      "cancel": "Cancel",
+      "doneTitle": "Done",
+      "doneHint": "Your TV is connected — you can play music on it now",
+      "home": "Home"
+    },
+    "waiting": {
+      "title": "Waiting for access",
+      "heading": "{name}, almost there",
+      "headingAnon": "Almost there",
+      "text": "An admin just needs to give you access. This screen updates by itself",
+      "check": "Check now",
+      "still": "No access yet",
+      "logout": "Sign out",
+      "as": "Signed in as {account}"
+    }
+  },
+  "lib": {
+    "rewind": {
+      "rewind": "Year in review",
+      "soFar": "Your year so far",
+      "rewindYear": "Your {year}",
+      "brand": "DalyWave",
+      "intro": "{name}, here’s how your year sounded",
+      "introAnon": "Here’s how your year sounded",
+      "introSoFar": "The year isn’t over — here’s what you have so far",
+      "minutesKicker": "Minutes of music",
+      "nonstop": "That’s {time} non-stop",
+      "monthsLabel": "Minutes by month",
+      "peakMonth": "Most of all {month}: {n} min",
+      "rhythm": "Your rhythm",
+      "ofDays": "out of {n} days",
+      "topDay": "Your biggest day — {day}",
+      "topDayShort": "Your biggest day",
+      "topDayStats": "{min} min · {plays}",
+      "topDayTrack": "“{title}” — {n}",
+      "firstKicker": "Your {year} began with",
+      "firstAt": "{day} at {time}",
+      "topTracks": "Top tracks",
+      "toyKicker": "Track of the year",
+      "timesAYear": "plays this year",
+      "firstTime": "first heard",
+      "mostOften": "most played",
+      "since": "since {day}",
+      "mostOftenIn": "most played {month}",
+      "inMonth": "in {month}",
+      "topArtist": "Artist of the year",
+      "topAlbums": "Top albums",
+      "soundKicker": "Your sound",
+      "moodLabel": "Mood",
+      "mood": {
+        "happy": "happy",
+        "sad": "sad",
+        "aggressive": "drive",
+        "relaxed": "calm",
+        "party": "party"
+      },
+      "soundEmpty": "Still listening closely",
+      "soundEmptyText": "Genres and mood appear once this year’s tracks are analysed",
+      "discKicker": "Discoveries",
+      "discSince": "since {day}",
+      "discNoFav": "New names came along — none became a favourite yet",
+      "discEmpty": "No new names",
+      "discEmptyText": "A whole year with the artists you love. Discover Weekly has new ones waiting",
+      "personaKicker": "Your listening type",
+      "persona": {
+        "night_owl": {
+          "title": "Night owl",
+          "text": "Music plays while the city sleeps: {share} of your time after 11 pm"
+        },
+        "early_bird": {
+          "title": "Early bird",
+          "text": "Mornings start with music: {share} of your time before noon"
+        },
+        "explorer": {
+          "title": "Explorer",
+          "text": "{share} of this year’s tracks were new to you"
+        },
+        "loyal": {
+          "title": "Loyal listener",
+          "text": "You know what you love: {share} of plays were favourites again"
+        },
+        "wave_rider": {
+          "title": "Wave rider",
+          "text": "{share} of your time went to My Wave"
+        },
+        "balanced": {
+          "title": "Music lover",
+          "text": "Mornings and nights, new and familiar — a bit of everything"
+        }
+      },
+      "peakHour": "Music played most at {time}",
+      "trait": {
+        "night": "Night",
+        "novelty": "New",
+        "repeat": "Repeats",
+        "wave": "Wave"
+      },
+      "sumArtists": "Artists",
+      "sumTracks": "Tracks",
+      "sumMinutes": "Minutes",
+      "sumMinutesTotal": "Total minutes",
+      "sumGenre": "Genre",
+      "sumPersona": "Type",
+      "share": "Share",
+      "savePlaylist": "Playlist",
+      "openPlaylist": "Playlist",
+      "nextKicker": "Next — more music",
+      "waveTitle": "A wave from your {year}",
+      "waveText": "Music like your {year} favourites — endless, no repeats",
+      "waveStart": "Play the wave",
+      "moreKicker": "More to hear",
+      "moreTitle": "New picks like your favourites",
+      "moreEmpty": "Nothing similar yet — try Discover Weekly",
+      "moreLoading": "Picking…",
+      "morePlay": "Play",
+      "emptyTitle": "Quiet so far",
+      "emptyText": "Play something — your {year} review builds from what you listen to",
+      "minShort": "min",
+      "number1": "#1",
+      "sideA": "Side A",
+      "oneRecord": "{name}, your year on one record",
+      "oneRecordAnon": "Your year on one record",
+      "onTape": "minutes on tape — {time}",
+      "mix": "MIX {year}",
+      "thanks": "Thanks for this year",
+      "receiptFor": "Your {year}",
+      "wave": {
+        "streak": "longest streak",
+        "topDay": "biggest day"
+      },
+      "record": {
+        "pass": "Season pass {year}",
+        "streak": "Longest streak",
+        "inDay": "That day",
+        "firstAt": "{day}, {time}",
+        "tuner": "Genres of the year"
+      },
+      "spread": {
+        "shareOfTime": "{pct} of all your time"
+      },
+      "page": {
+        "intro": "Year in review",
+        "minutes": "Minutes",
+        "days": "Rhythm",
+        "first": "First",
+        "tracks": "Tracks",
+        "toy": "Track of the year",
+        "artists": "Artist of the year",
+        "albums": "Albums",
+        "sound": "Sound",
+        "discoveries": "Discoveries",
+        "personality": "Type",
+        "summary": "Your {year}",
+        "wave": "Wave",
+        "more": "More"
+      }
+    }
   }
 }

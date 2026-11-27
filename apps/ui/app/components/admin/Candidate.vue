@@ -15,7 +15,7 @@ const props = defineProps<{
   playing?: boolean
 }>()
 const emit = defineEmits<{ choose: [videoId: string], play: [videoId: string | null] }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.Candidate')
 const lang = useLang()
 
 const c = computed(() => props.candidate)
@@ -144,62 +144,3 @@ const open = ref(false)
   .cd__detail, .cd__player { padding-left: 0; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "sec": "с",
-    "kind": { "atv": "официальное аудио", "omv": "клип", "ugc": "загрузка слушателя", "other": "другое" },
-    "rejected": "Отброшен: {why}",
-    "notDownloaded": "Не скачался",
-    "verified": "Скачан, отпечаток совпал на {p}%",
-    "notVerified": "Скачан, отпечаток совпал только на {p}%",
-    "noPreview": "Скачан, сверить было не с чем",
-    "breakdown": "Разбор оценки",
-    "play": "Послушать",
-    "stop": "Остановить",
-    "choose": "Выбрать",
-    "part": { "duration": "Длительность", "title": "Название", "artist": "Артисты", "album": "Альбом", "source": "Источник" },
-    "penalty": "Штраф",
-    "titleGot": "В источнике «{got}», ждали «{expected}»",
-    "versionGot": "Версия: в источнике {got}, ждали {expected}",
-    "missing": "Нет артистов: {names}"
-  },
-  "uk": {
-    "sec": "с",
-    "kind": { "atv": "офіційне аудіо", "omv": "кліп", "ugc": "завантаження слухача", "other": "інше" },
-    "rejected": "Відкинуто: {why}",
-    "notDownloaded": "Не завантажився",
-    "verified": "Завантажено, відбиток збігся на {p}%",
-    "notVerified": "Завантажено, відбиток збігся лише на {p}%",
-    "noPreview": "Завантажено, звірити не було з чим",
-    "breakdown": "Розбір оцінки",
-    "play": "Послухати",
-    "stop": "Зупинити",
-    "choose": "Вибрати",
-    "part": { "duration": "Тривалість", "title": "Назва", "artist": "Виконавці", "album": "Альбом", "source": "Джерело" },
-    "penalty": "Штраф",
-    "titleGot": "У джерелі «{got}», очікували «{expected}»",
-    "versionGot": "Версія: у джерелі {got}, очікували {expected}",
-    "missing": "Немає виконавців: {names}"
-  },
-  "en": {
-    "sec": "s",
-    "kind": { "atv": "official audio", "omv": "music video", "ugc": "user upload", "other": "other" },
-    "rejected": "Rejected: {why}",
-    "notDownloaded": "Didn't download",
-    "verified": "Downloaded, fingerprint matched {p}%",
-    "notVerified": "Downloaded, fingerprint matched only {p}%",
-    "noPreview": "Downloaded, nothing to compare with",
-    "breakdown": "Score breakdown",
-    "play": "Listen",
-    "stop": "Stop",
-    "choose": "Choose",
-    "part": { "duration": "Duration", "title": "Title", "artist": "Artists", "album": "Album", "source": "Source" },
-    "penalty": "Penalty",
-    "titleGot": "Source says “{got}”, expected “{expected}”",
-    "versionGot": "Version: source {got}, expected {expected}",
-    "missing": "Missing artists: {names}"
-  }
-}
-</i18n>

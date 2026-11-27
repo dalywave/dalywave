@@ -6,7 +6,7 @@ import type { Invite, Role } from '~/api/types'
 const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.Invites')
 const { failed, attempt } = useAttempts()
 
 const invites = ref<Invite[] | null>(null)
@@ -125,68 +125,3 @@ const roleText = (i: Invite) => (i.roles.length ? i.roles.map(r => t(`role.${r}`
 .iv__input::placeholder { color: var(--text-4); }
 .iv__input:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--focus); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Приглашения",
-    "hint": "Одноразовая ссылка: человек входит и сразу получает роль",
-    "create": "Пригласить",
-    "createTitle": "Приглашение",
-    "createSubmit": "Создать ссылку",
-    "roleLabel": "Роль",
-    "daysLabel": "Действует",
-    "days": "{n} дн.",
-    "note": "Для кого (видно только вам)",
-    "role": { "listener": "Слушатель", "admin": "Администратор", "none": "Без роли" },
-    "status": { "active": "действует", "used": "принято", "expired": "истекло", "revoked": "отозвано" },
-    "usedBy": "принял {name}",
-    "until": "до {when}",
-    "revoke": "Отозвать",
-    "empty": "Приглашений пока нет",
-    "linkTitle": "Ссылка-приглашение",
-    "linkText": "Отправьте её человеку. Ссылка показывается один раз и работает только для одного аккаунта",
-    "failed": "Не получилось — попробуйте ещё раз"
-  },
-  "uk": {
-    "title": "Запрошення",
-    "hint": "Одноразове посилання: людина входить і одразу отримує роль",
-    "create": "Запросити",
-    "createTitle": "Запрошення",
-    "createSubmit": "Створити посилання",
-    "roleLabel": "Роль",
-    "daysLabel": "Діє",
-    "days": "{n} дн.",
-    "note": "Для кого (бачите лише ви)",
-    "role": { "listener": "Слухач", "admin": "Адміністратор", "none": "Без ролі" },
-    "status": { "active": "діє", "used": "прийнято", "expired": "прострочено", "revoked": "відкликано" },
-    "usedBy": "прийняв {name}",
-    "until": "до {when}",
-    "revoke": "Відкликати",
-    "empty": "Запрошень поки немає",
-    "linkTitle": "Посилання-запрошення",
-    "linkText": "Надішліть його людині. Посилання показується один раз і працює лише для одного облікового запису",
-    "failed": "Не вдалося — спробуйте ще раз"
-  },
-  "en": {
-    "title": "Invites",
-    "hint": "One-time link: the person signs in and gets the role right away",
-    "create": "Invite",
-    "createTitle": "Invite",
-    "createSubmit": "Create link",
-    "roleLabel": "Role",
-    "daysLabel": "Valid for",
-    "days": "{n} d",
-    "note": "Who it's for (only you see this)",
-    "role": { "listener": "Listener", "admin": "Admin", "none": "No role" },
-    "status": { "active": "active", "used": "accepted", "expired": "expired", "revoked": "revoked" },
-    "usedBy": "accepted by {name}",
-    "until": "until {when}",
-    "revoke": "Revoke",
-    "empty": "No invites yet",
-    "linkTitle": "Invite link",
-    "linkText": "Send it to the person. The link is shown once and works for one account only",
-    "failed": "Something went wrong — try again"
-  }
-}
-</i18n>

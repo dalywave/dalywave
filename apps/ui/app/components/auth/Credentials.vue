@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<{
 }>(), { busy: false, error: null, username: null })
 
 const emit = defineEmits<{ submit: [value: { name: string, username: string, password: string }] }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.auth.Credentials')
 
 const name = ref('')
 const login = ref(props.username ?? '')
@@ -106,29 +106,3 @@ function onSubmit() {
   .cr__input { height: 44px; font-size: 15px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "name": "Имя",
-    "username": "Логин",
-    "password": "Пароль",
-    "newPassword": "Пароль",
-    "hint": "Не короче 10 символов"
-  },
-  "uk": {
-    "name": "Ім’я",
-    "username": "Логін",
-    "password": "Пароль",
-    "newPassword": "Пароль",
-    "hint": "Щонайменше 10 символів"
-  },
-  "en": {
-    "name": "Name",
-    "username": "Username",
-    "password": "Password",
-    "newPassword": "Password",
-    "hint": "At least 10 characters"
-  }
-}
-</i18n>

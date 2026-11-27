@@ -7,7 +7,7 @@ import type { WhyKind, WhyTrack } from '~/api/types'
 const bridge = useBridge()
 const auth = useAuthStore()
 const { track, session, open } = useWhyTrack()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.WhyTrack')
 
 const data = ref<WhyTrack | null>(null)
 const failed = ref(false)
@@ -162,23 +162,3 @@ const details = computed(() => {
   .why__more { min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Почему этот трек",
-    "failed": "Не получилось узнать — попробуйте позже",
-    "details": "Подробности"
-  },
-  "uk": {
-    "title": "Чому цей трек",
-    "failed": "Не вдалося дізнатися — спробуйте пізніше",
-    "details": "Подробиці"
-  },
-  "en": {
-    "title": "Why this track",
-    "failed": "Couldn't find out — try again later",
-    "details": "Details"
-  }
-}
-</i18n>

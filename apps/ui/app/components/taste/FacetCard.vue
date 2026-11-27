@@ -13,7 +13,7 @@ const emit = defineEmits<{ less: [], undo: [] }>()
 const player = usePlayerStore()
 const ui = useUiStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.taste.FacetCard')
 
 const covers = computed(() => {
   const seen = new Set<string>()
@@ -112,44 +112,3 @@ function listen() {
   .fc__actions :deep(.btn) { min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "listen": "Слушать",
-    "lessBtn": "Меньше такого",
-    "undo": "Вернуть",
-    "also": "ещё {names}",
-    "peak": {
-      "morning": "чаще утром",
-      "day": "чаще днём",
-      "evening": "чаще вечером",
-      "night": "чаще ночью"
-    }
-  },
-  "uk": {
-    "listen": "Слухати",
-    "lessBtn": "Менше такого",
-    "undo": "Повернути",
-    "also": "ще {names}",
-    "peak": {
-      "morning": "частіше вранці",
-      "day": "частіше вдень",
-      "evening": "частіше ввечері",
-      "night": "частіше вночі"
-    }
-  },
-  "en": {
-    "listen": "Play",
-    "lessBtn": "Less like this",
-    "undo": "Restore",
-    "also": "also {names}",
-    "peak": {
-      "morning": "mostly mornings",
-      "day": "mostly afternoons",
-      "evening": "mostly evenings",
-      "night": "mostly at night"
-    }
-  }
-}
-</i18n>

@@ -7,7 +7,7 @@ definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
 const clipSheet = useClipSheet()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.clips')
 useHead({ title: () => t('title') })
 const { failed, attempt } = useAttempts()
 
@@ -49,20 +49,3 @@ onMounted(() => {
 .cl__row { --cols: 40px minmax(0, 1fr) auto; }
 .cl__cover { width: 40px; height: 40px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Клипы",
-    "reports": { "title": "Жалобы на клипы", "hint": "Слушатели скрыли эти клипы у себя — выберите другой или оставьте без клипа", "n": "скрыли: {n}" }
-  },
-  "uk": {
-    "title": "Кліпи",
-    "reports": { "title": "Скарги на кліпи", "hint": "Слухачі приховали ці кліпи в себе — виберіть інший або залиште без кліпу", "n": "приховали: {n}" }
-  },
-  "en": {
-    "title": "Clips",
-    "reports": { "title": "Clip reports", "hint": "Listeners hid these clips — pick another one or leave the track without a clip", "n": "hidden: {n}" }
-  }
-}
-</i18n>

@@ -14,7 +14,7 @@ const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
 const L = useAdminLabels()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.JobRow')
 
 const j = computed(() => props.job ?? ({ status: 'queued', kind: '', payload: {} } as unknown as Job))
 const p = computed(() => (j.value.payload ?? {}) as Record<string, unknown>)
@@ -127,44 +127,3 @@ async function cancel() {
   .jr__actions { width: auto; min-width: 32px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "album": "альбом",
-    "artist": "артист",
-    "retry": "Повторить",
-    "cancel": "Отменить",
-    "cancelJob": "Отменить задачу",
-    "col": { "state": "Состояние", "job": "Задача", "lane": "Полоса", "attempts": "Попытки", "updated": "Обновлена" },
-    "retried": "Задача снова в очереди",
-    "cancelled": "Задача отменена",
-    "actionFailed": "Не получилось — задача уже изменилась, обновите список",
-    "noHistory": "Истории скачивания нет"
-  },
-  "uk": {
-    "album": "альбом",
-    "artist": "виконавець",
-    "retry": "Повторити",
-    "cancel": "Скасувати",
-    "cancelJob": "Скасувати завдання",
-    "col": { "state": "Стан", "job": "Завдання", "lane": "Смуга", "attempts": "Спроби", "updated": "Оновлено" },
-    "retried": "Завдання знову в черзі",
-    "cancelled": "Завдання скасовано",
-    "actionFailed": "Не вдалося — завдання вже змінилося, оновіть список",
-    "noHistory": "Історії завантаження немає"
-  },
-  "en": {
-    "album": "album",
-    "artist": "artist",
-    "retry": "Retry",
-    "cancel": "Cancel",
-    "cancelJob": "Cancel job",
-    "col": { "state": "State", "job": "Job", "lane": "Lane", "attempts": "Attempts", "updated": "Updated" },
-    "retried": "Job queued again",
-    "cancelled": "Job cancelled",
-    "actionFailed": "Didn't work — the job already changed, refresh the list",
-    "noHistory": "No download history"
-  }
-}
-</i18n>

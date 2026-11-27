@@ -10,7 +10,7 @@ const player = usePlayerStore()
 const pui = usePlaylistUi()
 const lang = useLang()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.friends._id')
 
 const id = computed(() => String(route.params.id))
 const { data, state, load } = useLoad(() => bridge.friends.profile(id.value), () => id.value)
@@ -194,80 +194,3 @@ const busy = computed(() => !!p.value && friends.busy.has(p.value.id))
   .now__play { opacity: 1; background: rgba(4, 5, 7, 0.28); }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "person": "Профиль",
-    "friend": "Друг",
-    "since": "В друзьях с {date}",
-    "nowPlaying": "Сейчас играет",
-    "lastPlayed": "Последнее · {when}",
-    "match": "Совпадение вкусов",
-    "matchUnknown": "Пока мало прослушиваний, чтобы сравнить",
-    "byArtists": "общие артисты {n}%",
-    "bySound": "звучание {n}%",
-    "common": "Ваши общие артисты",
-    "top": "Топ за месяц",
-    "playlists": "Плейлисты",
-    "quietTitle": "Пока тихо",
-    "quietText": "Здесь появится, что слушает ваш друг",
-    "closedTitle": "Видно только друзьям",
-    "closedText": "Что слушает человек и его плейлисты появятся, когда вы станете друзьями",
-    "accept": "Принять",
-    "decline": "Отклонить",
-    "sent": "Запрос отправлен",
-    "remove": "Удалить из друзей",
-    "removeTitle": "Удалить {name} из друзей?",
-    "removeText": "Вы перестанете видеть, что слушает каждый из вас"
-  },
-  "uk": {
-    "person": "Профіль",
-    "friend": "Друг",
-    "since": "У друзях з {date}",
-    "nowPlaying": "Зараз грає",
-    "lastPlayed": "Останнє · {when}",
-    "match": "Збіг смаків",
-    "matchUnknown": "Поки замало прослуховувань, щоб порівняти",
-    "byArtists": "спільні виконавці {n}%",
-    "bySound": "звучання {n}%",
-    "common": "Ваші спільні виконавці",
-    "top": "Топ за місяць",
-    "playlists": "Плейлисти",
-    "quietTitle": "Поки тихо",
-    "quietText": "Тут з’явиться, що слухає ваш друг",
-    "closedTitle": "Видно лише друзям",
-    "closedText": "Те, що слухає людина, і її плейлисти з’являться, коли ви станете друзями",
-    "accept": "Прийняти",
-    "decline": "Відхилити",
-    "sent": "Запит надіслано",
-    "remove": "Видалити з друзів",
-    "removeTitle": "Видалити {name} з друзів?",
-    "removeText": "Ви перестанете бачити, що слухає кожен із вас"
-  },
-  "en": {
-    "person": "Profile",
-    "friend": "Friend",
-    "since": "Friends since {date}",
-    "nowPlaying": "Playing now",
-    "lastPlayed": "Last played · {when}",
-    "match": "Taste match",
-    "matchUnknown": "Not enough listening yet to compare",
-    "byArtists": "shared artists {n}%",
-    "bySound": "sound {n}%",
-    "common": "Artists you both like",
-    "top": "Top this month",
-    "playlists": "Playlists",
-    "quietTitle": "Nothing yet",
-    "quietText": "What your friend plays will show up here",
-    "closedTitle": "Only friends can see this",
-    "closedText": "Become friends to see what they play and their playlists",
-    "accept": "Accept",
-    "decline": "Decline",
-    "sent": "Request sent",
-    "remove": "Remove friend",
-    "removeTitle": "Remove {name} from friends?",
-    "removeText": "You’ll both stop seeing what the other plays"
-  }
-}
-</i18n>

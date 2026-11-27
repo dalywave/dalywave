@@ -11,7 +11,7 @@ definePageMeta({ layout: 'bare' })
 const route = useRoute()
 const bridge = useBridge()
 const auth = useAuthStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.server')
 useHead({ title: () => t('title') })
 
 const appServer = bridge.appServer
@@ -205,80 +205,3 @@ const text = computed(() => {
   .sv__input { height: 44px; font-size: 15px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Адрес сервера",
-    "lead": "DalyWave играет музыку с вашего сервера. Введите его адрес — или загляните в демо с открытой музыкой",
-    "change": "Другой сервер",
-    "changeText": "На текущем сервере вы выйдете из аккаунта",
-    "address": "Адрес сервера",
-    "placeholder": "music.example.com",
-    "continue": "Продолжить",
-    "connect": "Подключиться",
-    "other": "Другой адрес",
-    "foundVersion": "{host} · версия {version}",
-    "recent": "Недавние серверы",
-    "forget": "Убрать «{name}» из недавних",
-    "demo": "Попробовать демо",
-    "cancel": "Отмена",
-    "privacy": "Конфиденциальность",
-    "errors": {
-      "invalid": "Это не похоже на адрес. Например: music.example.com",
-      "unreachable": "Сервер не отвечает. Проверьте адрес и интернет",
-      "not_dalywave": "По этому адресу не DalyWave",
-      "down": "Сервер на месте, но сейчас не готов. Попробуйте через пару минут",
-      "unknown": "Что-то пошло не так. Попробуйте ещё раз"
-    }
-  },
-  "uk": {
-    "title": "Адреса сервера",
-    "lead": "DalyWave грає музику з вашого сервера. Введіть його адресу — або зазирніть у демо з відкритою музикою",
-    "change": "Інший сервер",
-    "changeText": "На поточному сервері ви вийдете з облікового запису",
-    "address": "Адреса сервера",
-    "placeholder": "music.example.com",
-    "continue": "Продовжити",
-    "connect": "Підключитися",
-    "other": "Інша адреса",
-    "foundVersion": "{host} · версія {version}",
-    "recent": "Нещодавні сервери",
-    "forget": "Прибрати «{name}» з нещодавніх",
-    "demo": "Спробувати демо",
-    "cancel": "Скасувати",
-    "privacy": "Конфіденційність",
-    "errors": {
-      "invalid": "Це не схоже на адресу. Наприклад: music.example.com",
-      "unreachable": "Сервер не відповідає. Перевірте адресу та інтернет",
-      "not_dalywave": "За цією адресою не DalyWave",
-      "down": "Сервер на місці, але зараз не готовий. Спробуйте за кілька хвилин",
-      "unknown": "Щось пішло не так. Спробуйте ще раз"
-    }
-  },
-  "en": {
-    "title": "Server address",
-    "lead": "DalyWave plays music from your own server. Enter its address — or look around the demo with open music",
-    "change": "Another server",
-    "changeText": "You'll be signed out of the current server",
-    "address": "Server address",
-    "placeholder": "music.example.com",
-    "continue": "Continue",
-    "connect": "Connect",
-    "other": "Another address",
-    "foundVersion": "{host} · version {version}",
-    "recent": "Recent servers",
-    "forget": "Remove “{name}” from recent",
-    "demo": "Try the demo",
-    "cancel": "Cancel",
-    "privacy": "Privacy",
-    "errors": {
-      "invalid": "That doesn't look like an address. For example: music.example.com",
-      "unreachable": "The server isn't responding. Check the address and the internet",
-      "not_dalywave": "There's no DalyWave at this address",
-      "down": "The server is there but not ready. Try again in a couple of minutes",
-      "unknown": "Something went wrong. Try again"
-    }
-  }
-}
-</i18n>

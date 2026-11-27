@@ -8,7 +8,7 @@ const props = defineProps<{ person: PersonRef, relation: Relation, hint?: string
 const friends = useFriendsStore()
 const ui = useUiStore()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.friends.PersonRow')
 
 const busy = computed(() => friends.busy.has(props.person.id))
 const to = computed(() => (props.relation === 'friend' ? `/friends/${props.person.id}` : undefined))
@@ -59,29 +59,3 @@ a.pr__who:hover .pr__name { text-decoration: underline; text-underline-offset: 3
   .pr__actions :deep(.btn) { min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "add": "Добавить",
-    "accept": "Принять",
-    "decline": "Отклонить",
-    "sent": "Запрос отправлен",
-    "cancel": "Отменить запрос"
-  },
-  "uk": {
-    "add": "Додати",
-    "accept": "Прийняти",
-    "decline": "Відхилити",
-    "sent": "Запит надіслано",
-    "cancel": "Скасувати запит"
-  },
-  "en": {
-    "add": "Add",
-    "accept": "Accept",
-    "decline": "Decline",
-    "sent": "Request sent",
-    "cancel": "Cancel request"
-  }
-}
-</i18n>

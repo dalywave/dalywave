@@ -7,7 +7,7 @@ import type { ScrubberStyle } from '~/stores/prefs'
 defineProps<{ label: string }>()
 
 const model = defineModel<ScrubberStyle>({ required: true })
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.ScrubberStylePicker')
 
 const OPTIONS: ScrubberStyle[] = ['wave', 'line']
 // Огибающая песни для образца: вступление, куплет, припев, спад, второй припев, концовка
@@ -68,11 +68,3 @@ function update(v: unknown) {
   .ssp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "wave": "Волна", "line": "Линия" },
-  "uk": { "wave": "Хвиля", "line": "Лінія" },
-  "en": { "wave": "Wave", "line": "Line" }
-}
-</i18n>

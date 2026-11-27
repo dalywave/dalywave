@@ -7,7 +7,7 @@ const library = useLibraryStore()
 const player = usePlayerStore()
 const ui = useUiStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.liked')
 const { tg } = useGlobalT()
 useHead({ title: () => t('title') })
 
@@ -110,38 +110,3 @@ function play(shuffle = false) {
   .liked > :deep(.tl) { padding: 0 8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Любимые треки",
-    "kicker": "Медиатека",
-    "shuffle": "Перемешать",
-    "filter": "Найти среди любимых",
-    "nothing": "Ничего не нашлось",
-    "nothingText": "Среди любимых нет «{q}». Поищите во всём каталоге",
-    "empty": "Здесь появится то, что вам нравится",
-    "emptyText": "Отмечайте треки сердцем — в плеере или в списках"
-  },
-  "uk": {
-    "title": "Вподобане",
-    "kicker": "Медіатека",
-    "shuffle": "Перемішати",
-    "filter": "Знайти серед вподобаного",
-    "nothing": "Нічого не знайдено",
-    "nothingText": "Серед вподобаного немає «{q}». Пошукайте в усьому каталозі",
-    "empty": "Тут з’явиться те, що вам подобається",
-    "emptyText": "Позначайте треки сердечком — у плеєрі або в списках"
-  },
-  "en": {
-    "title": "Liked songs",
-    "kicker": "Library",
-    "shuffle": "Shuffle",
-    "filter": "Search liked songs",
-    "nothing": "Nothing found",
-    "nothingText": "No “{q}” among liked songs. Try the whole catalog",
-    "empty": "Songs you like will show up here",
-    "emptyText": "Tap the heart — in the player or in lists"
-  }
-}
-</i18n>

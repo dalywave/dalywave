@@ -2,7 +2,7 @@
 // «Собрать плейлист: …» — строка в поиске, когда запрос похож на описание («спокойный инди под дождь»):
 // ведёт на «Плейлист по описанию» с этим текстом
 const props = defineProps<{ text: string }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.search.DescribeRow')
 const to = computed(() => ({ path: '/describe', query: { text: props.text } }))
 </script>
 
@@ -30,11 +30,3 @@ const to = computed(() => ({ path: '/describe', query: { text: props.text } }))
   .drow { margin-inline: -8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "build": "Собрать плейлист по описанию" },
-  "uk": { "build": "Зібрати плейлист за описом" },
-  "en": { "build": "Build a playlist from this description" }
-}
-</i18n>

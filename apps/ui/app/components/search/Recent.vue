@@ -6,7 +6,7 @@ const props = withDefaults(defineProps<{ limit?: number }>(), { limit: 12 })
 
 const router = useRouter()
 const player = usePlayerStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.search.Recent')
 const recent = useSearchRecent()
 const list = computed(() => recent.items.value.slice(0, props.limit))
 
@@ -80,26 +80,3 @@ function open(item: RecentItem) {
   .recent .recent__list :deep(.recent__x) { --size: 44px; margin-right: -8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Недавние",
-    "clear": "Очистить",
-    "remove": "Убрать",
-    "kind": { "query": "Запрос", "artist": "Артист", "album": "Альбом", "track": "Трек", "playlist": "Плейлист" }
-  },
-  "uk": {
-    "title": "Нещодавні",
-    "clear": "Очистити",
-    "remove": "Прибрати",
-    "kind": { "query": "Запит", "artist": "Виконавець", "album": "Альбом", "track": "Трек", "playlist": "Плейлист" }
-  },
-  "en": {
-    "title": "Recent",
-    "clear": "Clear",
-    "remove": "Remove",
-    "kind": { "query": "Search", "artist": "Artist", "album": "Album", "track": "Song", "playlist": "Playlist" }
-  }
-}
-</i18n>

@@ -12,7 +12,7 @@ const props = defineProps<{
   state: ViewState
 }>()
 const emit = defineEmits<{ apply: [ViewState] }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.SavedViews')
 const pui = usePlaylistUi()
 
 interface Saved { name: string, state: ViewState }
@@ -86,11 +86,3 @@ function remove(v: Saved) {
 .sv__x:hover { opacity: 1; }
 .sv__add { color: var(--text-3); box-shadow: inset 0 0 0 1px var(--line); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "views": "Виды", "save": "Сохранить вид", "saveTitle": "Сохранить вид", "name": "Название", "remove": "Убрать вид «{name}»" },
-  "uk": { "views": "Подання", "save": "Зберегти подання", "saveTitle": "Зберегти подання", "name": "Назва", "remove": "Прибрати подання «{name}»" },
-  "en": { "views": "Views", "save": "Save view", "saveTitle": "Save view", "name": "Name", "remove": "Remove view “{name}”" }
-}
-</i18n>

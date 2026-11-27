@@ -3,7 +3,7 @@
 // первыми, затем по свежести; запросы в друзья — строкой сверху, всё остальное — в разделе «Друзья»
 const friends = useFriendsStore()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.friends.Panel')
 
 onMounted(() => {
   friends.init()
@@ -59,29 +59,3 @@ const quiet = computed(() => friends.friends.filter(f => !f.activity))
 .fp__skel-row { display: flex; align-items: center; gap: 12px; }
 .fp__skel-lines { display: flex; flex: 1; flex-direction: column; gap: 8px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "requests": "Запросы в друзья: {n}",
-    "emptyText": "Добавьте друзей — здесь будет видно, что они слушают",
-    "find": "Найти друзей",
-    "failed": "Не загрузилось",
-    "retry": "Повторить"
-  },
-  "uk": {
-    "requests": "Запити на дружбу: {n}",
-    "emptyText": "Додайте друзів — тут буде видно, що вони слухають",
-    "find": "Знайти друзів",
-    "failed": "Не завантажилося",
-    "retry": "Повторити"
-  },
-  "en": {
-    "requests": "Friend requests: {n}",
-    "emptyText": "Add friends to see what they’re playing",
-    "find": "Find friends",
-    "failed": "Didn’t load",
-    "retry": "Retry"
-  }
-}
-</i18n>

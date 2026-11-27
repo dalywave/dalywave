@@ -6,7 +6,7 @@ import type { AppUpdateState } from '~/bridge/types'
 // Сами мы не перезапускаемся: музыка не должна оборваться. На сайте и телефонах строк нет
 const bridge = useBridge()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.shell.AppUpdateRow')
 const { tg } = useGlobalT()
 
 const state = ref<AppUpdateState | null>(null)
@@ -93,44 +93,3 @@ async function restart() {
 .value { font-size: var(--fs-small); color: var(--text-2); }
 .tnum { font-variant-numeric: tabular-nums; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "version": "Версия приложения",
-    "upToDate": "Установлена последняя версия",
-    "checking": "Проверяем обновления…",
-    "downloading": "Скачиваем обновление {version}",
-    "ready": "Обновление готово — {version}",
-    "installing": "Устанавливаем…",
-    "failed": "Не получилось проверить обновления",
-    "onQuit": "Или само установится при выходе из DalyWave",
-    "restart": "Перезапустить",
-    "check": "Проверить"
-  },
-  "uk": {
-    "version": "Версія застосунку",
-    "upToDate": "Встановлено останню версію",
-    "checking": "Перевіряємо оновлення…",
-    "downloading": "Завантажуємо оновлення {version}",
-    "ready": "Оновлення готове — {version}",
-    "installing": "Встановлюємо…",
-    "failed": "Не вдалося перевірити оновлення",
-    "onQuit": "Або встановиться саме під час виходу з DalyWave",
-    "restart": "Перезапустити",
-    "check": "Перевірити"
-  },
-  "en": {
-    "version": "App version",
-    "upToDate": "You're on the latest version",
-    "checking": "Checking for updates…",
-    "downloading": "Downloading update {version}",
-    "ready": "Update ready — {version}",
-    "installing": "Installing…",
-    "failed": "Couldn't check for updates",
-    "onQuit": "Or it installs when you quit DalyWave",
-    "restart": "Restart",
-    "check": "Check"
-  }
-}
-</i18n>

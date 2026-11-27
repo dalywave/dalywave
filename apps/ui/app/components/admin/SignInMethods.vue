@@ -6,7 +6,7 @@ import { copyText } from '~/utils/web-api'
 // окружения сервера (docs/self-hosting/auth.md). Адрес возврата — тот, что регистрируют у провайдера
 defineProps<{ overview: AuthOverview }>()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.SignInMethods')
 
 async function copy(text: string) {
   try {
@@ -89,59 +89,3 @@ async function copy(text: string) {
 .sm__callback:hover { color: var(--text-1); }
 .sm__callback:focus-visible { outline: none; border-radius: var(--r-1, 4px); box-shadow: 0 0 0 2px var(--focus); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "admins": "админы: {claim} = {values}",
-    "noAdmins": "админов не выдаёт",
-    "open": "новые ждут роль",
-    "inviteOnly": "только по приглашению",
-    "trustEmail": "связывает по почте",
-    "users": "входят: {n}",
-    "copyCallback": "Скопировать адрес возврата",
-    "copied": "Адрес скопирован",
-    "copyFailed": "Не получилось скопировать",
-    "local": "Свои аккаунты",
-    "localOn": "Логин и пароль, приглашения, мастер первого запуска",
-    "localOff": "Выключены: DALYWAVE_LOCAL_AUTH=false",
-    "emergency": "Аварийный пароль",
-    "on": "включён",
-    "off": "выключен"
-  },
-  "uk": {
-    "admins": "адміни: {claim} = {values}",
-    "noAdmins": "адмінів не видає",
-    "open": "нові чекають на роль",
-    "inviteOnly": "лише за запрошенням",
-    "trustEmail": "пов’язує за поштою",
-    "users": "входять: {n}",
-    "copyCallback": "Скопіювати адресу повернення",
-    "copied": "Адресу скопійовано",
-    "copyFailed": "Не вдалося скопіювати",
-    "local": "Власні облікові записи",
-    "localOn": "Логін і пароль, запрошення, майстер першого запуску",
-    "localOff": "Вимкнено: DALYWAVE_LOCAL_AUTH=false",
-    "emergency": "Аварійний пароль",
-    "on": "увімкнено",
-    "off": "вимкнено"
-  },
-  "en": {
-    "admins": "admins: {claim} = {values}",
-    "noAdmins": "grants no admins",
-    "open": "new people wait for a role",
-    "inviteOnly": "invite only",
-    "trustEmail": "links by email",
-    "users": "users: {n}",
-    "copyCallback": "Copy the callback URL",
-    "copied": "URL copied",
-    "copyFailed": "Couldn't copy",
-    "local": "Local accounts",
-    "localOn": "Username and password, invites, first-run setup",
-    "localOff": "Off: DALYWAVE_LOCAL_AUTH=false",
-    "emergency": "Emergency password",
-    "on": "on",
-    "off": "off"
-  }
-}
-</i18n>

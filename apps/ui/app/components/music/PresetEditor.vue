@@ -16,7 +16,7 @@ const emit = defineEmits<{ submit: [value: { name: string, icon: string }] }>()
 const open = defineModel<boolean>('open', { default: false })
 
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.PresetEditor')
 const name = ref(props.name)
 const icon = ref(props.icon)
 const input = ref<HTMLInputElement | null>(null)
@@ -125,11 +125,3 @@ function submit() {
 .pe--sheet .pe__icons { gap: 6px; }
 .pe--sheet .pe__icon { min-height: 44px; font-size: 20px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "name": "Название", "icon": "Иконка" },
-  "uk": { "name": "Назва", "icon": "Іконка" },
-  "en": { "name": "Name", "icon": "Icon" }
-}
-</i18n>

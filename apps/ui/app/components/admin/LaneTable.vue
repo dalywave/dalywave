@@ -6,7 +6,7 @@ defineProps<{ lanes: Lane[] }>()
 const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.LaneTable')
 
 /** «2 потока · пауза 2 с» — сколько задач полоса делает разом и сколько ждёт между ними */
 function laneMode(l: Lane) {
@@ -75,65 +75,3 @@ async function toggle(l: Lane, paused: boolean) {
   .lt__mode-sm { display: block; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Полосы очереди",
-    "lane": "Полоса",
-    "queued": "Ждут",
-    "running": "Идут",
-    "failed24": "Ошибки",
-    "done": "За сутки",
-    "mode": "Как работает",
-    "state": "Включена",
-    "pause": "пауза {s} с",
-    "window": "только {w}",
-    "closed": "вне расписания",
-    "switchRunning": "«{title}» работает",
-    "switchPaused": "«{title}» на паузе",
-    "pausedLabel": "на паузе",
-    "paused": "«{title}» на паузе",
-    "resumed": "«{title}» снова работает",
-    "failed": "Не получилось изменить полосу"
-  },
-  "uk": {
-    "title": "Смуги черги",
-    "lane": "Смуга",
-    "queued": "Чекають",
-    "running": "Ідуть",
-    "failed24": "Помилки",
-    "done": "За добу",
-    "mode": "Як працює",
-    "state": "Увімкнено",
-    "pause": "пауза {s} с",
-    "window": "лише {w}",
-    "closed": "поза розкладом",
-    "switchRunning": "«{title}» працює",
-    "switchPaused": "«{title}» на паузі",
-    "pausedLabel": "на паузі",
-    "paused": "«{title}» на паузі",
-    "resumed": "«{title}» знову працює",
-    "failed": "Не вдалося змінити смугу"
-  },
-  "en": {
-    "title": "Queue lanes",
-    "lane": "Lane",
-    "queued": "Queued",
-    "running": "Running",
-    "failed24": "Failed",
-    "done": "24 h",
-    "mode": "How it runs",
-    "state": "Enabled",
-    "pause": "{s} s pause",
-    "window": "only {w}",
-    "closed": "off schedule",
-    "switchRunning": "“{title}” is running",
-    "switchPaused": "“{title}” is paused",
-    "pausedLabel": "paused",
-    "paused": "“{title}” paused",
-    "resumed": "“{title}” running again",
-    "failed": "Couldn't change the lane"
-  }
-}
-</i18n>

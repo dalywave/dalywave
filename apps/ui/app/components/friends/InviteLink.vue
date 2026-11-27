@@ -10,7 +10,7 @@ const bridge = useBridge()
 const ui = useUiStore()
 const toast = useToast()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.friends.InviteLink')
 
 const shortUrl = computed(() => props.url.replace(/^https?:\/\//, ''))
 const canShare = computed(() => import.meta.client && typeof navigator.share === 'function' && (ui.isPhone || bridge.platform === 'ios' || bridge.platform === 'ipados'))
@@ -64,26 +64,3 @@ async function share() {
   .il__link :deep(.btn), .il__reset { min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "qr": "QR-код ссылки",
-    "copy": "Скопировать",
-    "share": "Отправить",
-    "reset": "Новая ссылка"
-  },
-  "uk": {
-    "qr": "QR-код посилання",
-    "copy": "Скопіювати",
-    "share": "Надіслати",
-    "reset": "Нове посилання"
-  },
-  "en": {
-    "qr": "QR code with the link",
-    "copy": "Copy",
-    "share": "Send",
-    "reset": "New link"
-  }
-}
-</i18n>

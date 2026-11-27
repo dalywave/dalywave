@@ -11,7 +11,7 @@ const pui = usePlaylistUi()
 const ui = useUiStore()
 const auth = useAuthStore()
 const { playAlbum, loading: albumLoading } = usePlayActions()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.SharedLink')
 
 const shown = computed({
   get: () => state.value !== null,
@@ -173,68 +173,3 @@ onBeforeUnmount(() => {
 .sl__status { margin: 0; color: var(--text-3); font-size: var(--fs-caption); }
 .sl__row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Ссылка",
-    "from": "Из {source}",
-    "looking": "Ищем в каталоге…",
-    "play": "Слушать",
-    "like": "В любимые",
-    "liked": "В любимых",
-    "toPlaylist": "В плейлист",
-    "openAlbum": "Открыть альбом",
-    "error": {
-      "unsupported_link": "Эту ссылку не открыть",
-      "not_found": "Не нашли в каталоге",
-      "network": "Сервер не ответил"
-    },
-    "errorText": {
-      "unsupported_link": "Подходят ссылки из Deezer, Spotify, Apple Music, YouTube, SoundCloud и Bandcamp",
-      "not_found": "Попробуйте найти песню поиском",
-      "network": "Попробуйте ещё раз чуть позже"
-    }
-  },
-  "uk": {
-    "title": "Посилання",
-    "from": "З {source}",
-    "looking": "Шукаємо в каталозі…",
-    "play": "Слухати",
-    "like": "До вподобаного",
-    "liked": "У вподобаному",
-    "toPlaylist": "До плейлиста",
-    "openAlbum": "Відкрити альбом",
-    "error": {
-      "unsupported_link": "Це посилання не відкрити",
-      "not_found": "Не знайшли в каталозі",
-      "network": "Сервер не відповів"
-    },
-    "errorText": {
-      "unsupported_link": "Підходять посилання з Deezer, Spotify, Apple Music, YouTube, SoundCloud і Bandcamp",
-      "not_found": "Спробуйте знайти пісню пошуком",
-      "network": "Спробуйте ще раз трохи згодом"
-    }
-  },
-  "en": {
-    "title": "Link",
-    "from": "From {source}",
-    "looking": "Looking it up…",
-    "play": "Play",
-    "like": "Like",
-    "liked": "Liked",
-    "toPlaylist": "Add to playlist",
-    "openAlbum": "Open album",
-    "error": {
-      "unsupported_link": "Can’t open this link",
-      "not_found": "Not in the catalog",
-      "network": "The server didn’t respond"
-    },
-    "errorText": {
-      "unsupported_link": "Links from Deezer, Spotify, Apple Music, YouTube, SoundCloud and Bandcamp work",
-      "not_found": "Try finding the song with search",
-      "network": "Try again a little later"
-    }
-  }
-}
-</i18n>

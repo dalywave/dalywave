@@ -8,7 +8,7 @@ definePageMeta({ layout: 'admin' })
 const bridge = useBridge()
 const lang = useLang()
 const L = useAdminLabels()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.health')
 useHead({ title: () => t('title') })
 
 const data = ref<AdminHealth | null>(null)
@@ -115,62 +115,3 @@ const bad = computed(() => data.value?.checks.filter(c => c.state === 'down' || 
   .ap-stat:nth-child(odd) { padding-left: 0; border-left: 0; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Здоровье",
-    "allGood": "Всё работает",
-    "problems": "Требуют внимания: {n}",
-    "checks": "Части сервера",
-    "open": "Открыть",
-    "ok": "работает",
-    "off": "не включено на этом сервере",
-    "down": "не отвечает",
-    "latency": "ответ за {ms} мс",
-    "detail": { "worker": "последняя задача — {when}", "backups": "последняя копия — {when}", "noBackups": "копий пока нет" },
-    "uptime": { "min": "{n} мин", "h": "{n} ч", "d": "{n} дн." },
-    "stats": { "version": "версия · работает {uptime}", "db": "база", "connections": "соединений сейчас", "queue": "в очереди · идёт {n}", "failed": "задач упало за сутки" },
-    "state": { "ok": "В порядке", "warn": "Внимание", "down": "Не работает", "off": "Выключено" },
-    "part": { "database": "База данных", "storage": "Хранилище файлов", "realtime": "Живые события", "worker": "Очередь задач", "ml": "Анализ звука", "fetcher": "Серверный загрузчик", "backups": "Резервные копии" },
-    "about": { "database": "Postgres", "storage": "аудио, обложки, клипы", "realtime": "обновления на экранах", "worker": "скачивание, обложки, анализ", "ml": "рекомендации и волна", "fetcher": "скачивание на сервере", "backups": "ежедневный дамп базы" },
-    "failures": { "title": "Упало за сутки", "hint": "Последние задачи с ошибкой", "none": "Ни одна задача не упала", "all": "Все с ошибкой" }
-  },
-  "uk": {
-    "title": "Здоров’я",
-    "allGood": "Усе працює",
-    "problems": "Потребують уваги: {n}",
-    "checks": "Частини сервера",
-    "open": "Відкрити",
-    "ok": "працює",
-    "off": "не ввімкнено на цьому сервері",
-    "down": "не відповідає",
-    "latency": "відповідь за {ms} мс",
-    "detail": { "worker": "останнє завдання — {when}", "backups": "остання копія — {when}", "noBackups": "копій поки немає" },
-    "uptime": { "min": "{n} хв", "h": "{n} год", "d": "{n} дн." },
-    "stats": { "version": "версія · працює {uptime}", "db": "база", "connections": "з’єднань зараз", "queue": "у черзі · виконується {n}", "failed": "завдань упало за добу" },
-    "state": { "ok": "Гаразд", "warn": "Увага", "down": "Не працює", "off": "Вимкнено" },
-    "part": { "database": "База даних", "storage": "Сховище файлів", "realtime": "Живі події", "worker": "Черга завдань", "ml": "Аналіз звуку", "fetcher": "Серверний завантажувач", "backups": "Резервні копії" },
-    "about": { "database": "Postgres", "storage": "аудіо, обкладинки, кліпи", "realtime": "оновлення на екранах", "worker": "завантаження, обкладинки, аналіз", "ml": "рекомендації та хвиля", "fetcher": "завантаження на сервері", "backups": "щоденний дамп бази" },
-    "failures": { "title": "Упало за добу", "hint": "Останні завдання з помилкою", "none": "Жодне завдання не впало", "all": "Усі з помилкою" }
-  },
-  "en": {
-    "title": "Health",
-    "allGood": "Everything works",
-    "problems": "Need attention: {n}",
-    "checks": "Server parts",
-    "open": "Open",
-    "ok": "works",
-    "off": "not enabled on this server",
-    "down": "not responding",
-    "latency": "answered in {ms} ms",
-    "detail": { "worker": "last job — {when}", "backups": "last backup — {when}", "noBackups": "no backups yet" },
-    "uptime": { "min": "{n} min", "h": "{n} h", "d": "{n} d" },
-    "stats": { "version": "version · up {uptime}", "db": "database", "connections": "connections now", "queue": "queued · {n} running", "failed": "jobs failed in 24 h" },
-    "state": { "ok": "OK", "warn": "Attention", "down": "Down", "off": "Off" },
-    "part": { "database": "Database", "storage": "File storage", "realtime": "Live events", "worker": "Job queue", "ml": "Audio analysis", "fetcher": "Server downloader", "backups": "Backups" },
-    "about": { "database": "Postgres", "storage": "audio, covers, clips", "realtime": "updates on screens", "worker": "downloads, covers, analysis", "ml": "recommendations and wave", "fetcher": "downloading on the server", "backups": "daily database dump" },
-    "failures": { "title": "Failed in 24 hours", "hint": "Latest jobs with an error", "none": "No job failed", "all": "All failed" }
-  }
-}
-</i18n>

@@ -9,7 +9,7 @@ definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.storage')
 useHead({ title: () => t('title') })
 
 const { data, state, load } = useLoad<StorageOverview>(() => bridge.admin.storage())
@@ -109,65 +109,3 @@ const codecName = (c: string) => qualityLabel({ codec: c }) ?? c
   .st3 .ap-tr > :nth-child(2), .st3 .ap-tr > :nth-child(3) { display: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Хранилище",
-    "stats": {
-      "total": "занято всего",
-      "growth": "прибавилось за 30 дней",
-      "cost": "в месяц в R2",
-      "price": "$0,015 за ГБ сверх 10 ГБ",
-      "replaced": "вытесненные копии"
-    },
-    "kinds": "По видам",
-    "kind": { "audio": "Звук", "covers": "Обложки", "photos": "Фото артистов" },
-    "growth": { "title": "Прирост звука", "audio": "Звук за день" },
-    "codecs": "Звук по форматам",
-    "sources": "Звук по источникам",
-    "noAudio": "Звука на сервере пока нет",
-    "artists": "Самые «тяжёлые» артисты",
-    "artistsHint": "Все файлы записей артиста, включая вытесненные",
-    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Загружено", "other": "Другое" }
-  },
-  "uk": {
-    "title": "Сховище",
-    "stats": {
-      "total": "зайнято загалом",
-      "growth": "додалося за 30 днів",
-      "cost": "на місяць у R2",
-      "price": "$0,015 за ГБ понад 10 ГБ",
-      "replaced": "витіснені копії"
-    },
-    "kinds": "За видами",
-    "kind": { "audio": "Звук", "covers": "Обкладинки", "photos": "Фото виконавців" },
-    "growth": { "title": "Приріст звуку", "audio": "Звук за день" },
-    "codecs": "Звук за форматами",
-    "sources": "Звук за джерелами",
-    "noAudio": "Звуку на сервері поки немає",
-    "artists": "Найбільш «важкі» виконавці",
-    "artistsHint": "Усі файли записів виконавця, включно з витісненими",
-    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Завантажено", "other": "Інше" }
-  },
-  "en": {
-    "title": "Storage",
-    "stats": {
-      "total": "used in total",
-      "growth": "added in 30 days",
-      "cost": "per month in R2",
-      "price": "$0.015 per GB above 10 GB",
-      "replaced": "replaced copies"
-    },
-    "kinds": "By kind",
-    "kind": { "audio": "Audio", "covers": "Covers", "photos": "Artist photos" },
-    "growth": { "title": "Audio growth", "audio": "Audio per day" },
-    "codecs": "Audio by format",
-    "sources": "Audio by source",
-    "noAudio": "No audio on the server yet",
-    "artists": "Heaviest artists",
-    "artistsHint": "All files of the artist's recordings, replaced ones included",
-    "source": { "youtube_music": "YouTube Music", "youtube": "YouTube", "soundcloud": "SoundCloud", "bandcamp": "Bandcamp", "upload": "Uploaded", "other": "Other" }
-  }
-}
-</i18n>

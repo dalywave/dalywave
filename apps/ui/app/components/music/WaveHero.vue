@@ -10,7 +10,7 @@ const player = usePlayerStore()
 const ui = useUiStore()
 const lang = useLang()
 const { tg: t } = useGlobalT()
-const { t: tl } = useI18n({ useScope: 'local' })
+const { t: tl } = useScopedI18n('components.music.WaveHero')
 
 const settings = computed({
   get: () => player.wave,
@@ -188,35 +188,3 @@ const moreItems = computed<MenuEntry[]>(() => [
   .hero__below { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "preparing": "Готовим волну…",
-    "hint": "Подбираем музыку под эти настройки",
-    "progress": "Готово {ready} из {need}",
-    "cancel": "Отменить",
-    "more": "Ещё",
-    "taste": "Мой вкус",
-    "resetSettings": "Сбросить настройки волны"
-  },
-  "uk": {
-    "preparing": "Готуємо хвилю…",
-    "hint": "Підбираємо музику під ці налаштування",
-    "progress": "Готово {ready} з {need}",
-    "cancel": "Скасувати",
-    "more": "Ще",
-    "taste": "Мій смак",
-    "resetSettings": "Скинути налаштування хвилі"
-  },
-  "en": {
-    "preparing": "Preparing your wave…",
-    "hint": "Picking music for these settings",
-    "progress": "{ready} of {need} ready",
-    "cancel": "Cancel",
-    "more": "More",
-    "taste": "My taste",
-    "resetSettings": "Reset wave settings"
-  }
-}
-</i18n>

@@ -5,7 +5,7 @@ import type { ArtistAbout } from '~/api/types'
 // «Читать дальше» — сама статья. Статьи нет или источник молчит — блока нет
 const props = defineProps<{ artistId: string }>()
 const bridge = useBridge()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.ArtistAbout')
 
 const about = shallowRef<ArtistAbout | null>(null)
 async function load() {
@@ -68,32 +68,3 @@ const facts = computed(() => {
   .ab__more { min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Об артисте",
-    "more": "Читать дальше",
-    "active": "На сцене",
-    "since": "с {year}",
-    "from": "Откуда",
-    "genres": "Жанры"
-  },
-  "uk": {
-    "title": "Про виконавця",
-    "more": "Читати далі",
-    "active": "На сцені",
-    "since": "з {year}",
-    "from": "Звідки",
-    "genres": "Жанри"
-  },
-  "en": {
-    "title": "About",
-    "more": "Read more",
-    "active": "Active",
-    "since": "since {year}",
-    "from": "From",
-    "genres": "Genres"
-  }
-}
-</i18n>

@@ -12,7 +12,7 @@ const player = usePlayerStore()
 const pui = usePlaylistUi()
 const toast = useToast()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Overlay')
 const { tg } = useGlobalT()
 
 const STORE = 'dw.overlay.look'
@@ -199,86 +199,3 @@ const seg = computed(() => (ui.isPhone ? 'sm' : 'md'))
   .ovs__actions > * { flex: 1; min-height: 44px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "group": "Оверлей для стрима",
-    "title": "Плашка «Сейчас играет»",
-    "desc": "Для OBS: прозрачная страница с тем, что играет",
-    "create": "Получить ссылку",
-    "preview": "Как плашка выглядит на стриме",
-    "look": "Вид",
-    "line": "Строка",
-    "card": "Карточка",
-    "side": "Сторона",
-    "left": "Слева",
-    "right": "Справа",
-    "size": "Размер",
-    "private": "Прятать в приватной сессии",
-    "link": "Ссылка",
-    "linkDesc": "OBS → Источник → Браузер",
-    "copy": "Скопировать ссылку",
-    "copied": "Ссылка скопирована",
-    "rotate": "Сменить ссылку",
-    "rotateTitle": "Сменить ссылку?",
-    "rotateText": "Прежняя ссылка перестанет работать — в OBS нужно будет вставить новую.",
-    "off": "Выключить оверлей",
-    "offTitle": "Выключить оверлей?",
-    "offText": "Ссылка перестанет работать. Новую можно получить в любой момент.",
-    "failed": "Не получилось — попробуйте ещё раз"
-  },
-  "uk": {
-    "group": "Оверлей для стриму",
-    "title": "Плашка «Зараз грає»",
-    "desc": "Для OBS: прозора сторінка з тим, що грає",
-    "create": "Отримати посилання",
-    "preview": "Як плашка виглядає на стримі",
-    "look": "Вигляд",
-    "line": "Рядок",
-    "card": "Картка",
-    "side": "Сторона",
-    "left": "Ліворуч",
-    "right": "Праворуч",
-    "size": "Розмір",
-    "private": "Ховати в приватному сеансі",
-    "link": "Посилання",
-    "linkDesc": "OBS → Джерело → Браузер",
-    "copy": "Скопіювати посилання",
-    "copied": "Посилання скопійовано",
-    "rotate": "Змінити посилання",
-    "rotateTitle": "Змінити посилання?",
-    "rotateText": "Попереднє посилання перестане працювати — в OBS треба буде вставити нове.",
-    "off": "Вимкнути оверлей",
-    "offTitle": "Вимкнути оверлей?",
-    "offText": "Посилання перестане працювати. Нове можна отримати будь-коли.",
-    "failed": "Не вдалося — спробуйте ще раз"
-  },
-  "en": {
-    "group": "Stream overlay",
-    "title": "Now Playing card",
-    "desc": "For OBS: a transparent page with what’s playing",
-    "create": "Get link",
-    "preview": "How the card looks on stream",
-    "look": "Style",
-    "line": "Line",
-    "card": "Card",
-    "side": "Side",
-    "left": "Left",
-    "right": "Right",
-    "size": "Size",
-    "private": "Hide in a private session",
-    "link": "Link",
-    "linkDesc": "OBS → Source → Browser",
-    "copy": "Copy link",
-    "copied": "Link copied",
-    "rotate": "New link",
-    "rotateTitle": "Make a new link?",
-    "rotateText": "The old link will stop working — paste the new one into OBS.",
-    "off": "Turn off overlay",
-    "offTitle": "Turn off the overlay?",
-    "offText": "The link will stop working. You can get a new one any time.",
-    "failed": "Didn’t work — try again"
-  }
-}
-</i18n>

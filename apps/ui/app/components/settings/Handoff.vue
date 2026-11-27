@@ -14,7 +14,7 @@ const bridge = useBridge()
 const account = useAccountSettings()
 const connect = useConnectStore()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Handoff')
 const { t: tg } = useI18n()
 
 const on = computed({
@@ -69,41 +69,3 @@ const media = computed({
     </template>
   </SettingsGroup>
 </template>
-
-<i18n lang="json">
-{
-  "ru": {
-    "group": "Между устройствами",
-    "autoHint": "Где вы сейчас — там и играет",
-    "hereHint": "Другое устройство встанет на паузу",
-    "thereHint": "Это устройство — пульт",
-    "title": "Подхват на другом устройстве",
-    "desc": "Музыка идёт за наушниками",
-    "ask": "Спрашивать",
-    "askOn": "«Продолжить здесь?» перед переносом",
-    "askOff": "Музыка переходит сама"
-  },
-  "uk": {
-    "group": "Між пристроями",
-    "autoHint": "Де ви зараз — там і грає",
-    "hereHint": "Інший пристрій стане на паузу",
-    "thereHint": "Цей пристрій — пульт",
-    "title": "Продовження на іншому пристрої",
-    "desc": "Музика йде за навушниками",
-    "ask": "Запитувати",
-    "askOn": "«Продовжити тут?» перед перенесенням",
-    "askOff": "Музика переходить сама"
-  },
-  "en": {
-    "group": "Across devices",
-    "autoHint": "Plays where you are",
-    "hereHint": "The other device pauses",
-    "thereHint": "This device is a remote",
-    "title": "Continue on another device",
-    "desc": "Music follows your headphones",
-    "ask": "Ask first",
-    "askOn": "“Continue here?” before moving",
-    "askOff": "Music moves on its own"
-  }
-}
-</i18n>

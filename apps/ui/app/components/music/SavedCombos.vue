@@ -12,7 +12,7 @@ const player = usePlayerStore()
 const presets = useWavePresetsStore()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.SavedCombos')
 
 onMounted(() => void presets.load().catch(() => {}))
 
@@ -195,50 +195,3 @@ const swatch = (set: WaveSettings) => {
   .combo__go { display: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "label": "Сохранённые сочетания",
-    "now": "сейчас",
-    "save": "Сохранить",
-    "saveMeta": "текущие настройки",
-    "saveTitle": "Сохранить сочетание",
-    "editTitle": "Сочетание",
-    "done": "Готово",
-    "rename": "Переименовать",
-    "remove": "Удалить",
-    "removed": "«{name}» удалено",
-    "savedToast": "«{name}» сохранено",
-    "failed": "Не получилось — попробуйте ещё раз"
-  },
-  "uk": {
-    "label": "Збережені поєднання",
-    "now": "зараз",
-    "save": "Зберегти",
-    "saveMeta": "поточні налаштування",
-    "saveTitle": "Зберегти поєднання",
-    "editTitle": "Поєднання",
-    "done": "Готово",
-    "rename": "Перейменувати",
-    "remove": "Видалити",
-    "removed": "«{name}» видалено",
-    "savedToast": "«{name}» збережено",
-    "failed": "Не вдалося — спробуйте ще раз"
-  },
-  "en": {
-    "label": "Saved mixes",
-    "now": "now",
-    "save": "Save",
-    "saveMeta": "current settings",
-    "saveTitle": "Save this mix",
-    "editTitle": "Mix",
-    "done": "Done",
-    "rename": "Rename",
-    "remove": "Delete",
-    "removed": "“{name}” deleted",
-    "savedToast": "“{name}” saved",
-    "failed": "Something went wrong — try again"
-  }
-}
-</i18n>

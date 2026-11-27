@@ -6,7 +6,7 @@ const props = withDefaults(defineProps<{ title?: string }>(), { title: undefined
 const friends = useFriendsStore()
 const priv = usePrivateSession()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Friends')
 
 onMounted(() => {
   friends.init()
@@ -34,20 +34,3 @@ const privateDesc = computed(() => (priv.on.value ? [tg('friends.privateHint'), 
     </SettingsRow>
   </SettingsGroup>
 </template>
-
-<i18n lang="json">
-{
-  "ru": {
-    "shareOff": "Друзья видят только ваше имя",
-    "start": "Включить"
-  },
-  "uk": {
-    "shareOff": "Друзі бачать тільки ваше ім’я",
-    "start": "Увімкнути"
-  },
-  "en": {
-    "shareOff": "Friends only see your name",
-    "start": "Turn on"
-  }
-}
-</i18n>

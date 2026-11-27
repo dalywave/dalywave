@@ -5,7 +5,7 @@ definePageMeta({ layout: 'bare' })
 
 const auth = useAuthStore()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.waiting')
 useHead({ title: () => t('title') })
 
 const firstName = computed(() => auth.user?.name?.trim().split(/\s+/)[0] ?? '')
@@ -62,38 +62,3 @@ async function logout() {
 <style scoped>
 .who { margin: 0; max-width: 100%; overflow: hidden; font-size: var(--fs-small); color: var(--text-4); text-overflow: ellipsis; white-space: nowrap; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Ждём доступа",
-    "heading": "{name}, почти готово",
-    "headingAnon": "Почти готово",
-    "text": "Осталось дождаться, пока администратор откроет доступ. Экран обновится сам",
-    "check": "Проверить сейчас",
-    "still": "Доступа пока нет",
-    "logout": "Выйти",
-    "as": "Вы вошли как {account}"
-  },
-  "uk": {
-    "title": "Чекаємо на доступ",
-    "heading": "{name}, майже готово",
-    "headingAnon": "Майже готово",
-    "text": "Залишилося дочекатися, поки адміністратор відкриє доступ. Екран оновиться сам",
-    "check": "Перевірити зараз",
-    "still": "Доступу поки немає",
-    "logout": "Вийти",
-    "as": "Ви увійшли як {account}"
-  },
-  "en": {
-    "title": "Waiting for access",
-    "heading": "{name}, almost there",
-    "headingAnon": "Almost there",
-    "text": "An admin just needs to give you access. This screen updates by itself",
-    "check": "Check now",
-    "still": "No access yet",
-    "logout": "Sign out",
-    "as": "Signed in as {account}"
-  }
-}
-</i18n>

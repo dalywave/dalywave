@@ -7,7 +7,7 @@ withDefaults(defineProps<{ rail?: boolean }>(), {})
 const bridge = useBridge()
 const auth = useAuthStore()
 const dl = useDownloader()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.shell.DownloaderIndicator')
 
 const pc = bridge.platform === 'windows'
 const view = computed(() => dl.view.value)
@@ -65,77 +65,3 @@ const line = computed(() => {
 .dli--token .dli__meta, .dli--broken .dli__meta { color: var(--danger); }
 .dli--rail { justify-content: center; padding: 8px 0; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "titleMac": "Загрузчик на этом Mac",
-    "titlePc": "Загрузчик на этом ПК",
-    "line": "Загрузчик: {state}",
-    "meta": {
-      "working": "Качает «{track}»",
-      "workingFull": "Качает «{track}» — {artist}",
-      "workingUnknown": "Качает трек",
-      "finishing": "Доделывает «{track}», потом пауза",
-      "idle": "Ждёт заданий",
-      "paused": "На паузе",
-      "offline": "Нет связи с сервером",
-      "resting": "Отдыхает после проверки YouTube",
-      "starting": "Запускается…",
-      "stopping": "Останавливается…",
-      "restarting": "Перезапускается…",
-      "token": "Сервер не принял токен",
-      "broken": "Установка повреждена",
-      "disabled": "Выключен",
-      "signed-out": "Нужен вход",
-      "forbidden": "Доступен администратору"
-    }
-  },
-  "uk": {
-    "titleMac": "Завантажувач на цьому Mac",
-    "titlePc": "Завантажувач на цьому ПК",
-    "line": "Завантажувач: {state}",
-    "meta": {
-      "working": "Завантажує «{track}»",
-      "workingFull": "Завантажує «{track}» — {artist}",
-      "workingUnknown": "Завантажує трек",
-      "finishing": "Доробляє «{track}», потім пауза",
-      "idle": "Чекає завдань",
-      "paused": "На паузі",
-      "offline": "Немає зв’язку із сервером",
-      "resting": "Відпочиває після перевірки YouTube",
-      "starting": "Запускається…",
-      "stopping": "Зупиняється…",
-      "restarting": "Перезапускається…",
-      "token": "Сервер не прийняв токен",
-      "broken": "Встановлення пошкоджено",
-      "disabled": "Вимкнений",
-      "signed-out": "Потрібен вхід",
-      "forbidden": "Доступний адміністраторові"
-    }
-  },
-  "en": {
-    "titleMac": "Downloader on this Mac",
-    "titlePc": "Downloader on this PC",
-    "line": "Downloader: {state}",
-    "meta": {
-      "working": "Downloading “{track}”",
-      "workingFull": "Downloading “{track}” — {artist}",
-      "workingUnknown": "Downloading a track",
-      "finishing": "Finishing “{track}”, then pausing",
-      "idle": "Waiting for jobs",
-      "paused": "Paused",
-      "offline": "Can't reach the server",
-      "resting": "Resting after a YouTube check",
-      "starting": "Starting…",
-      "stopping": "Stopping…",
-      "restarting": "Restarting…",
-      "token": "Token rejected by the server",
-      "broken": "Installation is damaged",
-      "disabled": "Off",
-      "signed-out": "Sign-in required",
-      "forbidden": "Available to admins"
-    }
-  }
-}
-</i18n>

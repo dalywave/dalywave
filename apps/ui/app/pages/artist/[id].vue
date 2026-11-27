@@ -8,7 +8,7 @@ const bridge = useBridge()
 const library = useLibraryStore()
 const shareMenu = useShare()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.artist._id')
 const { tg } = useGlobalT()
 
 const id = computed(() => String(route.params.id))
@@ -138,62 +138,3 @@ const moreItems = computed<MenuEntry[]>(() => {
   .artist__head { padding: 0 8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Артист",
-    "resume": "Продолжить",
-    "shuffle": "Перемешать",
-    "follow": "Подписаться",
-    "following": "Вы подписаны",
-    "popular": "Популярные треки",
-    "more": "Показать 10",
-    "less": "Свернуть",
-    "related": "Похожие артисты",
-    "soon": "Скоро",
-    "empty": "Релизов пока нет",
-    "kinds": {
-      "albumsTitle": "Альбомы",
-      "epsTitle": "EP и синглы",
-      "compilationsTitle": "Сборники"
-    }
-  },
-  "uk": {
-    "title": "Виконавець",
-    "resume": "Продовжити",
-    "shuffle": "Перемішати",
-    "follow": "Підписатися",
-    "following": "Ви підписані",
-    "popular": "Популярні треки",
-    "more": "Показати 10",
-    "less": "Згорнути",
-    "related": "Схожі виконавці",
-    "soon": "Незабаром",
-    "empty": "Релізів поки немає",
-    "kinds": {
-      "albumsTitle": "Альбоми",
-      "epsTitle": "EP і сингли",
-      "compilationsTitle": "Збірки"
-    }
-  },
-  "en": {
-    "title": "Artist",
-    "resume": "Resume",
-    "shuffle": "Shuffle",
-    "follow": "Follow",
-    "following": "Following",
-    "popular": "Popular tracks",
-    "more": "Show 10",
-    "less": "Show less",
-    "related": "Similar artists",
-    "soon": "Coming soon",
-    "empty": "No releases yet",
-    "kinds": {
-      "albumsTitle": "Albums",
-      "epsTitle": "EPs and singles",
-      "compilationsTitle": "Compilations"
-    }
-  }
-}
-</i18n>

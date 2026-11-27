@@ -7,7 +7,7 @@ const bridge = useBridge()
 const library = useLibraryStore()
 const shareMenu = useShare()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.album._id')
 const { tg } = useGlobalT()
 
 const id = computed(() => String(route.params.id))
@@ -119,44 +119,3 @@ const moreItems = computed<MenuEntry[]>(() => {
   .album__foot { padding: 0 18px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Альбом",
-    "resume": "Продолжить",
-    "shuffle": "Перемешать",
-    "save": "Добавить в медиатеку",
-    "unsave": "Убрать из медиатеки",
-    "toArtist": "Перейти к артисту",
-    "disc": "Диск {n}",
-    "noTracks": "Треков пока нет",
-    "released": "Вышел {date}",
-    "upcoming": "Выйдет {date}"
-  },
-  "uk": {
-    "title": "Альбом",
-    "resume": "Продовжити",
-    "shuffle": "Перемішати",
-    "save": "Додати до медіатеки",
-    "unsave": "Прибрати з медіатеки",
-    "toArtist": "Перейти до виконавця",
-    "disc": "Диск {n}",
-    "noTracks": "Треків поки немає",
-    "released": "Вийшов {date}",
-    "upcoming": "Вийде {date}"
-  },
-  "en": {
-    "title": "Album",
-    "resume": "Resume",
-    "shuffle": "Shuffle",
-    "save": "Add to library",
-    "unsave": "Remove from library",
-    "toArtist": "Go to artist",
-    "disc": "Disc {n}",
-    "noTracks": "No tracks yet",
-    "released": "Released {date}",
-    "upcoming": "Out {date}"
-  }
-}
-</i18n>

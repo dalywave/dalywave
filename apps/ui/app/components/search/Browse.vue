@@ -8,7 +8,7 @@ import { MOOD_ORB } from '~/utils/wave-options'
 const router = useRouter()
 const bridge = useBridge()
 const player = usePlayerStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.search.Browse')
 const { tg } = useGlobalT()
 
 // Плитки — ровной заливкой, как у Spotify: цвет несут шар настроения и фото артиста, не градиент
@@ -180,47 +180,3 @@ onMounted(() => void loadArt())
   .tile.is-busy { animation: none; opacity: 0.7; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Настроения и жанры",
-    "genre": {
-      "ruRap": "Русский рэп",
-      "hyperpop": "Гиперпоп",
-      "phonk": "Фонк",
-      "alt": "Альтернатива",
-      "popPunk": "Поп-панк",
-      "electronic": "Электроника",
-      "indie": "Инди",
-      "rock": "Рок"
-    }
-  },
-  "uk": {
-    "title": "Настрої та жанри",
-    "genre": {
-      "ruRap": "Російський реп",
-      "hyperpop": "Гіперпоп",
-      "phonk": "Фонк",
-      "alt": "Альтернатива",
-      "popPunk": "Поп-панк",
-      "electronic": "Електроніка",
-      "indie": "Інді",
-      "rock": "Рок"
-    }
-  },
-  "en": {
-    "title": "Moods and genres",
-    "genre": {
-      "ruRap": "Russian rap",
-      "hyperpop": "Hyperpop",
-      "phonk": "Phonk",
-      "alt": "Alternative",
-      "popPunk": "Pop punk",
-      "electronic": "Electronic",
-      "indie": "Indie",
-      "rock": "Rock"
-    }
-  }
-}
-</i18n>

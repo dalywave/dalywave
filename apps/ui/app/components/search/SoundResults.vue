@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<{
 const bridge = useBridge()
 const player = usePlayerStore()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.search.SoundResults')
 const { tg } = useGlobalT()
 
 const data = shallowRef<SoundSearchResults | null>(null)
@@ -141,50 +141,3 @@ function startWave() {
   .snd__sub { padding: 0 10px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Похоже по звучанию",
-    "kicker": "По звучанию",
-    "wave": "Включить волну по запросу",
-    "waveShort": "Волна",
-    "ctx": "По запросу «{q}»",
-    "catalog": "Новое для вас",
-    "library": "Из медиатеки",
-    "unknown": "Не поняли слова: {words}",
-    "down": "Поиск по звучанию недоступен",
-    "downText": "Попробуйте чуть позже — обычный поиск работает",
-    "none": "Ничего похожего",
-    "noneText": "Опишите иначе: настроение, инструменты, темп"
-  },
-  "uk": {
-    "title": "Схоже за звучанням",
-    "kicker": "За звучанням",
-    "wave": "Увімкнути хвилю за запитом",
-    "waveShort": "Хвиля",
-    "ctx": "За запитом «{q}»",
-    "catalog": "Нове для вас",
-    "library": "З медіатеки",
-    "unknown": "Не зрозуміли слова: {words}",
-    "down": "Пошук за звучанням недоступний",
-    "downText": "Спробуйте трохи згодом — звичайний пошук працює",
-    "none": "Нічого схожого",
-    "noneText": "Опишіть інакше: настрій, інструменти, темп"
-  },
-  "en": {
-    "title": "Sounds like this",
-    "kicker": "By sound",
-    "wave": "Start a wave from this",
-    "waveShort": "Wave",
-    "ctx": "From “{q}”",
-    "catalog": "New for you",
-    "library": "From your library",
-    "unknown": "Didn't understand: {words}",
-    "down": "Sound search is unavailable",
-    "downText": "Try again a bit later — regular search works",
-    "none": "Nothing similar",
-    "noneText": "Try describing the mood, instruments or tempo"
-  }
-}
-</i18n>

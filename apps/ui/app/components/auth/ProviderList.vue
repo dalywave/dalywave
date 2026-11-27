@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<{
 }>(), { primary: false, next: '/', app: false, invite: undefined, label: undefined })
 
 const bridge = useBridge()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.auth.ProviderList')
 const failed = ref(new Set<string>())
 
 function href(p: OidcProvider) {
@@ -45,11 +45,3 @@ function href(p: OidcProvider) {
 .pl__label { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; }
 .pl__icon { flex: none; width: 20px; height: 20px; border-radius: 5px; object-fit: contain; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "with": "Войти через {title}" },
-  "uk": { "with": "Увійти через {title}" },
-  "en": { "with": "Sign in with {title}" }
-}
-</i18n>

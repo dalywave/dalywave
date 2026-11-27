@@ -10,7 +10,7 @@ const toast = useToast()
 const ui = useUiStore()
 const lang = useLang()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.playlist.join._code')
 useHead({ title: () => data.value?.playlist.title ?? t('title') })
 
 const code = computed(() => String(route.params.code))
@@ -71,41 +71,3 @@ async function join() {
 .inv__meta { margin: 0; font-size: var(--fs-small); color: var(--text-3); }
 .inv__text { max-width: 320px; margin: 4px 0 12px; color: var(--text-2); text-wrap: pretty; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Совместный плейлист",
-    "from": "Совместный плейлист · {name}",
-    "members": "участников: {n}",
-    "text": "Добавляйте свои треки — плейлист появится в вашей медиатеке",
-    "join": "Присоединиться",
-    "joined": "«{title}» — в вашей медиатеке",
-    "open": "Открыть плейлист",
-    "expired": "Ссылка больше не работает",
-    "expiredText": "Попросите у владельца плейлиста новую"
-  },
-  "uk": {
-    "title": "Спільний плейлист",
-    "from": "Спільний плейлист · {name}",
-    "members": "учасників: {n}",
-    "text": "Додавайте свої треки — плейлист з’явиться у вашій медіатеці",
-    "join": "Приєднатися",
-    "joined": "«{title}» — у вашій медіатеці",
-    "open": "Відкрити плейлист",
-    "expired": "Посилання більше не працює",
-    "expiredText": "Попросіть у власника плейлиста нове"
-  },
-  "en": {
-    "title": "Shared playlist",
-    "from": "Shared playlist · {name}",
-    "members": "{n} people",
-    "text": "Add your own tracks — the playlist will show up in your library",
-    "join": "Join",
-    "joined": "“{title}” is in your library",
-    "open": "Open playlist",
-    "expired": "This link no longer works",
-    "expiredText": "Ask the playlist owner for a new one"
-  }
-}
-</i18n>

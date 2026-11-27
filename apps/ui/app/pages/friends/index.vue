@@ -10,7 +10,7 @@ const ui = useUiStore()
 const toast = useToast()
 const pui = usePlaylistUi()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.friends.index')
 useHead({ title: () => tg('friends.title') })
 
 onMounted(() => {
@@ -191,62 +191,3 @@ onBeforeUnmount(() => tio?.disconnect())
   .fr__title { font-size: 28px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "invite": "Пригласить по ссылке",
-    "privacy": "Что видят друзья",
-    "inviteHint": "Кто откроет ссылку, сразу станет вашим другом",
-    "shareTitle": "Добавь меня в друзья в DalyWave",
-    "search": "Найти по имени",
-    "noOne": "Никого не нашлось",
-    "incoming": "Хотят дружить",
-    "wants": "Запрос в друзья",
-    "listeningNow": "Сейчас слушают: {n}",
-    "people": "Знакомые в DalyWave",
-    "outgoing": "Отправленные запросы",
-    "emptyText": "Найдите знакомых по имени или пришлите им ссылку — будет видно, что они слушают",
-    "open": "Страница друга",
-    "remove": "Удалить из друзей",
-    "removeTitle": "Удалить {name} из друзей?",
-    "removeText": "Вы перестанете видеть, что слушает каждый из вас"
-  },
-  "uk": {
-    "invite": "Запросити за посиланням",
-    "privacy": "Що бачать друзі",
-    "inviteHint": "Хто відкриє посилання, одразу стане вашим другом",
-    "shareTitle": "Додай мене в друзі в DalyWave",
-    "search": "Знайти за ім’ям",
-    "noOne": "Нікого не знайдено",
-    "incoming": "Хочуть дружити",
-    "wants": "Запит у друзі",
-    "listeningNow": "Зараз слухають: {n}",
-    "people": "Знайомі в DalyWave",
-    "outgoing": "Надіслані запити",
-    "emptyText": "Знайдіть знайомих за ім’ям або надішліть їм посилання — буде видно, що вони слухають",
-    "open": "Сторінка друга",
-    "remove": "Видалити з друзів",
-    "removeTitle": "Видалити {name} з друзів?",
-    "removeText": "Ви перестанете бачити, що слухає кожен із вас"
-  },
-  "en": {
-    "invite": "Invite with a link",
-    "privacy": "What friends see",
-    "inviteHint": "Whoever opens this link becomes your friend right away",
-    "shareTitle": "Add me as a friend on DalyWave",
-    "search": "Search by name",
-    "noOne": "No one found",
-    "incoming": "Friend requests",
-    "wants": "Friend request",
-    "listeningNow": "Listening now: {n}",
-    "people": "People on DalyWave",
-    "outgoing": "Sent requests",
-    "emptyText": "Find people by name or send them a link to see what they’re playing",
-    "open": "Friend’s page",
-    "remove": "Remove friend",
-    "removeTitle": "Remove {name} from friends?",
-    "removeText": "You’ll both stop seeing what the other plays"
-  }
-}
-</i18n>

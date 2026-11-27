@@ -9,7 +9,7 @@ definePageMeta({ layout: 'bare' })
 const route = useRoute()
 const auth = useAuthStore()
 const bridge = useBridge()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.invite._token')
 useHead({ title: () => t('title') })
 
 const token = computed(() => String(route.params.token ?? ''))
@@ -70,68 +70,3 @@ const text = computed(() => {
     <UiButton v-else-if="state === 'invalid'" variant="secondary" size="lg" block to="/login">{{ t('toLogin') }}</UiButton>
   </AuthStage>
 </template>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Приглашение",
-    "heading": "Вас пригласили",
-    "lead": "Придумайте логин и пароль — и музыка ваша",
-    "leadProviders": "Войдите — аккаунт появится сразу",
-    "submit": "Создать аккаунт",
-    "taken": "Такой логин уже есть",
-    "weak": "Пароль — не короче 10 символов",
-    "badUsername": "Логин — 3–32 символа: буквы, цифры, точка, _ и -",
-    "failed": "Не получилось. Проверьте связь с сервером",
-    "toLogin": "К входу",
-    "invalid": {
-      "title": "Приглашение не действует",
-      "text": "Его уже использовали или срок вышел. Попросите новую ссылку"
-    },
-    "down": {
-      "title": "Сервер не отвечает",
-      "text": "Скорее всего, это ненадолго. Попробуйте через минуту"
-    }
-  },
-  "uk": {
-    "title": "Запрошення",
-    "heading": "Вас запросили",
-    "lead": "Придумайте логін і пароль — і музика ваша",
-    "leadProviders": "Увійдіть — обліковий запис з’явиться одразу",
-    "submit": "Створити обліковий запис",
-    "taken": "Такий логін уже є",
-    "weak": "Пароль — не коротший за 10 символів",
-    "badUsername": "Логін — 3–32 символи: літери, цифри, крапка, _ і -",
-    "failed": "Не вдалося. Перевірте зв’язок із сервером",
-    "toLogin": "До входу",
-    "invalid": {
-      "title": "Запрошення не діє",
-      "text": "Його вже використали або термін минув. Попросіть нове посилання"
-    },
-    "down": {
-      "title": "Сервер не відповідає",
-      "text": "Найімовірніше, це ненадовго. Спробуйте за хвилину"
-    }
-  },
-  "en": {
-    "title": "Invite",
-    "heading": "You're invited",
-    "lead": "Pick a username and password — and the music is yours",
-    "leadProviders": "Sign in — your account appears right away",
-    "submit": "Create account",
-    "taken": "This username is taken",
-    "weak": "The password must be at least 10 characters",
-    "badUsername": "Username: 3–32 letters, digits, dot, _ and -",
-    "failed": "Something went wrong. Check the connection to the server",
-    "toLogin": "To sign-in",
-    "invalid": {
-      "title": "This invite doesn't work",
-      "text": "It was used or has expired. Ask for a new link"
-    },
-    "down": {
-      "title": "The server isn't responding",
-      "text": "It's probably brief. Try again in a minute"
-    }
-  }
-}
-</i18n>

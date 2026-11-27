@@ -18,7 +18,7 @@ const player = usePlayerStore()
 const ui = useUiStore()
 const auth = useAuthStore()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.rewind')
 
 interface StoryApi { shareCard: () => Promise<Blob> }
 
@@ -518,68 +518,3 @@ const STORIES = {
   .rw__stage { transition: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Итоги {year}",
-    "titleShort": "Итоги года",
-    "saved": "Картинка сохранена",
-    "shareFailed": "Не получилось собрать картинку",
-    "playlistSaved": "«Твои лучшие треки {year}» — в медиатеке",
-    "playlistFailed": "Не получилось сохранить плейлист",
-    "moreSaved": "«Ещё послушать {year}» — в\u00a0медиатеке",
-    "moreTitle": "Ещё послушать {year}",
-    "waveTitle": "Волна {year}",
-    "open": "Открыть",
-    "failed": "Итоги не загрузились",
-    "retry": "Ещё раз",
-    "prev": "Назад",
-    "next": "Дальше",
-    "close": "Закрыть",
-    "soundOn": "Включить звук",
-    "soundOff": "Выключить звук",
-    "progress": "Слайд {n} из {of}"
-  },
-  "uk": {
-    "title": "Підсумки {year}",
-    "titleShort": "Підсумки року",
-    "saved": "Зображення збережено",
-    "shareFailed": "Не вдалося зібрати зображення",
-    "playlistSaved": "«Твої найкращі треки {year}» — у медіатеці",
-    "playlistFailed": "Не вдалося зберегти плейлист",
-    "moreSaved": "«Ще послухати {year}» — у\u00a0медіатеці",
-    "moreTitle": "Ще послухати {year}",
-    "waveTitle": "Хвиля {year}",
-    "open": "Відкрити",
-    "failed": "Підсумки не завантажилися",
-    "retry": "Ще раз",
-    "prev": "Назад",
-    "next": "Далі",
-    "close": "Закрити",
-    "soundOn": "Увімкнути звук",
-    "soundOff": "Вимкнути звук",
-    "progress": "Слайд {n} з {of}"
-  },
-  "en": {
-    "title": "Your {year}",
-    "titleShort": "Year in review",
-    "saved": "Image saved",
-    "shareFailed": "Couldn’t make the image",
-    "playlistSaved": "“Your top tracks {year}” is in your library",
-    "playlistFailed": "Couldn’t save the playlist",
-    "moreSaved": "“More to hear {year}” is in your library",
-    "moreTitle": "More to hear {year}",
-    "waveTitle": "Your {year} wave",
-    "open": "Open",
-    "failed": "Couldn’t load your review",
-    "retry": "Try again",
-    "prev": "Back",
-    "next": "Next",
-    "close": "Close",
-    "soundOn": "Sound on",
-    "soundOff": "Sound off",
-    "progress": "Slide {n} of {of}"
-  }
-}
-</i18n>

@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<{
 
 const bridge = useBridge()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.TasteMap')
 
 const T = 7200
 const ICONS: Partial<Record<WhyKind, string>> = {
@@ -615,29 +615,3 @@ const settled = computed(() => now.value >= T)
   .tm__lbl, .tm__card, .tm__chip, .tm__legend { transition: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "aria": "Как подобран трек: карта вкуса",
-    "done": "дослушано",
-    "skipped": "пропущено",
-    "options": "варианты волны",
-    "replay": "Показать ещё раз"
-  },
-  "uk": {
-    "aria": "Як підібрано трек: мапа смаку",
-    "done": "дослухано",
-    "skipped": "пропущено",
-    "options": "варіанти хвилі",
-    "replay": "Показати ще раз"
-  },
-  "en": {
-    "aria": "How this track was picked: taste map",
-    "done": "played through",
-    "skipped": "skipped",
-    "options": "wave options",
-    "replay": "Show again"
-  }
-}
-</i18n>

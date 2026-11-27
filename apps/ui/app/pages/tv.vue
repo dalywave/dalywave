@@ -7,7 +7,7 @@ import type { TvLogin } from '~/api/types'
 const route = useRoute()
 const bridge = useBridge()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.tv')
 useHead({ title: () => t('title') })
 
 type Phase = 'enter' | 'confirm' | 'done'
@@ -154,53 +154,3 @@ onMounted(() => {
   .tv { padding-top: 8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Подключить телевизор",
-    "hint": "Введите код с экрана телевизора",
-    "code": "Код с экрана",
-    "next": "Продолжить",
-    "short": "В коде 8 знаков",
-    "unknown": "Код не подошёл — проверьте его на экране телевизора",
-    "confirmTitle": "Войти на «{name}»?",
-    "confirmHint": "Проверьте, что код совпадает с кодом на экране",
-    "approve": "Войти",
-    "cancel": "Отмена",
-    "doneTitle": "Готово",
-    "doneHint": "Телевизор подключён — музыку можно включать с него",
-    "home": "На главную"
-  },
-  "uk": {
-    "title": "Підключити телевізор",
-    "hint": "Введіть код з екрана телевізора",
-    "code": "Код з екрана",
-    "next": "Продовжити",
-    "short": "У коді 8 знаків",
-    "unknown": "Код не підійшов — перевірте його на екрані телевізора",
-    "confirmTitle": "Увійти на «{name}»?",
-    "confirmHint": "Перевірте, що код збігається з кодом на екрані",
-    "approve": "Увійти",
-    "cancel": "Скасувати",
-    "doneTitle": "Готово",
-    "doneHint": "Телевізор підключено — музику можна вмикати з нього",
-    "home": "На головну"
-  },
-  "en": {
-    "title": "Connect a TV",
-    "hint": "Enter the code shown on your TV",
-    "code": "Code from the screen",
-    "next": "Continue",
-    "short": "The code has 8 characters",
-    "unknown": "That code didn’t work — check it on the TV",
-    "confirmTitle": "Sign in on “{name}”?",
-    "confirmHint": "Make sure the code matches the one on the screen",
-    "approve": "Sign in",
-    "cancel": "Cancel",
-    "doneTitle": "Done",
-    "doneHint": "Your TV is connected — you can play music on it now",
-    "home": "Home"
-  }
-}
-</i18n>

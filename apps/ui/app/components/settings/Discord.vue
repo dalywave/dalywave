@@ -6,7 +6,7 @@ interface DiscordState { available: boolean, enabled: boolean, connected: boolea
 
 const bridge = useBridge()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Discord')
 
 const state = ref<DiscordState | null>(null)
 const busy = ref(false)
@@ -46,23 +46,3 @@ const enabled = computed({
     </SettingsRow>
   </SettingsGroup>
 </template>
-
-<i18n lang="json">
-{
-  "ru": {
-    "group": "Интеграции",
-    "title": "Статус в Discord",
-    "failed": "Не получилось переключить"
-  },
-  "uk": {
-    "group": "Інтеграції",
-    "title": "Статус у Discord",
-    "failed": "Не вдалося перемкнути"
-  },
-  "en": {
-    "group": "Integrations",
-    "title": "Discord status",
-    "failed": "Couldn’t switch it"
-  }
-}
-</i18n>

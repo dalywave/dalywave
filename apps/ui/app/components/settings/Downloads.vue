@@ -8,7 +8,7 @@ const bridge = useBridge()
 const offline = useOfflineStore()
 const lang = useLang()
 const route = useRoute()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Downloads')
 
 const GB = 1024 ** 3
 const phone = bridge.platform === 'ios' || bridge.platform === 'ipados'
@@ -174,83 +174,3 @@ onMounted(() => {
 .rsv { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; }
 .rsv__chev { flex: none; font-size: 16px; color: var(--text-3); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Загрузки",
-    "used": "Занято {used} из {limit}",
-    "part": { "pinned": "Закреплённое", "reserve": "Умный запас", "cache": "Кэш" },
-    "state": {
-      "forced": "Режим «Без сети»: играет только скачанное",
-      "offline": "Нет сети — загрузки продолжатся, когда она появится",
-      "wifi": "Ждёт Wi-Fi",
-      "downloading": "Скачивается {n}",
-      "overLimit": "Не помещается {n} — увеличьте предел",
-      "failed": "Не скачалось {n} — попробуем ещё раз позже",
-      "done": "Всё скачано"
-    },
-    "limit": "Сколько места занимать",
-    "wifi": "Только по Wi-Fi",
-    "wifiDesc": "По сотовой сети музыка не качается",
-    "reserve": "Умный запас",
-    "reserveDesc": "Любимое вперемешку с новым — волна играет и без сети",
-    "reserveCount": "Волна без сети: на устройстве {ready} из {total}",
-    "reserveList": "Запас для волны",
-    "forceOffline": "Без сети",
-    "forceOfflineDesc": "Только скачанное: приложение не ходит на сервер",
-    "remove": "Удалить всё скачанное",
-    "removeConfirm": "Точно удалить? Нажмите ещё раз"
-  },
-  "uk": {
-    "title": "Завантаження",
-    "used": "Зайнято {used} з {limit}",
-    "part": { "pinned": "Закріплене", "reserve": "Розумний запас", "cache": "Кеш" },
-    "state": {
-      "forced": "Режим «Без мережі»: грає тільки завантажене",
-      "offline": "Немає мережі — завантаження продовжаться, коли вона з’явиться",
-      "wifi": "Чекає Wi-Fi",
-      "downloading": "Завантажується {n}",
-      "overLimit": "Не вміщається {n} — збільште ліміт",
-      "failed": "Не завантажилося {n} — спробуємо ще раз пізніше",
-      "done": "Усе завантажено"
-    },
-    "limit": "Скільки місця займати",
-    "wifi": "Тільки через Wi-Fi",
-    "wifiDesc": "Через мобільну мережу музика не завантажується",
-    "reserve": "Розумний запас",
-    "reserveDesc": "Улюблене впереміш із новим — хвиля грає й без мережі",
-    "reserveCount": "Хвиля без мережі: на пристрої {ready} з {total}",
-    "reserveList": "Запас для хвилі",
-    "forceOffline": "Без мережі",
-    "forceOfflineDesc": "Тільки завантажене: застосунок не звертається до сервера",
-    "remove": "Видалити все завантажене",
-    "removeConfirm": "Точно видалити? Натисніть ще раз"
-  },
-  "en": {
-    "title": "Downloads",
-    "used": "{used} of {limit} used",
-    "part": { "pinned": "Pinned", "reserve": "Smart reserve", "cache": "Cache" },
-    "state": {
-      "forced": "Offline mode: only downloads play",
-      "offline": "No network — downloads resume when it's back",
-      "wifi": "Waiting for Wi-Fi",
-      "downloading": "Downloading {n}",
-      "overLimit": "{n} don't fit — raise the limit",
-      "failed": "{n} didn't download — we'll retry later",
-      "done": "Everything is downloaded"
-    },
-    "limit": "Storage to use",
-    "wifi": "Wi-Fi only",
-    "wifiDesc": "No music downloads over cellular",
-    "reserve": "Smart reserve",
-    "reserveDesc": "Favourites mixed with new music — the wave plays offline",
-    "reserveCount": "Offline wave: {ready} of {total} on this device",
-    "reserveList": "Wave reserve",
-    "forceOffline": "Offline mode",
-    "forceOfflineDesc": "Downloads only: the app stays off the server",
-    "remove": "Remove all downloads",
-    "removeConfirm": "Sure? Tap again"
-  }
-}
-</i18n>

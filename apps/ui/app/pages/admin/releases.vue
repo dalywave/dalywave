@@ -7,7 +7,7 @@ definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.releases')
 useHead({ title: () => t('title') })
 
 const data = ref<AppReleases | null>(null)
@@ -115,47 +115,3 @@ const groups = computed(() => {
   .re__hist { --cols: minmax(0, 1fr) minmax(0, 1fr) auto; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Выпуски",
-    "server": "сервер и сайт",
-    "outdated": "устройств на старых версиях",
-    "devices": "{n} устр.",
-    "people": "{n} чел.",
-    "unknown": "Версия неизвестна",
-    "old": "Устарела",
-    "target": { "darwin": "Mac", "windows": "Windows", "linux": "Linux", "streamdeck": "Stream Deck" },
-    "platform": { "macos": "Mac", "windows": "Windows", "linux": "Linux", "ios": "iPhone", "ipados": "iPad", "watchos": "Часы", "tvos": "Apple TV", "streamdeck": "Stream Deck", "android": "Android", "web": "Сайт" },
-    "installs": { "title": "Кто на какой версии", "hint": "Приложения, заходившие за 60 дней", "empty": "Приложениями пока не пользуются" },
-    "history": { "title": "История выпусков", "empty": "Выпусков пока нет", "emptyText": "Их публикует конвейер выпусков с токеном DALYWAVE_RELEASE_TOKEN", "version": "Версия", "target": "Для чего", "size": "Размер", "when": "Вышел", "installer": "Есть установщик на сайте" }
-  },
-  "uk": {
-    "title": "Випуски",
-    "server": "сервер і сайт",
-    "outdated": "пристроїв на старих версіях",
-    "devices": "{n} пристр.",
-    "people": "{n} осіб",
-    "unknown": "Версія невідома",
-    "old": "Застаріла",
-    "target": { "darwin": "Mac", "windows": "Windows", "linux": "Linux", "streamdeck": "Stream Deck" },
-    "platform": { "macos": "Mac", "windows": "Windows", "linux": "Linux", "ios": "iPhone", "ipados": "iPad", "watchos": "Годинник", "tvos": "Apple TV", "streamdeck": "Stream Deck", "android": "Android", "web": "Сайт" },
-    "installs": { "title": "Хто на якій версії", "hint": "Застосунки, що заходили за 60 днів", "empty": "Застосунками поки не користуються" },
-    "history": { "title": "Історія випусків", "empty": "Випусків поки немає", "emptyText": "Їх публікує конвеєр випусків із токеном DALYWAVE_RELEASE_TOKEN", "version": "Версія", "target": "Для чого", "size": "Розмір", "when": "Вийшов", "installer": "Є інсталятор на сайті" }
-  },
-  "en": {
-    "title": "Releases",
-    "server": "server and website",
-    "outdated": "devices on old versions",
-    "devices": "{n} dev.",
-    "people": "{n} ppl",
-    "unknown": "Unknown version",
-    "old": "Outdated",
-    "target": { "darwin": "Mac", "windows": "Windows", "linux": "Linux", "streamdeck": "Stream Deck" },
-    "platform": { "macos": "Mac", "windows": "Windows", "linux": "Linux", "ios": "iPhone", "ipados": "iPad", "watchos": "Watch", "tvos": "Apple TV", "streamdeck": "Stream Deck", "android": "Android", "web": "Website" },
-    "installs": { "title": "Who is on which version", "hint": "Apps seen in the last 60 days", "empty": "No apps in use yet" },
-    "history": { "title": "Release history", "empty": "No releases yet", "emptyText": "They are published by the release pipeline with DALYWAVE_RELEASE_TOKEN", "version": "Version", "target": "For", "size": "Size", "when": "Released", "installer": "Installer on the website" }
-  }
-}
-</i18n>

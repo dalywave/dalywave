@@ -5,7 +5,7 @@ import type { CreditPerson, CreditRole, TrackCredits } from '~/api/types'
 // Подпись слева — люди справа. Имя ведёт к артисту, только если его страница точно известна
 const props = defineProps<{ trackId: string }>()
 const bridge = useBridge()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.TrackCredits')
 
 const data = shallowRef<TrackCredits | null>(null)
 const loading = ref(true)
@@ -103,59 +103,3 @@ const empty = computed(() => !loading.value && !rows.value.length && !data.value
   .cr__title { font-size: 20px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Кто сделал трек",
-    "label": "Лейбл",
-    "year": "Год",
-    "role": {
-      "writer": "Музыка и слова",
-      "composer": "Музыка",
-      "lyricist": "Слова",
-      "producer": "Продюсер | Продюсеры",
-      "arranger": "Аранжировка",
-      "programming": "Программирование",
-      "recording": "Запись",
-      "engineer": "Звукорежиссёр | Звукорежиссёры",
-      "mix": "Сведение",
-      "mastering": "Мастеринг"
-    }
-  },
-  "uk": {
-    "title": "Хто створив трек",
-    "label": "Лейбл",
-    "year": "Рік",
-    "role": {
-      "writer": "Музика і слова",
-      "composer": "Музика",
-      "lyricist": "Слова",
-      "producer": "Продюсер | Продюсери",
-      "arranger": "Аранжування",
-      "programming": "Програмування",
-      "recording": "Запис",
-      "engineer": "Звукорежисер | Звукорежисери",
-      "mix": "Зведення",
-      "mastering": "Мастеринг"
-    }
-  },
-  "en": {
-    "title": "Credits",
-    "label": "Label",
-    "year": "Year",
-    "role": {
-      "writer": "Songwriting",
-      "composer": "Music",
-      "lyricist": "Lyrics",
-      "producer": "Producer | Producers",
-      "arranger": "Arrangement",
-      "programming": "Programming",
-      "recording": "Recording",
-      "engineer": "Engineer | Engineers",
-      "mix": "Mixing",
-      "mastering": "Mastering"
-    }
-  }
-}
-</i18n>

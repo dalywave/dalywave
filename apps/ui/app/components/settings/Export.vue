@@ -5,7 +5,7 @@ import type { ListFormat } from '~/composables/useExport'
 // (CSV и M3U8 каждого списка и полный JSON) или одним JSON, по желанию с историей; любимые — одним файлом
 const exporter = useExport()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Export')
 const { tg } = useGlobalT()
 
 const open = ref(false)
@@ -73,47 +73,3 @@ const formats: ListFormat[] = ['csv', 'm3u8', 'json']
   .ex__go { width: auto; margin-left: auto; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "row": "Экспорт",
-    "rowDesc": "Медиатека в файл: CSV, M3U8, JSON",
-    "title": "Экспорт медиатеки",
-    "whole": "Вся медиатека",
-    "zip": "Архив ZIP",
-    "zipDesc": "Каждый плейлист в CSV и M3U8, всё — в JSON",
-    "json": "Один файл JSON",
-    "jsonDesc": "Лайки, плейлисты с папками, подписки",
-    "history": "История прослушиваний",
-    "likedNote": "CSV подходит для TuneMyMusic и Soundiiz, M3U8 — для плееров",
-    "download": "Скачать"
-  },
-  "uk": {
-    "row": "Експорт",
-    "rowDesc": "Медіатека у файл: CSV, M3U8, JSON",
-    "title": "Експорт медіатеки",
-    "whole": "Уся медіатека",
-    "zip": "Архів ZIP",
-    "zipDesc": "Кожен плейлист у CSV і M3U8, усе — в JSON",
-    "json": "Один файл JSON",
-    "jsonDesc": "Вподобання, плейлисти з папками, підписки",
-    "history": "Історія прослуховувань",
-    "likedNote": "CSV підходить для TuneMyMusic і Soundiiz, M3U8 — для плеєрів",
-    "download": "Завантажити"
-  },
-  "en": {
-    "row": "Export",
-    "rowDesc": "Your library as a file: CSV, M3U8, JSON",
-    "title": "Export library",
-    "whole": "Whole library",
-    "zip": "ZIP archive",
-    "zipDesc": "Every playlist as CSV and M3U8, everything as JSON",
-    "json": "Single JSON file",
-    "jsonDesc": "Likes, playlists with folders, follows",
-    "history": "Listening history",
-    "likedNote": "CSV works with TuneMyMusic and Soundiiz, M3U8 with media players",
-    "download": "Download"
-  }
-}
-</i18n>

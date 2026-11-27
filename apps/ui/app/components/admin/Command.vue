@@ -9,7 +9,7 @@ const props = defineProps<{ sections: CommandSection[] }>()
 const open = defineModel<boolean>('open', { default: false })
 const bridge = useBridge()
 const L = useAdminLabels()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.Command')
 
 interface Item { key: string, group: string, label: string, hint?: string, icon: string, to: string }
 
@@ -148,32 +148,3 @@ function move(d: number) {
 .cmd__hint { flex: 1; min-width: 0; overflow: hidden; font-size: var(--fs-small); color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
 .cmd__empty { padding: 24px 10px; font-size: var(--fs-small); color: var(--text-3); text-align: center; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Поиск по админке",
-    "placeholder": "Раздел, человек, трек, задача или настройка",
-    "empty": "Ничего не нашлось",
-    "settingsWord": "Настройки",
-    "group": { "sections": "Разделы", "settings": "Настройки", "people": "Люди", "tracks": "Записи", "jobs": "Упавшие задачи" },
-    "settings": { "general": "Общее, часовой пояс", "signin": "Вход", "music": "Музыка: подписки, скорость, расписание", "storage": "Хранилище", "clips": "Клипы: качество, место", "reco": "Рекомендации", "notifications": "Уведомления", "integrations": "Интеграции" }
-  },
-  "uk": {
-    "title": "Пошук в адмінці",
-    "placeholder": "Розділ, людина, трек, завдання або налаштування",
-    "empty": "Нічого не знайшлося",
-    "settingsWord": "Налаштування",
-    "group": { "sections": "Розділи", "settings": "Налаштування", "people": "Люди", "tracks": "Записи", "jobs": "Невдалі завдання" },
-    "settings": { "general": "Загальне, часовий пояс", "signin": "Вхід", "music": "Музика: підписки, швидкість, розклад", "storage": "Сховище", "clips": "Кліпи: якість, місце", "reco": "Рекомендації", "notifications": "Сповіщення", "integrations": "Інтеграції" }
-  },
-  "en": {
-    "title": "Search the admin",
-    "placeholder": "Section, person, track, job or setting",
-    "empty": "Nothing found",
-    "settingsWord": "Settings",
-    "group": { "sections": "Sections", "settings": "Settings", "people": "People", "tracks": "Recordings", "jobs": "Failed jobs" },
-    "settings": { "general": "General, time zone", "signin": "Sign-in", "music": "Music: follows, speed, schedule", "storage": "Storage", "clips": "Clips: quality, space", "reco": "Recommendations", "notifications": "Notifications", "integrations": "Integrations" }
-  }
-}
-</i18n>

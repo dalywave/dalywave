@@ -5,7 +5,7 @@ import type { EnvSetting, SettingsSection } from '~/api/types'
 // сервере — с пометкой. Секреты — без значения, только «задан». Список один на страницу: грузится
 // раз и делится между вкладками
 const props = defineProps<{ section: SettingsSection }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.EnvList')
 const bridge = useBridge()
 const all = useState<EnvSetting[] | null>('admin-env', () => null)
 const failed = ref(false)
@@ -54,35 +54,3 @@ const showUnset = ref(false)
   .env__value { max-width: 160px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Задано на сервере",
-    "note": "Эти настройки задаются переменными окружения и меняются только на сервере",
-    "hidden": "задан",
-    "unset": "не задана",
-    "showUnset": "Остальные переменные раздела: {n}",
-    "hideUnset": "Скрыть незаданные",
-    "failed": "Не получилось узнать настройки сервера"
-  },
-  "uk": {
-    "title": "Задано на сервері",
-    "note": "Ці налаштування задаються змінними середовища й змінюються лише на сервері",
-    "hidden": "задано",
-    "unset": "не задано",
-    "showUnset": "Інші змінні розділу: {n}",
-    "hideUnset": "Сховати незадані",
-    "failed": "Не вдалося отримати налаштування сервера"
-  },
-  "en": {
-    "title": "Set on the server",
-    "note": "These come from environment variables and change only on the server",
-    "hidden": "set",
-    "unset": "not set",
-    "showUnset": "Other variables of this section: {n}",
-    "hideUnset": "Hide unset",
-    "failed": "Couldn't load server settings"
-  }
-}
-</i18n>

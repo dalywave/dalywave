@@ -15,7 +15,7 @@ const ui = useUiStore()
 const lang = useLang()
 const pla = usePlaylistActions()
 const pui = usePlaylistUi()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.playlist._id')
 const { tg } = useGlobalT()
 
 const id = computed(() => String(route.params.id))
@@ -282,59 +282,3 @@ function extraMenu(_track: Track, index: number): MenuEntry[] {
   .playlist > :deep(.tl) { padding: 0 8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Плейлист",
-    "kind": { "user": "Плейлист", "smart": "Умная подборка", "mix": "Микс" },
-    "resume": "Продолжить",
-    "shuffle": "Перемешать",
-    "addTracks": "Добавить треки",
-    "empty": "В плейлисте пока пусто",
-    "emptyMine": "Найдите треки или возьмите из подходящих",
-    "you": "вы",
-    "andMore": "{names} и ещё {n}",
-    "moreLikeThis": "Ещё в том же духе",
-    "moreAdded": "Добавлено: {n}",
-    "noMore": "Больше подходящего пока нет",
-    "weekly": "Обновлять каждую неделю",
-    "weeklyOn": "Каждую неделю прослушанное сменится новым",
-    "weeklyOff": "Плейлист больше не обновляется сам"
-  },
-  "uk": {
-    "title": "Плейлист",
-    "kind": { "user": "Плейлист", "smart": "Розумна добірка", "mix": "Мікс" },
-    "resume": "Продовжити",
-    "shuffle": "Перемішати",
-    "addTracks": "Додати треки",
-    "empty": "У плейлисті поки порожньо",
-    "emptyMine": "Знайдіть треки або виберіть із запропонованих",
-    "you": "ви",
-    "andMore": "{names} і ще {n}",
-    "moreLikeThis": "Ще в тому ж дусі",
-    "moreAdded": "Додано: {n}",
-    "noMore": "Більше відповідного поки немає",
-    "weekly": "Оновлювати щотижня",
-    "weeklyOn": "Щотижня прослухане зміниться новим",
-    "weeklyOff": "Плейлист більше не оновлюється сам"
-  },
-  "en": {
-    "title": "Playlist",
-    "kind": { "user": "Playlist", "smart": "Smart playlist", "mix": "Mix" },
-    "resume": "Resume",
-    "shuffle": "Shuffle",
-    "addTracks": "Add tracks",
-    "empty": "This playlist is empty",
-    "emptyMine": "Search for tracks or pick from suggestions",
-    "you": "you",
-    "andMore": "{names} and {n} more",
-    "moreLikeThis": "More like this",
-    "moreAdded": "Added: {n}",
-    "noMore": "Nothing more fits yet",
-    "weekly": "Refresh every week",
-    "weeklyOn": "What you've played will be swapped weekly",
-    "weeklyOff": "This playlist no longer refreshes"
-  }
-}
-</i18n>

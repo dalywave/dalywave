@@ -8,7 +8,7 @@ const props = withDefaults(defineProps<{ limit?: number }>(), { limit: 6 })
 const rec = useRecognizeStore()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.recognize.History')
 
 onMounted(() => void rec.loadHistory().catch(() => {}))
 // Одну песню узнают и по нескольку раз — в списке она одна, последней датой
@@ -74,11 +74,3 @@ async function remove(r: Recognition) {
   .rhist .rhist__list :deep(.rhist__x) { --size: 44px; margin-right: -8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "title": "Распознанное", "remove": "Убрать", "removeFailed": "Не получилось убрать" },
-  "uk": { "title": "Розпізнане", "remove": "Прибрати", "removeFailed": "Не вдалося прибрати" },
-  "en": { "title": "Recognized", "remove": "Remove", "removeFailed": "Couldn't remove" }
-}
-</i18n>

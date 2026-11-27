@@ -6,7 +6,7 @@ import type { WrongRecordingReason } from '~/api/types'
 const bridge = useBridge()
 const toast = useToast()
 const { track, open } = useReportRecording()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.ReportRecording')
 
 const REASONS: WrongRecordingReason[] = ['wrong_song', 'wrong_version', 'bad_quality', 'cut']
 const reason = ref<WrongRecordingReason | null>(null)
@@ -112,50 +112,3 @@ async function send() {
   .rr__comment { font-size: 16px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Неверная запись",
-    "reason": {
-      "wrong_song": "Другая песня",
-      "wrong_version": "Другая версия или лайв",
-      "bad_quality": "Плохое качество",
-      "cut": "Обрезано"
-    },
-    "comment": "Комментарий — необязательно",
-    "send": "Отправить",
-    "thanks": "Спасибо, переберём",
-    "notReady": "Этот трек ещё не скачан",
-    "failed": "Не получилось отправить"
-  },
-  "uk": {
-    "title": "Неправильний запис",
-    "reason": {
-      "wrong_song": "Інша пісня",
-      "wrong_version": "Інша версія або лайв",
-      "bad_quality": "Погана якість",
-      "cut": "Обрізано"
-    },
-    "comment": "Коментар — необов’язково",
-    "send": "Надіслати",
-    "thanks": "Дякуємо, переберемо",
-    "notReady": "Цей трек ще не завантажено",
-    "failed": "Не вдалося надіслати"
-  },
-  "en": {
-    "title": "Wrong recording",
-    "reason": {
-      "wrong_song": "Different song",
-      "wrong_version": "Different version or live",
-      "bad_quality": "Poor quality",
-      "cut": "Cut off"
-    },
-    "comment": "Comment — optional",
-    "send": "Send",
-    "thanks": "Thanks, we'll find another one",
-    "notReady": "This track isn't downloaded yet",
-    "failed": "Couldn't send"
-  }
-}
-</i18n>

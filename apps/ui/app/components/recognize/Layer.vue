@@ -10,7 +10,7 @@ const player = usePlayerStore()
 const library = useLibraryStore()
 const pui = usePlaylistUi()
 const ui = useUiStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.recognize.Layer')
 
 let offOpen: (() => void) | null = null
 onMounted(() => {
@@ -237,89 +237,3 @@ function searchIt() {
 .rres__icon { font-size: 24px; }
 .rres__act span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "aria": "Распознать песню",
-    "listening": "Слушаю…",
-    "found": "Нашли",
-    "noMatch": "Не узнали",
-    "closer": "Попробуйте ближе к звуку",
-    "again": "Ещё раз",
-    "cancel": "Отменить",
-    "close": "Закрыть",
-    "fail": {
-      "permission": { "title": "Нет доступа к микрофону", "text": "Разрешите его в настройках системы" },
-      "no_microphone": { "title": "Микрофон не найден", "text": "Подключите микрофон и попробуйте ещё раз" },
-      "shazam": { "title": "Shazam не ответил", "text": "Проверьте интернет и попробуйте ещё раз" },
-      "network": { "title": "Не получилось найти трек", "text": "Проверьте интернет и попробуйте ещё раз" },
-      "unsupported": { "title": "Здесь распознавания нет", "text": "Оно есть в приложении для iPhone и Mac" }
-    },
-    "sheetTitle": "Распознанная песня",
-    "recognized": "Распознанное",
-    "play": "Слушать",
-    "pause": "Пауза",
-    "like": "В любимые",
-    "liked": "В любимых",
-    "playlist": "В плейлист",
-    "wave": "Волна по треку",
-    "missing": "Этой песни нет в каталоге",
-    "search": "Искать"
-  },
-  "uk": {
-    "aria": "Розпізнати пісню",
-    "listening": "Слухаю…",
-    "found": "Знайшли",
-    "noMatch": "Не впізнали",
-    "closer": "Спробуйте ближче до звуку",
-    "again": "Ще раз",
-    "cancel": "Скасувати",
-    "close": "Закрити",
-    "fail": {
-      "permission": { "title": "Немає доступу до мікрофона", "text": "Дозвольте його в налаштуваннях системи" },
-      "no_microphone": { "title": "Мікрофон не знайдено", "text": "Під’єднайте мікрофон і спробуйте ще раз" },
-      "shazam": { "title": "Shazam не відповів", "text": "Перевірте інтернет і спробуйте ще раз" },
-      "network": { "title": "Не вдалося знайти трек", "text": "Перевірте інтернет і спробуйте ще раз" },
-      "unsupported": { "title": "Тут розпізнавання немає", "text": "Воно є в застосунку для iPhone і Mac" }
-    },
-    "sheetTitle": "Розпізнана пісня",
-    "recognized": "Розпізнане",
-    "play": "Слухати",
-    "pause": "Пауза",
-    "like": "До вподобаного",
-    "liked": "У вподобаному",
-    "playlist": "До плейлиста",
-    "wave": "Хвиля за треком",
-    "missing": "Цієї пісні немає в каталозі",
-    "search": "Шукати"
-  },
-  "en": {
-    "aria": "Recognize a song",
-    "listening": "Listening…",
-    "found": "Found it",
-    "noMatch": "No match",
-    "closer": "Try getting closer to the sound",
-    "again": "Try again",
-    "cancel": "Cancel",
-    "close": "Close",
-    "fail": {
-      "permission": { "title": "No microphone access", "text": "Allow it in system settings" },
-      "no_microphone": { "title": "No microphone", "text": "Connect a microphone and try again" },
-      "shazam": { "title": "Shazam didn't respond", "text": "Check your connection and try again" },
-      "network": { "title": "Couldn't find the song", "text": "Check your connection and try again" },
-      "unsupported": { "title": "Not available here", "text": "Use the iPhone or Mac app" }
-    },
-    "sheetTitle": "Recognized song",
-    "recognized": "Recognized",
-    "play": "Play",
-    "pause": "Pause",
-    "like": "Like",
-    "liked": "Liked",
-    "playlist": "Add to playlist",
-    "wave": "Song radio",
-    "missing": "This song isn't in the catalog",
-    "search": "Search"
-  }
-}
-</i18n>

@@ -13,7 +13,7 @@ const toast = useToast()
 const ui = useUiStore()
 const route = useRoute()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.PlaylistPeople')
 
 const pl = ref<PlaylistSummary | null>(null)
 const busy = ref<string | null>(null)
@@ -199,68 +199,3 @@ async function leave() {
   .pp__row { min-height: 60px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Совместный плейлист",
-    "collab": "Совместный",
-    "collabDesc": "Друзья добавляют, убирают и переставляют треки",
-    "visible": "Видно друзьям",
-    "visibleDesc": "На вашей странице у друзей",
-    "people": "Участники",
-    "you": "Вы",
-    "owner": "владелец",
-    "remove": "Убрать {name}",
-    "invite": "Позвать друзей",
-    "add": "Позвать",
-    "invited": "{name} теперь в плейлисте",
-    "allIn": "Все друзья уже здесь",
-    "noFriends": "Чтобы звать в плейлист, добавьте друзей:",
-    "byLink": "По ссылке",
-    "linkHint": "Кто откроет ссылку, сможет добавлять треки",
-    "leave": "Выйти из плейлиста",
-    "left": "Вы вышли из «{title}»"
-  },
-  "uk": {
-    "title": "Спільний плейлист",
-    "collab": "Спільний",
-    "collabDesc": "Друзі додають, прибирають і переставляють треки",
-    "visible": "Видно друзям",
-    "visibleDesc": "На вашій сторінці в друзів",
-    "people": "Учасники",
-    "you": "Ви",
-    "owner": "власник",
-    "remove": "Прибрати {name}",
-    "invite": "Запросити друзів",
-    "add": "Запросити",
-    "invited": "{name} тепер у плейлисті",
-    "allIn": "Усі друзі вже тут",
-    "noFriends": "Щоб запрошувати в плейлист, додайте друзів:",
-    "byLink": "За посиланням",
-    "linkHint": "Хто відкриє посилання, зможе додавати треки",
-    "leave": "Вийти з плейлиста",
-    "left": "Ви вийшли з «{title}»"
-  },
-  "en": {
-    "title": "Shared playlist",
-    "collab": "Shared",
-    "collabDesc": "Friends add, remove and reorder tracks",
-    "visible": "Visible to friends",
-    "visibleDesc": "On your page for friends",
-    "people": "People",
-    "you": "You",
-    "owner": "owner",
-    "remove": "Remove {name}",
-    "invite": "Invite friends",
-    "add": "Invite",
-    "invited": "{name} is in the playlist now",
-    "allIn": "All your friends are already here",
-    "noFriends": "To invite people, add friends first:",
-    "byLink": "With a link",
-    "linkHint": "Anyone who opens the link can add tracks",
-    "leave": "Leave playlist",
-    "left": "You left “{title}”"
-  }
-}
-</i18n>

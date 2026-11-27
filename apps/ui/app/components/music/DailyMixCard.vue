@@ -12,7 +12,7 @@ const props = defineProps<{
 
 const TINTS = ['#ff4f8b', '#8ed8f5', '#b6abff', '#ffb26b', '#7fdcae', '#ff8fd6']
 const { tg: t } = useGlobalT()
-const { t: tl } = useI18n({ useScope: 'local' })
+const { t: tl } = useScopedI18n('components.music.DailyMixCard')
 const { playPlaylist, isPlayingContext, loading } = usePlayActions()
 const tint = computed(() => TINTS[(props.index - 1) % TINTS.length]!)
 const covers = computed(() => props.playlist.covers ?? [])
@@ -62,11 +62,3 @@ const onMenu = () => (menu.value = pla.menuFor(props.playlist))
 .mix__kicker { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: clamp(9px, 6.2cqw, 15px); font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .mix__num { font-size: clamp(18px, 17cqw, 44px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "kicker": "Микс дня", "kind": { "on_repeat": "На повторе", "repeat_rewind": "Старые хиты" } },
-  "uk": { "kicker": "Мікс дня", "kind": { "on_repeat": "На повторі", "repeat_rewind": "Старі хіти" } },
-  "en": { "kicker": "Daily mix", "kind": { "on_repeat": "On repeat", "repeat_rewind": "Repeat rewind" } }
-}
-</i18n>

@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<{ launch?: boolean, home?: boolean, pastY
 
 const bridge = useBridge()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.rewind.Card')
 
 const years = ref<RewindYears | null>(null)
 const r = shallowRef<Rewind | null>(null)
@@ -257,35 +257,3 @@ const yearHalves = computed(() => [String(r.value?.year ?? '').slice(0, 2), Stri
   .rwc__card { transition: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "kicker": "Итоги года",
-    "soFar": "Итоги по сей день",
-    "sideA": "Сторона А",
-    "ready": "Твои итоги {year} готовы",
-    "watch": "Смотреть",
-    "empty": "Пока тихо — итоги соберутся из прослушиваний",
-    "past": "Прошлые годы"
-  },
-  "uk": {
-    "kicker": "Підсумки року",
-    "soFar": "Підсумки на сьогодні",
-    "sideA": "Сторона А",
-    "ready": "Твої підсумки {year} готові",
-    "watch": "Дивитися",
-    "empty": "Поки тихо — підсумки зберуться з прослуховувань",
-    "past": "Минулі роки"
-  },
-  "en": {
-    "kicker": "Year in review",
-    "soFar": "Your year so far",
-    "sideA": "Side A",
-    "ready": "Your {year} is ready",
-    "watch": "Watch",
-    "empty": "Quiet so far — your review builds as you listen",
-    "past": "Past years"
-  }
-}
-</i18n>

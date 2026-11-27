@@ -2,7 +2,7 @@
 // Волна или радио запускается: видно с любой страницы (мини-плеер, панель плеера), а не только на главной.
 // «1 из 3» — сколько треков начала уже на сервере; ✕ — отменить, что играло — играет дальше
 const player = usePlayerStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.WavePrepNote')
 
 const progress = computed(() => {
   const p = player.wavePrep
@@ -28,23 +28,3 @@ const progress = computed(() => {
   .wpn__x { width: 32px; height: 32px; margin: -6px -8px -6px -4px; font-size: 14px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "preparing": "Готовим «{name}»…",
-    "of": "{ready} из {need}",
-    "cancel": "Отменить"
-  },
-  "uk": {
-    "preparing": "Готуємо «{name}»…",
-    "of": "{ready} з {need}",
-    "cancel": "Скасувати"
-  },
-  "en": {
-    "preparing": "Preparing “{name}”…",
-    "of": "{ready} of {need}",
-    "cancel": "Cancel"
-  }
-}
-</i18n>

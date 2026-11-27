@@ -14,7 +14,7 @@ const props = defineProps<{
   names?: Record<string, string>
 }>()
 const emit = defineEmits<{ choose: [videoId: string] }>()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.Acquisition')
 const L = useAdminLabels()
 const lang = useLang()
 
@@ -79,32 +79,3 @@ defineExpose({ play: (videoId: string | null) => (playing.value = videoId) })
   .aq__attempts .ap-tr > :nth-child(4) { display: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "candidates": "Кандидаты",
-    "noCandidates": "Поиск ничего не нашёл",
-    "attempts": "Попытки",
-    "sec": "с",
-    "all": "Все {n}",
-    "less": "Свернуть"
-  },
-  "uk": {
-    "candidates": "Кандидати",
-    "noCandidates": "Пошук нічого не знайшов",
-    "attempts": "Спроби",
-    "sec": "с",
-    "all": "Усі {n}",
-    "less": "Згорнути"
-  },
-  "en": {
-    "candidates": "Candidates",
-    "noCandidates": "The search found nothing",
-    "attempts": "Attempts",
-    "sec": "s",
-    "all": "All {n}",
-    "less": "Collapse"
-  }
-}
-</i18n>

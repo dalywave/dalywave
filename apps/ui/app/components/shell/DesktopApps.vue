@@ -8,7 +8,7 @@ import type { AppDownload } from '~/api/types'
 const open = defineModel<boolean>('open', { default: false })
 const bridge = useBridge()
 const ui = useUiStore()
-const { t, locale } = useI18n({ useScope: 'local' })
+const { t, locale } = useScopedI18n('components.shell.DesktopApps')
 const { tg } = useGlobalT()
 
 const apps = ref<AppDownload[] | null>(null)
@@ -144,41 +144,3 @@ const meta = (a: AppDownload) => `${a.version} · ${formatBytes(a.sizeBytes, loc
 .da--phone .da__deck .da__logo { font-size: 28px; }
 .da--phone .da__next { grid-column: 1 / -1; margin-top: 4px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "macReq": "Apple silicon, macOS {v} и новее",
-    "winReq": "Windows {v} и новее, 64 бит",
-    "download": "Скачать",
-    "intel": "Для Mac с Intel",
-    "soon": "Скоро",
-    "failed": "Не получилось загрузить",
-    "deckWhat": "Плагин для Stream Deck и Stream Deck +",
-    "deckReq": "Для Mac и Windows, Stream Deck {v} и новее",
-    "deckNext": "Откройте файл — Stream Deck установит плагин и профиль «DalyWave». Нажмите любую кнопку DalyWave и войдите в открывшемся окне"
-  },
-  "uk": {
-    "macReq": "Apple silicon, macOS {v} і новіші",
-    "winReq": "Windows {v} і новіші, 64 біт",
-    "download": "Завантажити",
-    "intel": "Для Mac з Intel",
-    "soon": "Незабаром",
-    "failed": "Не вдалося завантажити",
-    "deckWhat": "Плагін для Stream Deck і Stream Deck +",
-    "deckReq": "Для Mac і Windows, Stream Deck {v} і новіші",
-    "deckNext": "Відкрийте файл — Stream Deck встановить плагін і профіль «DalyWave». Натисніть будь-яку кнопку DalyWave й увійдіть у вікні, що відкриється"
-  },
-  "en": {
-    "macReq": "Apple silicon, macOS {v} or later",
-    "winReq": "Windows {v} or later, 64-bit",
-    "download": "Download",
-    "intel": "For Intel-based Macs",
-    "soon": "Coming soon",
-    "failed": "Couldn't load",
-    "deckWhat": "Plugin for Stream Deck and Stream Deck +",
-    "deckReq": "For Mac and Windows, Stream Deck {v} or later",
-    "deckNext": "Open the file and Stream Deck will install the plugin and the DalyWave profile. Press any DalyWave key and sign in in the window that opens"
-  }
-}
-</i18n>

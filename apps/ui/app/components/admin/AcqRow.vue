@@ -15,7 +15,7 @@ const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
 const L = useAdminLabels()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.admin.AcqRow')
 
 const a = computed(() => props.acq?.acquisition ?? EMPTY)
 const EMPTY = { status: 'queued' } as Acquisition
@@ -127,32 +127,3 @@ async function cancel() {
   .ar__row { gap: 4px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "noTrack": "Трек удалён из каталога",
-    "col": { "track": "Запись", "state": "Состояние", "why": "Зачем · кто", "updated": "Обновлено" },
-    "position": "{n}-я",
-    "cancel": "Отменить скачивание",
-    "cancelled": "«{title}» больше не качается",
-    "failed": "Не получилось — скачивание уже изменилось"
-  },
-  "uk": {
-    "noTrack": "Трек видалено з каталогу",
-    "col": { "track": "Запис", "state": "Стан", "why": "Навіщо · хто", "updated": "Оновлено" },
-    "position": "{n}-й",
-    "cancel": "Скасувати завантаження",
-    "cancelled": "«{title}» більше не завантажується",
-    "failed": "Не вдалося — завантаження вже змінилося"
-  },
-  "en": {
-    "noTrack": "Track removed from the catalog",
-    "col": { "track": "Recording", "state": "State", "why": "Why · who", "updated": "Updated" },
-    "position": "#{n}",
-    "cancel": "Cancel download",
-    "cancelled": "“{title}” is no longer downloading",
-    "failed": "Didn't work — the download already changed"
-  }
-}
-</i18n>

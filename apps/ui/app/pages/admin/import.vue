@@ -7,7 +7,7 @@ definePageMeta({ layout: 'admin' })
 
 const bridge = useBridge()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.import')
 useHead({ title: () => t('title') })
 
 const { data, state, load } = useLoad<AdminImportList>(() => bridge.admin.imports())
@@ -17,32 +17,13 @@ useIntervalFn(() => {
 }, 3000)
 const pct = (done: number, total: number) => (total ? Math.round((done / total) * 100) : 0)
 
-const STAT_RU: Record<string, [string, string, string]> = {
-  likes: ['лайк', 'лайка', 'лайков'],
-  playlists: ['плейлист', 'плейлиста', 'плейлистов'],
-  albums: ['альбом', 'альбома', 'альбомов'],
-  artists: ['подписка', 'подписки', 'подписок'],
-  plays: ['прослушивание', 'прослушивания', 'прослушиваний'],
-  files: ['файл', 'файла', 'файлов'],
-  upgraded: ['замена', 'замены', 'замен'],
-}
-const STAT_UK: Record<string, [string, string, string]> = {
-  likes: ['лайк', 'лайки', 'лайків'],
-  playlists: ['плейлист', 'плейлисти', 'плейлистів'],
-  albums: ['альбом', 'альбоми', 'альбомів'],
-  artists: ['підписка', 'підписки', 'підписок'],
-  plays: ['прослуховування', 'прослуховування', 'прослуховувань'],
-  files: ['файл', 'файли', 'файлів'],
-  upgraded: ['заміна', 'заміни', 'замін'],
-}
-
 /** «1 240 лайков · 38 плейлистов · 52 000 прослушиваний» — только ненулевое */
 function statsLine(i: AdminImport): string {
   const s = i.stats
   const parts: [number, string][] = [[s.likes, 'likes'], [s.playlists, 'playlists'], [s.albums, 'albums'], [s.artists, 'artists'], [s.plays, 'plays'], [s.files, 'files'], [s.upgraded, 'upgraded']]
   return parts
     .filter(([n]) => n > 0)
-    .map(([n, k]) => `${formatNumber(n, lang.value)}\u00a0${lang.value === 'en' ? t(`stat.${k}`) : plural(n, (lang.value === 'uk' ? STAT_UK : STAT_RU)[k] ?? ['', '', ''])}`)
+    .map(([n, k]) => `${formatNumber(n, lang.value)}\u00a0${t(`stat.${k}`, n)}`)
     .join(' · ')
 }
 </script>
@@ -97,39 +78,3 @@ function statsLine(i: AdminImport): string {
   .im .ap-tr > :nth-child(2) { display: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Импорт",
-    "history": "История",
-    "empty": "Импортов пока не было",
-    "emptyText": "Здесь появятся переносы архива Spotify, списков и своих файлов — с ходом и позициями, которые не нашлись",
-    "col": { "what": "Что", "state": "Состояние", "matched": "Найдено", "unmatched": "Без пары", "when": "Когда" },
-    "kind": { "text": "Список текстом", "csv": "Таблица CSV", "m3u": "Плейлист M3U", "files": "Файлы", "spotify_archive": "Архив Spotify", "yandex": "Яндекс Музыка", "youtube_playlist": "Плейлист YouTube Music", "youtube_takeout": "Архив YouTube Music" },
-    "status": { "running": "Идёт", "done": "Готово", "failed": "Ошибка", "cancelled": "Остановлен" },
-    "phase": { "uploading": "Загрузка файлов", "matching": "Поиск в каталоге", "applying": "Раскладка", "done": "Готово" }
-  },
-  "uk": {
-    "title": "Імпорт",
-    "history": "Історія",
-    "empty": "Імпортів поки не було",
-    "emptyText": "Тут з’являться перенесення архіву Spotify, списків і власних файлів — із перебігом і позиціями, які не знайшлися",
-    "col": { "what": "Що", "state": "Стан", "matched": "Знайдено", "unmatched": "Без пари", "when": "Коли" },
-    "kind": { "text": "Список текстом", "csv": "Таблиця CSV", "m3u": "Плейлист M3U", "files": "Файли", "spotify_archive": "Архів Spotify", "yandex": "Яндекс Музика", "youtube_playlist": "Плейлист YouTube Music", "youtube_takeout": "Архів YouTube Music" },
-    "status": { "running": "Триває", "done": "Готово", "failed": "Помилка", "cancelled": "Зупинено" },
-    "phase": { "uploading": "Завантаження файлів", "matching": "Пошук у каталозі", "applying": "Розкладання", "done": "Готово" }
-  },
-  "en": {
-    "title": "Import",
-    "history": "History",
-    "empty": "No imports yet",
-    "emptyText": "Transfers of the Spotify archive, lists and your own files will show up here — with progress and items that weren't found",
-    "col": { "what": "What", "state": "State", "matched": "Found", "unmatched": "Unmatched", "when": "When" },
-    "kind": { "text": "Text list", "csv": "CSV table", "m3u": "M3U playlist", "files": "Files", "spotify_archive": "Spotify archive", "yandex": "Yandex Music", "youtube_playlist": "YouTube Music playlist", "youtube_takeout": "YouTube Music archive" },
-    "status": { "running": "Running", "done": "Done", "failed": "Failed", "cancelled": "Stopped" },
-    "phase": { "uploading": "Uploading files", "matching": "Catalog search", "applying": "Applying", "done": "Done" },
-    "stat": { "likes": "likes", "playlists": "playlists", "albums": "albums", "artists": "follows", "plays": "plays", "files": "files", "upgraded": "upgraded" }
-  }
-}
-</i18n>

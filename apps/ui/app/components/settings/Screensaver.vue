@@ -6,7 +6,7 @@ import type { ScreensaverBridge } from '~/bridge/types'
 // В сборке без заставки (не `make app`) строки нет
 const bridge = useBridge()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.settings.Screensaver')
 
 /** Только разработка: строку можно увидеть на сайте — `?screensaver=1` (снимки экранов) */
 function devSaver(): ScreensaverBridge | null {
@@ -48,38 +48,3 @@ async function install() {
     </SettingsRow>
   </SettingsGroup>
 </template>
-
-<i18n lang="json">
-{
-  "ru": {
-    "group": "Заставка",
-    "title": "Заставка DalyWave",
-    "hint": "Волна на экране, пока Mac отдыхает",
-    "installed": "Установлена",
-    "install": "Установить",
-    "open": "Настроить",
-    "done": "Выберите DalyWave в настройках заставки",
-    "failed": "Не получилось установить заставку"
-  },
-  "uk": {
-    "group": "Заставка",
-    "title": "Заставка DalyWave",
-    "hint": "Хвиля на екрані, поки Mac відпочиває",
-    "installed": "Встановлена",
-    "install": "Встановити",
-    "open": "Налаштувати",
-    "done": "Виберіть DalyWave у налаштуваннях заставки",
-    "failed": "Не вдалося встановити заставку"
-  },
-  "en": {
-    "group": "Screen saver",
-    "title": "DalyWave screen saver",
-    "hint": "The wave on screen while your Mac rests",
-    "installed": "Installed",
-    "install": "Install",
-    "open": "Set up",
-    "done": "Choose DalyWave in Screen Saver settings",
-    "failed": "Couldn’t install the screen saver"
-  }
-}
-</i18n>

@@ -25,7 +25,7 @@ const ui = useUiStore()
 const pui = usePlaylistUi()
 const router = useRouter()
 const toast = useToast()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.discover')
 useHead({ title: () => t('title') })
 
 const NEW: WaveSettings = { activity: 'any', character: 'new', mood: 'any', language: 'any' }
@@ -615,59 +615,3 @@ const wavebox = ref<HTMLElement | null>(null)
   .dc__burst { animation-duration: 1ms; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Открытия",
-    "close": "Закрыть",
-    "like": "В любимые",
-    "unlike": "Убрать из любимых",
-    "likeFailed": "Не получилось изменить любимые",
-    "add": "В плейлист",
-    "listen": "Слушать целиком",
-    "nav": "Листать",
-    "prev": "Предыдущий",
-    "next": "Следующий",
-    "empty": "Пока нечего показать",
-    "emptyText": "Послушайте немного — и здесь появится новое для вас",
-    "failed": "Не получилось загрузить",
-    "failedText": "Проверьте соединение и попробуйте ещё раз",
-    "retry": "Повторить"
-  },
-  "uk": {
-    "title": "Відкриття",
-    "close": "Закрити",
-    "like": "Вподобати",
-    "unlike": "Прибрати з вподобаного",
-    "likeFailed": "Не вдалося змінити вподобане",
-    "add": "До плейлиста",
-    "listen": "Слухати повністю",
-    "nav": "Гортати",
-    "prev": "Попередній",
-    "next": "Наступний",
-    "empty": "Поки нема чого показати",
-    "emptyText": "Послухайте трохи — і тут з’явиться нове для вас",
-    "failed": "Не вдалося завантажити",
-    "failedText": "Перевірте з’єднання і спробуйте ще раз",
-    "retry": "Повторити"
-  },
-  "en": {
-    "title": "Discover",
-    "close": "Close",
-    "like": "Like",
-    "unlike": "Unlike",
-    "likeFailed": "Couldn't update your likes",
-    "add": "Add to playlist",
-    "listen": "Play full track",
-    "nav": "Browse",
-    "prev": "Previous",
-    "next": "Next",
-    "empty": "Nothing to show yet",
-    "emptyText": "Listen a little and new music will show up here",
-    "failed": "Couldn't load",
-    "failedText": "Check your connection and try again",
-    "retry": "Retry"
-  }
-}
-</i18n>

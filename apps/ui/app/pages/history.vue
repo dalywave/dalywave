@@ -10,7 +10,7 @@ const player = usePlayerStore()
 const toast = useToast()
 const lang = useLang()
 const pui = usePlaylistUi()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.history')
 const { tg, te } = useGlobalT()
 useHead({ title: () => t('title') })
 
@@ -354,77 +354,3 @@ const empty = computed(() => state.value === 'ready' && !items.value.length)
   .skel__row { min-height: 64px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Недавно прослушанное",
-    "search": "Поиск в истории",
-    "jump": "Перейти к дате",
-    "until": "По {day}",
-    "resetDay": "Показать с начала",
-    "today": "Сегодня",
-    "yesterday": "Вчера",
-    "ctx": { "from": "из «{title}»", "radio": "Радио", "search": "из поиска" },
-    "openSource": "Перейти к источнику",
-    "hide": "Убрать из истории",
-    "hidden": "Убрано из истории",
-    "hideFailed": "Не получилось убрать",
-    "clear": "Очистить историю",
-    "clearTitle": "Очистить историю?",
-    "clearText": "Рекомендации и миксы это не изменит",
-    "cleared": "История очищена",
-    "clearFailed": "Не получилось очистить историю",
-    "empty": "Здесь появится то, что вы слушаете",
-    "emptyText": "Включите волну или любимый альбом",
-    "nothing": "Ничего не нашлось",
-    "nothingFor": "По запросу «{q}»"
-  },
-  "uk": {
-    "title": "Нещодавно прослухане",
-    "search": "Пошук в історії",
-    "jump": "Перейти до дати",
-    "until": "До {day}",
-    "resetDay": "Показати з початку",
-    "today": "Сьогодні",
-    "yesterday": "Вчора",
-    "ctx": { "from": "з «{title}»", "radio": "Радіо", "search": "з пошуку" },
-    "openSource": "Перейти до джерела",
-    "hide": "Прибрати з історії",
-    "hidden": "Прибрано з історії",
-    "hideFailed": "Не вдалося прибрати",
-    "clear": "Очистити історію",
-    "clearTitle": "Очистити історію?",
-    "clearText": "Рекомендацій і міксів це не змінить",
-    "cleared": "Історію очищено",
-    "clearFailed": "Не вдалося очистити історію",
-    "empty": "Тут з’явиться те, що ви слухаєте",
-    "emptyText": "Увімкніть хвилю або улюблений альбом",
-    "nothing": "Нічого не знайдено",
-    "nothingFor": "За запитом «{q}»"
-  },
-  "en": {
-    "title": "Recently played",
-    "search": "Search history",
-    "jump": "Go to date",
-    "until": "Up to {day}",
-    "resetDay": "Show from the start",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "ctx": { "from": "from “{title}”", "radio": "Radio", "search": "from search" },
-    "openSource": "Go to source",
-    "hide": "Remove from history",
-    "hidden": "Removed from history",
-    "hideFailed": "Couldn't remove",
-    "clear": "Clear history",
-    "clearTitle": "Clear history?",
-    "clearText": "Recommendations and mixes won't change",
-    "cleared": "History cleared",
-    "clearFailed": "Couldn't clear history",
-    "empty": "What you play will show up here",
-    "emptyText": "Start the wave or a favourite album",
-    "nothing": "Nothing found",
-    "nothingFor": "For “{q}”"
-  }
-}
-</i18n>

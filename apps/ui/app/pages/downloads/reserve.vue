@@ -10,7 +10,7 @@ const bridge = useBridge()
 const offline = useOfflineStore()
 const ui = useUiStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.downloads.reserve')
 useHead({ title: () => t('title') })
 
 /** Сколько id сервер принимает за раз */
@@ -127,32 +127,3 @@ onBeforeUnmount(() => io?.disconnect())
   .rsv > :deep(.tl) { margin: 0 -8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Запас для волны",
-    "sub": "Обновляется сам, пока есть сеть",
-    "off": "Запас выключен",
-    "offText": "Любимое вперемешку с новым — чтобы волна играла и без сети",
-    "empty": "Пока пусто",
-    "emptyText": "Треки появятся, когда будет сеть"
-  },
-  "uk": {
-    "title": "Запас для хвилі",
-    "sub": "Оновлюється сам, поки є мережа",
-    "off": "Запас вимкнено",
-    "offText": "Вподобане впереміш із новим — щоб хвиля грала й без мережі",
-    "empty": "Поки порожньо",
-    "emptyText": "Треки з’являться, коли буде мережа"
-  },
-  "en": {
-    "title": "Wave reserve",
-    "sub": "Refreshes itself while you're online",
-    "off": "Reserve is off",
-    "offText": "Favourites mixed with new music — so the wave plays offline",
-    "empty": "Nothing here yet",
-    "emptyText": "Tracks will appear once you're online"
-  }
-}
-</i18n>

@@ -7,7 +7,7 @@ const props = withDefaults(defineProps<{ text: string, limit?: number }>(), { li
 
 const bridge = useBridge()
 const player = usePlayerStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.search.LyricsResults')
 
 /** Строчка без кавычек вокруг */
 const line = computed(() => props.text.trim().replace(/^["«“„']+|["»”“']+$/g, '').trim())
@@ -97,11 +97,3 @@ const rows = computed(() => hits.value.map(h => ({ hit: h, parts: parts(h.line, 
   .lyr__row { grid-template-columns: 48px minmax(0, 1fr); }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "title": "По словам песни" },
-  "uk": { "title": "За словами пісні" },
-  "en": { "title": "From the lyrics" }
-}
-</i18n>

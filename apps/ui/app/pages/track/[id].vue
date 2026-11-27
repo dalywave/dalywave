@@ -6,7 +6,7 @@ const bridge = useBridge()
 const player = usePlayerStore()
 const library = useLibraryStore()
 const { menuFor } = useTrackActions()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.track._id')
 const { tg } = useGlobalT()
 
 const id = computed(() => String(route.params.id))
@@ -104,20 +104,3 @@ function radio() {
   .trk__album { margin: 0 8px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Трек",
-    "radio": "Радио"
-  },
-  "uk": {
-    "title": "Трек",
-    "radio": "Радіо"
-  },
-  "en": {
-    "title": "Track",
-    "radio": "Radio"
-  }
-}
-</i18n>

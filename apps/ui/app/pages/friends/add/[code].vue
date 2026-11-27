@@ -8,7 +8,7 @@ const friends = useFriendsStore()
 const toast = useToast()
 const ui = useUiStore()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.friends.add._code')
 useHead({ title: () => tg('friends.add') })
 
 const code = computed(() => String(route.params.code))
@@ -65,32 +65,3 @@ async function accept() {
 .inv__name { margin: 8px 0 0; font-size: var(--fs-h2); font-weight: 750; letter-spacing: var(--tr-title); }
 .inv__text { max-width: 320px; margin: 0 0 12px; color: var(--text-2); text-wrap: pretty; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "invites": "Зовёт вас в друзья: будет видно, что слушает каждый, и можно слушать вместе",
-    "already": "Вы уже друзья",
-    "open": "Открыть страницу",
-    "mine": "Это ваша ссылка — отправьте её друзьям",
-    "expired": "Ссылка больше не работает",
-    "expiredText": "Попросите у друга новую"
-  },
-  "uk": {
-    "invites": "Кличе вас у друзі: буде видно, що слухає кожен, і можна слухати разом",
-    "already": "Ви вже друзі",
-    "open": "Відкрити сторінку",
-    "mine": "Це ваше посилання — надішліть його друзям",
-    "expired": "Посилання більше не працює",
-    "expiredText": "Попросіть у друга нове"
-  },
-  "en": {
-    "invites": "Invites you to be friends: you’ll see what each other plays and can listen together",
-    "already": "You’re already friends",
-    "open": "Open page",
-    "mine": "This is your link — send it to friends",
-    "expired": "This link no longer works",
-    "expiredText": "Ask your friend for a new one"
-  }
-}
-</i18n>

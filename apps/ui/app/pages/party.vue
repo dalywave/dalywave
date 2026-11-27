@@ -15,7 +15,7 @@ const player = usePlayerStore()
 const connect = useConnectStore()
 const jam = useJamStore()
 const party = usePartyStore()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.party')
 const { tg } = useGlobalT()
 
 useHead({ title: () => t('title') })
@@ -370,77 +370,3 @@ onBeforeUnmount(() => {
   .ctl, .fade-enter-active, .fade-leave-active { transition: none; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Вечеринка",
-    "pairTitle": "Подключите телевизор",
-    "pairQr": "Код для входа с телефона",
-    "pairScan": "Наведите камеру телефона на код",
-    "pairOr": "или откройте {url} и введите",
-    "pairOffline": "Нет связи с сервером. Пробуем ещё раз…",
-    "addedBy": "Добавил(а) {name}",
-    "next": "Дальше",
-    "guests": "Гости",
-    "addTrack": "Добавить трек",
-    "silenceTitle": "Тишина",
-    "silenceHint": "Включите музыку на телефоне или компьютере",
-    "back": "Назад",
-    "playHere": "Играть здесь",
-    "settings": "Настройки вечеринки",
-    "full": "Во весь экран",
-    "exitFull": "Выйти из полноэкранного режима",
-    "energetic": "Только энергичное",
-    "noRepeat": "Без повторов артистов",
-    "dj": "Переходы «Диджей»",
-    "finish": "Закончить вечеринку"
-  },
-  "uk": {
-    "title": "Вечірка",
-    "pairTitle": "Підключіть телевізор",
-    "pairQr": "Код для входу з телефону",
-    "pairScan": "Наведіть камеру телефону на код",
-    "pairOr": "або відкрийте {url} і введіть",
-    "pairOffline": "Немає зв’язку із сервером. Пробуємо ще раз…",
-    "addedBy": "Додав(ла) {name}",
-    "next": "Далі",
-    "guests": "Гості",
-    "addTrack": "Додати трек",
-    "silenceTitle": "Тиша",
-    "silenceHint": "Увімкніть музику на телефоні або комп’ютері",
-    "back": "Назад",
-    "playHere": "Грати тут",
-    "settings": "Налаштування вечірки",
-    "full": "На весь екран",
-    "exitFull": "Вийти з повноекранного режиму",
-    "energetic": "Лише енергійне",
-    "noRepeat": "Без повторів виконавців",
-    "dj": "Переходи «Діджей»",
-    "finish": "Завершити вечірку"
-  },
-  "en": {
-    "title": "Party",
-    "pairTitle": "Connect your TV",
-    "pairQr": "Sign-in code for your phone",
-    "pairScan": "Point your phone camera at the code",
-    "pairOr": "or open {url} and enter",
-    "pairOffline": "Can’t reach the server. Retrying…",
-    "addedBy": "Added by {name}",
-    "next": "Up next",
-    "guests": "Guests",
-    "addTrack": "Add a track",
-    "silenceTitle": "Silence",
-    "silenceHint": "Start music on your phone or computer",
-    "back": "Back",
-    "playHere": "Play here",
-    "settings": "Party settings",
-    "full": "Full screen",
-    "exitFull": "Exit full screen",
-    "energetic": "Energetic only",
-    "noRepeat": "No repeated artists",
-    "dj": "DJ transitions",
-    "finish": "End the party"
-  }
-}
-</i18n>

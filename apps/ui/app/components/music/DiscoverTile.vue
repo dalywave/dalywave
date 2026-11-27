@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Вход в «Открытия» (лента клипов): строка-плитка на главной и в поиске. Ровная заливка, знак ленты
 // слева, подпись и стрелка — как остальные строки-ссылки
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.DiscoverTile')
 // Лента ищет новое в каталоге Deezer: без него входа в неё нет
 const server = useServerStore()
 </script>
@@ -57,11 +57,3 @@ const server = useServerStore()
 .dt__sub { font-size: var(--fs-small); color: var(--text-2); }
 .dt__chev { flex: none; font-size: 18px; color: var(--text-3); }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "title": "Открытия", "sub": "Новое для вас — клипами, листайте" },
-  "uk": { "title": "Відкриття", "sub": "Нове для вас — кліпами, гортайте" },
-  "en": { "title": "Discover", "sub": "New music for you, as clips — swipe through" }
-}
-</i18n>

@@ -4,7 +4,7 @@
 definePageMeta({ layout: 'admin' })
 
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('pages.admin.live')
 useHead({ title: () => t('title') })
 const { data, failed, load } = useAdminLiveFeed()
 const now = useTicker()
@@ -54,35 +54,3 @@ const stats = computed(() => {
   .lv__grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Сейчас",
-    "live": "Обновляется вживую",
-    "offline": "Нет связи — обновится при подключении",
-    "people": "В сети",
-    "empty": "Сейчас никого нет",
-    "emptyText": "Когда кто-нибудь откроет сайт или приложение, он появится здесь",
-    "stats": { "online": "в сети", "listening": "слушают сейчас", "plays": "прослушиваний за сутки", "newUsers": "новых за неделю" }
-  },
-  "uk": {
-    "title": "Зараз",
-    "live": "Оновлюється наживо",
-    "offline": "Немає зв’язку — оновиться після під’єднання",
-    "people": "У мережі",
-    "empty": "Зараз нікого немає",
-    "emptyText": "Коли хтось відкриє сайт або застосунок, він з’явиться тут",
-    "stats": { "online": "у мережі", "listening": "слухають зараз", "plays": "прослуховувань за добу", "newUsers": "нових за тиждень" }
-  },
-  "en": {
-    "title": "Now",
-    "live": "Updating live",
-    "offline": "Offline — will update when connected",
-    "people": "Online",
-    "empty": "Nobody is here right now",
-    "emptyText": "When someone opens the site or the app, they will appear here",
-    "stats": { "online": "online", "listening": "listening now", "plays": "plays in 24 hours", "newUsers": "new this week" }
-  }
-}
-</i18n>

@@ -9,6 +9,7 @@
     "typecheck": "nuxt typecheck",
     "lint": "eslint .",
     "api-types": "bun scripts/api-types.mjs",
+    "i18n-check": "bun scripts/i18n-check.mjs",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {

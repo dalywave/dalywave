@@ -10,7 +10,7 @@ const bridge = useBridge()
 const toast = useToast()
 const ui = useUiStore()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.music.JamPanel')
 
 onMounted(() => {
   jam.init()
@@ -167,83 +167,3 @@ const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 .jam--panel .jam__settings { padding: 0 8px; }
 .jam__end { margin-top: 4px; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Слушать вместе",
-    "intro": "Друзья откроют ссылку на телефоне и добавят свои треки в очередь — без аккаунта",
-    "start": "Начать",
-    "qr": "QR-код ссылки для гостей",
-    "scan": "Наведите камеру телефона или отправьте ссылку",
-    "copy": "Скопировать",
-    "copied": "Ссылка скопирована",
-    "copyFailed": "Не получилось скопировать ссылку",
-    "share": "Отправить",
-    "shareTitle": "Слушаем вместе в DalyWave",
-    "pending": "Ждут одобрения",
-    "approve": "Добавить в очередь",
-    "decline": "Отклонить",
-    "listening": "Слушают",
-    "online": "на связи {n}",
-    "noGuests": "Пока никого",
-    "here": "на связи",
-    "away": "не на связи",
-    "remove": "Убрать {name}",
-    "canAdd": "Гости добавляют треки",
-    "approval": "Одобрять треки гостей",
-    "canListen": "Гости слушают у себя",
-    "end": "Закончить"
-  },
-  "uk": {
-    "title": "Слухати разом",
-    "intro": "Друзі відкриють посилання на телефоні й додадуть свої треки в чергу — без облікового запису",
-    "start": "Почати",
-    "qr": "QR-код посилання для гостей",
-    "scan": "Наведіть камеру телефона або надішліть посилання",
-    "copy": "Скопіювати",
-    "copied": "Посилання скопійовано",
-    "copyFailed": "Не вдалося скопіювати посилання",
-    "share": "Надіслати",
-    "shareTitle": "Слухаємо разом у DalyWave",
-    "pending": "Чекають схвалення",
-    "approve": "Додати в чергу",
-    "decline": "Відхилити",
-    "listening": "Слухають",
-    "online": "на зв’язку {n}",
-    "noGuests": "Поки нікого",
-    "here": "на зв’язку",
-    "away": "не на зв’язку",
-    "remove": "Прибрати {name}",
-    "canAdd": "Гості додають треки",
-    "approval": "Схвалювати треки гостей",
-    "canListen": "Гості слухають у себе",
-    "end": "Завершити"
-  },
-  "en": {
-    "title": "Listen together",
-    "intro": "Friends open the link on their phones and add tracks to the queue — no account needed",
-    "start": "Start",
-    "qr": "QR code with the guest link",
-    "scan": "Point a phone camera here or send the link",
-    "copy": "Copy",
-    "copied": "Link copied",
-    "copyFailed": "Couldn’t copy the link",
-    "share": "Send",
-    "shareTitle": "Listening together on DalyWave",
-    "pending": "Waiting for approval",
-    "approve": "Add to queue",
-    "decline": "Decline",
-    "listening": "Listening",
-    "online": "{n} online",
-    "noGuests": "Nobody yet",
-    "here": "online",
-    "away": "away",
-    "remove": "Remove {name}",
-    "canAdd": "Guests add tracks",
-    "approval": "Approve guest tracks",
-    "canListen": "Guests listen on their devices",
-    "end": "End session"
-  }
-}
-</i18n>

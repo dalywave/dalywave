@@ -9,7 +9,7 @@ const emit = defineEmits<{ changed: [] }>()
 const bridge = useBridge()
 const toast = useToast()
 const lang = useLang()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.import.Review')
 
 const items = ref<ImportItem[]>([])
 const cursor = ref<string | null>(null)
@@ -231,80 +231,3 @@ function heading(item: ImportItem): string {
   .rv__guess, .rv__search { margin-left: 0; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "title": "Не нашлось",
-    "find": "Найти",
-    "close": "Закрыть",
-    "skip": "Пропустить",
-    "skipped": "Пропущено",
-    "guess": "Похоже на",
-    "yes": "Да, это он",
-    "added": "Готово — добавлено в медиатеку",
-    "fileQueued": "Файл кладём к выбранному треку",
-    "fixFailed": "Не получилось — попробуйте ещё раз",
-    "loadFailed": "Не удалось загрузить список",
-    "retry": "Повторить",
-    "allDone": "Всё разобрано",
-    "allDoneText": "Ненайденного больше нет",
-    "searchPlaceholder": "Артист и название",
-    "searching": "Ищем…",
-    "nothing": "Ничего не нашлось — попробуйте написать иначе",
-    "more": "Показать ещё",
-    "album": "альбом",
-    "artist": "Артист",
-    "follow": "подписка",
-    "liked": "в лайках"
-  },
-  "uk": {
-    "title": "Не знайшлося",
-    "find": "Знайти",
-    "close": "Закрити",
-    "skip": "Пропустити",
-    "skipped": "Пропущено",
-    "guess": "Схоже на",
-    "yes": "Так, це він",
-    "added": "Готово — додано до медіатеки",
-    "fileQueued": "Файл додаємо до вибраного трека",
-    "fixFailed": "Не вдалося — спробуйте ще раз",
-    "loadFailed": "Не вдалося завантажити список",
-    "retry": "Повторити",
-    "allDone": "Усе розібрано",
-    "allDoneText": "Незнайденого більше немає",
-    "searchPlaceholder": "Виконавець і назва",
-    "searching": "Шукаємо…",
-    "nothing": "Нічого не знайшлося — спробуйте написати інакше",
-    "more": "Показати ще",
-    "album": "альбом",
-    "artist": "Виконавець",
-    "follow": "підписка",
-    "liked": "у вподобаних"
-  },
-  "en": {
-    "title": "Not found",
-    "find": "Find",
-    "close": "Close",
-    "skip": "Skip",
-    "skipped": "Skipped",
-    "guess": "Looks like",
-    "yes": "Yes, that's it",
-    "added": "Done — added to your library",
-    "fileQueued": "Attaching the file to the chosen track",
-    "fixFailed": "That didn't work — try again",
-    "loadFailed": "Couldn't load the list",
-    "retry": "Retry",
-    "allDone": "All sorted",
-    "allDoneText": "Nothing left unmatched",
-    "searchPlaceholder": "Artist and title",
-    "searching": "Searching…",
-    "nothing": "Nothing found — try different words",
-    "more": "Show more",
-    "album": "album",
-    "artist": "Artist",
-    "follow": "follow",
-    "liked": "liked"
-  }
-}
-</i18n>

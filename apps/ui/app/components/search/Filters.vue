@@ -6,7 +6,7 @@ export type SearchType = 'all' | 'tracks' | 'artists' | 'albums' | 'playlists' |
 // Фильтры результатов: что показать и где искать. Ряд прокручивается вбок на узком экране
 const type = defineModel<SearchType>('type', { required: true })
 const library = defineModel<boolean>('library', { required: true })
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.search.Filters')
 // Без каталога Deezer искать «везде» и «в медиатеке» — одно и то же: переключателя нет
 const server = useServerStore()
 const TYPES: SearchType[] = ['all', 'tracks', 'artists', 'albums', 'playlists']
@@ -95,23 +95,3 @@ watch(type, () => void nextTick(() => reveal()))
 .fchip--sound .fchip__icon { color: var(--accent); }
 .fchip--sound.is-on .fchip__icon { color: inherit; }
 </style>
-
-<i18n lang="json">
-{
-  "ru": {
-    "label": "Фильтры",
-    "library": "В медиатеке",
-    "type": { "all": "Всё", "tracks": "Треки", "artists": "Артисты", "albums": "Альбомы", "playlists": "Плейлисты", "sound": "По звучанию" }
-  },
-  "uk": {
-    "label": "Фільтри",
-    "library": "У медіатеці",
-    "type": { "all": "Усе", "tracks": "Треки", "artists": "Виконавці", "albums": "Альбоми", "playlists": "Плейлисти", "sound": "За звучанням" }
-  },
-  "en": {
-    "label": "Filters",
-    "library": "In library",
-    "type": { "all": "All", "tracks": "Songs", "artists": "Artists", "albums": "Albums", "playlists": "Playlists", "sound": "By sound" }
-  }
-}
-</i18n>

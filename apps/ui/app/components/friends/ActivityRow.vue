@@ -10,7 +10,7 @@ const friends = useFriendsStore()
 const ui = useUiStore()
 const lang = useLang()
 const { tg } = useGlobalT()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useScopedI18n('components.friends.ActivityRow')
 
 const a = computed(() => props.friend.activity ?? null)
 const when = computed(() => {
@@ -87,11 +87,3 @@ const jamTo = computed(() => (a.value?.jamCode ? `/jam/${a.value.jamCode}` : nul
   .fa__ctx, .fa__track { min-height: 22px; }
 }
 </style>
-
-<i18n lang="json">
-{
-  "ru": { "nothing": "Пока тихо" },
-  "uk": { "nothing": "Поки тихо" },
-  "en": { "nothing": "Nothing yet" }
-}
-</i18n>
